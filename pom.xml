@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.salesforce.datacloud</groupId>
     <artifactId>jdbc</artifactId>
-    <version>0.20.0-SNAPSHOT</version>
+    <version>0.20.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>Salesforce Data Cloud JDBC Driver</name>
     <description>Salesforce Data Cloud JDBC Driver</description>
@@ -11,11 +11,11 @@
         <arrow.version>18.0.0</arrow.version>
         <assertj.version>3.26.3</assertj.version>
         <avatica.version>1.25.0</avatica.version>
-        <commons-codec.version>1.17.1</commons-codec.version>
         <commons-lang3.version>3.17.0</commons-lang3.version>
         <download.cache.directory>${project.build.directory}/.cache</download.cache.directory>
         <git-build-hook-maven-plugin.version>3.5.0</git-build-hook-maven-plugin.version>
-        <grpcmock.junit5.version>0.13.0</grpcmock.junit5.version>
+        <grpc.version>1.68.1</grpc.version>
+        <grpcmock-junit5.version>0.13.0</grpcmock-junit5.version>
         <!-- https://tableau.github.io/hyper-db/docs/releases#download -->
         <hyperapi.version>0.0.20746.reac9bd2d</hyperapi.version>
         <hyperd.directory>${project.build.directory}/hyper</hyperd.directory>
@@ -31,13 +31,27 @@
         <okhttp.version>4.12.0</okhttp.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <protobuf-java.version>3.25.5</protobuf-java.version>
+        <protobuf.version>3.25.5</protobuf.version>
         <shadeBase>com.salesforce.datacloud.jdbc.internal.shaded</shadeBase>
         <slf4j.version>1.7.32</slf4j.version>
         <spotless.version>2.43.0</spotless.version>
     </properties>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-bom</artifactId>
+                <version>${protobuf.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-bom</artifactId>
+                <version>${grpc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
             <dependency>
                 <groupId>org.apache.arrow</groupId>
                 <artifactId>arrow-bom</artifactId>
@@ -70,7 +84,6 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>${protobuf-java.version}</version>
         </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
@@ -78,29 +91,16 @@
             <version>${okhttp.version}</version>
         </dependency>
         <dependency>
-            <groupId>commons-cli</groupId>
-            <artifactId>commons-cli</artifactId>
-            <version>1.6.0</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
-            <version>${commons-codec.version}</version>
-        </dependency>
-        <dependency>
             <groupId>io.grpc</groupId>
-            <artifactId>grpc-netty-shaded</artifactId>
-            <version>1.63.0</version>
+            <artifactId>grpc-netty</artifactId>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
-            <version>1.63.0</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-stub</artifactId>
-            <version>1.63.0</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -128,17 +128,12 @@
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
-            <artifactId>commons-collections4</artifactId>
-            <version>4.4</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <version>${commons-lang3.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
+            <artifactId>slf4j-api</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
         <dependency>
@@ -149,13 +144,13 @@
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-gson</artifactId>
+            <artifactId>jjwt-impl</artifactId>
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
+            <artifactId>jjwt-jackson</artifactId>
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
@@ -179,7 +174,12 @@
         <dependency>
             <groupId>org.grpcmock</groupId>
             <artifactId>grpcmock-junit5</artifactId>
-            <version>${grpcmock.junit5.version}</version>
+            <version>${grpcmock-junit5.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -225,9 +225,9 @@
                 <artifactId>protobuf-maven-plugin</artifactId>
                 <version>0.6.1</version>
                 <configuration>
-                    <protocArtifact>com.google.protobuf:protoc:3.19.6:exe:${os.detected.classifier}</protocArtifact>
+                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
                     <pluginId>grpc-java</pluginId>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.63.0:exe:${os.detected.classifier}</pluginArtifact>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
                     <attachProtoSources>false</attachProtoSources>
                 </configuration>
                 <executions>
@@ -270,10 +270,6 @@
                             <shadedPattern>${shadeBase}.io.jsonwebtoken</shadedPattern>
                         </relocation>
                         <relocation>
-                            <pattern>io.vavr</pattern>
-                            <shadedPattern>${shadeBase}.io.vavr</shadedPattern>
-                        </relocation>
-                        <relocation>
                             <pattern>com.squareup</pattern>
                             <shadedPattern>${shadeBase}.com.squareup</shadedPattern>
                         </relocation>
@@ -296,14 +292,6 @@
                         <relocation>
                             <pattern>com.google.protobuf</pattern>
                             <shadedPattern>${shadeBase}.com.google.protobuf</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>commons-cli</pattern>
-                            <shadedPattern>${shadeBase}.commons-cli</shadedPattern>
-                        </relocation>
-                        <relocation>
-                            <pattern>commons-codec</pattern>
-                            <shadedPattern>${shadeBase}.commons-codec</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>org.slf4j</pattern>
@@ -338,13 +326,6 @@
                             <excludes>
                                 <!-- codegen directory is used to generate java code for arrow vector package. Excludes them since we only need class file -->
                                 <exclude>codegen/**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>org.slf4j:slf4j-simple</artifact>
-                            <excludes>
-                                <!-- Causes logging binding warnings with other java projects that use the shaded jar -->
-                                <exclude>org/slf4j/**</exclude>
                             </excludes>
                         </filter>
                     </filters>
@@ -781,6 +762,11 @@
             </properties>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>3.8.1</version>
+                    </plugin>
                     <plugin>
                         <groupId>org.sonatype.plugins</groupId>
                         <artifactId>nexus-staging-maven-plugin</artifactId>
