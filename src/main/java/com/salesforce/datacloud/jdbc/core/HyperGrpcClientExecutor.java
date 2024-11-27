@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
 import com.salesforce.hyperdb.grpc.ExecuteQueryResponse;
@@ -78,8 +79,9 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
                     .defaultServiceConfig(retryPolicy(maxRetryAttempts));
         }
 
-        val channel =
-                builder.maxInboundMessageSize(GRPC_INBOUND_MESSAGE_MAX_SIZE).build();
+        val channel = builder.maxInboundMessageSize(GRPC_INBOUND_MESSAGE_MAX_SIZE)
+                .userAgent(DriverVersion.formatDriverInfo())
+                .build();
         return client.channel(channel).build();
     }
 
@@ -202,7 +204,7 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         }
     }
 
-    private HyperServiceGrpc.HyperServiceBlockingStub getStub(String queryId) {
+    private HyperServiceGrpc.HyperServiceBlockingStub getStub(@NonNull String queryId) {
         val queryIdHeaderInterceptor = new QueryIdHeaderInterceptor(queryId);
         return getStub().withInterceptors(queryIdHeaderInterceptor);
     }

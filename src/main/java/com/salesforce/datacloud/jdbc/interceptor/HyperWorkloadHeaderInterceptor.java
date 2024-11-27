@@ -16,28 +16,31 @@
 package com.salesforce.datacloud.jdbc.interceptor;
 
 import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 import io.grpc.Metadata;
+import java.util.Properties;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
+import lombok.val;
 
 @Getter
 @ToString
-@RequiredArgsConstructor
-public class QueryIdHeaderInterceptor implements SingleHeaderMutatingClientInterceptor {
-    @ToString.Exclude
-    public final Metadata.Key<String> key = keyOf("x-hyperdb-query-id");
-
-    @NonNull private final String value;
-
-    @Override
-    public void mutate(final Metadata headers) {
-        if (value == null || value.isBlank()) {
-            return;
-        }
-
-        headers.put(key, value);
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class HyperWorkloadHeaderInterceptor implements SingleHeaderMutatingClientInterceptor {
+    public static HyperWorkloadHeaderInterceptor of(Properties properties) {
+        val value = optional(properties, PROPERTY).orElse(DEFAULT);
+        return new HyperWorkloadHeaderInterceptor(value);
     }
+
+    private static final String PROPERTY = "workload";
+
+    private static final String DEFAULT = "jdbcv3";
+
+    @ToString.Exclude
+    private final Metadata.Key<String> key = keyOf("x-hyperdb-workload");
+
+    private final String value;
 }

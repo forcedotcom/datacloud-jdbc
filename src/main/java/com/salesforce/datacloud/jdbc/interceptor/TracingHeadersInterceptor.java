@@ -15,19 +15,17 @@
  */
 package com.salesforce.datacloud.jdbc.interceptor;
 
-import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
+import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
 
 import com.salesforce.datacloud.jdbc.internal.Tracer;
 import io.grpc.Metadata;
 import java.util.function.Supplier;
 import lombok.AccessLevel;
 import lombok.Builder;
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 @Slf4j
-@ToString
 @Builder(access = AccessLevel.PRIVATE)
 public class TracingHeadersInterceptor implements HeaderMutatingClientInterceptor {
     public static TracingHeadersInterceptor of() {
@@ -43,8 +41,8 @@ public class TracingHeadersInterceptor implements HeaderMutatingClientIntercepto
     private static final String TRACE_ID = "x-b3-traceid";
     private static final String SPAN_ID = "x-b3-spanid";
 
-    private static final Metadata.Key<String> TRACE_ID_KEY = Metadata.Key.of(TRACE_ID, ASCII_STRING_MARSHALLER);
-    private static final Metadata.Key<String> SPAN_ID_KEY = Metadata.Key.of(SPAN_ID, ASCII_STRING_MARSHALLER);
+    private static final Metadata.Key<String> TRACE_ID_KEY = keyOf(TRACE_ID);
+    private static final Metadata.Key<String> SPAN_ID_KEY = keyOf(SPAN_ID);
 
     private final Supplier<String> getTraceId;
     private final Supplier<String> getSpanId;

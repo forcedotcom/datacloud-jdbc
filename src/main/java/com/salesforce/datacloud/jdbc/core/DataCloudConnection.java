@@ -27,9 +27,10 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.ClientBuilder;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.interceptor.HyperDefaultsHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.interceptor.MaxMetadataSizeHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
-import com.salesforce.datacloud.jdbc.interceptor.UserAgentHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.Messages;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
@@ -125,9 +126,10 @@ public class DataCloudConnection implements Connection, AutoCloseable {
             AuthorizationHeaderInterceptor authInterceptor, Properties properties) {
         return Stream.of(
                         authInterceptor,
-                        new HyperDefaultsHeaderInterceptor(),
+                        new MaxMetadataSizeHeaderInterceptor(),
                         TracingHeadersInterceptor.of(),
-                        UserAgentHeaderInterceptor.of(properties),
+                        HyperExternalClientContextHeaderInterceptor.of(properties),
+                        HyperWorkloadHeaderInterceptor.of(properties),
                         DataspaceHeaderInterceptor.of(properties))
                 .filter(Objects::nonNull)
                 .peek(t -> log.info("Registering interceptor. interceptor={}", t))

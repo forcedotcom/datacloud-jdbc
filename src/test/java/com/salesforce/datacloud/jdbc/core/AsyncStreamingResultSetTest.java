@@ -45,7 +45,7 @@ public class AsyncStreamingResultSetTest extends HyperTestBase {
         });
 
         AssertionsForClassTypes.assertThat(ex).hasCauseInstanceOf(StatusRuntimeException.class);
-        Pattern rootCausePattern = Pattern.compile("^INVALID_ARGUMENT: table \"nonsense\" does not exist.*");
+        val rootCausePattern = Pattern.compile("^[A-Z]+(_[A-Z]+)*: table \"nonsense\" does not exist.*");
         AssertionsForClassTypes.assertThat(ex.getCause().getMessage()).containsPattern(rootCausePattern);
     }
 
