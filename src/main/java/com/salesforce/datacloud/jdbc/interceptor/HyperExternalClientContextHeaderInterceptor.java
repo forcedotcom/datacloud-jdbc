@@ -16,28 +16,29 @@
 package com.salesforce.datacloud.jdbc.interceptor;
 
 import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 import io.grpc.Metadata;
+import java.util.Properties;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
 @Getter
 @ToString
-@RequiredArgsConstructor
-public class QueryIdHeaderInterceptor implements SingleHeaderMutatingClientInterceptor {
-    @ToString.Exclude
-    public final Metadata.Key<String> key = keyOf("x-hyperdb-query-id");
-
-    @NonNull private final String value;
-
-    @Override
-    public void mutate(final Metadata headers) {
-        if (value == null || value.isBlank()) {
-            return;
-        }
-
-        headers.put(key, value);
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class HyperExternalClientContextHeaderInterceptor implements SingleHeaderMutatingClientInterceptor {
+    public static HyperExternalClientContextHeaderInterceptor of(Properties properties) {
+        return optional(properties, PROPERTY)
+                .map(HyperExternalClientContextHeaderInterceptor::new)
+                .orElse(null);
     }
+
+    static final String PROPERTY = "external-client-context";
+
+    @ToString.Exclude
+    private final Metadata.Key<String> key = keyOf("x-hyperdb-external-client-context");
+
+    private final String value;
 }

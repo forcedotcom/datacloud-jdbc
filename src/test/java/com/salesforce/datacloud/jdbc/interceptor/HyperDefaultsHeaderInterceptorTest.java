@@ -25,23 +25,12 @@ import org.junit.jupiter.api.Test;
 
 class HyperDefaultsHeaderInterceptorTest {
 
-    private static final HyperDefaultsHeaderInterceptor sut = new HyperDefaultsHeaderInterceptor();
-
-    @Test
-    void setsWorkload() {
-        val key = Metadata.Key.of("x-hyperdb-workload", ASCII_STRING_MARSHALLER);
-        assertThat(actual().get(key)).isEqualTo("jdbcv3");
-    }
+    private static final MaxMetadataSizeHeaderInterceptor sut = new MaxMetadataSizeHeaderInterceptor();
 
     @Test
     void setsMaxSize() {
         val key = Metadata.Key.of("grpc.max_metadata_size", ASCII_STRING_MARSHALLER);
         assertThat(Integer.parseInt(Objects.requireNonNull(actual().get(key)))).isEqualTo(1024 * 1024);
-    }
-
-    @Test
-    void hasNiceToString() {
-        assertThat(sut.toString()).isEqualTo("HyperDefaultsHeaderInterceptor()");
     }
 
     private static Metadata actual() {

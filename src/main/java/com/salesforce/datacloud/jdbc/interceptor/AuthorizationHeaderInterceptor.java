@@ -15,7 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.interceptor;
 
-import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
+import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
 
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
 import io.grpc.Metadata;
@@ -52,8 +52,8 @@ public class AuthorizationHeaderInterceptor implements HeaderMutatingClientInter
     private static final String AUTH = "Authorization";
     private static final String AUD = "audience";
 
-    private static final Metadata.Key<String> AUTH_KEY = Metadata.Key.of(AUTH, ASCII_STRING_MARSHALLER);
-    private static final Metadata.Key<String> AUD_KEY = Metadata.Key.of(AUD, ASCII_STRING_MARSHALLER);
+    private static final Metadata.Key<String> AUTH_KEY = keyOf(AUTH);
+    private static final Metadata.Key<String> AUD_KEY = keyOf(AUD);
 
     @ToString.Exclude
     private final TokenSupplier tokenSupplier;

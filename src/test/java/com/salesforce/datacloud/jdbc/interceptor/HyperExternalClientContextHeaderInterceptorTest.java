@@ -18,50 +18,37 @@ package com.salesforce.datacloud.jdbc.interceptor;
 import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import io.grpc.Metadata;
 import java.util.Properties;
 import java.util.UUID;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 
-class UserAgentHeaderInterceptorTest {
-    @Test
-    void ofReturnsBasicWithNoUserAgent() {
-        val metadata = new Metadata();
-        sut(null).mutate(metadata);
+class HyperExternalClientContextHeaderInterceptorTest {
+    private static final String property = "external-client-context";
+    private static final String header = "x-hyperdb-" + property;
 
-        assertThat(metadata.get(Metadata.Key.of("User-Agent", ASCII_STRING_MARSHALLER)))
-                .isEqualTo(DriverVersion.formatDriverInfo());
+    @Test
+    void ofReturnsNullWithNoClientContextHeader() {
+        assertThat(HyperExternalClientContextHeaderInterceptor.of(new Properties()))
+                .isNull();
     }
 
     @Test
-    void noDuplicateDriverInfo() {
-        val metadata = new Metadata();
-        sut(DriverVersion.formatDriverInfo()).mutate(metadata);
-
-        assertThat(metadata.get(Metadata.Key.of("User-Agent", ASCII_STRING_MARSHALLER)))
-                .isEqualTo(DriverVersion.formatDriverInfo());
-    }
-
-    @Test
-    void appliesDataspaceValueToMetadata() {
+    void appliesContextValueToMetadata() {
         val expected = UUID.randomUUID().toString();
 
         val metadata = new Metadata();
         sut(expected).mutate(metadata);
 
-        assertThat(metadata.get(Metadata.Key.of("User-Agent", ASCII_STRING_MARSHALLER)))
-                .isEqualTo(expected + " " + DriverVersion.formatDriverInfo());
+        assertThat(metadata.get(Metadata.Key.of(header, ASCII_STRING_MARSHALLER)))
+                .isEqualTo(expected);
     }
 
-    private static UserAgentHeaderInterceptor sut(String userAgent) {
+    private static HyperExternalClientContextHeaderInterceptor sut(String context) {
         val properties = new Properties();
+        properties.put(property, context);
 
-        if (userAgent != null) {
-            properties.put("User-Agent", userAgent);
-        }
-
-        return UserAgentHeaderInterceptor.of(properties);
+        return HyperExternalClientContextHeaderInterceptor.of(properties);
     }
 }

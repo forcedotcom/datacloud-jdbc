@@ -41,12 +41,6 @@ class DataspaceHeaderInterceptorTest {
                 .isEqualTo(expected);
     }
 
-    @Test
-    void hasNiceToString() {
-        val expected = UUID.randomUUID().toString();
-        assertThat(sut(expected).toString()).contains("dataspace=" + expected);
-    }
-
     private static DataspaceHeaderInterceptor sut(String dataspace) {
         val properties = new Properties();
         properties.put("dataspace", dataspace);

@@ -15,29 +15,15 @@
  */
 package com.salesforce.datacloud.jdbc.interceptor;
 
-import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
-
 import io.grpc.Metadata;
-import lombok.Getter;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-import lombok.ToString;
 
-@Getter
-@ToString
-@RequiredArgsConstructor
-public class QueryIdHeaderInterceptor implements SingleHeaderMutatingClientInterceptor {
-    @ToString.Exclude
-    public final Metadata.Key<String> key = keyOf("x-hyperdb-query-id");
+interface SingleHeaderMutatingClientInterceptor extends HeaderMutatingClientInterceptor {
+    @NonNull Metadata.Key<String> getKey();
 
-    @NonNull private final String value;
+    @NonNull String getValue();
 
-    @Override
-    public void mutate(final Metadata headers) {
-        if (value == null || value.isBlank()) {
-            return;
-        }
-
-        headers.put(key, value);
+    default void mutate(final Metadata headers) {
+        headers.put(getKey(), getValue());
     }
 }

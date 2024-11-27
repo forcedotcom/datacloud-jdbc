@@ -15,38 +15,30 @@
  */
 package com.salesforce.datacloud.jdbc.interceptor;
 
+import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
-import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 
 import io.grpc.Metadata;
 import java.util.Properties;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
+import lombok.Getter;
+import lombok.ToString;
 
-@Slf4j
+@Getter
+@ToString
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class DataspaceHeaderInterceptor implements HeaderMutatingClientInterceptor {
+public class DataspaceHeaderInterceptor implements SingleHeaderMutatingClientInterceptor {
     public static DataspaceHeaderInterceptor of(Properties properties) {
-        return optional(properties, DATASPACE)
+        return optional(properties, PROPERTY)
                 .map(DataspaceHeaderInterceptor::new)
                 .orElse(null);
     }
 
-    @NonNull private final String dataspace;
+    static final String PROPERTY = "dataspace";
 
-    static final String DATASPACE = "dataspace";
+    @ToString.Exclude
+    private final Metadata.Key<String> key = keyOf(PROPERTY);
 
-    private static final Metadata.Key<String> DATASPACE_KEY = Metadata.Key.of(DATASPACE, ASCII_STRING_MARSHALLER);
-
-    @Override
-    public void mutate(final Metadata headers) {
-        headers.put(DATASPACE_KEY, dataspace);
-    }
-
-    @Override
-    public String toString() {
-        return ("DataspaceHeaderInterceptor(dataspace=" + dataspace + ")");
-    }
+    private final String value;
 }
