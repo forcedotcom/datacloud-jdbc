@@ -26,29 +26,19 @@ import java.sql.RowIdLifetime;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 
 @Slf4j
+@AllArgsConstructor
 public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     private final DataCloudStatement dataCloudStatement;
     private final Optional<TokenProcessor> tokenProcessor;
     private final OkHttpClient client;
-    private final String loginURL;
+    private final Optional<DataCloudConnectionString> connectionString;
     private final String userName;
-
-    public DataCloudDatabaseMetadata(
-            DataCloudStatement dataCloudStatement,
-            Optional<TokenProcessor> tokenProcessor,
-            OkHttpClient client,
-            String loginURL,
-            String userName) {
-        this.dataCloudStatement = dataCloudStatement;
-        this.tokenProcessor = tokenProcessor;
-        this.client = client;
-        this.loginURL = loginURL;
-        this.userName = userName;
-    }
 
     @Override
     public boolean allProceduresAreCallable() {
@@ -60,9 +50,10 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
         return true;
     }
 
+    @SneakyThrows
     @Override
     public String getURL() {
-        return loginURL;
+        return connectionString.map(DataCloudConnectionString::getDatabaseUrl).orElse(null);
     }
 
     @Override

@@ -15,12 +15,13 @@
  */
 package com.salesforce.datacloud.jdbc;
 
+import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
 import static com.salesforce.datacloud.jdbc.core.StreamingResultSetTest.query;
-import static com.salesforce.datacloud.jdbc.util.Constants.CONNECTION_PROTOCOL;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
+import com.google.common.collect.ImmutableSet;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
@@ -39,6 +40,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -67,7 +69,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 class OrgIntegrationTest {
     static Properties getPropertiesFromEnvironment() {
         val properties = new Properties();
-        System.getenv().forEach(properties::setProperty);
+        System.getenv().entrySet().stream()
+                .filter(e -> SETTINGS.contains(e.getKey()))
+                .forEach(e -> properties.setProperty(e.getKey(), e.getValue()));
         return properties;
     }
 
@@ -336,6 +340,8 @@ class OrgIntegrationTest {
         executor.shutdown();
     }
 
+    @Test
+    @Disabled
     @SneakyThrows
     void testMainQuery() {
         int max = 100;
@@ -362,8 +368,31 @@ class OrgIntegrationTest {
         }
     }
 
+    @Test
+    @Disabled
+    @SneakyThrows
+    void testMetadataUrlRoundTrip() {
+        try (val connection = getConnection()) {
+            val url = connection.getMetaData().getURL();
+            val driver = DriverManager.getDriver(url);
+            assertThat(driver).isInstanceOf(DataCloudJDBCDriver.class);
+        }
+    }
+
     static boolean validateProperties() {
         AuthenticationSettings getSettings = getSettingsFromEnvironment();
         return getSettings != null;
     }
+
+    private static final Set<String> SETTINGS = ImmutableSet.of(
+            "loginURL",
+            "userName",
+            "password",
+            "privateKey",
+            "clientSecret",
+            "clientId",
+            "dataspace",
+            "maxRetries",
+            "User-Agent",
+            "refreshToken");
 }

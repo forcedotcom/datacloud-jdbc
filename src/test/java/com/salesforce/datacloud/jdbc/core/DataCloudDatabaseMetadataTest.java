@@ -25,6 +25,7 @@ import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.jdbc.DataCloudJDBCDriver;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
 import com.salesforce.datacloud.jdbc.auth.OAuthToken;
@@ -37,6 +38,7 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.ClientBuilder;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -85,14 +87,20 @@ public class DataCloudDatabaseMetadataTest {
     DataCloudDatabaseMetadata dataCloudDatabaseMetadata;
 
     @BeforeEach
+    @SneakyThrows
     public void beforeEach() {
+        val connectionString = DataCloudConnectionString.of("jdbc:salesforce-datacloud://login.salesforce.com");
         dataCloudStatement = mock(DataCloudStatement.class);
         tokenProcessor = mock(TokenProcessor.class);
         val properties = propertiesForPassword("un", "pw");
         val client = ClientBuilder.buildOkHttpClient(properties);
         authenticationSettings = mock(AuthenticationSettings.class);
         dataCloudDatabaseMetadata = new DataCloudDatabaseMetadata(
-                dataCloudStatement, Optional.ofNullable(tokenProcessor), client, "loginURL", "userName");
+                dataCloudStatement,
+                Optional.ofNullable(tokenProcessor),
+                client,
+                Optional.of(connectionString),
+                "userName");
     }
 
     @Test
@@ -106,8 +114,13 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
+    @SneakyThrows
     public void testGetURL() {
-        assertThat(dataCloudDatabaseMetadata.getURL()).isEqualTo("loginURL");
+        val url = dataCloudDatabaseMetadata.getURL();
+        val driver = DriverManager.getDriver(url);
+
+        assertThat(url).isEqualTo(DataCloudConnectionString.CONNECTION_PROTOCOL + "//login.salesforce.com");
+        assertThat(driver).isInstanceOf(DataCloudJDBCDriver.class);
     }
 
     @Test

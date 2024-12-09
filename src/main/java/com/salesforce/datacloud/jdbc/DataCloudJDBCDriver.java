@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc;
 
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
+import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -66,7 +67,7 @@ public class DataCloudJDBCDriver implements Driver {
 
     @Override
     public boolean acceptsURL(String url) {
-        return DataCloudConnection.acceptsUrl(url);
+        return DataCloudConnectionString.acceptsUrl(url);
     }
 
     @Override
