@@ -16,10 +16,12 @@
 package com.salesforce.datacloud.jdbc.util;
 
 import java.util.function.Function;
+import lombok.SneakyThrows;
 
 @FunctionalInterface
 public interface ThrowingFunction<T, R, E extends Exception> {
-    static <T, R, E extends Exception> Function<T, R> rethrowFunction(ThrowingFunction<T, R, E> function) throws E {
+    @SneakyThrows
+    static <T, R, E extends Exception> Function<T, R> rethrowFunction(ThrowingFunction<T, R, E> function) {
         return t -> {
             try {
                 return function.apply(t);
@@ -31,7 +33,7 @@ public interface ThrowingFunction<T, R, E extends Exception> {
     }
 
     @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void throwAsUnchecked(Exception exception) throws E {
+    static <E extends Throwable> void throwAsUnchecked(Exception exception) throws E {
         throw (E) exception;
     }
 

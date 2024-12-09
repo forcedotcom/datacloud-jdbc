@@ -15,6 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
@@ -86,12 +88,12 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
     }
 
     private static Map<String, Object> retryPolicy(int maxRetryAttempts) {
-        return Map.of(
+        return ImmutableMap.of(
                 "methodConfig",
-                List.of(Map.of(
-                        "name", List.of(Collections.EMPTY_MAP),
+                ImmutableList.of(ImmutableMap.of(
+                        "name", ImmutableList.of(Collections.EMPTY_MAP),
                         "retryPolicy",
-                                Map.of(
+                                ImmutableMap.of(
                                         "maxAttempts",
                                         String.valueOf(maxRetryAttempts),
                                         "initialBackoff",
@@ -101,7 +103,7 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
                                         "backoffMultiplier",
                                         2.0,
                                         "retryableStatusCodes",
-                                        List.of("UNAVAILABLE")))));
+                                        ImmutableList.of("UNAVAILABLE")))));
     }
 
     public static HyperGrpcClientExecutor of(
@@ -188,13 +190,13 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
     private final HyperServiceGrpc.HyperServiceBlockingStub stub = lazyStub();
 
     private HyperServiceGrpc.HyperServiceBlockingStub lazyStub() {
-        var result = HyperServiceGrpc.newBlockingStub(channel);
+        HyperServiceGrpc.HyperServiceBlockingStub result = HyperServiceGrpc.newBlockingStub(channel);
 
         log.info("Stub will execute query. deadline={}", queryTimeout > 0 ? Duration.ofSeconds(queryTimeout) : "none");
 
         if (interceptors != null && !interceptors.isEmpty()) {
             log.info("Registering additional interceptors. count={}", interceptors.size());
-            result = result.withInterceptors(interceptors.toArray(ClientInterceptor[]::new));
+            result = result.withInterceptors(interceptors.toArray(new ClientInterceptor[0]));
         }
 
         if (queryTimeout > 0) {

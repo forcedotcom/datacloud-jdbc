@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.nulledOutVector;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
@@ -186,11 +187,11 @@ public class BaseIntVectorAccessorTest {
     }
 
     private List<Byte> getTinyIntValues() {
-        return List.of((byte) 0, (byte) 1, (byte) -1, Byte.MIN_VALUE, Byte.MAX_VALUE);
+        return ImmutableList.of((byte) 0, (byte) 1, (byte) -1, Byte.MIN_VALUE, Byte.MAX_VALUE);
     }
 
     private List<Short> getSmallIntValues() {
-        return List.of(
+        return ImmutableList.of(
                 (short) 0,
                 (short) 1,
                 (short) -1,
@@ -201,7 +202,7 @@ public class BaseIntVectorAccessorTest {
     }
 
     private List<Integer> getIntValues() {
-        return List.of(
+        return ImmutableList.of(
                 0,
                 1,
                 -1,
@@ -214,7 +215,7 @@ public class BaseIntVectorAccessorTest {
     }
 
     private List<Long> getBigIntValues() {
-        return List.of(
+        return ImmutableList.of(
                 (long) 0,
                 (long) 1,
                 (long) -1,

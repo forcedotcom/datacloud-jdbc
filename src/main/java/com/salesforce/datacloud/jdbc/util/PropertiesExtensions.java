@@ -33,12 +33,15 @@ public class PropertiesExtensions {
         }
 
         val value = properties.getProperty(key);
-        return (value == null || value.isBlank()) ? Optional.empty() : Optional.of(value);
+        return (value == null || StringCompatibility.isBlank(value)) ? Optional.empty() : Optional.of(value);
     }
 
     public static String required(Properties properties, String key) {
-        return optional(properties, key)
-                .orElseThrow(() -> new IllegalArgumentException(Messages.REQUIRED_MISSING_PREFIX + key));
+        val result = optional(properties, key);
+        if (!result.isPresent()) {
+            throw new IllegalArgumentException(Messages.REQUIRED_MISSING_PREFIX + key);
+        }
+        return result.get();
     }
 
     public static Properties copy(Properties properties, Set<String> filterKeys) {

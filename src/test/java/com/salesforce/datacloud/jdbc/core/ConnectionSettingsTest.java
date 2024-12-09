@@ -17,10 +17,10 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,7 @@ public class ConnectionSettingsTest extends HyperTestBase {
     @Test
     @SneakyThrows
     public void testHyperRespectsConnectionSetting() {
-        val settings = Map.entry("serverSetting.date_style", "YMD");
+        val settings = Maps.immutableEntry("serverSetting.date_style", "YMD");
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         assertWithStatement(

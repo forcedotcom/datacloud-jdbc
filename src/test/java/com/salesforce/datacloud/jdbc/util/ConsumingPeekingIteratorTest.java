@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -34,14 +35,14 @@ class ConsumingPeekingIteratorTest {
 
     private List<Deque<Integer>> getData() {
         return Stream.of(
-                        List.of(1, 2, 3),
-                        List.of(4, 5, 6, 7, 8, 9),
+                        ImmutableList.of(1, 2, 3),
+                        ImmutableList.of(4, 5, 6, 7, 8, 9),
                         new ArrayList<Integer>(),
                         new ArrayList<Integer>(),
                         new ArrayList<Integer>(),
                         new ArrayList<Integer>(),
-                        List.of(10, 11, 12, 13, 14, 15, 16, 17, 18, 19),
-                        List.of(20),
+                        ImmutableList.of(10, 11, 12, 13, 14, 15, 16, 17, 18, 19),
+                        ImmutableList.of(20),
                         new ArrayList<Integer>())
                 .map(ArrayDeque::new)
                 .collect(Collectors.toList());

@@ -29,12 +29,12 @@ public interface HeaderMutatingClientInterceptor extends ClientInterceptor {
     void mutate(final Metadata headers);
 
     @Override
-    default <Req, Res> ClientCall<Req, Res> interceptCall(
-            MethodDescriptor<Req, Res> method, CallOptions callOptions, Channel next) {
-        return new ForwardingClientCall.SimpleForwardingClientCall<>(next.newCall(method, callOptions)) {
+    default <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
+            MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
+        return new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(next.newCall(method, callOptions)) {
             @SneakyThrows
             @Override
-            public void start(final Listener<Res> responseListener, final Metadata headers) {
+            public void start(final Listener<RespT> responseListener, final Metadata headers) {
                 try {
                     mutate(headers);
                 } catch (Exception ex) {

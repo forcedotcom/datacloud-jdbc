@@ -111,7 +111,7 @@ class AdaptiveQueryStatusPollerTest extends HyperGrpcTestBase {
         val data = RealisticArrowGenerator.data();
         val actual = sut.map(
                         ExecuteQueryResponse.newBuilder().setQueryResult(data).build())
-                .orElseThrow();
+                .orElseThrow(RuntimeException::new);
         assertThat(actual).isEqualTo(data);
     }
 }

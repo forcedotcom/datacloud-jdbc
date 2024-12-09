@@ -18,6 +18,8 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.salesforce.hyperdb.grpc.ExecuteQueryResponse;
 import com.salesforce.hyperdb.grpc.HyperServiceGrpc;
@@ -31,7 +33,6 @@ import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import lombok.Getter;
@@ -83,13 +84,13 @@ public class HyperGrpcClientRetryTest {
     }
 
     private Map<String, Object> retryPolicy() {
-        return Map.of(
+        return ImmutableMap.of(
                 "methodConfig",
-                List.of(Map.of(
+                ImmutableList.of(ImmutableMap.of(
                         "name",
-                        List.of(Collections.EMPTY_MAP),
+                        ImmutableList.of(Collections.EMPTY_MAP),
                         "retryPolicy",
-                        Map.of(
+                        ImmutableMap.of(
                                 "maxAttempts",
                                 String.valueOf(5),
                                 "initialBackoff",
@@ -99,7 +100,7 @@ public class HyperGrpcClientRetryTest {
                                 "backoffMultiplier",
                                 2.0,
                                 "retryableStatusCodes",
-                                List.of("UNAVAILABLE")))));
+                                ImmutableList.of("UNAVAILABLE")))));
     }
 
     private final String query = "SELECT * FROM test";

@@ -17,8 +17,8 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import java.sql.ResultSetMetaData;
-import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -84,7 +84,7 @@ public class QueryResultSetMetadataTest {
 
     @Test
     public void testGetColumnLabelWithNullColumnNameReturnsDefaultValue() {
-        queryResultSetMetadata = new QueryResultSetMetadata(null, List.of("Col1"), List.of(1));
+        queryResultSetMetadata = new QueryResultSetMetadata(null, ImmutableList.of("Col1"), ImmutableList.of(1));
         assertThat(queryResultSetMetadata.getColumnLabel(1)).isEqualTo("C0");
     }
 

@@ -28,6 +28,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.DateTimeUtils;
@@ -50,7 +51,6 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Calendar;
-import java.util.List;
 import java.util.Properties;
 import java.util.TimeZone;
 import java.util.stream.Stream;
@@ -97,7 +97,7 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
     @Test
     @SneakyThrows
     public void testExecuteQuery() {
-        setupHyperGrpcClientWithMockedResultSet("query id", List.of());
+        setupHyperGrpcClientWithMockedResultSet("query id", ImmutableList.of());
         ResultSet resultSet = preparedStatement.executeQuery("SELECT * FROM table");
         assertNotNull(resultSet);
         assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(3);
@@ -109,7 +109,7 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
     @Test
     @SneakyThrows
     public void testExecute() {
-        setupHyperGrpcClientWithMockedResultSet("query id", List.of());
+        setupHyperGrpcClientWithMockedResultSet("query id", ImmutableList.of());
         preparedStatement.execute("SELECT * FROM table");
         ResultSet resultSet = preparedStatement.getResultSet();
         assertNotNull(resultSet);
@@ -130,7 +130,9 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
         val statement = new DataCloudPreparedStatement(mockConnection, mockParameterManager);
 
         setupHyperGrpcClientWithMockedResultSet(
-                "query id", List.of(), forceSync ? QueryParam.TransferMode.SYNC : QueryParam.TransferMode.ADAPTIVE);
+                "query id",
+                ImmutableList.of(),
+                forceSync ? QueryParam.TransferMode.SYNC : QueryParam.TransferMode.ADAPTIVE);
         ResultSet response = statement.executeQuery("SELECT * FROM table");
         AssertionsForClassTypes.assertThat(statement.isReady()).isTrue();
         assertNotNull(response);

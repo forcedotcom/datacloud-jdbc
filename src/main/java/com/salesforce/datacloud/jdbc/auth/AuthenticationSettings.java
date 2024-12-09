@@ -19,6 +19,7 @@ import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.copy;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.required;
 
+import com.google.common.collect.ImmutableSet;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
@@ -84,7 +85,7 @@ public abstract class AuthenticationSettings {
         }
 
         val missing = Keys.REQUIRED_KEYS.stream()
-                .filter(k -> optional(properties, k).isEmpty())
+                .filter(k -> !optional(properties, k).isPresent())
                 .collect(Collectors.joining(", ", Messages.PROPERTIES_REQUIRED, ""));
 
         throw new DataCloudJDBCException(missing, "28000", new IllegalArgumentException(missing));
@@ -136,15 +137,15 @@ public abstract class AuthenticationSettings {
         static final String USER_AGENT = "User-Agent";
         static final String REFRESH_TOKEN = "refreshToken";
 
-        static final Set<String> REQUIRED_KEYS = Set.of(LOGIN_URL, CLIENT_ID, CLIENT_SECRET);
+        static final Set<String> REQUIRED_KEYS = ImmutableSet.of(LOGIN_URL, CLIENT_ID, CLIENT_SECRET);
 
-        static final Set<String> OPTIONAL_KEYS = Set.of(DATASPACE, USER_AGENT, MAX_RETRIES);
+        static final Set<String> OPTIONAL_KEYS = ImmutableSet.of(DATASPACE, USER_AGENT, MAX_RETRIES);
 
-        static final Set<String> PASSWORD_KEYS = Set.of(USER_NAME, PASSWORD);
+        static final Set<String> PASSWORD_KEYS = ImmutableSet.of(USER_NAME, PASSWORD);
 
-        static final Set<String> PRIVATE_KEY_KEYS = Set.of(USER_NAME, PRIVATE_KEY);
+        static final Set<String> PRIVATE_KEY_KEYS = ImmutableSet.of(USER_NAME, PRIVATE_KEY);
 
-        static final Set<String> REFRESH_TOKEN_KEYS = Set.of(REFRESH_TOKEN);
+        static final Set<String> REFRESH_TOKEN_KEYS = ImmutableSet.of(REFRESH_TOKEN);
 
         static final Set<String> ALL = Stream.of(
                         REQUIRED_KEYS, OPTIONAL_KEYS, PASSWORD_KEYS, PRIVATE_KEY_KEYS, REFRESH_TOKEN_KEYS)

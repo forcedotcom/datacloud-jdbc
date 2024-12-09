@@ -17,12 +17,12 @@ package com.salesforce.datacloud.jdbc.core.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.hyperdb.grpc.ExecuteQueryResponse;
 import com.salesforce.hyperdb.grpc.QueryInfo;
 import com.salesforce.hyperdb.grpc.QueryParam;
 import com.salesforce.hyperdb.grpc.QueryStatus;
-import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -59,8 +59,8 @@ class SyncQueryStatusListenerTest extends HyperGrpcTestBase {
                                         .build())
                                 .build())
                         .build())
-                .collect(Collectors.toUnmodifiableList());
-        setupExecuteQuery("", query, QueryParam.TransferMode.SYNC, responses.toArray(ExecuteQueryResponse[]::new));
+                .collect(Collectors.toList());
+        setupExecuteQuery("", query, QueryParam.TransferMode.SYNC, responses.toArray(new ExecuteQueryResponse[0]));
         val listener = SyncQueryStatusListener.of(query, hyperGrpcClient);
         assertThat(listener.getStatus()).isNull();
         val iterator = listener.stream().iterator();
@@ -94,7 +94,7 @@ class SyncQueryStatusListenerTest extends HyperGrpcTestBase {
     @Test
     void getResultSet() {
         val id = UUID.randomUUID().toString();
-        setupHyperGrpcClientWithMockedResultSet(id, List.of());
+        setupHyperGrpcClientWithMockedResultSet(id, ImmutableList.of());
 
         val listener = SyncQueryStatusListener.of(query, hyperGrpcClient);
         val resultSet = listener.generateResultSet();

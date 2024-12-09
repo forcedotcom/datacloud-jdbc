@@ -19,6 +19,7 @@ import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.appe
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.nulledOutVector;
 import static org.apache.calcite.avatica.util.DateTimeUtils.MILLIS_PER_DAY;
 
+import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
@@ -456,7 +457,7 @@ public class DateVectorAccessorTest {
         final int expectedMonth = zdt.getMonthValue();
         final int expectedDay = zdt.getDayOfMonth();
 
-        return Map.of("year", expectedYear, "month", expectedMonth, "day", expectedDay);
+        return ImmutableMap.of("year", expectedYear, "month", expectedMonth, "day", expectedDay);
     }
 
     private String getISOString(Long millis) {

@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
 import com.salesforce.datacloud.jdbc.auth.OAuthToken;
@@ -880,7 +881,7 @@ public class DataCloudDatabaseMetadataTest {
         val dataspaceResponse = new DataspaceResponse();
         val dataspaceAttributes = new DataspaceResponse.DataSpaceAttributes();
         dataspaceAttributes.setName(dataspaceAttributeName);
-        dataspaceResponse.setRecords(List.of(dataspaceAttributes));
+        dataspaceResponse.setRecords(ImmutableList.of(dataspaceAttributes));
 
         try (val server = new MockWebServer()) {
             server.start();
@@ -889,7 +890,7 @@ public class DataCloudDatabaseMetadataTest {
 
             server.enqueue(new MockResponse().setBody(mapper.writeValueAsString(dataspaceResponse)));
             val actual = dataCloudDatabaseMetadata.getDataspaces();
-            List<String> expected = List.of(dataspaceAttributeName);
+            List<String> expected = ImmutableList.of(dataspaceAttributeName);
             assertThat(actual).isEqualTo(expected);
 
             val actualRequest = server.takeRequest();
@@ -914,7 +915,7 @@ public class DataCloudDatabaseMetadataTest {
         val dataspaceResponse = new DataspaceResponse();
         val dataspaceAttributes = new DataspaceResponse.DataSpaceAttributes();
         dataspaceAttributes.setName(dataspaceAttributeName);
-        dataspaceResponse.setRecords(List.of(dataspaceAttributes));
+        dataspaceResponse.setRecords(ImmutableList.of(dataspaceAttributes));
 
         try (val server = new MockWebServer()) {
             server.start();

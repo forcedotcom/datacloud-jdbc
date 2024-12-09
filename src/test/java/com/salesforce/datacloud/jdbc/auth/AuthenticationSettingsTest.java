@@ -24,6 +24,7 @@ import static com.salesforce.datacloud.jdbc.util.ThrowingFunction.rethrowFunctio
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -55,7 +56,7 @@ public class AuthenticationSettingsTest {
     @SneakyThrows
     private static Stream<Arguments> constructors() {
         List<Properties> properties = Arrays.asList(null, new Properties());
-        List<Function<Properties, AuthenticationSettings>> ctors = List.of(
+        List<Function<Properties, AuthenticationSettings>> ctors = ImmutableList.of(
                 rethrowFunction(AuthenticationSettings::of),
                 rethrowFunction(PasswordAuthenticationSettings::new),
                 rethrowFunction(PrivateKeyAuthenticationSettings::new),

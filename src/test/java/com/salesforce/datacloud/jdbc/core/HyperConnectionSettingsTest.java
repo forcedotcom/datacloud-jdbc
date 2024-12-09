@@ -17,9 +17,11 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.salesforce.hyperdb.grpc.HyperServiceGrpc;
 import io.grpc.inprocess.InProcessChannelBuilder;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -34,7 +36,7 @@ class HyperConnectionSettingsTest extends HyperGrpcTestBase {
 
     @Test
     void testGetSettingWithCorrectPrefix() {
-        Map<String, String> expected = Map.of("lc_time", "en_US");
+        Map<String, String> expected = ImmutableMap.of("lc_time", "en_US");
         Properties properties = new Properties();
         properties.setProperty(HYPER_SETTING + "lc_time", "en_US");
         properties.setProperty("username", "alice");
@@ -44,7 +46,7 @@ class HyperConnectionSettingsTest extends HyperGrpcTestBase {
 
     @Test
     void testGetSettingReturnEmptyResultSet() {
-        Map<String, String> expected = Map.of();
+        Map<String, String> expected = ImmutableMap.of();
         Properties properties = new Properties();
         properties.setProperty("c_time", "en_US");
         properties.setProperty("username", "alice");
@@ -54,7 +56,7 @@ class HyperConnectionSettingsTest extends HyperGrpcTestBase {
 
     @Test
     void testGetSettingWithEmptyProperties() {
-        Map<String, String> expected = Map.of();
+        Map<String, String> expected = ImmutableMap.of();
         Properties properties = new Properties();
         HyperConnectionSettings hyperConnectionSettings = HyperConnectionSettings.of(properties);
         assertThat(hyperConnectionSettings.getSettings()).containsExactlyInAnyOrderEntriesOf(expected);
@@ -76,11 +78,11 @@ class HyperConnectionSettingsTest extends HyperGrpcTestBase {
                         actual.set(t.getSettingsMap());
                         return true;
                     })
-                    .willReturn(List.of(executeQueryResponse("", null, null))));
+                    .willReturn(ImmutableList.of(executeQueryResponse("", null, null))));
 
             client.executeQuery("").next();
         }
 
-        assertThat(actual.get()).containsOnly(Map.entry(key, setting));
+        assertThat(actual.get()).containsOnly(Maps.immutableEntry(key, setting));
     }
 }

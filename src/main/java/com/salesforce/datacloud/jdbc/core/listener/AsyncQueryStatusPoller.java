@@ -50,7 +50,9 @@ class AsyncQueryStatusPoller implements QueryStatusPoller {
 
     private Optional<QueryStatus> fetchQueryStatus() {
         val status = getQueryInfo().map(QueryInfo::getQueryStatus);
-        status.ifPresent(this.lastStatus::set);
+        if (status.isPresent()) {
+            this.lastStatus.set(status.get());
+        }
         return status;
     }
 

@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.salesforce.hyperdb.grpc.QueryResult;
 import com.salesforce.hyperdb.grpc.QueryResultPartBinary;
@@ -47,7 +48,7 @@ public class RealisticArrowGenerator {
 
     public static QueryResult data() {
         val student = new Student(random.nextInt(), "Somebody", random.nextDouble());
-        return getMockedData(List.of(student)).findFirst().orElse(null);
+        return getMockedData(ImmutableList.of(student)).findFirst().orElse(null);
     }
 
     @Value
@@ -73,7 +74,7 @@ public class RealisticArrowGenerator {
         val doubleField = new Field(
                 "grade", FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE)), null);
 
-        val fields = List.of(intField, stringField, doubleField);
+        val fields = ImmutableList.of(intField, stringField, doubleField);
         return new Schema(fields);
     }
 

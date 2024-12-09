@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.BaseIntVectorAccessor;
@@ -46,12 +47,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 public class QueryJDBCAccessorFactoryTest {
     public static final IntSupplier GET_CURRENT_ROW = () -> 0;
 
-    List<byte[]> binaryList = List.of(
+    List<byte[]> binaryList = ImmutableList.of(
             "BINARY_DATA_0001".getBytes(StandardCharsets.UTF_8),
             "BINARY_DATA_0002".getBytes(StandardCharsets.UTF_8),
             "BINARY_DATA_0003".getBytes(StandardCharsets.UTF_8));
 
-    List<Integer> uint4List = List.of(
+    List<Integer> uint4List = ImmutableList.of(
             0,
             1,
             -1,
@@ -89,7 +90,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsDecimal() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createDecimalVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createDecimalVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             Assertions.assertInstanceOf(DecimalVectorAccessor.class, accessor);
@@ -99,7 +100,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsBoolean() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createBitVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createBitVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             Assertions.assertInstanceOf(BooleanVectorAccessor.class, accessor);
@@ -109,7 +110,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsFloat8() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createFloat8Vector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createFloat8Vector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             Assertions.assertInstanceOf(DoubleVectorAccessor.class, accessor);
@@ -139,7 +140,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeNano() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeNanoVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeNanoVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             assertThat(accessor).isInstanceOf(TimeVectorAccessor.class);
@@ -149,7 +150,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeMicro() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeMicroVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeMicroVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             assertThat(accessor).isInstanceOf(TimeVectorAccessor.class);
@@ -159,7 +160,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeMilli() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeMilliVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeMilliVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             assertThat(accessor).isInstanceOf(TimeVectorAccessor.class);
@@ -169,7 +170,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeSec() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeSecVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeSecVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             assertThat(accessor).isInstanceOf(TimeVectorAccessor.class);
@@ -190,7 +191,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     public void testCreateAccessorCorrectlyDetectsTinyInt() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTinyIntVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createTinyIntVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             Assertions.assertInstanceOf(BaseIntVectorAccessor.class, accessor);
@@ -200,7 +201,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     public void testCreateAccessorCorrectlyDetectsSmallInt() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createSmallIntVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createSmallIntVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             Assertions.assertInstanceOf(BaseIntVectorAccessor.class, accessor);
@@ -210,7 +211,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     public void testCreateAccessorCorrectlyDetectsInt() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createIntVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createIntVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             Assertions.assertInstanceOf(BaseIntVectorAccessor.class, accessor);
@@ -220,7 +221,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     public void testCreateAccessorCorrectlyDetectsBigInt() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createBigIntVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createBigIntVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
             Assertions.assertInstanceOf(BaseIntVectorAccessor.class, accessor);
@@ -273,7 +274,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeStampNanoVector() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampNanoVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampNanoVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
@@ -284,7 +285,8 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeStampNanoTZVector() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampNanoTZVector(List.of(), "UTC")) {
+        try (ValueVector valueVector =
+                rootAllocatorTestExtension.createTimeStampNanoTZVector(ImmutableList.of(), "UTC")) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
@@ -295,7 +297,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeStampMicroVector() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampMicroVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampMicroVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
@@ -306,7 +308,8 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeStampMicroTZVector() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampMicroTZVector(List.of(), "UTC")) {
+        try (ValueVector valueVector =
+                rootAllocatorTestExtension.createTimeStampMicroTZVector(ImmutableList.of(), "UTC")) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
@@ -317,7 +320,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeStampMilliVector() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampMilliVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampMilliVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
@@ -328,7 +331,8 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeStampMilliTZVector() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampMilliTZVector(List.of(), "UTC")) {
+        try (ValueVector valueVector =
+                rootAllocatorTestExtension.createTimeStampMilliTZVector(ImmutableList.of(), "UTC")) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
@@ -339,7 +343,7 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeStampSecVector() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampSecVector(List.of())) {
+        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampSecVector(ImmutableList.of())) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
@@ -350,7 +354,8 @@ public class QueryJDBCAccessorFactoryTest {
     @Test
     @SneakyThrows
     void testCreateAccessorCorrectlyDetectsTimeStampSecTZVector() {
-        try (ValueVector valueVector = rootAllocatorTestExtension.createTimeStampSecTZVector(List.of(), "UTC")) {
+        try (ValueVector valueVector =
+                rootAllocatorTestExtension.createTimeStampSecTZVector(ImmutableList.of(), "UTC")) {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 

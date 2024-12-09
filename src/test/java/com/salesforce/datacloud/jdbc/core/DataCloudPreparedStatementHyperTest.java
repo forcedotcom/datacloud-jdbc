@@ -31,6 +31,7 @@ import java.util.TimeZone;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import lombok.var;
 import org.junit.jupiter.api.Test;
 
 @Slf4j

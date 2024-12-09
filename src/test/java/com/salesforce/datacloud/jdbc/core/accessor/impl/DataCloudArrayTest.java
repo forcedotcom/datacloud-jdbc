@@ -19,12 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import java.sql.Types;
 import java.util.HashMap;
-import java.util.List;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -60,7 +60,7 @@ public class DataCloudArrayTest {
     @SneakyThrows
     @Test
     void testGetBaseTypeReturnsCorrectBaseType() {
-        val values = List.of(true, false);
+        val values = ImmutableList.of(true, false);
         dataVector = extension.createBitVector(values);
         val array = new DataCloudArray(dataVector, 0, dataVector.getValueCount());
         collector.assertThat(array.getBaseType()).isEqualTo(Types.BOOLEAN);
@@ -69,7 +69,7 @@ public class DataCloudArrayTest {
     @SneakyThrows
     @Test
     void testGetBaseTypeNameReturnsCorrectBaseTypeName() {
-        val values = List.of(1, 2, 3);
+        val values = ImmutableList.of(1, 2, 3);
         dataVector = extension.createIntVector(values);
         val array = new DataCloudArray(dataVector, 0, dataVector.getValueCount());
         collector.assertThat(array.getBaseTypeName()).isEqualTo("INTEGER");
@@ -78,7 +78,7 @@ public class DataCloudArrayTest {
     @SneakyThrows
     @Test
     void testGetArrayReturnsCorrectArray() {
-        val values = List.of(1, 2, 3);
+        val values = ImmutableList.of(1, 2, 3);
         dataVector = extension.createIntVector(values);
         val dataCloudArray = new DataCloudArray(dataVector, 0, dataVector.getValueCount());
         val array = (Object[]) dataCloudArray.getArray();
@@ -90,11 +90,11 @@ public class DataCloudArrayTest {
     @SneakyThrows
     @Test
     void testGetArrayWithCorrectOffsetReturnsCorrectArray() {
-        val values = List.of(1, 2, 3);
+        val values = ImmutableList.of(1, 2, 3);
         dataVector = extension.createIntVector(values);
         val dataCloudArray = new DataCloudArray(dataVector, 0, dataVector.getValueCount());
         val array = (Object[]) dataCloudArray.getArray(0, 2);
-        val expected = List.of(1, 2).toArray();
+        val expected = ImmutableList.of(1, 2).toArray();
         collector.assertThat(array).isEqualTo(expected);
         collector.assertThat(array.length).isEqualTo(expected.length);
     }
@@ -102,7 +102,7 @@ public class DataCloudArrayTest {
     @SneakyThrows
     @Test
     void testShouldThrowIfGetArrayHasIncorrectOffset() {
-        val values = List.of(1, 2, 3);
+        val values = ImmutableList.of(1, 2, 3);
         dataVector = extension.createIntVector(values);
         val dataCloudArray = new DataCloudArray(dataVector, 0, dataVector.getValueCount());
         assertThrows(
@@ -112,7 +112,7 @@ public class DataCloudArrayTest {
     @SneakyThrows
     @Test
     void testShouldThrowIfGetArrayHasIncorrectIndex() {
-        val values = List.of(1, 2, 3);
+        val values = ImmutableList.of(1, 2, 3);
         dataVector = extension.createIntVector(values);
         val dataCloudArray = new DataCloudArray(dataVector, 0, dataVector.getValueCount());
         assertThrows(
@@ -137,7 +137,7 @@ public class DataCloudArrayTest {
     @MethodSource("unsupported")
     @SneakyThrows
     void testUnsupportedOperations(ThrowingConsumer<DataCloudArray> func) {
-        val values = List.of(1, 2, 3);
+        val values = ImmutableList.of(1, 2, 3);
         dataVector = extension.createIntVector(values);
         val dataCloudArray = new DataCloudArray(dataVector, 0, dataVector.getValueCount());
 

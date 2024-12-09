@@ -15,11 +15,12 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 import java.util.TimeZone;
 import lombok.experimental.UtilityClass;
 import lombok.val;
@@ -32,7 +33,8 @@ import org.apache.calcite.avatica.QueryState;
 @UtilityClass
 public class MetadataResultSet {
     public static AvaticaResultSet of() throws SQLException {
-        val signature = new Meta.Signature(List.of(), null, List.of(), Map.of(), null, Meta.StatementType.SELECT);
+        val signature = new Meta.Signature(
+                ImmutableList.of(), null, ImmutableList.of(), ImmutableMap.of(), null, Meta.StatementType.SELECT);
         return of(
                 null,
                 new QueryState(),
@@ -40,7 +42,7 @@ public class MetadataResultSet {
                 new AvaticaResultSetMetaData(null, null, signature),
                 TimeZone.getDefault(),
                 null,
-                List.of());
+                ImmutableList.of());
     }
 
     public static AvaticaResultSet of(

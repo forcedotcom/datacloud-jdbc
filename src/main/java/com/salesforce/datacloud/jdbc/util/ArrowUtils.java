@@ -15,6 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -115,22 +117,28 @@ public class ArrowUtils {
                 .collect(Collectors.toList());
     }
 
-    private static final Map<Integer, Function<ParameterBinding, FieldType>> SQL_TYPE_TO_FIELD_TYPE = Map.ofEntries(
-            Map.entry(Types.VARCHAR, pb -> FieldType.nullable(new ArrowType.Utf8())),
-            Map.entry(Types.INTEGER, pb -> FieldType.nullable(new ArrowType.Int(32, true))),
-            Map.entry(Types.BIGINT, pb -> FieldType.nullable(new ArrowType.Int(64, true))),
-            Map.entry(Types.BOOLEAN, pb -> FieldType.nullable(new ArrowType.Bool())),
-            Map.entry(Types.TINYINT, pb -> FieldType.nullable(new ArrowType.Int(8, true))),
-            Map.entry(Types.SMALLINT, pb -> FieldType.nullable(new ArrowType.Int(16, true))),
-            Map.entry(Types.DATE, pb -> FieldType.nullable(new ArrowType.Date(DateUnit.DAY))),
-            Map.entry(Types.TIME, pb -> FieldType.nullable(new ArrowType.Time(TimeUnit.MICROSECOND, 64))),
-            Map.entry(Types.TIMESTAMP, pb -> FieldType.nullable(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC"))),
-            Map.entry(
-                    Types.FLOAT, pb -> FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE))),
-            Map.entry(
-                    Types.DOUBLE, pb -> FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE))),
-            Map.entry(Types.DECIMAL, ArrowUtils::createDecimalFieldType),
-            Map.entry(Types.ARRAY, pb -> FieldType.nullable(new ArrowType.List())));
+    private static final Map<Integer, Function<ParameterBinding, FieldType>> SQL_TYPE_TO_FIELD_TYPE =
+            ImmutableMap.ofEntries(
+                    Maps.immutableEntry(Types.VARCHAR, pb -> FieldType.nullable(new ArrowType.Utf8())),
+                    Maps.immutableEntry(Types.INTEGER, pb -> FieldType.nullable(new ArrowType.Int(32, true))),
+                    Maps.immutableEntry(Types.BIGINT, pb -> FieldType.nullable(new ArrowType.Int(64, true))),
+                    Maps.immutableEntry(Types.BOOLEAN, pb -> FieldType.nullable(new ArrowType.Bool())),
+                    Maps.immutableEntry(Types.TINYINT, pb -> FieldType.nullable(new ArrowType.Int(8, true))),
+                    Maps.immutableEntry(Types.SMALLINT, pb -> FieldType.nullable(new ArrowType.Int(16, true))),
+                    Maps.immutableEntry(Types.DATE, pb -> FieldType.nullable(new ArrowType.Date(DateUnit.DAY))),
+                    Maps.immutableEntry(
+                            Types.TIME, pb -> FieldType.nullable(new ArrowType.Time(TimeUnit.MICROSECOND, 64))),
+                    Maps.immutableEntry(
+                            Types.TIMESTAMP,
+                            pb -> FieldType.nullable(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC"))),
+                    Maps.immutableEntry(
+                            Types.FLOAT,
+                            pb -> FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE))),
+                    Maps.immutableEntry(
+                            Types.DOUBLE,
+                            pb -> FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE))),
+                    Maps.immutableEntry(Types.DECIMAL, ArrowUtils::createDecimalFieldType),
+                    Maps.immutableEntry(Types.ARRAY, pb -> FieldType.nullable(new ArrowType.List())));
 
     /**
      * Creates a Schema from a list of ParameterBinding.

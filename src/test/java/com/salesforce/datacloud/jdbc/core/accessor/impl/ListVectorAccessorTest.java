@@ -157,6 +157,6 @@ public class ListVectorAccessorTest {
     private List<List<Integer>> createListVectors() {
         return IntStream.range(0, total)
                 .mapToObj(x -> IntStream.range(0, 5).map(j -> j * x).boxed().collect(Collectors.toList()))
-                .collect(Collectors.toUnmodifiableList());
+                .collect(Collectors.toList());
     }
 }

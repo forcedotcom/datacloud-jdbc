@@ -15,8 +15,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static java.util.Map.entry;
+import static com.google.common.collect.Maps.immutableEntry;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.auth.OAuthToken;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
 import com.salesforce.datacloud.jdbc.config.QueryResources;
@@ -85,23 +87,23 @@ class QueryMetadataUtil {
     private static final int AUTO_INCREMENT_INDEX = 22;
     private static final int GENERATED_COLUMN_INDEX = 23;
 
-    private static final Map<String, String> dbTypeToSql = Map.ofEntries(
-            Map.entry("int2", SqlType.SMALLINT.toString()),
-            Map.entry("int4", SqlType.INTEGER.toString()),
-            Map.entry("oid", SqlType.BIGINT.toString()),
-            Map.entry("int8", SqlType.BIGINT.toString()),
-            Map.entry("float", SqlType.DOUBLE.toString()),
-            Map.entry("float4", SqlType.REAL.toString()),
-            Map.entry("float8", SqlType.DOUBLE.toString()),
-            Map.entry("bool", SqlType.BOOLEAN.toString()),
-            Map.entry("char", SqlType.CHAR.toString()),
-            Map.entry("text", SqlType.VARCHAR.toString()),
-            Map.entry("date", SqlType.DATE.toString()),
-            Map.entry("time", SqlType.TIME.toString()),
-            Map.entry("timetz", SqlType.TIME.toString()),
-            Map.entry("timestamp", SqlType.TIMESTAMP.toString()),
-            Map.entry("timestamptz", SqlType.TIMESTAMP.toString()),
-            Map.entry("array", SqlType.ARRAY.toString()));
+    private static final Map<String, String> dbTypeToSql = ImmutableMap.ofEntries(
+            immutableEntry("int2", SqlType.SMALLINT.toString()),
+            immutableEntry("int4", SqlType.INTEGER.toString()),
+            immutableEntry("oid", SqlType.BIGINT.toString()),
+            immutableEntry("int8", SqlType.BIGINT.toString()),
+            immutableEntry("float", SqlType.DOUBLE.toString()),
+            immutableEntry("float4", SqlType.REAL.toString()),
+            immutableEntry("float8", SqlType.DOUBLE.toString()),
+            immutableEntry("bool", SqlType.BOOLEAN.toString()),
+            immutableEntry("char", SqlType.CHAR.toString()),
+            immutableEntry("text", SqlType.VARCHAR.toString()),
+            immutableEntry("date", SqlType.DATE.toString()),
+            immutableEntry("time", SqlType.TIME.toString()),
+            immutableEntry("timetz", SqlType.TIME.toString()),
+            immutableEntry("timestamp", SqlType.TIMESTAMP.toString()),
+            immutableEntry("timestamptz", SqlType.TIMESTAMP.toString()),
+            immutableEntry("array", SqlType.ARRAY.toString()));
 
     public static ResultSet createTableResultSet(
             String schemaPattern, String tableNamePattern, String[] types, DataCloudStatement dataCloudStatement)
@@ -357,7 +359,7 @@ class QueryMetadataUtil {
             throws SQLException {
         val tenantId = tokenProcessor.get().getDataCloudToken().getTenantId();
         val dataspaceName = tokenProcessor.get().getSettings().getDataspace();
-        List<Object> data = List.of(List.of("lakehouse:" + tenantId + ";" + dataspaceName));
+        List<Object> data = ImmutableList.of(ImmutableList.of("lakehouse:" + tenantId + ";" + dataspaceName));
 
         QueryDBMetadata queryDbMetadata = QueryDBMetadata.GET_CATALOGS;
 
@@ -382,7 +384,7 @@ class QueryMetadataUtil {
         val builder = FormCommand.builder();
         builder.url(oAuthToken.getInstanceUrl());
         builder.suffix(new URI(SOQL_ENDPOINT_SUFFIX));
-        builder.queryParameters(Map.of(SOQL_QUERY_PARAM_KEY, "SELECT+name+from+Dataspace"));
+        builder.queryParameters(ImmutableMap.of(SOQL_QUERY_PARAM_KEY, "SELECT+name+from+Dataspace"));
         builder.header(Constants.AUTHORIZATION, oAuthToken.getBearerToken());
         builder.header(FormCommand.CONTENT_TYPE_HEADER_NAME, Constants.CONTENT_TYPE_JSON);
         builder.header("User-Agent", "cdp/jdbc");
@@ -395,7 +397,8 @@ class QueryMetadataUtil {
         String errorMessage = isGetCatalog
                 ? "Token processor is empty. getCatalogs() cannot be executed"
                 : "Token processor is empty. getDataspaces() cannot be executed";
-        if (tokenProcessor.isEmpty()) {
+
+        if (!tokenProcessor.isPresent()) {
             throw new DataCloudJDBCException(errorMessage);
         }
         try {
@@ -409,115 +412,118 @@ class QueryMetadataUtil {
         }
     }
 
-    private static final Map<String, Map<String, String>> tableTypeClauses = Map.ofEntries(
-            entry(
+    private static final Map<String, Map<String, String>> tableTypeClauses = ImmutableMap.ofEntries(
+            immutableEntry(
                     "TABLE",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'r' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'",
                             "NOSCHEMAS",
                             "c.relkind = 'r' AND c.relname !~ '^pg_'")),
-            entry(
+            immutableEntry(
                     "PARTITIONED TABLE",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'p' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'",
                             "NOSCHEMAS",
                             "c.relkind = 'p' AND c.relname !~ '^pg_'")),
-            entry(
+            immutableEntry(
                     "VIEW",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'v' AND n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema'",
                             "NOSCHEMAS",
                             "c.relkind = 'v' AND c.relname !~ '^pg_'")),
-            entry(
+            immutableEntry(
                     "INDEX",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'i' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'",
                             "NOSCHEMAS",
                             "c.relkind = 'i' AND c.relname !~ '^pg_'")),
-            entry(
+            immutableEntry(
                     "PARTITIONED INDEX",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'I' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'",
                             "NOSCHEMAS",
                             "c.relkind = 'I' AND c.relname !~ '^pg_'")),
-            entry("SEQUENCE", Map.of("SCHEMAS", "c.relkind = 'S'", "NOSCHEMAS", "c.relkind = 'S'")),
-            entry(
+            immutableEntry("SEQUENCE", ImmutableMap.of("SCHEMAS", "c.relkind = 'S'", "NOSCHEMAS", "c.relkind = 'S'")),
+            immutableEntry(
                     "TYPE",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'c' AND n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'",
                             "NOSCHEMAS",
                             "c.relkind = 'c' AND c.relname !~ '^pg_'")),
-            entry(
+            immutableEntry(
                     "SYSTEM TABLE",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'r' AND (n.nspname = 'pg_catalog' OR n.nspname = 'information_schema')",
                             "NOSCHEMAS",
                             "c.relkind = 'r' AND c.relname ~ '^pg_' AND c.relname !~ '^pg_toast_' AND c.relname !~ '^pg_temp_'")),
-            entry(
+            immutableEntry(
                     "SYSTEM TOAST TABLE",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'r' AND n.nspname = 'pg_toast'",
                             "NOSCHEMAS",
                             "c.relkind = 'r' AND c.relname ~ '^pg_toast_'")),
-            entry(
+            immutableEntry(
                     "SYSTEM TOAST INDEX",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'i' AND n.nspname = 'pg_toast'",
                             "NOSCHEMAS",
                             "c.relkind = 'i' AND c.relname ~ '^pg_toast_'")),
-            entry(
+            immutableEntry(
                     "SYSTEM VIEW",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'v' AND (n.nspname = 'pg_catalog' OR n.nspname = 'information_schema') ",
                             "NOSCHEMAS",
                             "c.relkind = 'v' AND c.relname ~ '^pg_'")),
-            entry(
+            immutableEntry(
                     "SYSTEM INDEX",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'i' AND (n.nspname = 'pg_catalog' OR n.nspname = 'information_schema') ",
                             "NOSCHEMAS",
                             "c.relkind = 'v' AND c.relname ~ '^pg_' AND c.relname !~ '^pg_toast_' AND c.relname !~ '^pg_temp_'")),
-            entry(
+            immutableEntry(
                     "TEMPORARY TABLE",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind IN ('r','p') AND n.nspname ~ '^pg_temp_' ",
                             "NOSCHEMAS",
                             "c.relkind IN ('r','p') AND c.relname ~ '^pg_temp_' ")),
-            entry(
+            immutableEntry(
                     "TEMPORARY INDEX",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'i' AND n.nspname ~ '^pg_temp_' ",
                             "NOSCHEMAS",
                             "c.relkind = 'i' AND c.relname ~ '^pg_temp_' ")),
-            entry(
+            immutableEntry(
                     "TEMPORARY VIEW",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'v' AND n.nspname ~ '^pg_temp_' ",
                             "NOSCHEMAS",
                             "c.relkind = 'v' AND c.relname ~ '^pg_temp_' ")),
-            entry(
+            immutableEntry(
                     "TEMPORARY SEQUENCE",
-                    Map.of(
+                    ImmutableMap.of(
                             "SCHEMAS",
                             "c.relkind = 'S' AND n.nspname ~ '^pg_temp_' ",
                             "NOSCHEMAS",
                             "c.relkind = 'S' AND c.relname ~ '^pg_temp_' ")),
-            entry("FOREIGN TABLE", Map.of("SCHEMAS", "c.relkind = 'f'", "NOSCHEMAS", "c.relkind = 'f'")),
-            entry("MATERIALIZED VIEW", Map.of("SCHEMAS", "c.relkind = 'm'", "NOSCHEMAS", "c.relkind = 'm'")));
+            immutableEntry(
+                    "FOREIGN TABLE", ImmutableMap.of("SCHEMAS", "c.relkind = 'f'", "NOSCHEMAS", "c.relkind = 'f'")),
+            immutableEntry(
+                    "MATERIALIZED VIEW",
+                    ImmutableMap.of("SCHEMAS", "c.relkind = 'm'", "NOSCHEMAS", "c.relkind = 'm'")));
 
     public static String quoteStringLiteral(String v) {
         StringBuilder result = new StringBuilder();

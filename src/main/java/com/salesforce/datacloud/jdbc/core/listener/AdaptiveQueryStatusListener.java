@@ -149,7 +149,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     @SneakyThrows
     private void blockUntilReady(QueryStatusPoller poller, Duration timeout) {
         val end = Instant.now().plus(timeout);
-        var millis = 1000;
+        int millis = 1000;
         while (!poller.pollIsReady() && Instant.now().isBefore(end)) {
             log.info(
                     "Waiting for additional query results. queryId={}, timeout={}, sleep={}",

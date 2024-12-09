@@ -32,6 +32,7 @@ import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.MaxMetadataSizeHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
 import com.salesforce.datacloud.jdbc.util.Messages;
+import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URI;
@@ -109,9 +110,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     /** This flow is not supported by the JDBC Driver Manager, only use it if you know what you're doing. */
     public static DataCloudConnection fromTokenSupplier(
-            AuthorizationHeaderInterceptor authInterceptor,
-            @NonNull ManagedChannelBuilder<?> builder,
-            Properties properties)
+            AuthorizationHeaderInterceptor authInterceptor, ManagedChannelBuilder<?> builder, Properties properties)
             throws SQLException {
         val interceptors = getClientInterceptors(authInterceptor, properties);
         val executor = HyperGrpcClientExecutor.of(builder.intercept(interceptors), properties);
@@ -137,7 +136,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     public static DataCloudConnection of(String url, Properties properties) throws SQLException {
-        var serviceRootUrl = getServiceRootUrl(url);
+        val serviceRootUrl = getServiceRootUrl(url);
         properties.put(LOGIN_URL, serviceRootUrl);
         addClientUsernameIfRequired(properties);
 
@@ -451,7 +450,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         val noTrailingSlash = StringUtils.removeEnd(serviceRootUrl, "/");
         val host = StringUtils.removeStart(noTrailingSlash, "//");
 
-        return host.isBlank() ? host : createURI(host).toString();
+        return StringCompatibility.isBlank(host) ? host : createURI(host).toString();
     }
 
     private static URI createURI(String host) throws SQLException {

@@ -18,10 +18,10 @@ package com.salesforce.datacloud.jdbc.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import lombok.val;
@@ -85,15 +85,16 @@ class PropertiesExtensionsTest {
 
     @Test
     void copy() {
-        val included = Set.of("a", "b", "c", "d", "e");
-        val excluded = Set.of("1", "2", "3", "4", "5");
+        val included = ImmutableSet.of("a", "b", "c", "d", "e");
+        val excluded = ImmutableSet.of("1", "2", "3", "4", "5");
 
         val p = new Properties();
         Stream.concat(included.stream(), excluded.stream()).forEach(k -> p.put(k, k.toUpperCase(Locale.ROOT)));
 
         val actual = PropertiesExtensions.copy(p, included);
 
-        assertThat(actual).containsExactlyInAnyOrderEntriesOf(Map.of("a", "A", "b", "B", "c", "C", "d", "D", "e", "E"));
+        assertThat(actual)
+                .containsExactlyInAnyOrderEntriesOf(ImmutableMap.of("a", "A", "b", "B", "c", "C", "d", "D", "e", "E"));
     }
 
     @Test

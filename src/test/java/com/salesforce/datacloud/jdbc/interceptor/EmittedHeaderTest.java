@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.interceptor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
@@ -146,7 +147,7 @@ class HeaderCapturingService extends HyperServiceGrpc.HyperServiceImplBase {
 }
 
 class HeaderCapturingInterceptor implements ServerInterceptor {
-    private final AtomicReference<Map<String, String>> ref = new AtomicReference<>(Map.of());
+    private final AtomicReference<Map<String, String>> ref = new AtomicReference<>(ImmutableMap.of());
 
     public Map<String, String> get() {
         return ref.get();
