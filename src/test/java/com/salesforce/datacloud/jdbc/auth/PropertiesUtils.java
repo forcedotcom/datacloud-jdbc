@@ -15,9 +15,12 @@
  */
 package com.salesforce.datacloud.jdbc.auth;
 
+import com.google.common.collect.ImmutableSet;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.val;
 
 public class PropertiesUtils {
@@ -30,7 +33,9 @@ public class PropertiesUtils {
     }
 
     public static Properties allPropertiesExcept(String... excepts) {
-        Set<String> except = excepts == null || excepts.length == 0 ? Set.of() : Set.of(excepts);
+        Set<String> except = excepts == null || excepts.length == 0
+                ? ImmutableSet.of()
+                : Arrays.stream(excepts).collect(Collectors.toSet());
         return allPropertiesExcept(except);
     }
 

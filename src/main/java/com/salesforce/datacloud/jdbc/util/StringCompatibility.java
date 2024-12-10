@@ -15,25 +15,10 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
-import java.util.function.Function;
+import com.google.common.base.Strings;
 
-@FunctionalInterface
-public interface ThrowingFunction<T, R, E extends Exception> {
-    static <T, R, E extends Exception> Function<T, R> rethrowFunction(ThrowingFunction<T, R, E> function) throws E {
-        return t -> {
-            try {
-                return function.apply(t);
-            } catch (Exception exception) {
-                throwAsUnchecked(exception);
-                return null;
-            }
-        };
+public class StringCompatibility {
+    public static boolean isBlank(String str) {
+        return Strings.nullToEmpty(str).trim().isEmpty();
     }
-
-    @SuppressWarnings("unchecked")
-    private static <E extends Throwable> void throwAsUnchecked(Exception exception) throws E {
-        throw (E) exception;
-    }
-
-    R apply(T t) throws E;
 }

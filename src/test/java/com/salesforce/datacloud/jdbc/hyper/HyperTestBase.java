@@ -18,12 +18,14 @@ package com.salesforce.datacloud.jdbc.hyper;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import io.grpc.ManagedChannelBuilder;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
@@ -42,10 +44,10 @@ import lombok.val;
 import org.assertj.core.api.ThrowingConsumer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Timeout;
 
 @Slf4j
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -63,7 +65,8 @@ public class HyperTestBase {
     @SneakyThrows
     public static void assertWithConnection(
             ThrowingConsumer<DataCloudConnection> assertion, Map.Entry<String, String>... settings) {
-        try (val connection = getHyperQueryConnection(settings == null ? Map.of() : Map.ofEntries(settings))) {
+        try (val connection =
+                getHyperQueryConnection(settings == null ? ImmutableMap.of() : ImmutableMap.ofEntries(settings))) {
             assertion.accept(connection);
         }
     }
@@ -72,14 +75,15 @@ public class HyperTestBase {
     @SneakyThrows
     public static void assertWithStatement(
             ThrowingConsumer<DataCloudStatement> assertion, Map.Entry<String, String>... settings) {
-        try (val connection = getHyperQueryConnection(settings == null ? Map.of() : Map.ofEntries(settings));
+        try (val connection = getHyperQueryConnection(
+                        settings == null ? ImmutableMap.of() : ImmutableMap.ofEntries(settings));
                 val result = connection.createStatement().unwrap(DataCloudStatement.class)) {
             assertion.accept(result);
         }
     }
 
     public static DataCloudConnection getHyperQueryConnection() {
-        return getHyperQueryConnection(Map.of());
+        return getHyperQueryConnection(ImmutableMap.of());
     }
 
     @SneakyThrows
@@ -88,29 +92,34 @@ public class HyperTestBase {
         val properties = new Properties();
         properties.putAll(connectionSettings);
         val auth = AuthorizationHeaderInterceptor.of(new NoopTokenSupplier());
-        val channel = ManagedChannelBuilder.forAddress("localhost", 8181).usePlaintext();
+        ManagedChannelBuilder<?> channel =
+                ManagedChannelBuilder.forAddress("0.0.0.0", 8181).usePlaintext();
 
         return DataCloudConnection.fromTokenSupplier(auth, channel, properties);
     }
 
-    private static Process hyperProcess;
-    private static final ExecutorService hyperMonitors = Executors.newFixedThreadPool(2);
+    private Process hyperProcess;
+    private final ExecutorService hyperMonitors = Executors.newFixedThreadPool(2);
 
-    public static boolean enabled() {
-        return hyperProcess != null && hyperProcess.isAlive();
-    }
-
+    @SneakyThrows
     @AfterAll
+    @Timeout(5_000)
     public void afterAll() {
         try {
             if (hyperProcess != null && hyperProcess.isAlive()) {
+                log.info("destroy hyper process");
                 hyperProcess.destroy();
             }
         } catch (Throwable e) {
             log.error("Failed to destroy hyperd", e);
         }
 
+        if (hyperProcess != null && hyperProcess.isAlive()) {
+            Thread.sleep(3_000);
+        }
+
         try {
+            log.info("shutdown hyper monitors");
             hyperMonitors.shutdown();
         } catch (Throwable e) {
             log.error("Failed to shutdown hyper monitor thread pool", e);
@@ -120,12 +129,7 @@ public class HyperTestBase {
     @SneakyThrows
     @BeforeAll
     public void beforeAll() {
-        if (hyperProcess != null) {
-            log.info("hyperd was started but not cleaned up?");
-            return;
-        } else {
-            log.info("starting hyperd, this might take a few seconds");
-        }
+        log.info("starting hyperd, this might take a few seconds");
 
         val hyperd = new File("./target/hyper/hyperd");
         val properties = Paths.get(requireNonNull(HyperTestBase.class.getResource("/hyper.yaml"))
@@ -158,7 +162,7 @@ public class HyperTestBase {
 
     @BeforeEach
     public void assumeHyperEnabled() {
-        Assumptions.assumeTrue(enabled(), "Hyper wasn't started so skipping test");
+        Assertions.assertTrue(hyperProcess != null && hyperProcess.isAlive(), "Hyper wasn't started, failing test");
     }
 
     static class NoopTokenSupplier implements AuthorizationHeaderInterceptor.TokenSupplier {
@@ -172,10 +176,12 @@ public class HyperTestBase {
         try (val reader = new BufferedReader(new BufferedReader(new InputStreamReader(inputStream)))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                consumer.accept(line);
+                consumer.accept("hyperd - " + line);
             }
+        } catch (IOException e) {
+            log.warn("Caught exception while consuming log stream, it probably closed", e);
         } catch (Exception e) {
-            log.error("Caught exception while consuming log stream", e);
+            log.error("Caught unexpected exception", e);
         }
     }
 }

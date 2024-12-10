@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.interceptor;
 
 import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
 
+import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import io.grpc.Metadata;
 import lombok.Getter;
 import lombok.NonNull;
@@ -34,7 +35,7 @@ public class QueryIdHeaderInterceptor implements SingleHeaderMutatingClientInter
 
     @Override
     public void mutate(final Metadata headers) {
-        if (value == null || value.isBlank()) {
+        if (StringCompatibility.isBlank(value)) {
             return;
         }
 

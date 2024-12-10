@@ -15,19 +15,20 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import java.sql.Types;
 import java.util.List;
 
 public enum QueryDBMetadata {
-    GET_TABLE_TYPES(List.of("TABLE_TYPE"), List.of(Constants.TEXT), List.of(Types.VARCHAR)),
-    GET_CATALOGS(List.of("TABLE_CAT"), List.of(Constants.TEXT), List.of(Types.VARCHAR)),
+    GET_TABLE_TYPES(ImmutableList.of("TABLE_TYPE"), ImmutableList.of(Constants.TEXT), ImmutableList.of(Types.VARCHAR)),
+    GET_CATALOGS(ImmutableList.of("TABLE_CAT"), ImmutableList.of(Constants.TEXT), ImmutableList.of(Types.VARCHAR)),
     GET_SCHEMAS(
-            List.of("TABLE_SCHEM", "TABLE_CATALOG"),
-            List.of(Constants.TEXT, Constants.TEXT),
-            List.of(Types.VARCHAR, Types.VARCHAR)),
+            ImmutableList.of("TABLE_SCHEM", "TABLE_CATALOG"),
+            ImmutableList.of(Constants.TEXT, Constants.TEXT),
+            ImmutableList.of(Types.VARCHAR, Types.VARCHAR)),
     GET_TABLES(
-            List.of(
+            ImmutableList.of(
                     "TABLE_CAT",
                     "TABLE_SCHEM",
                     "TABLE_NAME",
@@ -38,7 +39,7 @@ public enum QueryDBMetadata {
                     "TYPE_NAME",
                     "SELF_REFERENCING_COL_NAME",
                     "REF_GENERATION"),
-            List.of(
+            ImmutableList.of(
                     Constants.TEXT,
                     Constants.TEXT,
                     Constants.TEXT,
@@ -49,7 +50,7 @@ public enum QueryDBMetadata {
                     Constants.TEXT,
                     Constants.TEXT,
                     Constants.TEXT),
-            List.of(
+            ImmutableList.of(
                     Types.VARCHAR,
                     Types.VARCHAR,
                     Types.VARCHAR,
@@ -61,7 +62,7 @@ public enum QueryDBMetadata {
                     Types.VARCHAR,
                     Types.VARCHAR)),
     GET_COLUMNS(
-            List.of(
+            ImmutableList.of(
                     "TABLE_CAT",
                     "TABLE_SCHEM",
                     "TABLE_NAME",
@@ -86,7 +87,7 @@ public enum QueryDBMetadata {
                     "SOURCE_DATA_TYPE",
                     "IS_AUTOINCREMENT",
                     "IS_GENERATEDCOLUMN"),
-            List.of(
+            ImmutableList.of(
                     Constants.TEXT,
                     Constants.TEXT,
                     Constants.TEXT,
@@ -111,7 +112,7 @@ public enum QueryDBMetadata {
                     Constants.SHORT,
                     Constants.TEXT,
                     Constants.TEXT),
-            List.of(
+            ImmutableList.of(
                     Types.VARCHAR,
                     Types.VARCHAR,
                     Types.VARCHAR,

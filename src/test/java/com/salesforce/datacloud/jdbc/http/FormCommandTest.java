@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -81,7 +83,10 @@ class FormCommandTest {
         val ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> FormCommand.post(
-                        null, new FormCommand(VALID, new URI("/suffix"), Map.of(), Map.of(), Map.of()), Object.class));
+                        null,
+                        new FormCommand(
+                                VALID, new URI("/suffix"), ImmutableMap.of(), ImmutableMap.of(), ImmutableMap.of()),
+                        Object.class));
         assertThat(ex).hasMessage("client is marked non-null but is null").hasNoCause();
     }
 
@@ -100,19 +105,19 @@ class FormCommandTest {
         val userAgent = UUID.randomUUID().toString();
         val a = UUID.randomUUID().toString();
         val b = UUID.randomUUID().toString();
-        val expectedBody = Map.of("a", a, "b", b);
+        val expectedBody = ImmutableMap.of("a", a, "b", b);
         val command = new FormCommand(
                 new URI(server.url("").toString()),
                 new URI("foo"),
-                Map.of("User-Agent", userAgent),
+                ImmutableMap.of("User-Agent", userAgent),
                 expectedBody,
-                Map.of());
+                ImmutableMap.of());
 
         server.enqueue(new MockResponse().setBody(body));
 
         val resp = FormCommand.post(client, command, FakeCommandResp.class);
 
-        assertThat(resp.getNumbers()).hasSameElementsAs(List.of(1, 2, 3));
+        assertThat(resp.getNumbers()).hasSameElementsAs(ImmutableList.of(1, 2, 3));
         val r = server.takeRequest();
         softly.assertThat(r.getRequestLine()).startsWith("POST");
         softly.assertThat(r.getPath()).as("path").isEqualTo("/foo");
@@ -133,19 +138,19 @@ class FormCommandTest {
         val userAgent = UUID.randomUUID().toString();
         val a = UUID.randomUUID().toString();
         val b = UUID.randomUUID().toString();
-        val expectedQueryParams = Map.of("a", a, "b", b);
+        val expectedQueryParams = ImmutableMap.of("a", a, "b", b);
         val command = new FormCommand(
                 new URI(server.url("").toString()),
                 new URI("foo"),
-                Map.of("User-Agent", userAgent),
-                Map.of(),
+                ImmutableMap.of("User-Agent", userAgent),
+                ImmutableMap.of(),
                 expectedQueryParams);
 
         server.enqueue(new MockResponse().setBody(body));
 
         val resp = FormCommand.get(client, command, FakeCommandResp.class);
 
-        assertThat(resp.getNumbers()).hasSameElementsAs(List.of(1, 2, 3));
+        assertThat(resp.getNumbers()).hasSameElementsAs(ImmutableList.of(1, 2, 3));
         val r = server.takeRequest();
         val actualRequestUrl = r.getRequestUrl();
         softly.assertThat(actualRequestUrl.queryParameter("a")).isEqualTo(a);
@@ -154,15 +159,15 @@ class FormCommandTest {
         softly.assertThat(actualRequestUrl.scheme()).isEqualTo(expectedUrl.scheme());
         softly.assertThat(actualRequestUrl.host()).isEqualTo(expectedUrl.host());
         softly.assertThat(actualRequestUrl.port()).isEqualTo(expectedUrl.port());
-        softly.assertThat(actualRequestUrl.pathSegments()).isEqualTo(List.of("foo"));
+        softly.assertThat(actualRequestUrl.pathSegments()).isEqualTo(ImmutableList.of("foo"));
         softly.assertThat(r.getRequestLine()).startsWith("GET");
         softly.assertThat(r.getHeader("Accept")).as("Accept header").isEqualTo("application/json");
         softly.assertThat(r.getHeader("Content-Type"))
                 .as("Content-Type header")
                 .isEqualTo("application/x-www-form-urlencoded");
         softly.assertThat(r.getHeader("User-Agent")).as("User-Agent header").isEqualTo(userAgent);
-        var actualBody = getBody(r);
-        softly.assertThat(actualBody).isEqualTo(Map.of());
+        val actualBody = getBody(r);
+        softly.assertThat(actualBody).isEqualTo(ImmutableMap.of());
     }
 
     private Map<String, String> getBody(RecordedRequest request) {

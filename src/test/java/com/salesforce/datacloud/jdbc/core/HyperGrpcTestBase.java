@@ -131,8 +131,8 @@ public class HyperGrpcTestBase {
 
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
                 .withRequest(req -> req.getQuery().equals(query) && req.getTransferMode() == mode)
-                .willReturn(Stream.concat(Stream.of(first), Stream.of(responses))
-                        .collect(Collectors.toUnmodifiableList())));
+                .willReturn(
+                        Stream.concat(Stream.of(first), Stream.of(responses)).collect(Collectors.toList())));
     }
 
     public void setupGetQueryInfo(String queryId, QueryStatus.CompletionStatus completionStatus) {
@@ -185,7 +185,7 @@ public class HyperGrpcTestBase {
         val response = Stream.concat(
                         Stream.of(executeQueryResponse(queryId, null, null)),
                         Stream.concat(results, Stream.of(executeQueryResponse(queryId, status, chunks))))
-                .collect(Collectors.toUnmodifiableList());
+                .collect(Collectors.toList());
 
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
                 .withRequest(req -> req.getQuery().equals(sql))
@@ -193,7 +193,7 @@ public class HyperGrpcTestBase {
     }
 
     public static ExecuteQueryResponse executeQueryResponseWithData(List<RealisticArrowGenerator.Student> students) {
-        val result = RealisticArrowGenerator.getMockedData(students).findFirst().orElseThrow();
+        val result = RealisticArrowGenerator.getMockedData(students).findFirst().orElseThrow(RuntimeException::new);
         return ExecuteQueryResponse.newBuilder().setQueryResult(result).build();
     }
 

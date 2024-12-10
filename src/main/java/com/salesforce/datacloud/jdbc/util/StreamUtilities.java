@@ -17,12 +17,16 @@ package com.salesforce.datacloud.jdbc.util;
 
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import lombok.experimental.UtilityClass;
+import lombok.val;
 
 @UtilityClass
 public class StreamUtilities {
@@ -31,8 +35,8 @@ public class StreamUtilities {
     }
 
     public <T> Stream<T> toStream(Iterator<T> iterator) {
-        return Stream.iterate(iterator, Iterator::hasNext, UnaryOperator.identity())
-                .map(Iterator::next);
+        val spliterator = Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED);
+        return StreamSupport.stream(spliterator, false);
     }
 
     public <T, E extends Exception> Optional<T> tryTimes(

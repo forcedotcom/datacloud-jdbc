@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
@@ -139,7 +140,7 @@ public class DoubleVectorAccessorTest {
     @Test
     void testGetBigDecimalIllegalDoublesMethodFromFloat8Vector() {
         val consumer = iterate(
-                List.of(Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NaN),
+                ImmutableList.of(Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NaN),
                 expected -> sut -> assertThrows(DataCloudJDBCException.class, sut::getBigDecimal));
         consumer.assertThat().hasNullSeen(0).hasNotNullSeen(3);
     }
@@ -150,7 +151,7 @@ public class DoubleVectorAccessorTest {
         val big = Double.MAX_VALUE;
         val expected = BigDecimal.valueOf(big).setScale(scale, RoundingMode.HALF_UP);
         iterate(
-                List.of(Double.MAX_VALUE),
+                ImmutableList.of(Double.MAX_VALUE),
                 e -> sut -> collector.assertThat(sut.getBigDecimal(scale)).isEqualTo(expected));
     }
 }

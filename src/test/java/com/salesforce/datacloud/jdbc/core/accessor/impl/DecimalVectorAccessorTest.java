@@ -167,6 +167,6 @@ public class DecimalVectorAccessorTest {
     private List<BigDecimal> getBigDecimals() {
         return IntStream.range(0, total)
                 .mapToObj(x -> new BigDecimal(random.nextLong()))
-                .collect(Collectors.toUnmodifiableList());
+                .collect(Collectors.toList());
     }
 }

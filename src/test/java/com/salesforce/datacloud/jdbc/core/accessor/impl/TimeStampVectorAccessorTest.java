@@ -17,10 +17,12 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.nulledOutVector;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
 import java.time.Instant;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -92,7 +94,7 @@ public class TimeStampVectorAccessorTest {
                         .hasHourOfDay(currentNumber)
                         .hasMinute(currentNumber)
                         .hasSecond(currentNumber);
-                collector.assertThat(stringValue).isEqualTo(getISOString(currentMillis));
+                assertISOStringLike(stringValue, currentMillis);
             }
         }
         consumer.assertThat().hasNullSeen(0).hasNotNullSeen(NUM_OF_METHODS * values.size());
@@ -143,7 +145,7 @@ public class TimeStampVectorAccessorTest {
                         .hasHourOfDay(currentNumber)
                         .hasMinute(currentNumber)
                         .hasSecond(currentNumber);
-                collector.assertThat(stringValue).isEqualTo(getISOString(currentMillis));
+                assertISOStringLike(stringValue, currentMillis);
             }
         }
         consumer.assertThat().hasNullSeen(0).hasNotNullSeen(NUM_OF_METHODS * values.size());
@@ -194,7 +196,7 @@ public class TimeStampVectorAccessorTest {
                         .hasHourOfDay(currentNumber)
                         .hasMinute(currentNumber)
                         .hasSecond(currentNumber);
-                collector.assertThat(stringValue).isEqualTo(getISOString(currentMillis));
+                assertISOStringLike(stringValue, currentMillis);
             }
         }
         consumer.assertThat().hasNullSeen(0).hasNotNullSeen(NUM_OF_METHODS * values.size());
@@ -245,7 +247,7 @@ public class TimeStampVectorAccessorTest {
                         .hasHourOfDay(currentNumber)
                         .hasMinute(currentNumber)
                         .hasSecond(currentNumber);
-                collector.assertThat(stringValue).isEqualTo(getISOString(currentMillis));
+                assertISOStringLike(stringValue, currentMillis);
             }
         }
         consumer.assertThat().hasNullSeen(0).hasNotNullSeen(NUM_OF_METHODS * values.size());
@@ -296,7 +298,7 @@ public class TimeStampVectorAccessorTest {
                         .hasHourOfDay(currentNumber)
                         .hasMinute(currentNumber)
                         .hasSecond(currentNumber);
-                collector.assertThat(stringValue).isEqualTo(getISOString(currentMillis));
+                assertISOStringLike(stringValue, currentMillis);
             }
         }
         consumer.assertThat().hasNullSeen(0).hasNotNullSeen(NUM_OF_METHODS * values.size());
@@ -347,7 +349,7 @@ public class TimeStampVectorAccessorTest {
                         .hasHourOfDay(currentNumber)
                         .hasMinute(currentNumber)
                         .hasSecond(currentNumber);
-                collector.assertThat(stringValue).isEqualTo(getISOString(currentMillis));
+                assertISOStringLike(stringValue, currentMillis);
             }
         }
         consumer.assertThat().hasNullSeen(0).hasNotNullSeen(NUM_OF_METHODS * values.size());
@@ -398,7 +400,7 @@ public class TimeStampVectorAccessorTest {
                         .hasHourOfDay(currentNumber)
                         .hasMinute(currentNumber)
                         .hasSecond(currentNumber);
-                collector.assertThat(stringValue).isEqualTo(getISOString(currentMillis));
+                assertISOStringLike(stringValue, currentMillis);
             }
         }
         consumer.assertThat().hasNullSeen(0).hasNotNullSeen(NUM_OF_METHODS * values.size());
@@ -449,7 +451,8 @@ public class TimeStampVectorAccessorTest {
                         .hasHourOfDay(currentNumber)
                         .hasMinute(currentNumber)
                         .hasSecond(currentNumber);
-                collector.assertThat(stringValue).isEqualTo(getISOString(currentMillis));
+
+                assertISOStringLike(stringValue, currentMillis);
             }
         }
         consumer.assertThat().hasNullSeen(0).hasNotNullSeen(NUM_OF_METHODS * values.size());
@@ -503,10 +506,16 @@ public class TimeStampVectorAccessorTest {
         int valA = rand.nextInt(10) + 1;
         int valB = rand.nextInt(10) + 1;
         int valC = rand.nextInt(10) + 1;
-        return List.of(valA, valB, valC);
+        return ImmutableList.of(valA, valB, valC);
+    }
+
+    private void assertISOStringLike(String value, Long millis) {
+        collector.assertThat(value).startsWith(getISOString(millis)).matches(".+Z$");
     }
 
     private String getISOString(Long millis) {
-        return Instant.ofEpochMilli(millis).toString();
+        val formatter = new DateTimeFormatterBuilder().appendInstant(-1).toFormatter();
+
+        return formatter.format(Instant.ofEpochMilli(millis)).replaceFirst("Z$", "");
     }
 }

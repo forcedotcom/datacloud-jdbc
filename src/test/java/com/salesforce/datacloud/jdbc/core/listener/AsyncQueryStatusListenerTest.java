@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.core.listener;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
@@ -25,7 +26,6 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
 import com.salesforce.hyperdb.grpc.QueryParam;
 import com.salesforce.hyperdb.grpc.QueryStatus;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Properties;
@@ -88,7 +88,7 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
         val queryId = UUID.randomUUID().toString();
         setupExecuteQuery(queryId, query, mode);
         setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.FINISHED, 2);
-        val twoStudents = List.of(
+        val twoStudents = ImmutableList.of(
                 new RealisticArrowGenerator.Student(1, "alice", 2), new RealisticArrowGenerator.Student(2, "bob", 3));
         setupGetQueryResult(queryId, 0, 2, twoStudents);
         setupGetQueryResult(queryId, 1, 2, twoStudents);
@@ -124,10 +124,13 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
         val studentId = random.nextInt();
         val studentGrade = random.nextDouble();
         val studentName = UUID.randomUUID().toString();
-        setupHyperGrpcClientWithMockedResultSet(queryId, List.of());
+        setupHyperGrpcClientWithMockedResultSet(queryId, ImmutableList.of());
         setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.FINISHED);
         setupGetQueryResult(
-                queryId, 0, 1, List.of(new RealisticArrowGenerator.Student(studentId, studentName, studentGrade)));
+                queryId,
+                0,
+                1,
+                ImmutableList.of(new RealisticArrowGenerator.Student(studentId, studentName, studentGrade)));
         val resultSet = sut(query).generateResultSet();
         assertThat(resultSet).isNotNull();
         assertThat(resultSet.getQueryId()).isEqualTo(queryId);
@@ -153,7 +156,7 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
     @Test
     void userShouldWaitForQueryBeforeAccessingResultSet() {
         val queryId = UUID.randomUUID().toString();
-        setupHyperGrpcClientWithMockedResultSet(queryId, List.of());
+        setupHyperGrpcClientWithMockedResultSet(queryId, ImmutableList.of());
         setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.RUNNING);
 
         try (val statement = statement().executeAsyncQuery(query)) {

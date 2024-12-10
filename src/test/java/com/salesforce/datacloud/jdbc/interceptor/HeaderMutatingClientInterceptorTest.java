@@ -20,11 +20,11 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.hyperdb.grpc.QueryParam;
 import io.grpc.Metadata;
-import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 import lombok.AllArgsConstructor;
@@ -48,7 +48,8 @@ class HeaderMutatingClientInterceptorTest extends HyperGrpcTestBase {
         Consumer<Metadata> mockConsumer = mock(Consumer.class);
         val sut = new Sut(mockConsumer);
 
-        try (val client = hyperGrpcClient.toBuilder().interceptors(List.of(sut)).build()) {
+        try (val client =
+                hyperGrpcClient.toBuilder().interceptors(ImmutableList.of(sut)).build()) {
             setupExecuteQuery(queryId, query, QueryParam.TransferMode.SYNC);
             client.executeQuery(query);
         }
@@ -71,8 +72,9 @@ class HeaderMutatingClientInterceptorTest extends HyperGrpcTestBase {
         val sut = new Sut(mockConsumer);
 
         val ex = Assertions.assertThrows(DataCloudJDBCException.class, () -> {
-            try (val client =
-                    hyperGrpcClient.toBuilder().interceptors(List.of(sut)).build()) {
+            try (val client = hyperGrpcClient.toBuilder()
+                    .interceptors(ImmutableList.of(sut))
+                    .build()) {
                 setupExecuteQuery(queryId, query, QueryParam.TransferMode.SYNC);
                 client.executeQuery(query);
             }

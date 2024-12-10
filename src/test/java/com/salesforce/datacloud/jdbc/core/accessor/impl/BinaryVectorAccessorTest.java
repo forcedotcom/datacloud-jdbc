@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.nulledOutVector;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
@@ -39,7 +40,7 @@ public class BinaryVectorAccessorTest {
     @InjectSoftAssertions
     private SoftAssertions collector;
 
-    private final List<byte[]> binaryList = List.of(
+    private final List<byte[]> binaryList = ImmutableList.of(
             "BINARY_DATA_0001".getBytes(StandardCharsets.UTF_8),
             "BINARY_DATA_0002".getBytes(StandardCharsets.UTF_8),
             "BINARY_DATA_0003".getBytes(StandardCharsets.UTF_8));

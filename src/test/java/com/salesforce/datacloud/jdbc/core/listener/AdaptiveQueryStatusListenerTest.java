@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.core.listener;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -49,7 +50,7 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
     private final RealisticArrowGenerator.Student alice = new RealisticArrowGenerator.Student(1, "alice", 2);
     private final RealisticArrowGenerator.Student bob = new RealisticArrowGenerator.Student(2, "bob", 3);
 
-    private final List<RealisticArrowGenerator.Student> twoStudents = List.of(alice, bob);
+    private final List<RealisticArrowGenerator.Student> twoStudents = ImmutableList.of(alice, bob);
 
     @SneakyThrows
     @Test

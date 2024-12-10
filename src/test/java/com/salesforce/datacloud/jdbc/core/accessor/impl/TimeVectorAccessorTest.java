@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 import static com.salesforce.datacloud.jdbc.util.Constants.ISO_TIME_FORMAT;
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.nulledOutVector;
 
+import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
@@ -822,7 +823,7 @@ public class TimeVectorAccessorTest {
         final int expectedSecond = zdt.getSecond();
         final int expectedMillisecond = (int) TimeUnit.NANOSECONDS.toMillis(zdt.getNano());
 
-        return Map.of(
+        return ImmutableMap.of(
                 "hour", expectedHour, "minute", expectedMinute, "second", expectedSecond, "milli", expectedMillisecond);
     }
 

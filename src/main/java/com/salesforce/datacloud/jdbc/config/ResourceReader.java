@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.config;
 
+import com.google.common.io.ByteStreams;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.io.IOException;
@@ -36,7 +37,7 @@ import lombok.val;
 public class ResourceReader {
     public static String readResourceAsString(@NonNull String path) {
         val result = new AtomicReference<String>();
-        withResourceAsStream(path, in -> result.set(new String(in.readAllBytes(), StandardCharsets.UTF_8)));
+        withResourceAsStream(path, in -> result.set(new String(ByteStreams.toByteArray(in), StandardCharsets.UTF_8)));
         return result.get();
     }
 

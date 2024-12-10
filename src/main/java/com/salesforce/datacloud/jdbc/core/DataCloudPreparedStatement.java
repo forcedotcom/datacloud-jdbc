@@ -20,6 +20,8 @@ import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimeFromTim
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimestampFromTimestampAndCalendar;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
@@ -445,16 +447,16 @@ final class TypeHandlers {
     public static final TypeHandler TIME_HANDLER = (ps, idx, value) -> ps.setTime(idx, (Time) value);
     public static final TypeHandler TIMESTAMP_HANDLER = (ps, idx, value) -> ps.setTimestamp(idx, (Timestamp) value);
     public static final TypeHandler BOOLEAN_HANDLER = (ps, idx, value) -> ps.setBoolean(idx, (Boolean) value);
-    static final Map<Class<?>, TypeHandler> typeHandlerMap = Map.ofEntries(
-            Map.entry(String.class, STRING_HANDLER),
-            Map.entry(BigDecimal.class, BIGDECIMAL_HANDLER),
-            Map.entry(Short.class, SHORT_HANDLER),
-            Map.entry(Integer.class, INTEGER_HANDLER),
-            Map.entry(Long.class, LONG_HANDLER),
-            Map.entry(Float.class, FLOAT_HANDLER),
-            Map.entry(Double.class, DOUBLE_HANDLER),
-            Map.entry(Date.class, DATE_HANDLER),
-            Map.entry(Time.class, TIME_HANDLER),
-            Map.entry(Timestamp.class, TIMESTAMP_HANDLER),
-            Map.entry(Boolean.class, BOOLEAN_HANDLER));
+    static final Map<Class<?>, TypeHandler> typeHandlerMap = ImmutableMap.ofEntries(
+            Maps.immutableEntry(String.class, STRING_HANDLER),
+            Maps.immutableEntry(BigDecimal.class, BIGDECIMAL_HANDLER),
+            Maps.immutableEntry(Short.class, SHORT_HANDLER),
+            Maps.immutableEntry(Integer.class, INTEGER_HANDLER),
+            Maps.immutableEntry(Long.class, LONG_HANDLER),
+            Maps.immutableEntry(Float.class, FLOAT_HANDLER),
+            Maps.immutableEntry(Double.class, DOUBLE_HANDLER),
+            Maps.immutableEntry(Date.class, DATE_HANDLER),
+            Maps.immutableEntry(Time.class, TIME_HANDLER),
+            Maps.immutableEntry(Timestamp.class, TIMESTAMP_HANDLER),
+            Maps.immutableEntry(Boolean.class, BOOLEAN_HANDLER));
 }

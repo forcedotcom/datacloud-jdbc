@@ -43,7 +43,7 @@ public class RequestRecordingInterceptor implements ClientInterceptor {
         queries.add(name);
         log.info("Executing grpc endpoint: " + name);
 
-        return new ForwardingClientCall.SimpleForwardingClientCall<>(next.newCall(method, callOptions)) {
+        return new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(next.newCall(method, callOptions)) {
             @Override
             public void start(final Listener<RespT> responseListener, final Metadata headers) {
                 headers.put(Metadata.Key.of("FOO", Metadata.ASCII_STRING_MARSHALLER), "BAR");

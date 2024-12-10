@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
@@ -30,7 +31,6 @@ import com.salesforce.hyperdb.grpc.HyperServiceGrpc;
 import com.salesforce.hyperdb.grpc.QueryParam;
 import io.grpc.StatusRuntimeException;
 import java.sql.ResultSet;
-import java.util.List;
 import java.util.Properties;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -100,7 +100,9 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
         val statement = new DataCloudStatement(connection);
 
         setupHyperGrpcClientWithMockedResultSet(
-                "query id", List.of(), forceSync ? QueryParam.TransferMode.SYNC : QueryParam.TransferMode.ADAPTIVE);
+                "query id",
+                ImmutableList.of(),
+                forceSync ? QueryParam.TransferMode.SYNC : QueryParam.TransferMode.ADAPTIVE);
         ResultSet response = statement.executeQuery("SELECT * FROM table");
         AssertionsForClassTypes.assertThat(statement.isReady()).isTrue();
         assertNotNull(response);
@@ -111,7 +113,7 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @Test
     @SneakyThrows
     public void testExecuteQuery() {
-        setupHyperGrpcClientWithMockedResultSet("query id", List.of());
+        setupHyperGrpcClientWithMockedResultSet("query id", ImmutableList.of());
         ResultSet response = statement.executeQuery("SELECT * FROM table");
         assertThat(statement.isReady()).isTrue();
         assertNotNull(response);
@@ -124,7 +126,7 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @Test
     @SneakyThrows
     public void testExecute() {
-        setupHyperGrpcClientWithMockedResultSet("query id", List.of());
+        setupHyperGrpcClientWithMockedResultSet("query id", ImmutableList.of());
         statement.execute("SELECT * FROM table");
         ResultSet response = statement.getResultSet();
         assertNotNull(response);
@@ -137,9 +139,9 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @Test
     @SneakyThrows
     public void testExecuteQueryIncludesInterceptorsProvidedByCaller() {
-        setupHyperGrpcClientWithMockedResultSet("abc", List.of());
+        setupHyperGrpcClientWithMockedResultSet("abc", ImmutableList.of());
         val interceptor = new RequestRecordingInterceptor();
-        Mockito.when(connection.getInterceptors()).thenReturn(List.of(interceptor));
+        Mockito.when(connection.getInterceptors()).thenReturn(ImmutableList.of(interceptor));
 
         assertThat(interceptor.getQueries().size()).isEqualTo(0);
         statement.executeQuery("SELECT * FROM table");

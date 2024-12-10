@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.QueryResultSetMetadata;
 import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
 import java.math.BigDecimal;
@@ -35,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import lombok.val;
+import lombok.var;
 import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.IntervalUnit;
@@ -62,9 +64,9 @@ class ArrowUtilsTest {
 
     @Test
     void testConvertArrowFieldsToColumnMetaData() {
-        List<Field> arrowFields = List.of(new Field("id", FieldType.nullable(new ArrowType.Utf8()), null));
+        List<Field> arrowFields = ImmutableList.of(new Field("id", FieldType.nullable(new ArrowType.Utf8()), null));
         final List<ColumnMetaData> expectedColumnMetadata =
-                List.of(ColumnMetaData.fromProto(Common.ColumnMetaData.newBuilder()
+                ImmutableList.of(ColumnMetaData.fromProto(Common.ColumnMetaData.newBuilder()
                         .setColumnName("id")
                         .setOrdinal(0)
                         .build()));
@@ -84,45 +86,47 @@ class ArrowUtilsTest {
         Map<String, List<Field>> testCases = new HashMap<>();
         testCases.put(
                 JDBCType.valueOf(Types.TINYINT).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.Int(8, true)), null)));
+                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Int(8, true)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.SMALLINT).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.Int(16, true)), null)));
+                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Int(16, true)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.INTEGER).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.Int(32, true)), null)));
+                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Int(32, true)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.BIGINT).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.Int(64, true)), null)));
+                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Int(64, true)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.BOOLEAN).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.Bool()), null)));
+                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Bool()), null)));
         testCases.put(
                 JDBCType.valueOf(Types.VARCHAR).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.Utf8()), null)));
+                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Utf8()), null)));
         testCases.put(
                 JDBCType.valueOf(Types.FLOAT).getName(),
-                List.of(new Field(
+                ImmutableList.of(new Field(
                         "", FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.DOUBLE).getName(),
-                List.of(new Field(
+                ImmutableList.of(new Field(
                         "", FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.DATE).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.Date(DateUnit.DAY)), null)));
+                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Date(DateUnit.DAY)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.TIME).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.Time(TimeUnit.MICROSECOND, 64)), null)));
+                ImmutableList.of(
+                        new Field("", FieldType.nullable(new ArrowType.Time(TimeUnit.MICROSECOND, 64)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.TIMESTAMP).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC")), null)));
+                ImmutableList.of(
+                        new Field("", FieldType.nullable(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC")), null)));
         testCases.put(
                 JDBCType.valueOf(Types.DECIMAL).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.Decimal(1, 1, 128)), null)));
+                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Decimal(1, 1, 128)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.ARRAY).getName(),
-                List.of(new Field("", FieldType.nullable(new ArrowType.List()), null)));
+                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.List()), null)));
 
         for (var entry : testCases.entrySet()) {
             List<ColumnMetaData> actual = ArrowUtils.toColumnMetaData(entry.getValue());
@@ -207,7 +211,7 @@ class ArrowUtilsTest {
                 new ParameterBinding(Types.TIME, new Time(1)),
                 new ParameterBinding(Types.TIMESTAMP, new Timestamp(1)),
                 new ParameterBinding(Types.DECIMAL, new BigDecimal("123.45")),
-                new ParameterBinding(Types.ARRAY, List.of(1, 2, 3)));
+                new ParameterBinding(Types.ARRAY, ImmutableList.of(1, 2, 3)));
 
         Schema schema = ArrowUtils.createSchemaFromParameters(parameterBindings);
 

@@ -36,7 +36,7 @@ public interface ThrowingSupplier<T, E extends Exception> {
     static <T, E extends Exception> LongSupplier rethrowLongSupplier(ThrowingSupplier<T, E> function) throws E {
         return () -> {
             try {
-                return (long) function.get();
+                return (Long) function.get();
             } catch (Exception exception) {
                 throwAsUnchecked(exception);
                 return Long.parseLong(null);
@@ -44,7 +44,8 @@ public interface ThrowingSupplier<T, E extends Exception> {
         };
     }
 
-    private static <E extends Throwable> void throwAsUnchecked(Exception exception) throws E {
+    @SuppressWarnings("unchecked")
+    static <E extends Throwable> void throwAsUnchecked(Exception exception) throws E {
         throw (E) exception;
     }
 }

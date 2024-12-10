@@ -3,12 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.salesforce.datacloud</groupId>
     <artifactId>jdbc</artifactId>
-    <version>0.21.0-SNAPSHOT</version>
+    <version>0.22.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>Salesforce Data Cloud JDBC Driver</name>
     <description>Salesforce Data Cloud JDBC Driver</description>
     <properties>
-        <arrow.version>18.0.0</arrow.version>
+        <arrow.version>17.0.0</arrow.version>
         <assertj.version>3.26.3</assertj.version>
         <avatica.version>1.25.0</avatica.version>
         <commons-lang3.version>3.17.0</commons-lang3.version>
@@ -16,25 +16,26 @@
         <git-build-hook-maven-plugin.version>3.5.0</git-build-hook-maven-plugin.version>
         <grpc.version>1.68.1</grpc.version>
         <grpcmock-junit5.version>0.13.0</grpcmock-junit5.version>
+        <guava.version>33.2.1-jre</guava.version>
         <!-- https://tableau.github.io/hyper-db/docs/releases#download -->
         <hyperapi.version>0.0.20746.reac9bd2d</hyperapi.version>
         <hyperd.directory>${project.build.directory}/hyper</hyperd.directory>
         <jackson.version>2.18.0</jackson.version>
         <jacoco.maven.plugin.version>0.8.12</jacoco.maven.plugin.version>
-        <java.version>11</java.version>
+        <java.version>1.8</java.version>
         <jjwt.version>0.12.6</jjwt.version>
         <junit-bom.version>5.11.3</junit-bom.version>
         <lombok.version>1.18.34</lombok.version>
         <maven.compiler.source>{java.version}</maven.compiler.source>
         <maven.compiler.target>{java.version}</maven.compiler.target>
-        <mockito-bom.version>5.14.1</mockito-bom.version>
+        <mockito-bom.version>4.11.0</mockito-bom.version>
         <okhttp.version>4.12.0</okhttp.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <protobuf.version>3.25.5</protobuf.version>
         <shadeBase>com.salesforce.datacloud.jdbc.internal.shaded</shadeBase>
         <slf4j.version>1.7.32</slf4j.version>
-        <spotless.version>2.43.0</spotless.version>
+        <spotless.version>2.30.0</spotless.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -53,13 +54,6 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>org.apache.arrow</groupId>
-                <artifactId>arrow-bom</artifactId>
-                <version>${arrow.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
                 <version>${junit-bom.version}</version>
@@ -73,6 +67,11 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava-bom</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <dependencies>
@@ -80,6 +79,11 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
@@ -120,6 +124,7 @@
         <dependency>
             <groupId>org.apache.arrow</groupId>
             <artifactId>arrow-vector</artifactId>
+            <version>${arrow.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.calcite.avatica</groupId>
@@ -157,6 +162,7 @@
         <dependency>
             <groupId>org.apache.arrow</groupId>
             <artifactId>arrow-memory-netty</artifactId>
+            <version>${arrow.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
@@ -199,12 +205,18 @@
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
+            <artifactId>mockito-inline</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${slf4j.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -494,15 +506,12 @@
                         </format>
                     </formats>
                     <java>
-                        <toggleOffOn/>
                         <includes>
                             <include>src/main/java/**/*.java</include>
                             <include>src/test/java/**/*.java</include>
                         </includes>
                         <palantirJavaFormat>
-                            <version>2.39.0</version>
-                            <style>PALANTIR</style>
-                            <formatJavadoc>true</formatJavadoc>
+                            <version>1.1.0</version>
                         </palantirJavaFormat>
                         <formatAnnotations/>
                         <importOrder/>
@@ -568,7 +577,7 @@
             <plugin>
                 <groupId>com.github.ekryd.sortpom</groupId>
                 <artifactId>sortpom-maven-plugin</artifactId>
-                <version>3.4.1</version>
+                <version>3.0.1</version>
                 <configuration>
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <predefinedSortOrder>custom_1</predefinedSortOrder>

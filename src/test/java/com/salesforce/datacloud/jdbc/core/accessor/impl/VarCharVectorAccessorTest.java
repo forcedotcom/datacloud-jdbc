@@ -145,6 +145,6 @@ public class VarCharVectorAccessorTest {
     private List<String> getStrings() {
         return IntStream.range(0, total)
                 .mapToObj(x -> UUID.randomUUID().toString())
-                .collect(Collectors.toUnmodifiableList());
+                .collect(Collectors.toList());
     }
 }

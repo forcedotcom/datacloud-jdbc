@@ -15,6 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -84,19 +86,19 @@ class VectorValueSetterFactory {
     private final Map<Class<? extends ValueVector>, VectorValueSetter<?>> setterMap;
 
     VectorValueSetterFactory(Calendar calendar) {
-        setterMap = Map.ofEntries(
-                Map.entry(VarCharVector.class, new VarCharVectorSetter()),
-                Map.entry(Float4Vector.class, new Float4VectorSetter()),
-                Map.entry(Float8Vector.class, new Float8VectorSetter()),
-                Map.entry(IntVector.class, new IntVectorSetter()),
-                Map.entry(SmallIntVector.class, new SmallIntVectorSetter()),
-                Map.entry(BigIntVector.class, new BigIntVectorSetter()),
-                Map.entry(BitVector.class, new BitVectorSetter()),
-                Map.entry(DecimalVector.class, new DecimalVectorSetter()),
-                Map.entry(DateDayVector.class, new DateDayVectorSetter()),
-                Map.entry(TimeMicroVector.class, new TimeMicroVectorSetter(calendar)),
-                Map.entry(TimeStampMicroTZVector.class, new TimeStampMicroTZVectorSetter(calendar)),
-                Map.entry(TinyIntVector.class, new TinyIntVectorSetter()));
+        setterMap = ImmutableMap.ofEntries(
+                Maps.immutableEntry(VarCharVector.class, new VarCharVectorSetter()),
+                Maps.immutableEntry(Float4Vector.class, new Float4VectorSetter()),
+                Maps.immutableEntry(Float8Vector.class, new Float8VectorSetter()),
+                Maps.immutableEntry(IntVector.class, new IntVectorSetter()),
+                Maps.immutableEntry(SmallIntVector.class, new SmallIntVectorSetter()),
+                Maps.immutableEntry(BigIntVector.class, new BigIntVectorSetter()),
+                Maps.immutableEntry(BitVector.class, new BitVectorSetter()),
+                Maps.immutableEntry(DecimalVector.class, new DecimalVectorSetter()),
+                Maps.immutableEntry(DateDayVector.class, new DateDayVectorSetter()),
+                Maps.immutableEntry(TimeMicroVector.class, new TimeMicroVectorSetter(calendar)),
+                Maps.immutableEntry(TimeStampMicroTZVector.class, new TimeStampMicroTZVectorSetter(calendar)),
+                Maps.immutableEntry(TinyIntVector.class, new TinyIntVectorSetter()));
     }
 
     @SuppressWarnings("unchecked")
