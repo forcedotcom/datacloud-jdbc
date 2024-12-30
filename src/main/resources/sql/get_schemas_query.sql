@@ -5,3 +5,5 @@ WHERE nspname <> 'pg_toast'
                OR nspname = (pg_catalog.current_schemas(true))[1])
   AND (nspname !~ '^pg_toast_temp_'
                OR nspname = replace((pg_catalog.current_schemas(true))[1], 'pg_temp_', 'pg_toast_temp_'))
+  AND (nspname !~ 'tableau*')
+  AND (nspname !~ 'pg_*')
