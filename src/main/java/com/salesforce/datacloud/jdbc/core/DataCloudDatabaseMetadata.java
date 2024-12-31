@@ -674,7 +674,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getCatalogs() throws SQLException {
-        return QueryMetadataUtil.createCatalogsResultSet(tokenProcessor, client);
+        return QueryMetadataUtil.createCatalogsResultSet(tokenProcessor);
     }
 
     @Override

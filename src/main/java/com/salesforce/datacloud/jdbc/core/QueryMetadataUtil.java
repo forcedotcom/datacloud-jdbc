@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.stream.Collectors;
+import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -355,13 +356,23 @@ class QueryMetadataUtil {
         return data;
     }
 
-    public static ResultSet createCatalogsResultSet(Optional<TokenProcessor> tokenProcessor, OkHttpClient client)
-            throws SQLException {
-        val tenantId = tokenProcessor.get().getDataCloudToken().getTenantId();
-        val dataspaceName = tokenProcessor.get().getSettings().getDataspace();
-        List<Object> data = ImmutableList.of(ImmutableList.of("lakehouse:" + tenantId + ";" + dataspaceName));
+    @SneakyThrows
+    static List<Object> getLakehouse(Optional<TokenProcessor> tokenProcessor) {
+        if (!tokenProcessor.isPresent()) {
+            return ImmutableList.of();
+        }
 
-        QueryDBMetadata queryDbMetadata = QueryDBMetadata.GET_CATALOGS;
+        val tenantId = tokenProcessor.get().getDataCloudToken().getTenantId();
+        val dataspace = tokenProcessor.get().getSettings().getDataspace();
+        val lakehouse =
+                "lakehouse:" + tenantId + ";" + Optional.ofNullable(dataspace).orElse("");
+
+        return ImmutableList.of(ImmutableList.of(lakehouse));
+    }
+
+    public static ResultSet createCatalogsResultSet(Optional<TokenProcessor> tokenProcessor) throws SQLException {
+        val data = getLakehouse(tokenProcessor);
+        val queryDbMetadata = QueryDBMetadata.GET_CATALOGS;
 
         return getMetadataResultSet(queryDbMetadata, NUM_CATALOG_METADATA_COLUMNS, data);
     }
