@@ -340,6 +340,12 @@
                                 <exclude>codegen/**</exclude>
                             </excludes>
                         </filter>
+                        <filter>
+                            <artifact>org.apache.calcite.avatica:avatica</artifact>
+                            <excludes>
+                                <exclude>org/apache/calcite/avatica/**/Driver.class</exclude>
+                            </excludes>
+                        </filter>
                     </filters>
                     <transformers>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
