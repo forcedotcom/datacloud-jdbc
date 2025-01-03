@@ -66,7 +66,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 @Slf4j
-@Getter
 @Builder(access = AccessLevel.PACKAGE)
 public class DataCloudConnection implements Connection, AutoCloseable {
     private static final int DEFAULT_PORT = 443;
@@ -77,13 +76,16 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     private final DataCloudConnectionString connectionString;
 
+    @Getter(AccessLevel.PACKAGE)
     @NonNull @Builder.Default
     private final Properties properties = new Properties();
 
+    @Getter(AccessLevel.PACKAGE)
     @Setter
     @Builder.Default
     private List<ClientInterceptor> interceptors = new ArrayList<>();
 
+    @Getter(AccessLevel.PACKAGE)
     @NonNull private final HyperGrpcClientExecutor executor;
 
     public static DataCloudConnection fromChannel(@NonNull ManagedChannelBuilder<?> builder, Properties properties)

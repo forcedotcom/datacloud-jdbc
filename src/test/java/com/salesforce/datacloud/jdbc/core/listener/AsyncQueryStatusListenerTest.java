@@ -15,11 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
+import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionMocker.mockedConnection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
-import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -41,7 +41,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.Mockito;
 
 @ExtendWith(InProcessGrpcMockExtension.class)
 class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
@@ -166,10 +165,7 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
     }
 
     DataCloudStatement statement() {
-        val connection = Mockito.mock(DataCloudConnection.class);
-        Mockito.when(connection.getProperties()).thenReturn(new Properties());
-        Mockito.when(connection.getExecutor()).thenReturn(hyperGrpcClient);
-
+        val connection = mockedConnection(new Properties(), hyperGrpcClient);
         return new DataCloudStatement(connection);
     }
 
