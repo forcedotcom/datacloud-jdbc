@@ -23,11 +23,6 @@ public final class Constants {
     public static final String CDP_URL = "/api/v1";
     public static final String METADATA_URL = "/metadata";
 
-    public static final String CONNECTION_PROTOCOL = "jdbc:salesforce-datacloud:";
-    public static final String HYPER_LAKEHOUSE_ALIAS = "lakehouse";
-    public static final String HYPER_LAKEHOUSE_PATH_PREFIX = "lakehouse:";
-
-    // authentication constants
     public static final String LOGIN_URL = "loginURL";
 
     // Property constants
@@ -54,7 +49,6 @@ public final class Constants {
     public static final String DRIVER_VERSION = "3.0";
 
     // Date Time constants
-    public static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
-    public static final String ISO_DATE_TIME_SEC_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+
     public static final String ISO_TIME_FORMAT = "HH:mm:ss";
 }

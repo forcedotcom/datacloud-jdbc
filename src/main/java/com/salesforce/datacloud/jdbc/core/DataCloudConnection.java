@@ -15,7 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.util.Constants.CONNECTION_PROTOCOL;
 import static com.salesforce.datacloud.jdbc.util.Constants.LOGIN_URL;
 import static com.salesforce.datacloud.jdbc.util.Constants.USER;
 import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
@@ -31,11 +30,8 @@ import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeade
 import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.MaxMetadataSizeHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
-import com.salesforce.datacloud.jdbc.util.Messages;
-import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
-import java.net.URI;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -68,10 +64,8 @@ import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.commons.lang3.StringUtils;
 
 @Slf4j
-@Getter
 @Builder(access = AccessLevel.PACKAGE)
 public class DataCloudConnection implements Connection, AutoCloseable {
     private static final int DEFAULT_PORT = 443;
@@ -80,13 +74,18 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     private final TokenProcessor tokenProcessor;
 
+    private final DataCloudConnectionString connectionString;
+
+    @Getter(AccessLevel.PACKAGE)
     @NonNull @Builder.Default
     private final Properties properties = new Properties();
 
+    @Getter(AccessLevel.PACKAGE)
     @Setter
     @Builder.Default
     private List<ClientInterceptor> interceptors = new ArrayList<>();
 
+    @Getter(AccessLevel.PACKAGE)
     @NonNull private final HyperGrpcClientExecutor executor;
 
     public static DataCloudConnection fromChannel(@NonNull ManagedChannelBuilder<?> builder, Properties properties)
@@ -136,9 +135,10 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     public static DataCloudConnection of(String url, Properties properties) throws SQLException {
-        val serviceRootUrl = getServiceRootUrl(url);
-        properties.put(LOGIN_URL, serviceRootUrl);
+        val connectionString = DataCloudConnectionString.of(url);
         addClientUsernameIfRequired(properties);
+        connectionString.withParameters(properties);
+        properties.setProperty(LOGIN_URL, connectionString.getLoginUrl());
 
         if (!AuthenticationSettings.hasAny(properties)) {
             throw new DataCloudJDBCException("No authentication settings provided");
@@ -147,7 +147,6 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         val tokenProcessor = DataCloudTokenProcessor.of(properties);
 
         val host = tokenProcessor.getDataCloudToken().getTenantUrl();
-
         val builder = ManagedChannelBuilder.forAddress(host, DEFAULT_PORT);
         val authInterceptor = AuthorizationHeaderInterceptor.of(tokenProcessor);
 
@@ -158,6 +157,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                 .tokenProcessor(tokenProcessor)
                 .executor(executor)
                 .properties(properties)
+                .connectionString(connectionString)
                 .build();
     }
 
@@ -219,9 +219,12 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public DatabaseMetaData getMetaData() {
         val client = ClientBuilder.buildOkHttpClient(properties);
         val userName = this.properties.getProperty("userName");
-        val loginUrl = this.properties.getProperty("loginURL");
         return new DataCloudDatabaseMetadata(
-                getQueryStatement(), Optional.ofNullable(tokenProcessor), client, loginUrl, userName);
+                getQueryStatement(),
+                Optional.ofNullable(tokenProcessor),
+                client,
+                Optional.ofNullable(connectionString),
+                userName);
     }
 
     private @NonNull DataCloudStatement getQueryStatement() {
@@ -423,42 +426,6 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     @Override
     public boolean isWrapperFor(Class<?> iface) {
         return iface.isInstance(this);
-    }
-
-    public static boolean acceptsUrl(String url) {
-        return url != null && url.startsWith(CONNECTION_PROTOCOL) && urlDoesNotContainScheme(url);
-    }
-
-    private static boolean urlDoesNotContainScheme(String url) {
-        val suffix = url.substring(CONNECTION_PROTOCOL.length());
-        return !suffix.startsWith("http://") && !suffix.startsWith("https://");
-    }
-
-    /**
-     * Returns the extracted service url from given jdbc endpoint
-     *
-     * @param url of the form jdbc:salesforce-datacloud://login.salesforce.com
-     * @return service url
-     * @throws SQLException when given url doesn't belong with required datasource
-     */
-    static String getServiceRootUrl(String url) throws SQLException {
-        if (!acceptsUrl(url)) {
-            throw new DataCloudJDBCException(Messages.ILLEGAL_CONNECTION_PROTOCOL);
-        }
-
-        val serviceRootUrl = url.substring(CONNECTION_PROTOCOL.length());
-        val noTrailingSlash = StringUtils.removeEnd(serviceRootUrl, "/");
-        val host = StringUtils.removeStart(noTrailingSlash, "//");
-
-        return StringCompatibility.isBlank(host) ? host : createURI(host).toString();
-    }
-
-    private static URI createURI(String host) throws SQLException {
-        try {
-            return URI.create("https://" + host);
-        } catch (IllegalArgumentException e) {
-            throw new DataCloudJDBCException(Messages.ILLEGAL_CONNECTION_PROTOCOL, e);
-        }
     }
 
     static void addClientUsernameIfRequired(Properties properties) {

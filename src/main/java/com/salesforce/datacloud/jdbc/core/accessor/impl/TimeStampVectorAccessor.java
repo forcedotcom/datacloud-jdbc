@@ -16,8 +16,6 @@
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorGetter.createGetter;
-import static com.salesforce.datacloud.jdbc.util.Constants.ISO_DATE_TIME_FORMAT;
-import static com.salesforce.datacloud.jdbc.util.Constants.ISO_DATE_TIME_SEC_FORMAT;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
@@ -39,7 +37,8 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.util.DateUtility;
 
 public class TimeStampVectorAccessor extends QueryJDBCAccessor {
-
+    private static final String ISO_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+    private static final String ISO_DATE_TIME_SEC_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'Z'";
     private static final String INVALID_UNIT_ERROR_RESPONSE = "Invalid Arrow time unit";
 
     @FunctionalInterface

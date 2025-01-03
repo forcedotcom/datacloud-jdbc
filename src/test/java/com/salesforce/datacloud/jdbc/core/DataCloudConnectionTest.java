@@ -32,56 +32,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class DataCloudConnectionTest extends HyperGrpcTestBase {
-    static final String validUrl = "jdbc:salesforce-datacloud://login.salesforce.com";
 
     static final Properties properties = propertiesForPassword("un", "pw");
-
-    @SneakyThrows
-    @Test
-    void getServiceRootUrl_acceptsWellFormedUrl() {
-        val url = "jdbc:salesforce-datacloud://login.salesforce.com";
-        assertThat(DataCloudConnection.acceptsUrl(url)).isTrue();
-        assertThat(DataCloudConnection.getServiceRootUrl(url)).isEqualTo("https://login.salesforce.com");
-    }
-
-    @SneakyThrows
-    @Test
-    void getServiceRootUrl_rejectsUrlThatContainsHttps() {
-        val url = "jdbc:salesforce-datacloud:https://login.salesforce.com";
-        assertThat(DataCloudConnection.acceptsUrl(url)).isFalse();
-        val ex =
-                Assertions.assertThrows(DataCloudJDBCException.class, () -> DataCloudConnection.getServiceRootUrl(url));
-        assertThat(ex).hasMessage(ILLEGAL_CONNECTION_PROTOCOL);
-    }
-
-    @SneakyThrows
-    @Test
-    void getServiceRootUrl_rejectsUrlThatDoesNotStartWithConnectionProtocol() {
-        val url = "foo:https://login.salesforce.com";
-        assertThat(DataCloudConnection.acceptsUrl(url)).isFalse();
-        val ex =
-                Assertions.assertThrows(DataCloudJDBCException.class, () -> DataCloudConnection.getServiceRootUrl(url));
-        assertThat(ex).hasMessage(ILLEGAL_CONNECTION_PROTOCOL);
-    }
-
-    @SneakyThrows
-    @Test
-    void getServiceRootUrl_rejectsUrlThatIsMalformed() {
-        val url = "jdbc:salesforce-datacloud://log^in.sal^esf^orce.c^om";
-        assertThat(DataCloudConnection.acceptsUrl(url)).isTrue();
-        val ex =
-                Assertions.assertThrows(DataCloudJDBCException.class, () -> DataCloudConnection.getServiceRootUrl(url));
-        assertThat(ex).hasMessage(ILLEGAL_CONNECTION_PROTOCOL).hasCauseInstanceOf(IllegalArgumentException.class);
-    }
-
-    @SneakyThrows
-    @Test
-    void getServiceRootUrl_rejectsUrlThatIsNull() {
-        assertThat(DataCloudConnection.acceptsUrl(null)).isFalse();
-        val ex = Assertions.assertThrows(
-                DataCloudJDBCException.class, () -> DataCloudConnection.getServiceRootUrl(null));
-        assertThat(ex).hasMessage(ILLEGAL_CONNECTION_PROTOCOL);
-    }
 
     @Test
     void testCreateStatement() {

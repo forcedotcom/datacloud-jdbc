@@ -22,7 +22,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.TimeZone;
-import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -34,7 +33,6 @@ import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.QueryState;
 
-@Getter
 @Slf4j
 public class StreamingResultSet extends AvaticaResultSet implements DataCloudResultSet {
     private static final int ROOT_ALLOCATOR_MB_FROM_V2 = 100 * 1024 * 1024;
