@@ -21,7 +21,9 @@ import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -484,6 +486,40 @@ public class TimeStampVectorAccessorTest {
             }
         }
         consumer.assertThat().hasNotNullSeen(0).hasNullSeen(NUM_OF_METHODS * values.size());
+    }
+
+    @SneakyThrows
+    @Test
+    void testGetTimestampWithDifferentTimeZone() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
+        List<Integer> monthNumber = getRandomMonthNumber();
+        val values = getMilliSecondValues(calendar, monthNumber);
+        val consumer = new TestWasNullConsumer(collector);
+
+        try (val vector = extension.createTimeStampNanoVector(values)) {
+            val i = new AtomicInteger(0);
+            val sut = new TimeStampVectorAccessor(vector, i::get, consumer);
+
+            Calendar pstCalendar = Calendar.getInstance(TimeZone.getTimeZone("PST"));
+
+            for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
+                val timestampValue = sut.getTimestamp(pstCalendar);
+                val stringValue = sut.getString();
+                val currentMillis = values.get(i.get());
+
+                pstCalendar.setTimeInMillis(currentMillis);
+                long pstMillis = pstCalendar.getTimeInMillis();
+
+                LocalDateTime expectedPST = LocalDateTime.ofInstant(
+                        Instant.ofEpochMilli(pstMillis),
+                        TimeZone.getTimeZone("PST").toZoneId());
+                Timestamp expectedTimestamp = Timestamp.valueOf(expectedPST);
+
+                collector.assertThat(timestampValue).isEqualTo(expectedTimestamp);
+                assertISOStringLike(stringValue, currentMillis);
+            }
+        }
     }
 
     private List<Long> getMilliSecondValues(Calendar calendar, List<Integer> monthNumber) {

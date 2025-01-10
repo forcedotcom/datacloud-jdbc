@@ -24,9 +24,11 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -132,9 +134,10 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
 
         if (calendar != null) {
             TimeZone timeZone = calendar.getTimeZone();
-            long millis = this.timeUnit.toMillis(value);
-            localDateTime = localDateTime.minus(
-                    (long) timeZone.getOffset(millis) - (long) this.timeZone.getOffset(millis), ChronoUnit.MILLIS);
+            ZonedDateTime utcZonedDateTime =
+                    ZonedDateTime.ofInstant(Instant.ofEpochMilli(this.timeUnit.toMillis(value)), ZoneOffset.UTC);
+            localDateTime =
+                    utcZonedDateTime.withZoneSameInstant(timeZone.toZoneId()).toLocalDateTime();
         }
         return localDateTime;
     }
