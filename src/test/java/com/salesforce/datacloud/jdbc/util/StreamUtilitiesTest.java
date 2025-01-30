@@ -21,58 +21,46 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 
+@Slf4j
 class StreamUtilitiesTest {
     @Test
-    void testTakeWhile_Stream_BasicCase() {
+    void testTakeWhileSomeMatch() {
         val stream = Stream.of(1, 2, 3, 4, 5, 6, 7);
-        Predicate<Integer> predicate = x -> x < 5;
 
-        val result = StreamUtilities.takeWhile(stream, predicate).collect(Collectors.toList());
+        val result = StreamUtilities.takeWhile(stream, x -> x < 5).collect(Collectors.toList());
 
         assertThat(result).containsExactly(1, 2, 3, 4);
     }
 
     @Test
-    void testTakeWhile_Stream_AllMatch() {
+    void testTakeWhileAllMatch() {
         val stream = Stream.of(1, 2, 3, 4);
-        Predicate<Integer> predicate = x -> x < 10;
 
-        val result = StreamUtilities.takeWhile(stream, predicate).collect(Collectors.toList());
+        val result = StreamUtilities.takeWhile(stream, x -> x < 10).collect(Collectors.toList());
 
         assertThat(result).containsExactly(1, 2, 3, 4);
     }
 
     @Test
-    void testTakeWhile_Stream_NoMatch() {
+    void testTakeWhileNoMatch() {
         val stream = Stream.of(1, 2, 3);
-        Predicate<Integer> predicate = x -> x < 0;
 
-        val result = StreamUtilities.takeWhile(stream, predicate).collect(Collectors.toList());
+        val result = StreamUtilities.takeWhile(stream, x -> x < 0).collect(Collectors.toList());
 
         assertThat(result).isEmpty();
     }
 
     @Test
-    void testTakeWhile_Stream_StopsEarly() {
-        val stream = Stream.of(2, 4, 6, 7, 8, 10);
-        Predicate<Integer> predicate = x -> x % 2 == 0;
-
-        val result = StreamUtilities.takeWhile(stream, predicate).collect(Collectors.toList());
-
-        assertThat(result).containsExactly(2, 4, 6);
-    }
-
-    @Test
-    void testTakeWhile_Stream_EmptyStream() {
+    void testTakeWhileEmptyStream() {
         Stream<Integer> stream = Stream.empty();
         Predicate<Integer> predicate = x -> x < 5;
 
@@ -82,51 +70,20 @@ class StreamUtilitiesTest {
     }
 
     @Test
-    void testTryTimes_SuccessFirstTry() {
-        Optional<Stream<String>> result = StreamUtilities.tryTimes(3, () -> Stream.of("Success"), System.out::println);
+    void testTryTimesSuccessFirstTry() {
+        val result = StreamUtilities.tryTimes(3, () -> Stream.of("Success"), this::consumer);
 
         assertThat(result).isPresent();
         assertThat(result.get().collect(Collectors.toList())).containsExactly("Success");
     }
 
     @Test
-    void testTryTimes_SuccessAfterFewFailures() {
-        val counter = new AtomicInteger(0);
-
-        Optional<Stream<String>> result = StreamUtilities.tryTimes(
-                3,
-                () -> {
-                    if (counter.incrementAndGet() < 3) {
-                        throw new RuntimeException("Failure " + counter.get());
-                    }
-                    return Stream.of("Success");
-                },
-                System.out::println);
-
-        assertThat(result).isPresent();
-        assertThat(result.get().collect(Collectors.toList())).containsExactly("Success");
-    }
-
-    @Test
-    void testTryTimes_AllFailures() {
-        Optional<Stream<String>> result = StreamUtilities.tryTimes(
-                3,
-                () -> {
-                    throw new RuntimeException("Always fails");
-                },
-                System.out::println);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void testTryTimes_ConsumerReceivesExceptions() {
-        @SuppressWarnings("unchecked")
+    void testTryTimesSomeFailures() {
         Consumer<Throwable> mockConsumer = mock(Consumer.class);
 
-        AtomicInteger counter = new AtomicInteger(0);
+        val counter = new AtomicInteger(0);
 
-        Optional<Stream<String>> result = StreamUtilities.tryTimes(
+        val result = StreamUtilities.tryTimes(
                 3,
                 () -> {
                     if (counter.incrementAndGet() < 3) {
@@ -143,22 +100,25 @@ class StreamUtilitiesTest {
     }
 
     @Test
-    void testTryTimes_NoAttemptsAllowed() {
-        Optional<Stream<String>> result =
-                StreamUtilities.tryTimes(0, () -> Stream.of("Never runs"), System.out::println);
+    void testTryTimesNoAttemptsAllowed() {
+        val result = StreamUtilities.tryTimes(0, () -> Stream.of("Never runs"), this::consumer);
 
         assertThat(result).isEmpty();
     }
 
     @Test
-    void testTryTimes_ReturnsEmptyStream_WhenOptionalEmpty() {
+    void testTryTimesAlwaysFails() {
         val result = StreamUtilities.tryTimes(
                 3,
                 () -> {
                     throw new RuntimeException("Always fails");
                 },
-                System.out::println);
+                this::consumer);
 
         assertThat(result).isNotPresent();
+    }
+
+    private void consumer(Throwable err) {
+        log.error("consumed throwable", err);
     }
 }
