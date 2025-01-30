@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
+import com.salesforce.datacloud.jdbc.core.fsm.QueryStateMachine;
 import com.salesforce.datacloud.jdbc.core.listener.AdaptiveQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
@@ -87,6 +88,10 @@ public class DataCloudStatement implements Statement {
         return listener.isReady();
     }
 
+    private boolean useFSM() {
+        return this.dataCloudConnection.getProperties().containsKey("fsm");
+    }
+
     @Override
     public boolean execute(String sql) throws SQLException {
         log.debug("Entering execute");
@@ -113,7 +118,9 @@ public class DataCloudStatement implements Statement {
     }
 
     protected DataCloudResultSet executeSyncQuery(String sql, HyperGrpcClientExecutor client) throws SQLException {
-        listener = SyncQueryStatusListener.of(sql, client);
+        listener = useFSM()
+                ? new QueryStateMachine(client, sql, QueryParam.TransferMode.SYNC)
+                : SyncQueryStatusListener.of(sql, client);
         resultSet = listener.generateResultSet();
         log.info("executeSyncQuery completed.  queryId={}", listener.getQueryId());
         return (DataCloudResultSet) resultSet;
@@ -128,7 +135,9 @@ public class DataCloudStatement implements Statement {
 
     protected DataCloudResultSet executeAdaptiveQuery(String sql, HyperGrpcClientExecutor client, Duration timeout)
             throws SQLException {
-        listener = AdaptiveQueryStatusListener.of(sql, client, timeout);
+        listener = useFSM()
+                ? new QueryStateMachine(client, sql, QueryParam.TransferMode.ADAPTIVE)
+                : AdaptiveQueryStatusListener.of(sql, client, timeout);
         resultSet = listener.generateResultSet();
         log.info("executeAdaptiveQuery completed. queryId={}", listener.getQueryId());
         return (DataCloudResultSet) resultSet;
@@ -141,7 +150,9 @@ public class DataCloudStatement implements Statement {
     }
 
     protected DataCloudStatement executeAsyncQuery(String sql, HyperGrpcClientExecutor client) throws SQLException {
-        listener = AsyncQueryStatusListener.of(sql, client);
+        listener = useFSM()
+                ? new QueryStateMachine(client, sql, QueryParam.TransferMode.ASYNC)
+                : AsyncQueryStatusListener.of(sql, client);
         log.info("executeAsyncQuery completed. queryId={}", listener.getQueryId());
         return this;
     }

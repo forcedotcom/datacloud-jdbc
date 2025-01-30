@@ -33,6 +33,7 @@ import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
+@Deprecated
 @Slf4j
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
 public class AdaptiveQueryStatusPoller implements QueryStatusPoller {

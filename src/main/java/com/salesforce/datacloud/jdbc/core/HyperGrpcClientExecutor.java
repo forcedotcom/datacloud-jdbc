@@ -135,6 +135,18 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         return getStub(queryId).getQueryInfo(param);
     }
 
+    public Iterator<QueryResult> getQueryResult(String queryId, long rowCount, long offset, boolean omitSchema) {
+        val rowRange = RowRange.newBuilder().setRowCount(rowCount).setOffset(offset);
+
+        val param = QueryResultParam.newBuilder()
+                .setQueryId(queryId)
+                .setRowRange(rowRange)
+                .setOmitSchema(omitSchema)
+                .build();
+
+        return getStub(queryId).getQueryResult(param);
+    }
+
     public Iterator<QueryResult> getQueryResult(String queryId, long chunkId, boolean omitSchema) {
         val param = getQueryResultParam(queryId, chunkId, omitSchema);
         return getStub(queryId).getQueryResult(param);

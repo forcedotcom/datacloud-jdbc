@@ -32,6 +32,7 @@ import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
+@Deprecated
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
 class AsyncQueryStatusPoller implements QueryStatusPoller {
     private final String queryId;

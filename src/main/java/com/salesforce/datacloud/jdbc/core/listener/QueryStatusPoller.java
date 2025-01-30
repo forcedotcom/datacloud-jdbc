@@ -19,6 +19,7 @@ import java.sql.SQLException;
 import java.util.Optional;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
+@Deprecated
 public interface QueryStatusPoller {
     QueryStatus pollQueryStatus();
 

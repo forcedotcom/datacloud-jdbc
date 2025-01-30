@@ -36,6 +36,7 @@ import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
+@Deprecated
 @Slf4j
 @Builder(access = AccessLevel.PRIVATE)
 public class AsyncQueryStatusListener implements QueryStatusListener {

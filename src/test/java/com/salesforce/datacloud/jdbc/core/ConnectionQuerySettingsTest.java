@@ -18,9 +18,11 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.Maps;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class ConnectionQuerySettingsTest extends HyperTestBase {
@@ -49,6 +51,17 @@ public class ConnectionQuerySettingsTest extends HyperTestBase {
                     result.next();
                     assertThat(result.getString(1)).isEqualTo("ISO, YMD");
                 },
+                settings);
+    }
+
+    @Test
+    @SneakyThrows
+    public void testHyperDoesNothingForMalformedSetting() {
+        val settings = Maps.immutableEntry("serverSetting.date_style", "MDY723847923743");
+
+        assertWithStatement(
+                statement -> Assertions.assertThrows(
+                        DataCloudJDBCException.class, () -> statement.executeQuery("SELECT CURRENT_DATE")),
                 settings);
     }
 }

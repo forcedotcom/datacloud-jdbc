@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.jdbc.core.listener;
 
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
+import com.salesforce.datacloud.jdbc.core.fsm.QueryStateMachine;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -35,7 +36,11 @@ class QueryStatusListenerTest extends HyperGrpcTestBase {
     }
 
     @SneakyThrows
-    private QueryStatusListener sut(String query, QueryParam.TransferMode mode, Duration timeout) {
+    private QueryStatusListener sut(String query, QueryParam.TransferMode mode, Duration timeout, boolean fsm) {
+        if (fsm) {
+            return new QueryStateMachine(hyperGrpcClient, query, mode);
+        }
+
         switch (mode) {
             case SYNC:
                 return SyncQueryStatusListener.of(query, hyperGrpcClient);
@@ -61,6 +66,18 @@ class QueryStatusListenerTest extends HyperGrpcTestBase {
 
         setupExecuteQuery(queryId, query, mode);
         val listener = sut(query, mode);
+
+        QueryStatusListenerAssert.assertThat(listener).hasQueryId(queryId).hasQuery(query);
+    }
+
+    @ParameterizedTest
+    @MethodSource("supported")
+    void fsmKeepsTrackOfQueryAndQueryId(QueryParam.TransferMode mode) {
+        val query = this.query + UUID.randomUUID();
+        val queryId = UUID.randomUUID().toString();
+
+        setupExecuteQuery(queryId, query, mode);
+        val listener = sut(query, mode, Duration.ofMinutes(1), true);
 
         QueryStatusListenerAssert.assertThat(listener).hasQueryId(queryId).hasQuery(query);
     }

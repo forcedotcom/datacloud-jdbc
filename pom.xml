@@ -14,7 +14,7 @@
         <commons-lang3.version>3.17.0</commons-lang3.version>
         <download.cache.directory>${project.build.directory}/.cache</download.cache.directory>
         <git-build-hook-maven-plugin.version>3.5.0</git-build-hook-maven-plugin.version>
-        <grpc.version>1.68.1</grpc.version>
+        <grpc.version>1.70.0</grpc.version>
         <grpcmock-junit5.version>0.13.0</grpcmock-junit5.version>
         <guava.version>33.2.1-jre</guava.version>
         <!-- https://tableau.github.io/hyper-db/docs/releases#download -->
@@ -32,7 +32,7 @@
         <okhttp.version>4.12.0</okhttp.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <protobuf.version>3.25.5</protobuf.version>
+        <protobuf.version>4.29.3</protobuf.version>
         <shadeBase>com.salesforce.datacloud.jdbc.internal.shaded</shadeBase>
         <slf4j.version>1.7.32</slf4j.version>
         <spotless.version>2.30.0</spotless.version>

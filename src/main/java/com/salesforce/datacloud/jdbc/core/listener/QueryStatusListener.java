@@ -20,6 +20,7 @@ import java.sql.SQLException;
 import java.util.stream.Stream;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 
+// TODO: decide if we should deprecate, or just update this to return the entire QueryStatus object
 public interface QueryStatusListener {
     String BEFORE_READY = "Results were requested before ready";
 

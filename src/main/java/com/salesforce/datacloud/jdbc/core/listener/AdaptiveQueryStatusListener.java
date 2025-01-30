@@ -44,6 +44,7 @@ import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
+@Deprecated
 @Slf4j
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class AdaptiveQueryStatusListener implements QueryStatusListener {
