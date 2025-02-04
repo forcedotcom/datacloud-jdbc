@@ -12,11 +12,12 @@ jobs:
     strategy:
       matrix:
         java-version: [8, 11, 17, 21]
+    name: Build with JDK ${{ matrix.java-version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ matrix.java-version }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ matrix.java-version }}
@@ -25,7 +26,15 @@ jobs:
       - name: Get hyperd version
         id: evaluate-property
         run: |
+          mvn -v
           echo "HYPER_VERSION=$(mvn help:evaluate -Dexpression=hyperapi.version -q -DforceStdout)" >> $GITHUB_ENV
+      - name: Call Hyper Download workflow
+        uses: ./.github/workflows/hyper-download.yml
+        with:
+          hyper_version: ${{ env.HYPER_VERSION }}
+          target_directory: ${{ env.CURRENT_DIR }}
+        secrets:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Cache hyperd
         uses: actions/cache@v3
         with:
@@ -35,4 +44,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
       - name: Maven package
-        run: mvn --batch-mode --no-transfer-progress clean package --file pom.xml
+        run: mvn --batch-mode --no-transfer-progress clean package --file pom.xml -Dskip.hyper.download=true

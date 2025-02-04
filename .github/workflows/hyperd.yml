@@ -1,0 +1,43 @@
+on:
+  workflow_call:
+    inputs:
+      hyper_version:
+        required: true
+        type: string
+      target_directory:
+        required: true
+        type: string
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+
+jobs:
+  download-hyperd:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Cache hyperd
+        id: cache-hyperd
+        uses: actions/cache@v4
+        with:
+          path: /tmp/hyperd
+          key: hyperd-${{ runner.os }}-${{ inputs.hyper_version }}
+          restore-keys:
+            hyperd-${{ runner.os }}-
+
+      - name: Download hyperd if not cached
+        if: steps.cache-hyperd.outputs.cache-hit != 'true'
+        run: |
+          wget "https://downloads.tableau.com/tssoftware/tableauhyperapi-cxx-linux-x86_64-release-main.${{ inputs.hyper_version }}.zip" -O /tmp/hyperd.zip
+
+      - name: Extract hyperd to target/hyper
+        if: steps.cache-hyperd.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/hyperd
+          unzip -j /tmp/hyperd.zip -d /tmp/hyperd "**/hyperd" "**/*.so"
+
+      - name: Move hyperd for maven
+        run: |
+          mkdir -p ${{ inputs.target_directory }}/target/hyper
+          cp /tmp/hyperd/* ${{ inputs.target_directory }}/target/hyper/
+          chmod 700 ${{ inputs.target_directory }}/target/hyper/hyperd

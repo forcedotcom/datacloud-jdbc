@@ -18,7 +18,7 @@
         <grpcmock-junit5.version>0.13.0</grpcmock-junit5.version>
         <guava.version>33.2.1-jre</guava.version>
         <!-- https://tableau.github.io/hyper-db/docs/releases#download -->
-        <hyperapi.version>0.0.20746.reac9bd2d</hyperapi.version>
+        <hyperapi.version>0.0.21200.re11c8cb9</hyperapi.version>
         <hyperd.directory>${project.build.directory}/hyper</hyperd.directory>
         <jackson.version>2.18.0</jackson.version>
         <jacoco.maven.plugin.version>0.8.12</jacoco.maven.plugin.version>
@@ -33,7 +33,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <protobuf.version>3.25.5</protobuf.version>
+        <release.profile.active>false</release.profile.active>
         <shadeBase>com.salesforce.datacloud.jdbc.internal.shaded</shadeBase>
+        <skip.hyper.download>false</skip.hyper.download>
         <slf4j.version>1.7.32</slf4j.version>
         <spotless.version>2.30.0</spotless.version>
     </properties>
@@ -626,6 +628,7 @@
                             <url>${hyper-download-url}.${hyperapi.version}.zip</url>
                             <unpack>true</unpack>
                             <outputDirectory>${download.cache.directory}/hyper-unzipped</outputDirectory>
+                            <skip>${skip.hyper.download}</skip>
                         </configuration>
                     </execution>
                 </executions>
@@ -670,6 +673,7 @@
                                     </fileset>
                                 </chmod>
                             </target>
+                            <skip>${skip.hyper.download}</skip>
                         </configuration>
                     </execution>
                 </executions>

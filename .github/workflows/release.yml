@@ -23,19 +23,19 @@ jobs:
       - name: Get hyperd version
         id: evaluate-property
         run: |
+          mvn -v
           echo "HYPER_VERSION=$(mvn help:evaluate -Dexpression=hyperapi.version -q -DforceStdout)" >> $GITHUB_ENV
-      - name: Cache hyperd
-        uses: actions/cache@v3
+      - name: Call Hyper Download workflow
+        uses: ./.github/workflows/hyper-download.yml
         with:
-          path: |
-            target/.cache
-          key: ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
-          restore-keys: |
-            ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
+          hyper_version: ${{ env.HYPER_VERSION }}
+          target_directory: ${{ env.CURRENT_DIR }}
+        secrets:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Set version
         run: mvn versions:set --no-transfer-progress -DnewVersion=${{ github.event.release.tag_name }}
       - name: Build with Maven
-        run: mvn --batch-mode --no-transfer-progress clean deploy -P release --file pom.xml
+        run: mvn --batch-mode --no-transfer-progress clean deploy -P release --file pom.xml -Dskip.hyper.download=true
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
