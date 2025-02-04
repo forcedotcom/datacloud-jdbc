@@ -15,22 +15,20 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import java.sql.SQLException;
 import java.util.stream.Stream;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 
 // TODO: decide if we should deprecate, or just update this to return the entire QueryStatus object
+@Deprecated
 public interface QueryStatusListener {
     String BEFORE_READY = "Results were requested before ready";
 
+    DataCloudQueryStatus getStatus();
+
     String getQuery();
-
-    boolean isReady();
-
-    String getStatus();
-
-    String getQueryId();
 
     DataCloudResultSet generateResultSet();
 

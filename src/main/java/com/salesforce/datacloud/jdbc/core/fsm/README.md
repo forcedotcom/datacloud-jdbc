@@ -21,3 +21,16 @@ stateDiagram
     GetQueryInfo --> GetQueryInfo:Poll until results produced or finished
     GetQueryInfo --> [*]:No more pages, finished
 ```
+
+```mermaid
+stateDiagram-v2
+    direction LR
+[*] --> GetQueryResults: ID, Offset, Count
+GetQueryResults --> GetQueryInfo: Error
+GetQueryInfo --> GetQueryResults: Results available
+GetQueryInfo --> GetQueryInfo: Try until timeout
+GetQueryInfo --> [*]: Timeout Exception
+GetQueryResults --> EmitQueryResults: Success
+EmitQueryResults --> EmitQueryResults: More in stream
+EmitQueryResults --> [*]: Done
+```

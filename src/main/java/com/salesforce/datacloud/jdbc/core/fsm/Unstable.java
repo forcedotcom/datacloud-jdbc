@@ -13,16 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.salesforce.datacloud.jdbc.core;
+package com.salesforce.datacloud.jdbc.core.fsm;
 
-import java.sql.ResultSet;
-import lombok.val;
+import java.lang.annotation.Documented;
 
-public interface DataCloudResultSet extends ResultSet {
-    DataCloudQueryStatus getStatus();
-
-    default boolean isReady() {
-        val status = getStatus();
-        return status.isResultsProduced() || status.isExecutionFinished();
-    }
-}
+@Documented
+public @interface Unstable {}

@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
@@ -72,7 +73,9 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
     }
 
     @Override
-    public String getStatus() {
+    public DataCloudQueryStatus getStatus() {
+        return client.getQueryStatus(queryId)
+
         return Optional.of(getPoller())
                 .map(AsyncQueryStatusPoller::pollQueryStatus)
                 .map(QueryStatus::getCompletionStatus)

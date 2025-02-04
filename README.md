@@ -40,6 +40,10 @@ Use `jdbc:salesforce-datacloud://login.salesforce.com`
 
 Use `com.salesforce.datacloud.jdbc.DataCloudJDBCDriver` as the driver class name for the JDBC application.
 
+### Syntax
+
+See the documentation on [supported syntax][supported syntax]
+
 ### Authentication
 
 We support three of the [OAuth authorization flows][oauth authorization flows] provided by Salesforce.
@@ -175,3 +179,4 @@ mvn assertj:generate-assertions
 [connection settings]: https://tableau.github.io/hyper-db/docs/hyper-api/connection#connection-settings
 [assertion generator]: https://joel-costigliola.github.io/assertj/assertj-assertions-generator-maven-plugin.html#configuration
 [connected app overview]: https://help.salesforce.com/s/articleView?id=sf.connected_app_overview.htm&type=5
+[supported syntax]: https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/dc-sql-reference/syntax.html

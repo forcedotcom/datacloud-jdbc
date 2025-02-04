@@ -64,7 +64,6 @@ public class StreamingResultSetTest extends HyperTestBase {
 
                 val rs = statement.executeQuery();
                 assertThat(rs).isInstanceOf(StreamingResultSet.class);
-                assertThat(((StreamingResultSet) rs).isReady()).isTrue();
 
                 while (rs.next()) {
                     assertEachRowIsTheSame(rs, expected);

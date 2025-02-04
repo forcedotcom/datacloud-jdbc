@@ -22,6 +22,7 @@ import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProcessor;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
+import com.salesforce.datacloud.jdbc.core.fsm.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.ClientBuilder;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
@@ -64,6 +65,12 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+/**
+ * TODO: DataCloudConnection should be an interface that makes more clear the public methods available from this type,
+ * this change should be mostly non-breaking, but it does require a fair amount of refactors to do in test to do it now:
+ * DataCloudConnection::getRowBasedResultSet(QueryId, RowIndex, Count) -> DataCloudResultSet
+ * DataCloudConnection::getChunkBasedResultSet(QueryId, ChunkId) -> DataCloudResultSet
+ */
 @Slf4j
 @Builder(access = AccessLevel.PACKAGE)
 public class DataCloudConnection implements Connection, AutoCloseable {
@@ -157,6 +164,15 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                 .properties(properties)
                 .connectionString(connectionString)
                 .build();
+    }
+
+    public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit, RowBased.Mode mode) {
+        val iterator = RowBased.of(executor, queryId, offset, limit, mode);
+        return PartialResultSet.of(queryId, executor, iterator);
+    }
+
+    protected DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) {
+        throw new UnsupportedOperationException();
     }
 
     @Override

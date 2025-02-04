@@ -15,10 +15,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getBooleanOrDefault;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
-import com.salesforce.datacloud.jdbc.core.fsm.QueryStateMachine;
+import com.salesforce.datacloud.jdbc.core.fsm.RowBased;
 import com.salesforce.datacloud.jdbc.core.listener.AdaptiveQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
@@ -32,11 +32,24 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.time.Duration;
+import java.util.Optional;
+
+import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 
+/**
+ * TODO: DataCloudStatement should be an interface that makes more clear the public methods available from this type,
+ * this change should be mostly non-breaking, but it does require a fair amount of refactors to do in test to do it now:
+ * DataCloudStatement::getRowBasedResultSet(RowIndex, Count) -> DataCloudResultSet
+ * DataCloudStatement::getChunkBasedResultSet(ChunkId) -> DataCloudResultSet
+ * DataCloudStatement::executeAdaptiveQuery(Query) -> DataCloudResultSet
+ * DataCloudStatement::executeSyncQuery(Query) -> DataCloudResultSet
+ * DataCloudStatement::executeAsyncQuery(Query) -> DataCloudStatement
+ */
 @Slf4j
 public class DataCloudStatement implements Statement {
     protected ResultSet resultSet;
@@ -74,23 +87,38 @@ public class DataCloudStatement implements Statement {
         return clientBuilder.queryTimeout(getQueryTimeout()).build();
     }
 
-    private void assertQueryReady() throws SQLException {
+    private void assertQueryActive() throws SQLException {
         if (listener == null) {
             throw new DataCloudJDBCException("a query was not executed before attempting to access results");
         }
+    }
+
+    private void assertQueryReady() throws SQLException {
+        assertQueryActive();
 
         if (!listener.isReady()) {
             throw new DataCloudJDBCException("query results were not ready");
         }
     }
 
-    public boolean isReady() {
-        return listener.isReady();
+    public DataCloudQueryStatus getStatus() throws SQLException {
+        assertQueryActive();
+        val client = getQueryExecutor();
+        val queryId = listener.getQueryId();
+        return client.getQueryStatus(queryId).findFirst().orElse(null);
     }
 
-    private boolean useFSM() {
-        return this.dataCloudConnection.getProperties().containsKey("fsm");
+    public boolean isReady() throws SQLException {
+        val status = getStatus();
+        return Optional.ofNullable(status).map(t -> t.isResultsProduced() || t.isExecutionFinished()).orElse(false);
     }
+
+    @Getter(lazy = true, value = AccessLevel.PROTECTED)
+    private final boolean useFSM = getBooleanOrDefault(dataCloudConnection.getProperties(), Constants.FORCE_FSM, false);
+
+    @Getter(lazy = true, value = AccessLevel.PROTECTED)
+    private final boolean forceSync =
+            getBooleanOrDefault(dataCloudConnection.getProperties(), Constants.FORCE_SYNC, false);
 
     @Override
     public boolean execute(String sql) throws SQLException {
@@ -103,10 +131,7 @@ public class DataCloudStatement implements Statement {
     public ResultSet executeQuery(String sql) throws SQLException {
         log.debug("Entering executeQuery");
 
-        val useSync = optional(this.dataCloudConnection.getProperties(), Constants.FORCE_SYNC)
-                .map(Boolean::parseBoolean)
-                .orElse(false);
-        resultSet = useSync ? executeSyncQuery(sql) : executeAdaptiveQuery(sql);
+        resultSet = isForceSync() ? executeSyncQuery(sql) : executeAdaptiveQuery(sql);
 
         return resultSet;
     }
@@ -118,9 +143,7 @@ public class DataCloudStatement implements Statement {
     }
 
     protected DataCloudResultSet executeSyncQuery(String sql, HyperGrpcClientExecutor client) throws SQLException {
-        listener = useFSM()
-                ? new QueryStateMachine(client, sql, QueryParam.TransferMode.SYNC)
-                : SyncQueryStatusListener.of(sql, client);
+        listener = SyncQueryStatusListener.of(sql, client);
         resultSet = listener.generateResultSet();
         log.info("executeSyncQuery completed.  queryId={}", listener.getQueryId());
         return (DataCloudResultSet) resultSet;
@@ -135,9 +158,7 @@ public class DataCloudStatement implements Statement {
 
     protected DataCloudResultSet executeAdaptiveQuery(String sql, HyperGrpcClientExecutor client, Duration timeout)
             throws SQLException {
-        listener = useFSM()
-                ? new QueryStateMachine(client, sql, QueryParam.TransferMode.ADAPTIVE)
-                : AdaptiveQueryStatusListener.of(sql, client, timeout);
+        listener = AdaptiveQueryStatusListener.of(sql, client, timeout);
         resultSet = listener.generateResultSet();
         log.info("executeAdaptiveQuery completed. queryId={}", listener.getQueryId());
         return (DataCloudResultSet) resultSet;
@@ -150,9 +171,7 @@ public class DataCloudStatement implements Statement {
     }
 
     protected DataCloudStatement executeAsyncQuery(String sql, HyperGrpcClientExecutor client) throws SQLException {
-        listener = useFSM()
-                ? new QueryStateMachine(client, sql, QueryParam.TransferMode.ASYNC)
-                : AsyncQueryStatusListener.of(sql, client);
+        listener = AsyncQueryStatusListener.of(sql, client);
         log.info("executeAsyncQuery completed. queryId={}", listener.getQueryId());
         return this;
     }
