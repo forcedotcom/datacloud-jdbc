@@ -7,9 +7,6 @@ on:
       target_directory:
         required: true
         type: string
-    secrets:
-      GITHUB_TOKEN:
-        required: true
 
 jobs:
   download-hyperd:

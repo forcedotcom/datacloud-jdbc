@@ -29,12 +29,10 @@ jobs:
           mvn -v
           echo "HYPER_VERSION=$(mvn help:evaluate -Dexpression=hyperapi.version -q -DforceStdout)" >> $GITHUB_ENV
       - name: Call Hyper Download workflow
-        uses: ./.github/workflows/hyper-download.yml
+        uses: ./.github/workflows/hyperd.yml
         with:
           hyper_version: ${{ env.HYPER_VERSION }}
           target_directory: ${{ env.CURRENT_DIR }}
-        secrets:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Cache hyperd
         uses: actions/cache@v3
         with:
