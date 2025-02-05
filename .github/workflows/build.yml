@@ -6,7 +6,15 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  HYPER_VERSION: "0.0.21200.re11c8cb9"
+
 jobs:
+  download-hyperd:
+    uses: ./.github/workflows/hyperd.yml
+    with:
+      hyper_version: "0.0.21200.re11c8cb9"
+
   build:
     runs-on: ubuntu-latest
     strategy:
@@ -22,20 +30,14 @@ jobs:
         with:
           java-version: ${{ matrix.java-version }}
           distribution: 'temurin'
-          cache: maven
-      - name: Call Hyper Download workflow
-        uses: ./.github/workflows/hyperd.yml
+#          cache: maven
+      - name: Maven clean
+        run: mvn --batch-mode clean
+      - name: Restore hyperd from cache
+        uses: actions/cache@v4
         with:
-          target_directory: ${{ env.CURRENT_DIR }}
-      - name: Cache hyperd
-        uses: actions/cache@v3
-        with:
-          path: |
-            target/.cache
-          key: ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
-          restore-keys: |
-            ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
+          path: target/hyper
+          fail-on-cache-miss: 'true'
+          key: hyperd-${{ runner.os }}-${{ env.HYPER_VERSION }}
       - name: Maven package
-        run: |
-          mvn -v
-          mvn --batch-mode --no-transfer-progress clean package --file pom.xml -Dskip.hyper.download=true
+        run: mvn --batch-mode --no-transfer-progress package --file pom.xml -Dskip.hyper.download=true -X

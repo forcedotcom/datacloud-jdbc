@@ -657,6 +657,7 @@
                                     <flattenmapper/>
                                 </copy>
                             </target>
+                            <skip>${skip.hyper.download}</skip>
                         </configuration>
                     </execution>
                     <execution>
@@ -673,7 +674,6 @@
                                     </fileset>
                                 </chmod>
                             </target>
-                            <skip>${skip.hyper.download}</skip>
                         </configuration>
                     </execution>
                 </executions>

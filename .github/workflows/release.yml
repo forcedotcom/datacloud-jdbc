@@ -4,7 +4,15 @@ on:
   release:
     types: [ "created" ]
 
+env:
+  HYPER_VERSION: "0.0.21200.re11c8cb9"
+
 jobs:
+  download-hyperd:
+    uses: ./.github/workflows/hyperd.yml
+    with:
+      hyper_version: ${{ env.HYPER_VERSION }}
+
   build:
     runs-on: ubuntu-latest
 
@@ -20,10 +28,12 @@ jobs:
           server-password: 'MAVEN_PASSWORD'
           gpg-private-key: ${{ secrets.GPG_SIGNING_KEY }}
           gpg-passphrase: 'MAVEN_GPG_PASSPHRASE'
-      - name: Call Hyper Download workflow
-        uses: ./.github/workflows/hyperd.yml
+      - name: Restore hyperd from cache
+        uses: actions/cache@v4
         with:
-          target_directory: ${{ env.CURRENT_DIR }}
+          path: target/hyper
+          fail-on-cache-miss: 'true'
+          key: hyperd-${{ runner.os }}-${{ env.HYPER_VERSION }}
       - name: Set version
         run: mvn versions:set --no-transfer-progress -DnewVersion=${{ github.event.release.tag_name }}
       - name: Build with Maven

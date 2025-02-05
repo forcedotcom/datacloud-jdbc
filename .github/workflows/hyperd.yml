@@ -4,21 +4,16 @@ on:
       hyper_version:
         required: true
         type: string
-        default: "0.0.21200.re11c8cb9"
-      target_directory:
-        required: true
-        type: string
 
 jobs:
   download-hyperd:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - name: Cache hyperd
         id: cache-hyperd
         uses: actions/cache@v4
         with:
-          path: /tmp/hyperd
+          path: target/hyper
           key: hyperd-${{ runner.os }}-${{ inputs.hyper_version }}
           restore-keys:
             hyperd-${{ runner.os }}-
@@ -31,11 +26,13 @@ jobs:
       - name: Extract hyperd to target/hyper
         if: steps.cache-hyperd.outputs.cache-hit != 'true'
         run: |
-          mkdir -p /tmp/hyperd
-          unzip -j /tmp/hyperd.zip -d /tmp/hyperd "**/hyperd" "**/*.so"
+          mkdir -p target/hyper
+          unzip -j /tmp/hyperd.zip -d target/hyper "**/hyperd" "**/*.so"
 
-      - name: Move hyperd for maven
+      - name: Verify hyperd exists
         run: |
-          mkdir -p ${{ inputs.target_directory }}/target/hyper
-          cp /tmp/hyperd/* ${{ inputs.target_directory }}/target/hyper/
-          chmod 700 ${{ inputs.target_directory }}/target/hyper/hyperd
+          ls -latrR
+          if [[ ! -f "target/hyper/hyperd" ]]; then
+            echo "ERROR: hyperd is missing!"
+            exit 1
+          fi
