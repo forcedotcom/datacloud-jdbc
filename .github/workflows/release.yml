@@ -20,15 +20,9 @@ jobs:
           server-password: 'MAVEN_PASSWORD'
           gpg-private-key: ${{ secrets.GPG_SIGNING_KEY }}
           gpg-passphrase: 'MAVEN_GPG_PASSPHRASE'
-      - name: Get hyperd version
-        id: evaluate-property
-        run: |
-          mvn -v
-          echo "HYPER_VERSION=$(mvn help:evaluate -Dexpression=hyperapi.version -q -DforceStdout)" >> $GITHUB_ENV
       - name: Call Hyper Download workflow
         uses: ./.github/workflows/hyperd.yml
         with:
-          hyper_version: ${{ env.HYPER_VERSION }}
           target_directory: ${{ env.CURRENT_DIR }}
       - name: Set version
         run: mvn versions:set --no-transfer-progress -DnewVersion=${{ github.event.release.tag_name }}

@@ -4,6 +4,7 @@ on:
       hyper_version:
         required: true
         type: string
+        default: "0.0.21200.re11c8cb9"
       target_directory:
         required: true
         type: string
