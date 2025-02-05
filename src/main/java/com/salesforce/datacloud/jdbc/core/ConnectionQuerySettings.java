@@ -16,25 +16,33 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.val;
 
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class HyperConnectionSettings {
-    private static final String HYPER_SETTING = "serverSetting.";
+public class ConnectionQuerySettings {
+    private static final String HYPER_SETTING = "querySetting.";
+    private static final String HYPER_LEGACY_SETTING = "serverSetting.";
     private final Map<String, String> settings;
 
-    public static HyperConnectionSettings of(Properties properties) {
-        val result = properties.entrySet().stream()
-                .filter(e -> e.getKey().toString().startsWith(HYPER_SETTING))
-                .collect(
-                        Collectors.toMap(e -> e.getKey().toString().substring(HYPER_SETTING.length()), e -> e.getValue()
-                                .toString()));
-        return new HyperConnectionSettings(result);
+    public static ConnectionQuerySettings of(Properties properties) {
+        Map<String, String> settings = new HashMap<>();
+        for (val e : properties.entrySet()) {
+            if (e.getKey().toString().startsWith(HYPER_SETTING)) {
+                settings.put(
+                        e.getKey().toString().substring(HYPER_SETTING.length()),
+                        e.getValue().toString());
+            } else if (e.getKey().toString().startsWith(HYPER_LEGACY_SETTING)) {
+                settings.put(
+                        e.getKey().toString().substring(HYPER_LEGACY_SETTING.length()),
+                        e.getValue().toString());
+            }
+        }
+        return new ConnectionQuerySettings(settings);
     }
 
     public Map<String, String> getSettings() {

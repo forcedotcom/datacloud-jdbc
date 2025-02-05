@@ -100,12 +100,12 @@ properties.put("clientSecret", "${clientSecret}");
 ### Connection settings
 
 See this page on available [connection settings][connection settings].
-These settings can be configured in properties by using the prefix `serverSetting.`
+These settings can be configured in properties by using the prefix `querySetting.`
 
 For example, to control locale set the following property:
 
 ```java
-properties.put("serverSetting.lc_time", "en_US");
+properties.put("querySetting.lc_time", "en_US");
 ```
 
 ---
