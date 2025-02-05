@@ -32,7 +32,7 @@ import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
 
 class HyperConnectionSettingsTest extends HyperGrpcTestBase {
-    private static final String HYPER_SETTING = "serverSetting.";
+    private static final String HYPER_SETTING = "querySetting.";
 
     @Test
     void testGetSettingWithCorrectPrefix() {
@@ -40,8 +40,8 @@ class HyperConnectionSettingsTest extends HyperGrpcTestBase {
         Properties properties = new Properties();
         properties.setProperty(HYPER_SETTING + "lc_time", "en_US");
         properties.setProperty("username", "alice");
-        HyperConnectionSettings hyperConnectionSettings = HyperConnectionSettings.of(properties);
-        assertThat(hyperConnectionSettings.getSettings()).containsExactlyInAnyOrderEntriesOf(expected);
+        ConnectionQuerySettings connectionQuerySettings = ConnectionQuerySettings.of(properties);
+        assertThat(connectionQuerySettings.getSettings()).containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     @Test
@@ -50,16 +50,16 @@ class HyperConnectionSettingsTest extends HyperGrpcTestBase {
         Properties properties = new Properties();
         properties.setProperty("c_time", "en_US");
         properties.setProperty("username", "alice");
-        HyperConnectionSettings hyperConnectionSettings = HyperConnectionSettings.of(properties);
-        assertThat(hyperConnectionSettings.getSettings()).containsExactlyInAnyOrderEntriesOf(expected);
+        ConnectionQuerySettings connectionQuerySettings = ConnectionQuerySettings.of(properties);
+        assertThat(connectionQuerySettings.getSettings()).containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     @Test
     void testGetSettingWithEmptyProperties() {
         Map<String, String> expected = ImmutableMap.of();
         Properties properties = new Properties();
-        HyperConnectionSettings hyperConnectionSettings = HyperConnectionSettings.of(properties);
-        assertThat(hyperConnectionSettings.getSettings()).containsExactlyInAnyOrderEntriesOf(expected);
+        ConnectionQuerySettings connectionQuerySettings = ConnectionQuerySettings.of(properties);
+        assertThat(connectionQuerySettings.getSettings()).containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     @SneakyThrows

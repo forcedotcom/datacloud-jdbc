@@ -67,7 +67,7 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
             throws SQLException {
         val client = HyperGrpcClientExecutor.builder();
 
-        val settings = HyperConnectionSettings.of(properties).getSettings();
+        val settings = ConnectionQuerySettings.of(properties).getSettings();
         if (!settings.isEmpty()) {
             client.settingsQueryParams(
                     QueryParam.newBuilder().putAllSettings(settings).build());

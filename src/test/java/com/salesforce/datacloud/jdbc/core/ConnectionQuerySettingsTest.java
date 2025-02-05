@@ -19,28 +19,35 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 
-public class ConnectionSettingsTest extends HyperTestBase {
+public class ConnectionQuerySettingsTest extends HyperTestBase {
     @Test
     @SneakyThrows
-    public void testHyperRespectsConnectionSetting() {
+    public void testLegacyQuerySetting() {
         val settings = Maps.immutableEntry("serverSetting.date_style", "YMD");
-        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         assertWithStatement(
                 statement -> {
-                    val result = statement.executeQuery("SELECT CURRENT_DATE");
+                    val result = statement.executeQuery("SHOW date_style");
                     result.next();
+                    assertThat(result.getString(1)).isEqualTo("ISO, YMD");
+                },
+                settings);
+    }
 
-                    val expected = LocalDate.parse(result.getDate(1).toString(), formatter);
-                    val actual = result.getDate(1);
+    @Test
+    @SneakyThrows
+    public void testQuerySetting() {
+        val settings = Maps.immutableEntry("querySetting.date_style", "YMD");
 
-                    assertThat(actual.toString()).isEqualTo(expected.toString());
+        assertWithStatement(
+                statement -> {
+                    val result = statement.executeQuery("SHOW date_style");
+                    result.next();
+                    assertThat(result.getString(1)).isEqualTo("ISO, YMD");
                 },
                 settings);
     }
