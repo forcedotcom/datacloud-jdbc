@@ -46,9 +46,11 @@ public class JDBCLimitsTest extends HyperTestBase {
     public void testTooLargeQuery() {
         String query = "SELECT 'a', /*" + StringUtils.repeat('x', 65 * 1024 * 1024) + "*/ 'b'";
         assertWithStatement(statement -> {
-            assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
-                statement.executeQuery(query);
-            });
+            assertThatExceptionOfType(DataCloudJDBCException.class)
+                    .isThrownBy(() -> {
+                        statement.executeQuery(query);
+                    })
+                    .withMessageEndingWith("<truncated>");
         });
     }
 
