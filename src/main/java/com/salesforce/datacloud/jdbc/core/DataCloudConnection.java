@@ -28,7 +28,6 @@ import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.interceptor.MaxMetadataSizeHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
@@ -124,7 +123,6 @@ public class DataCloudConnection implements Connection, AutoCloseable {
             AuthorizationHeaderInterceptor authInterceptor, Properties properties) {
         return Stream.of(
                         authInterceptor,
-                        new MaxMetadataSizeHeaderInterceptor(),
                         TracingHeadersInterceptor.of(),
                         HyperExternalClientContextHeaderInterceptor.of(properties),
                         HyperWorkloadHeaderInterceptor.of(properties),

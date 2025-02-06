@@ -82,12 +82,6 @@ public class EmittedHeaderTest {
         val v = DriverVersion.formatDriverInfo();
 
         return Stream.of(
-                argumentSet(
-                        "max metadata size is registered",
-                        "grpc.max_metadata_size",
-                        null,
-                        null,
-                        String.valueOf(1024 * 1024)),
                 argumentSet("workload has a sensible default", WORKLOAD, null, null, "jdbcv3"),
                 argumentSet("workload can be overridden", WORKLOAD, trim(WORKLOAD), workload, workload),
                 argumentSet("client context is ignored if not provided", CONTEXT, null, null, null),
