@@ -21,8 +21,10 @@ import java.util.Map;
 import java.util.Properties;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+@Slf4j
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class ConnectionQuerySettings {
     private static final String HYPER_SETTING = "querySetting.";
@@ -37,6 +39,7 @@ public class ConnectionQuerySettings {
                         e.getKey().toString().substring(HYPER_SETTING.length()),
                         e.getValue().toString());
             } else if (e.getKey().toString().startsWith(HYPER_LEGACY_SETTING)) {
+                log.warn("`serverSetting` connection properties are deprecated, use `querySetting` instead.");
                 settings.put(
                         e.getKey().toString().substring(HYPER_LEGACY_SETTING.length()),
                         e.getValue().toString());
