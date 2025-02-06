@@ -61,7 +61,7 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
                     .client(client)
                     .build();
         } catch (StatusRuntimeException ex) {
-            throw QueryExceptionHandler.createException("Failed to execute query: " + query, ex);
+            throw QueryExceptionHandler.createQueryException(query, ex);
         }
     }
 

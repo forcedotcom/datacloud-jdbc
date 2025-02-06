@@ -78,7 +78,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
                     new AdaptiveQueryStatusPoller(queryId, client),
                     new AsyncQueryStatusPoller(queryId, client));
         } catch (StatusRuntimeException ex) {
-            throw QueryExceptionHandler.createException("Failed to execute query: " + query, ex);
+            throw QueryExceptionHandler.createQueryException(query, ex);
         }
     }
 
