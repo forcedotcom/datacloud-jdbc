@@ -7,7 +7,7 @@ package salesforce.hyperdb.grpc.v1;
 
 
 option java_multiple_files = true;
-option java_package = "com.salesforce.hyperdb.grpc";
+option java_package = "salesforce.cdp.hyperdb.v1";
 option java_outer_classname = "HyperDatabaseServiceProto";
 
 service HyperService {
@@ -26,14 +26,15 @@ message QueryResultParam {
   OutputFormat output_format = 2;
   oneof requested_data {
     uint64 chunk_id = 3;
-    RowRange row_range = 5;
+    ResultRange result_range = 5;
   }
   bool omit_schema = 4;
 }
 
-message RowRange {
-  uint64 offset = 1;
-  uint64 row_count = 2;
+message ResultRange {
+  uint64 row_offset = 1;
+  optional uint64 row_limit = 2;
+  uint64 byte_limit = 3;
 }
 
 message QueryResult {
@@ -41,6 +42,8 @@ message QueryResult {
     QueryResultPartBinary binary_part = 1;
     QueryResultPartString string_part = 2;
   }
+
+  uint64 result_part_row_count = 3;
 }
 
 message QueryInfoParam {
@@ -56,8 +59,8 @@ message QueryInfo {
 }
 
 message QueryStatus {
-  enum CompletionStatus{
-    RUNNING = 0;
+  enum CompletionStatus {
+    RUNNING_OR_UNSPECIFIED = 0;
     RESULTS_PRODUCED = 1;
     FINISHED = 2;
   }
@@ -70,30 +73,32 @@ message QueryStatus {
 }
 
 enum OutputFormat {
-  TEXT_DEBUG = 0;
+  OUTPUT_FORMAT_UNSPECIFIED = 0;
   reserved 1;
-  ARROW_LEGACY_V1 = 2;
-  JSON_LEGACY_V1 = 3;
-  ARROW_LEGACY_V2 = 4;
-  ARROW_V3 = 5;
-  JSON_V2 = 6;
+  ARROW_LEGACY = 2;
+  JSON_LEGACY_DICT = 3;
+  ARROW_LEGACY_IPC = 4;
+  ARROW_IPC = 5;
+  JSON_ARRAY = 6;
 }
 
 message QueryParam {
   enum TransferMode {
-    ADAPTIVE = 0;
+    TRANSFER_MODE_UNSPECIFIED = 0;
+    ADAPTIVE = 3;
     ASYNC = 1;
     SYNC = 2;
   }
 
   enum ParameterStyle {
-    QUESTION_MARK = 0;
+    PARAMETER_STYLE_UNSPECIFIED = 0;
+    QUESTION_MARK = 3;
     DOLLAR_NUMBERED = 1;
     NAMED = 2;
   }
 
   string query = 1;
-  repeated AttachedDatabase database = 2;
+  repeated AttachedDatabase databases = 2;
   OutputFormat output_format = 3;
   map<string, string> settings = 4;
   TransferMode transfer_mode = 5;
@@ -102,7 +107,7 @@ message QueryParam {
     QueryParameterArrow arrow_parameters = 7;
     QueryParameterJson json_parameters = 8;
   }
-  uint64 max_rows = 9;
+  optional ResultRange result_range = 9;
 }
 
 message AttachedDatabase {
@@ -136,7 +141,7 @@ message QueryCommandOk {
 }
 
 message QueryResultSchema {
-  repeated ColumnDescription column = 1;
+  repeated ColumnDescription columns = 1;
 }
 
 message ColumnDescription {
@@ -146,7 +151,7 @@ message ColumnDescription {
 
 message SqlType {
   enum TypeTag {
-    HYPER_UNSUPPORTED = 0;
+    HYPER_UNSPECIFIED = 0;
     HYPER_BOOL = 1;
     HYPER_BIG_INT = 2;
     HYPER_SMALL_INT = 3;

@@ -19,12 +19,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
-import com.salesforce.hyperdb.grpc.ExecuteQueryResponse;
-import com.salesforce.hyperdb.grpc.QueryInfo;
-import com.salesforce.hyperdb.grpc.QueryStatus;
 import java.util.UUID;
 import lombok.val;
 import org.junit.jupiter.api.Test;
+import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
+import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 class AdaptiveQueryStatusPollerTest extends HyperGrpcTestBase {
     @Test
@@ -79,7 +79,7 @@ class AdaptiveQueryStatusPollerTest extends HyperGrpcTestBase {
         sut.map(ExecuteQueryResponse.newBuilder()
                 .setQueryInfo(QueryInfo.newBuilder()
                         .setQueryStatus(QueryStatus.newBuilder()
-                                .setCompletionStatus(QueryStatus.CompletionStatus.RUNNING)
+                                .setCompletionStatus(QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED)
                                 .build())
                         .build())
                 .build());

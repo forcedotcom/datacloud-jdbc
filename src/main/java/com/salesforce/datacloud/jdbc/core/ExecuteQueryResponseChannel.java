@@ -17,8 +17,6 @@ package com.salesforce.datacloud.jdbc.core;
 
 import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.util.ConsumingPeekingIterator;
-import com.salesforce.hyperdb.grpc.QueryResult;
-import com.salesforce.hyperdb.grpc.QueryResultPartBinary;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
@@ -27,6 +25,8 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import salesforce.cdp.hyperdb.v1.QueryResult;
+import salesforce.cdp.hyperdb.v1.QueryResultPartBinary;
 
 @Slf4j
 public class ExecuteQueryResponseChannel implements ReadableByteChannel {

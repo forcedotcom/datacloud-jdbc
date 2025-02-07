@@ -3,7 +3,7 @@ syntax = "proto3";
 package salesforce.hyperdb.grpc.v1;
 
 option java_multiple_files = true;
-option java_package = "com.salesforce.hyperdb.grpc";
+option java_package = "salesforce.cdp.hyperdb.v1";
 
 message TextPosition {
   uint64 error_begin_character_offset = 2;
@@ -17,4 +17,5 @@ message ErrorInfo {
   string customer_detail = 4;
   string system_detail = 5;
   TextPosition position = 6;
+  string error_source = 7;
 }

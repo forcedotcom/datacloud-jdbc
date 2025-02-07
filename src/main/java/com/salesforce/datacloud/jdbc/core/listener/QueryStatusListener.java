@@ -16,9 +16,9 @@
 package com.salesforce.datacloud.jdbc.core.listener;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
-import com.salesforce.hyperdb.grpc.QueryResult;
 import java.sql.SQLException;
 import java.util.stream.Stream;
+import salesforce.cdp.hyperdb.v1.QueryResult;
 
 public interface QueryStatusListener {
     String BEFORE_READY = "Results were requested before ready";

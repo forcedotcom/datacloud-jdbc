@@ -15,9 +15,9 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
-import com.salesforce.hyperdb.grpc.QueryStatus;
 import java.sql.SQLException;
 import java.util.Optional;
+import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 public interface QueryStatusPoller {
     QueryStatus pollQueryStatus();

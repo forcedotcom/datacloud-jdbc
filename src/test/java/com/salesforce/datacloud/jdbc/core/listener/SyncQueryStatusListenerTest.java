@@ -19,10 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
-import com.salesforce.hyperdb.grpc.ExecuteQueryResponse;
-import com.salesforce.hyperdb.grpc.QueryInfo;
-import com.salesforce.hyperdb.grpc.QueryParam;
-import com.salesforce.hyperdb.grpc.QueryStatus;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -31,6 +27,10 @@ import lombok.val;
 import org.grpcmock.junit5.InProcessGrpcMockExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
+import salesforce.cdp.hyperdb.v1.QueryParam;
+import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @ExtendWith(InProcessGrpcMockExtension.class)
 class SyncQueryStatusListenerTest extends HyperGrpcTestBase {

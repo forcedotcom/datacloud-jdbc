@@ -34,8 +34,6 @@ import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.DateTimeUtils;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
-import com.salesforce.hyperdb.grpc.HyperServiceGrpc;
-import com.salesforce.hyperdb.grpc.QueryParam;
 import io.grpc.StatusRuntimeException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -68,6 +66,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
+import salesforce.cdp.hyperdb.v1.QueryParam;
 
 public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
 

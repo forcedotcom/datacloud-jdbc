@@ -17,8 +17,6 @@ package com.salesforce.datacloud.jdbc.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
-import com.salesforce.hyperdb.grpc.QueryResult;
-import com.salesforce.hyperdb.grpc.QueryResultPartBinary;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -41,6 +39,8 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
+import salesforce.cdp.hyperdb.v1.QueryResult;
+import salesforce.cdp.hyperdb.v1.QueryResultPartBinary;
 
 @UtilityClass
 public class RealisticArrowGenerator {

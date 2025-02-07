@@ -22,8 +22,6 @@ import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
-import com.salesforce.hyperdb.grpc.QueryParam;
-import com.salesforce.hyperdb.grpc.QueryStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.time.Duration;
@@ -39,6 +37,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import salesforce.cdp.hyperdb.v1.QueryParam;
+import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)

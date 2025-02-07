@@ -21,10 +21,6 @@ import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
-import com.salesforce.hyperdb.grpc.ExecuteQueryResponse;
-import com.salesforce.hyperdb.grpc.QueryInfo;
-import com.salesforce.hyperdb.grpc.QueryResult;
-import com.salesforce.hyperdb.grpc.QueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -37,6 +33,10 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
+import salesforce.cdp.hyperdb.v1.QueryResult;
+import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Slf4j
 @Builder(access = AccessLevel.PRIVATE)

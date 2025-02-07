@@ -24,8 +24,6 @@ import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
-import com.salesforce.hyperdb.grpc.QueryParam;
-import com.salesforce.hyperdb.grpc.QueryStatus;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Properties;
@@ -41,6 +39,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import salesforce.cdp.hyperdb.v1.QueryParam;
+import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @ExtendWith(InProcessGrpcMockExtension.class)
 class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
@@ -50,7 +50,7 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
     @ParameterizedTest
     @ValueSource(
             ints = {
-                QueryStatus.CompletionStatus.RUNNING_VALUE,
+                QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED_VALUE,
                 QueryStatus.CompletionStatus.RESULTS_PRODUCED_VALUE,
                 QueryStatus.CompletionStatus.FINISHED_VALUE
             })
@@ -73,7 +73,7 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
         setupExecuteQuery(queryId, query, mode);
         val listener = sut(query);
 
-        setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.RUNNING);
+        setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
 
         QueryStatusListenerAssert.assertThat(listener).isNotReady();
         val ex = Assertions.assertThrows(
@@ -156,7 +156,7 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
     void userShouldWaitForQueryBeforeAccessingResultSet() {
         val queryId = UUID.randomUUID().toString();
         setupHyperGrpcClientWithMockedResultSet(queryId, ImmutableList.of());
-        setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.RUNNING);
+        setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
 
         try (val statement = statement().executeAsyncQuery(query)) {
             val ex = assertThrows(DataCloudJDBCException.class, statement::getResultSet);

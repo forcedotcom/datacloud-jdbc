@@ -18,15 +18,15 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.google.protobuf.ByteString;
-import com.salesforce.hyperdb.grpc.ExecuteQueryResponse;
-import com.salesforce.hyperdb.grpc.HyperServiceGrpc;
-import com.salesforce.hyperdb.grpc.OutputFormat;
-import com.salesforce.hyperdb.grpc.QueryParam;
-import com.salesforce.hyperdb.grpc.QueryResultPartBinary;
 import java.sql.SQLException;
 import java.util.Iterator;
 import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
+import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
+import salesforce.cdp.hyperdb.v1.OutputFormat;
+import salesforce.cdp.hyperdb.v1.QueryParam;
+import salesforce.cdp.hyperdb.v1.QueryResultPartBinary;
 
 class HyperGrpcClientTest extends HyperGrpcTestBase {
 
@@ -51,7 +51,7 @@ class HyperGrpcClientTest extends HyperGrpcTestBase {
 
         QueryParam expectedQueryParam = QueryParam.newBuilder()
                 .setQuery(query)
-                .setOutputFormat(OutputFormat.ARROW_V3)
+                .setOutputFormat(OutputFormat.ARROW_IPC)
                 .setTransferMode(QueryParam.TransferMode.SYNC)
                 .build();
         GrpcMock.verifyThat(

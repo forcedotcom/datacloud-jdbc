@@ -25,7 +25,6 @@ import com.salesforce.datacloud.jdbc.core.listener.SyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
-import com.salesforce.hyperdb.grpc.QueryParam;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -35,6 +34,7 @@ import java.time.Duration;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import salesforce.cdp.hyperdb.v1.QueryParam;
 
 @Slf4j
 public class DataCloudStatement implements Statement {

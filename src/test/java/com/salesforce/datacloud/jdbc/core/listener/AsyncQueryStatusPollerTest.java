@@ -21,8 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
-import com.salesforce.hyperdb.grpc.HyperServiceGrpc;
-import com.salesforce.hyperdb.grpc.QueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
 import java.util.UUID;
@@ -33,6 +31,8 @@ import org.grpcmock.junit5.InProcessGrpcMockExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
+import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @ExtendWith(InProcessGrpcMockExtension.class)
 class AsyncQueryStatusPollerTest extends HyperGrpcTestBase {
@@ -51,7 +51,7 @@ class AsyncQueryStatusPollerTest extends HyperGrpcTestBase {
         val id = UUID.randomUUID().toString();
         val poller = new AsyncQueryStatusPoller(id, hyperGrpcClient);
 
-        setupGetQueryInfo(id, QueryStatus.CompletionStatus.RUNNING);
+        setupGetQueryInfo(id, QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
 
         Assertions.assertThrows(DataCloudJDBCException.class, poller::pollChunkCount);
     }
@@ -76,10 +76,11 @@ class AsyncQueryStatusPollerTest extends HyperGrpcTestBase {
         val id = UUID.randomUUID().toString();
         val poller = new AsyncQueryStatusPoller(id, hyperGrpcClient);
 
-        setupGetQueryInfo(id, QueryStatus.CompletionStatus.RUNNING);
+        setupGetQueryInfo(id, QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
         assertThat(poller.pollIsReady()).isFalse();
-        setupGetQueryInfo(id, QueryStatus.CompletionStatus.RUNNING);
-        assertThat(poller.pollQueryStatus().getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
+        setupGetQueryInfo(id, QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
+        assertThat(poller.pollQueryStatus().getCompletionStatus())
+                .isEqualTo(QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
 
         setupGetQueryInfo(id, QueryStatus.CompletionStatus.RESULTS_PRODUCED);
         assertThat(poller.pollIsReady()).isTrue();

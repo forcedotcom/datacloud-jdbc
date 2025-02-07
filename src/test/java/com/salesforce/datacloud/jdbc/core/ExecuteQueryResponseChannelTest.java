@@ -18,8 +18,6 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.protobuf.ByteString;
-import com.salesforce.hyperdb.grpc.QueryResult;
-import com.salesforce.hyperdb.grpc.QueryResultPartBinary;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -29,6 +27,8 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.arrow.vector.ipc.ReadChannel;
 import org.junit.jupiter.api.Test;
+import salesforce.cdp.hyperdb.v1.QueryResult;
+import salesforce.cdp.hyperdb.v1.QueryResultPartBinary;
 
 @Slf4j
 class ExecuteQueryResponseChannelTest {

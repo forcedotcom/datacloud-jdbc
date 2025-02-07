@@ -23,7 +23,6 @@ import static org.mockito.Mockito.verify;
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.hyperdb.grpc.QueryParam;
 import io.grpc.Metadata;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -36,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
+import salesforce.cdp.hyperdb.v1.QueryParam;
 
 @ExtendWith(MockitoExtension.class)
 class HeaderMutatingClientInterceptorTest extends HyperGrpcTestBase {

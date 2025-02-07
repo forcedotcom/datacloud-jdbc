@@ -27,8 +27,6 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
-import com.salesforce.hyperdb.grpc.QueryParam;
-import com.salesforce.hyperdb.grpc.QueryParameterArrow;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -58,6 +56,8 @@ import java.util.TimeZone;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import salesforce.cdp.hyperdb.v1.QueryParam;
+import salesforce.cdp.hyperdb.v1.QueryParameterArrow;
 
 @Slf4j
 public class DataCloudPreparedStatement extends DataCloudStatement implements PreparedStatement {

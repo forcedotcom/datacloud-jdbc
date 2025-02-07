@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.salesforce.hyperdb.grpc.HyperServiceGrpc;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import java.util.Map;
 import java.util.Properties;
@@ -30,6 +29,7 @@ import lombok.SneakyThrows;
 import lombok.val;
 import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 class HyperConnectionSettingsTest extends HyperGrpcTestBase {
     private static final String HYPER_SETTING = "querySetting.";

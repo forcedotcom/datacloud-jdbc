@@ -16,11 +16,11 @@
 package com.salesforce.datacloud.jdbc.util;
 
 import com.google.protobuf.Any;
-import com.salesforce.hyperdb.grpc.ErrorInfo;
 import io.grpc.Metadata;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.StatusProto;
 import lombok.experimental.UtilityClass;
+import salesforce.cdp.hyperdb.v1.ErrorInfo;
 
 @UtilityClass
 public class GrpcUtils {

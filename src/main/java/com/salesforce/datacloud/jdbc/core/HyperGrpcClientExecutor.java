@@ -20,14 +20,6 @@ import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
-import com.salesforce.hyperdb.grpc.ExecuteQueryResponse;
-import com.salesforce.hyperdb.grpc.HyperServiceGrpc;
-import com.salesforce.hyperdb.grpc.OutputFormat;
-import com.salesforce.hyperdb.grpc.QueryInfo;
-import com.salesforce.hyperdb.grpc.QueryInfoParam;
-import com.salesforce.hyperdb.grpc.QueryParam;
-import com.salesforce.hyperdb.grpc.QueryResult;
-import com.salesforce.hyperdb.grpc.QueryResultParam;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -45,6 +37,14 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
+import salesforce.cdp.hyperdb.v1.OutputFormat;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
+import salesforce.cdp.hyperdb.v1.QueryInfoParam;
+import salesforce.cdp.hyperdb.v1.QueryParam;
+import salesforce.cdp.hyperdb.v1.QueryResult;
+import salesforce.cdp.hyperdb.v1.QueryResultParam;
 
 @Slf4j
 @Builder(toBuilder = true)
@@ -144,7 +144,7 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         val builder = QueryParam.newBuilder()
                 .setQuery(sql)
                 .setTransferMode(transferMode)
-                .setOutputFormat(OutputFormat.ARROW_V3);
+                .setOutputFormat(OutputFormat.ARROW_IPC);
 
         if (additionalQueryParams != null) {
             builder.mergeFrom(additionalQueryParams);
@@ -161,7 +161,7 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         val builder = QueryResultParam.newBuilder()
                 .setQueryId(queryId)
                 .setChunkId(chunkId)
-                .setOutputFormat(OutputFormat.ARROW_V3);
+                .setOutputFormat(OutputFormat.ARROW_IPC);
 
         if (omitSchema) {
             builder.setOmitSchema(true);

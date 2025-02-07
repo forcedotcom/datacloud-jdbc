@@ -16,7 +16,6 @@
 package com.salesforce.datacloud.jdbc.core.listener;
 
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
-import com.salesforce.hyperdb.grpc.QueryParam;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -25,6 +24,7 @@ import lombok.val;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import salesforce.cdp.hyperdb.v1.QueryParam;
 
 class QueryStatusListenerTest extends HyperGrpcTestBase {
     private final String query = "select * from stuff";

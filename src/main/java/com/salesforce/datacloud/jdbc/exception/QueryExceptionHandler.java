@@ -17,13 +17,13 @@ package com.salesforce.datacloud.jdbc.exception;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.salesforce.hyperdb.grpc.ErrorInfo;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.StatusProto;
 import java.sql.SQLException;
 import java.util.List;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import salesforce.cdp.hyperdb.v1.ErrorInfo;
 
 @Slf4j
 @UtilityClass

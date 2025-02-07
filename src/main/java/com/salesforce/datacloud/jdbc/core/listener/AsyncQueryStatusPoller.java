@@ -20,8 +20,6 @@ import static com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener.BE
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
-import com.salesforce.hyperdb.grpc.QueryInfo;
-import com.salesforce.hyperdb.grpc.QueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -31,6 +29,8 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.val;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
+import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @AllArgsConstructor(access = AccessLevel.PACKAGE)
 class AsyncQueryStatusPoller implements QueryStatusPoller {

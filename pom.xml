@@ -18,7 +18,7 @@
         <grpcmock-junit5.version>0.13.0</grpcmock-junit5.version>
         <guava.version>33.2.1-jre</guava.version>
         <!-- https://tableau.github.io/hyper-db/docs/releases#download -->
-        <hyperapi.version>0.0.20746.reac9bd2d</hyperapi.version>
+        <hyperapi.version>0.0.21200.re11c8cb9</hyperapi.version>
         <hyperd.directory>${project.build.directory}/hyper</hyperd.directory>
         <jackson.version>2.18.0</jackson.version>
         <jacoco.maven.plugin.version>0.8.12</jacoco.maven.plugin.version>
