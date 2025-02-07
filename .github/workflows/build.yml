@@ -6,30 +6,38 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  HYPER_VERSION: "0.0.21200.re11c8cb9"
+
 jobs:
+  download-hyperd:
+    uses: ./.github/workflows/hyperd.yml
+    with:
+      hyper_version: "0.0.21200.re11c8cb9"
+
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java-version: [8, 11, 17, 21]
+    name: Build with JDK ${{ matrix.java-version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - name: Set up JDK 8
+      - name: Set up JDK ${{ matrix.java-version }}
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
+          java-version: ${{ matrix.java-version }}
           distribution: 'temurin'
-          cache: maven
-      - name: Get hyperd version
-        id: evaluate-property
-        run: |
-          echo "HYPER_VERSION=$(mvn help:evaluate -Dexpression=hyperapi.version -q -DforceStdout)" >> $GITHUB_ENV
-      - name: Cache hyperd
-        uses: actions/cache@v3
+#          cache: maven
+      - name: Maven clean
+        run: mvn --batch-mode clean
+      - name: Restore hyperd from cache
+        uses: actions/cache@v4
         with:
-          path: |
-            target/.cache
-          key: ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
-          restore-keys: |
-            ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
+          path: target/hyper
+          fail-on-cache-miss: 'true'
+          key: hyperd-${{ runner.os }}-${{ env.HYPER_VERSION }}
       - name: Maven package
-        run: mvn --batch-mode --no-transfer-progress clean package --file pom.xml
+        run: mvn --batch-mode --no-transfer-progress package --file pom.xml -Dskip.hyper.download=true -X

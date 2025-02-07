@@ -1,0 +1,38 @@
+on:
+  workflow_call:
+    inputs:
+      hyper_version:
+        required: true
+        type: string
+
+jobs:
+  download-hyperd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache hyperd
+        id: cache-hyperd
+        uses: actions/cache@v4
+        with:
+          path: target/hyper
+          key: hyperd-${{ runner.os }}-${{ inputs.hyper_version }}
+          restore-keys:
+            hyperd-${{ runner.os }}-
+
+      - name: Download hyperd if not cached
+        if: steps.cache-hyperd.outputs.cache-hit != 'true'
+        run: |
+          wget "https://downloads.tableau.com/tssoftware/tableauhyperapi-cxx-linux-x86_64-release-main.${{ inputs.hyper_version }}.zip" -O /tmp/hyperd.zip
+
+      - name: Extract hyperd to target/hyper
+        if: steps.cache-hyperd.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p target/hyper
+          unzip -j /tmp/hyperd.zip -d target/hyper "**/hyperd" "**/*.so"
+
+      - name: Verify hyperd exists
+        run: |
+          ls -latrR
+          if [[ ! -f "target/hyper/hyperd" ]]; then
+            echo "ERROR: hyperd is missing!"
+            exit 1
+          fi

@@ -4,7 +4,15 @@ on:
   release:
     types: [ "created" ]
 
+env:
+  HYPER_VERSION: "0.0.21200.re11c8cb9"
+
 jobs:
+  download-hyperd:
+    uses: ./.github/workflows/hyperd.yml
+    with:
+      hyper_version: ${{ env.HYPER_VERSION }}
+
   build:
     runs-on: ubuntu-latest
 
@@ -20,22 +28,16 @@ jobs:
           server-password: 'MAVEN_PASSWORD'
           gpg-private-key: ${{ secrets.GPG_SIGNING_KEY }}
           gpg-passphrase: 'MAVEN_GPG_PASSPHRASE'
-      - name: Get hyperd version
-        id: evaluate-property
-        run: |
-          echo "HYPER_VERSION=$(mvn help:evaluate -Dexpression=hyperapi.version -q -DforceStdout)" >> $GITHUB_ENV
-      - name: Cache hyperd
-        uses: actions/cache@v3
+      - name: Restore hyperd from cache
+        uses: actions/cache@v4
         with:
-          path: |
-            target/.cache
-          key: ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
-          restore-keys: |
-            ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
+          path: target/hyper
+          fail-on-cache-miss: 'true'
+          key: hyperd-${{ runner.os }}-${{ env.HYPER_VERSION }}
       - name: Set version
         run: mvn versions:set --no-transfer-progress -DnewVersion=${{ github.event.release.tag_name }}
       - name: Build with Maven
-        run: mvn --batch-mode --no-transfer-progress clean deploy -P release --file pom.xml
+        run: mvn --batch-mode --no-transfer-progress clean deploy -P release --file pom.xml -Dskip.hyper.download=true
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
