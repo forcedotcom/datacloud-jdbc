@@ -1,8 +1,7 @@
 # Salesforce DataCloud JDBC Driver
 
 With the Salesforce Data Cloud JDBC driver you can efficiently query millions of rows of data with low latency, and perform bulk data extractions.
-This driver is read-only and forward-only.
-It requires Java 8 or greater.
+This driver is read-only, forward-only, and requires Java 8 or greater. It uses the new [Data Cloud Query API SQL syntax](https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/dc-sql-reference/data-cloud-sql-context.html).
 
 
 ## Getting started
