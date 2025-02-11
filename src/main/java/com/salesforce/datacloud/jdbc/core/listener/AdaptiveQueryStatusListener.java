@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.core.listener;
 import static com.salesforce.datacloud.jdbc.util.ThrowingSupplier.rethrowLongSupplier;
 import static com.salesforce.datacloud.jdbc.util.ThrowingSupplier.rethrowSupplier;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
@@ -42,7 +43,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.QueryResult;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Deprecated
 @Slf4j
@@ -84,18 +84,8 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     }
 
     @Override
-    public boolean isReady() {
-        return true;
-    }
-
-    @Override
-    public String getStatus() {
-        val poller = headPoller.pollChunkCount() > 1 ? tailPoller : headPoller;
-        return Optional.of(poller)
-                .map(QueryStatusPoller::pollQueryStatus)
-                .map(QueryStatus::getCompletionStatus)
-                .map(Enum::name)
-                .orElse(QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED.name());
+    public DataCloudQueryStatus getStatus() {
+        return client.getQueryStatus(queryId).findFirst().orElse(null);
     }
 
     @Override

@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
@@ -105,6 +106,7 @@ public class HyperGrpcTestBase {
     public void setupHyperGrpcClientWithMockedResultSet(
             String expectedQueryId, List<RealisticArrowGenerator.Student> students) {
         setupHyperGrpcClientWithMockedResultSet(expectedQueryId, students, null);
+        setupGetQueryInfo(expectedQueryId, QueryStatus.CompletionStatus.RESULTS_PRODUCED);
     }
 
     public void setupHyperGrpcClientWithMockedResultSet(
@@ -149,7 +151,7 @@ public class HyperGrpcTestBase {
                 .build();
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getGetQueryInfoMethod())
                 .withRequest(req -> req.getQueryId().equals(queryId))
-                .willReturn(queryInfo));
+                .willReturn(ImmutableList.of(queryInfo)));
     }
 
     protected void verifyGetQueryInfo(int times) {

@@ -15,6 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
+import lombok.val;
 import org.assertj.core.api.AbstractObjectAssert;
 import org.assertj.core.util.Objects;
 
@@ -83,7 +85,7 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
         String assertjErrorMessage = "\nExpecting queryId of:\n  <%s>\nto be:\n  <%s>\nbut was:\n  <%s>";
 
         // null safe check
-        String actualQueryId = actual.getQueryId();
+        String actualQueryId = actual.getStatus().getQueryId();
         if (!Objects.areEqual(actualQueryId, queryId)) {
             failWithMessage(assertjErrorMessage, actual, queryId, actualQueryId);
         }
@@ -103,7 +105,8 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
         isNotNull();
 
         // check that property call/field access is true
-        if (!actual.isReady()) {
+        val status = actual.getStatus().getCompletionStatus();
+        if (!isReady(status)) {
             failWithMessage("\nExpecting that actual QueryStatusListener is ready but is not.");
         }
 
@@ -122,12 +125,18 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
         isNotNull();
 
         // check that property call/field access is false
-        if (actual.isReady()) {
+        val status = actual.getStatus().getCompletionStatus();
+        if (isReady(status)) {
             failWithMessage("\nExpecting that actual QueryStatusListener is not ready but is.");
         }
 
         // return the current assertion for method chaining
         return this;
+    }
+
+    private boolean isReady(DataCloudQueryStatus.CompletionStatus status) {
+        return status == DataCloudQueryStatus.CompletionStatus.RESULTS_PRODUCED
+                || status == DataCloudQueryStatus.CompletionStatus.FINISHED;
     }
 
     /**
@@ -137,7 +146,7 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
      * @return this assertion object.
      * @throws AssertionError - if the actual QueryStatusListener's status is not equal to the given one.
      */
-    public QueryStatusListenerAssert hasStatus(String status) {
+    public QueryStatusListenerAssert hasCompletionStatus(DataCloudQueryStatus.CompletionStatus status) {
         // check that actual QueryStatusListener we want to make assertions on is not null.
         isNotNull();
 
@@ -145,7 +154,7 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
         String assertjErrorMessage = "\nExpecting status of:\n  <%s>\nto be:\n  <%s>\nbut was:\n  <%s>";
 
         // null safe check
-        String actualStatus = actual.getStatus();
+        val actualStatus = actual.getStatus().getCompletionStatus();
         if (!Objects.areEqual(actualStatus, status)) {
             failWithMessage(assertjErrorMessage, actual, status, actualStatus);
         }

@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
@@ -68,16 +69,8 @@ public class SyncQueryStatusListener implements QueryStatusListener {
     }
 
     @Override
-    public boolean isReady() {
-        return true;
-    }
-
-    @Override
-    public String getStatus() {
-        return Optional.ofNullable(status.get())
-                .map(QueryStatus::getCompletionStatus)
-                .map(Enum::name)
-                .orElse(null);
+    public DataCloudQueryStatus getStatus() {
+        return null;
     }
 
     @Override

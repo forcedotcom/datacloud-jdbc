@@ -23,7 +23,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.Optional;
 import java.util.TimeZone;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -45,14 +44,6 @@ class PartialResultSet extends AvaticaResultSet implements DataCloudResultSet {
     private final String queryId;
 
     private final HyperGrpcClientExecutor client;
-
-    private Optional<DataCloudQueryStatus> getQueryStatus() {
-        return StreamUtilities.toStream(client.getQueryInfo(queryId))
-                .map(DataCloudQueryStatus::of)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .findFirst();
-    }
 
     private PartialResultSet(
             String queryId,

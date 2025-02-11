@@ -28,6 +28,8 @@ public interface QueryStatusListener {
 
     DataCloudQueryStatus getStatus();
 
+    String getQueryId();
+
     String getQuery();
 
     DataCloudResultSet generateResultSet();

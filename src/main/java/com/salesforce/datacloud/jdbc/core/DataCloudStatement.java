@@ -18,7 +18,6 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getBooleanOrDefault;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
 
-import com.salesforce.datacloud.jdbc.core.fsm.RowBased;
 import com.salesforce.datacloud.jdbc.core.listener.AdaptiveQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
@@ -33,7 +32,6 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.time.Duration;
 import java.util.Optional;
-
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
@@ -94,23 +92,23 @@ public class DataCloudStatement implements Statement {
     }
 
     private void assertQueryReady() throws SQLException {
-        assertQueryActive();
-
-        if (!listener.isReady()) {
+        val status = getStatus();
+        val ready = status.isResultsProduced() || status.isExecutionFinished();
+        if (!ready) {
             throw new DataCloudJDBCException("query results were not ready");
         }
     }
 
     public DataCloudQueryStatus getStatus() throws SQLException {
         assertQueryActive();
-        val client = getQueryExecutor();
-        val queryId = listener.getQueryId();
-        return client.getQueryStatus(queryId).findFirst().orElse(null);
+        return listener.getStatus();
     }
 
     public boolean isReady() throws SQLException {
         val status = getStatus();
-        return Optional.ofNullable(status).map(t -> t.isResultsProduced() || t.isExecutionFinished()).orElse(false);
+        return Optional.ofNullable(status)
+                .map(t -> t.isResultsProduced() || t.isExecutionFinished())
+                .orElse(false);
     }
 
     @Getter(lazy = true, value = AccessLevel.PROTECTED)
@@ -145,7 +143,7 @@ public class DataCloudStatement implements Statement {
     protected DataCloudResultSet executeSyncQuery(String sql, HyperGrpcClientExecutor client) throws SQLException {
         listener = SyncQueryStatusListener.of(sql, client);
         resultSet = listener.generateResultSet();
-        log.info("executeSyncQuery completed.  queryId={}", listener.getQueryId());
+        log.info("executeSyncQuery completed. queryId={}", listener.getQueryId());
         return (DataCloudResultSet) resultSet;
     }
 

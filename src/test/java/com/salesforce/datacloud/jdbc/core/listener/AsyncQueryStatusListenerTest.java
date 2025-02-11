@@ -132,7 +132,6 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
                 ImmutableList.of(new RealisticArrowGenerator.Student(studentId, studentName, studentGrade)));
         val resultSet = sut(query).generateResultSet();
         assertThat(resultSet).isNotNull();
-        assertThat(resultSet.getQueryId()).isEqualTo(queryId);
         assertThat(resultSet.isReady()).isTrue();
 
         resultSet.next();

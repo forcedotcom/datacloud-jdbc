@@ -39,11 +39,11 @@ public class DataCloudQueryStatus {
 
     CompletionStatus completionStatus;
 
-    boolean isResultsProduced() {
+    public boolean isResultsProduced() {
         return completionStatus == CompletionStatus.RESULTS_PRODUCED;
     }
 
-    boolean isExecutionFinished() {
+    public boolean isExecutionFinished() {
         return completionStatus == CompletionStatus.FINISHED;
     }
 

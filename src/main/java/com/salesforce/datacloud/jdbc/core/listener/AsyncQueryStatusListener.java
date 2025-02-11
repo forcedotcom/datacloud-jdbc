@@ -24,7 +24,6 @@ import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
-import java.util.Optional;
 import java.util.function.UnaryOperator;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -35,7 +34,6 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryResult;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Deprecated
 @Slf4j
@@ -68,19 +66,8 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
     }
 
     @Override
-    public boolean isReady() {
-        return getPoller().pollIsReady();
-    }
-
-    @Override
     public DataCloudQueryStatus getStatus() {
-        return client.getQueryStatus(queryId)
-
-        return Optional.of(getPoller())
-                .map(AsyncQueryStatusPoller::pollQueryStatus)
-                .map(QueryStatus::getCompletionStatus)
-                .map(Enum::name)
-                .orElse(null);
+        return client.getQueryStatus(queryId).findFirst().orElse(null);
     }
 
     @Override
@@ -100,11 +87,15 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
     @SneakyThrows
     private long getChunkLimit() {
-        if (!isReady()) {
-            throw new DataCloudJDBCException(BEFORE_READY);
-        }
-
-        return getPoller().pollChunkCount();
+        return client.getQueryStatus(queryId)
+                .filter(t -> {
+                    val status = t.getCompletionStatus();
+                    return status == DataCloudQueryStatus.CompletionStatus.FINISHED
+                            || status == DataCloudQueryStatus.CompletionStatus.RESULTS_PRODUCED;
+                })
+                .map(DataCloudQueryStatus::getChunkCount)
+                .findFirst()
+                .orElseThrow(() -> new DataCloudJDBCException(BEFORE_READY));
     }
 
     private Stream<QueryResult> tryGetQueryResult(long chunkId) {

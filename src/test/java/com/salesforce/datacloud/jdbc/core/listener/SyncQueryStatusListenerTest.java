@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.core.listener;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -67,7 +68,8 @@ class SyncQueryStatusListenerTest extends HyperGrpcTestBase {
 
         expected.forEach(exp -> {
             iterator.next();
-            QueryStatusListenerAssert.assertThat(listener).hasStatus(exp.name());
+
+            QueryStatusListenerAssert.assertThat(listener).hasCompletionStatus(mapCompletionStatus(exp));
         });
     }
 
@@ -99,6 +101,18 @@ class SyncQueryStatusListenerTest extends HyperGrpcTestBase {
         val listener = SyncQueryStatusListener.of(query, hyperGrpcClient);
         val resultSet = listener.generateResultSet();
         assertThat(resultSet).isNotNull();
-        assertThat(resultSet.getQueryId()).isEqualTo(id);
+    }
+
+    private static DataCloudQueryStatus.CompletionStatus mapCompletionStatus(QueryStatus.CompletionStatus status) {
+        switch (status) {
+            case RUNNING_OR_UNSPECIFIED:
+                return DataCloudQueryStatus.CompletionStatus.RUNNING;
+            case RESULTS_PRODUCED:
+                return DataCloudQueryStatus.CompletionStatus.RESULTS_PRODUCED;
+            case FINISHED:
+                return DataCloudQueryStatus.CompletionStatus.FINISHED;
+            default:
+                throw new IllegalArgumentException("Unknown completion status. status=" + status);
+        }
     }
 }

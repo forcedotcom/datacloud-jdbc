@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.core.listener;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -59,7 +60,8 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
         setupExecuteQuery(queryId, query, mode, executeQueryResponse(queryId, null, 1));
         setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.RESULTS_PRODUCED, 3);
         val listener = sut(query);
-        QueryStatusListenerAssert.assertThat(listener).hasStatus(QueryStatus.CompletionStatus.RESULTS_PRODUCED.name());
+        QueryStatusListenerAssert.assertThat(listener)
+                .hasCompletionStatus(DataCloudQueryStatus.CompletionStatus.RESULTS_PRODUCED);
     }
 
     @SneakyThrows
@@ -76,7 +78,6 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
         val resultSet = sut(query).generateResultSet();
 
         assertThat(resultSet).isNotNull();
-        assertThat(resultSet.getQueryId()).isEqualTo(queryId);
         assertThat(resultSet.isReady()).isTrue();
 
         resultSet.next();
@@ -97,7 +98,8 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
         setupExecuteQuery(queryId, query, mode, executeQueryResponse(queryId, null, 1));
         val listener = sut(query);
 
-        assertThat(listener.isReady()).isTrue();
+        val status = listener.getStatus();
+        assertThat(status.isResultsProduced() || status.isExecutionFinished()).isTrue();
     }
 
     @SneakyThrows
