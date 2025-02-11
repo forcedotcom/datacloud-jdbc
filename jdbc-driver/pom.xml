@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.salesforce.datacloud</groupId>
+        <artifactId>jdbc-parent</artifactId>
+        <version>0.23.0-SNAPSHOT</version>
+    </parent>
+
+    <!-- TODO: should we name this jdbc-driver, and have another package that includes jdbc, jdbc-grpc, etc. for ease of use? -->
+    <artifactId>jdbc-driver</artifactId>
+
+    <properties>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.salesforce.datacloud</groupId>
+            <artifactId>jdbc-grpc</artifactId>
+            <version>0.23.0-SNAPSHOT</version>
+            <!-- TODO: make sure 'provided' doesn't break dbeaver, it allows you to pull in "optional" dependencies, but I don't know if this also means adding provided dependencies at runtime: https://dbeaver.com/docs/dbeaver/How-to-add-additional-artifacts-to-the-driver/#dependency-declaration -->
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+</project>
