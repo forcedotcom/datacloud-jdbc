@@ -25,6 +25,7 @@ import com.salesforce.datacloud.jdbc.core.listener.SyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
+import com.salesforce.datacloud.jdbc.util.Unstable;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -73,14 +74,25 @@ public class DataCloudStatement implements Statement {
         return clientBuilder.queryTimeout(getQueryTimeout()).build();
     }
 
-    private void assertQueryReady() throws SQLException {
+    private void assertQueryExecuted() throws SQLException {
         if (listener == null) {
             throw new DataCloudJDBCException("a query was not executed before attempting to access results");
         }
+    }
+
+    private void assertQueryReady() throws SQLException {
+        assertQueryExecuted();
 
         if (!listener.isReady()) {
             throw new DataCloudJDBCException("query results were not ready");
         }
+    }
+
+    @Unstable
+    public String getQueryId() throws SQLException {
+        assertQueryExecuted();
+
+        return listener.getQueryId();
     }
 
     public boolean isReady() {

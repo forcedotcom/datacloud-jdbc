@@ -75,7 +75,7 @@ properties.put("clientSecret", "${clientSecret}");
 
 The documentation for jwt authentication can be found [here][jwt flow].
 
-Instuctions to generate a private key can be found [here](#generating-a-private-key-for-jwt-authentication)
+Instructions to generate a private key can be found [here](#generating-a-private-key-for-jwt-authentication)
 
 ```java
 Properties properties = new Properties();

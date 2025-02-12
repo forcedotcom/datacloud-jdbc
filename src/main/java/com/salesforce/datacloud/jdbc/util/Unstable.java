@@ -13,26 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.salesforce.datacloud.jdbc.core.listener;
+package com.salesforce.datacloud.jdbc.util;
 
-import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
-import java.sql.SQLException;
-import java.util.stream.Stream;
-import salesforce.cdp.hyperdb.v1.QueryResult;
+import java.lang.annotation.Documented;
 
-@Deprecated
-public interface QueryStatusListener {
-    String BEFORE_READY = "Results were requested before ready";
-
-    String getQuery();
-
-    boolean isReady();
-
-    String getStatus();
-
-    String getQueryId();
-
-    DataCloudResultSet generateResultSet();
-
-    Stream<QueryResult> stream() throws SQLException;
-}
+@Documented
+public @interface Unstable {}

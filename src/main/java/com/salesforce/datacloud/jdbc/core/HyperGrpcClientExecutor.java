@@ -20,6 +20,8 @@ import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
+import com.salesforce.datacloud.jdbc.util.StreamUtilities;
+import com.salesforce.datacloud.jdbc.util.Unstable;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -29,8 +31,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -45,6 +49,7 @@ import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 import salesforce.cdp.hyperdb.v1.QueryResultParam;
+import salesforce.cdp.hyperdb.v1.ResultRange;
 
 @Slf4j
 @Builder(toBuilder = true)
@@ -135,6 +140,29 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         return getStub(queryId).getQueryInfo(param);
     }
 
+    @Unstable
+    public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) {
+        val iterator = getQueryInfo(queryId);
+        return StreamUtilities.toStream(iterator)
+                .map(DataCloudQueryStatus::of)
+                .filter(Optional::isPresent)
+                .map(Optional::get);
+    }
+
+    public Iterator<QueryResult> getQueryResult(String queryId, long offset, long limit, boolean omitSchema) {
+        val rowRange =
+                ResultRange.newBuilder().setRowOffset(offset).setRowLimit(limit).setByteLimit(1024);
+
+        final QueryResultParam param = QueryResultParam.newBuilder()
+                .setQueryId(queryId)
+                .setResultRange(rowRange)
+                .setOmitSchema(omitSchema)
+                .setOutputFormat(OutputFormat.ARROW_IPC)
+                .build();
+
+        return getStub(queryId).getQueryResult(param);
+    }
+
     public Iterator<QueryResult> getQueryResult(String queryId, long chunkId, boolean omitSchema) {
         val param = getQueryResultParam(queryId, chunkId, omitSchema);
         return getStub(queryId).getQueryResult(param);
@@ -161,11 +189,8 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         val builder = QueryResultParam.newBuilder()
                 .setQueryId(queryId)
                 .setChunkId(chunkId)
+                .setOmitSchema(omitSchema)
                 .setOutputFormat(OutputFormat.ARROW_IPC);
-
-        if (omitSchema) {
-            builder.setOmitSchema(true);
-        }
 
         return builder.build();
     }

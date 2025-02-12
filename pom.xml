@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.salesforce.datacloud</groupId>
     <artifactId>jdbc</artifactId>
-    <version>0.23.0-SNAPSHOT</version>
+    <version>0.24.0-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>Salesforce Data Cloud JDBC Driver</name>
     <description>Salesforce Data Cloud JDBC Driver</description>
@@ -416,8 +416,9 @@
                     <sourcepath>${project.build.directory}/delombok;${project.build.directory}/generated-sources/protobuf</sourcepath>
                     <source>${java.version}</source>
                     <quiet>true</quiet>
-                    <excludePackageNames>com.salesforce.hyperdb.grpc</excludePackageNames>
+                    <excludePackageNames>salesforce.cdp.hyperdb.v1.*</excludePackageNames>
                     <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
+                    <failOnWarnings>false</failOnWarnings>
                 </configuration>
                 <executions>
                     <execution>

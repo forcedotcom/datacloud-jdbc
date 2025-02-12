@@ -21,6 +21,7 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
@@ -53,5 +54,27 @@ public class StreamUtilities {
                 })
                 .findFirst()
                 .flatMap(Result::get);
+    }
+
+    public <T> Stream<T> takeWhile(Stream<T> stream, Predicate<T> predicate) {
+        val split = stream.spliterator();
+
+        return StreamSupport.stream(
+                new Spliterators.AbstractSpliterator<T>(split.estimateSize(), split.characteristics()) {
+                    boolean shouldContinue = true;
+
+                    @Override
+                    public boolean tryAdvance(Consumer<? super T> action) {
+                        return shouldContinue
+                                && split.tryAdvance(elem -> {
+                                    if (predicate.test(elem)) {
+                                        action.accept(elem);
+                                    } else {
+                                        shouldContinue = false;
+                                    }
+                                });
+                    }
+                },
+                false);
     }
 }

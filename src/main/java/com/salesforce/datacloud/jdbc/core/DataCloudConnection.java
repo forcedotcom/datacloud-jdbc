@@ -22,6 +22,7 @@ import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProcessor;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
+import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.ClientBuilder;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
@@ -29,6 +30,7 @@ import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
+import com.salesforce.datacloud.jdbc.util.Unstable;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.Array;
@@ -171,6 +173,24 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     private DataCloudPreparedStatement getQueryPreparedStatement(String sql) {
         return new DataCloudPreparedStatement(this, sql, new DefaultParameterManager());
+    }
+
+    /**
+     * Use getQueryStatus to determine if your query is "ready" then use this to get a collection of rows.
+     * When using {@link RowBased.Mode#FULL_RANGE} this method is not responsible for calculating the offset near the end of available rows,
+     * you must calculate the correct "pages" of offset and limit.
+     */
+    public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit, RowBased.Mode mode) {
+        val iterator = RowBased.of(executor, queryId, offset, limit, mode);
+        return StreamingResultSet.of(queryId, executor, iterator);
+    }
+
+    /**
+     * Use this to determine when a given query is complete by filtering the responses and a subsequent findFirst()
+     */
+    @Unstable
+    public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) {
+        return executor.getQueryStatus(queryId);
     }
 
     @Override
