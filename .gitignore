@@ -16,7 +16,7 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 .project
 .classpath
-src/main/resources/config/config.properties
+jdbc-driver/src/main/resources/config/config.properties
 
 *.iml
 pom.xml.bak

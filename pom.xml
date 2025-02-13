@@ -213,16 +213,6 @@
         </dependencies>
     </dependencyManagement>
     <build>
-        <resources>
-            <resource>
-                <filtering>true</filtering>
-                <directory>src/main/resources</directory>
-            </resource>
-            <resource>
-                <filtering>true</filtering>
-                <directory>src/test/resources</directory>
-            </resource>
-        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -230,14 +220,19 @@
                 <version>3.6.0</version>
                 <executions>
                     <execution>
+                        <id>default-shade</id>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <phase>package</phase>
                         <configuration>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <!-- TODO: can we use the maven-shade-plugin to produce a jar com.salesforce.datacloud:jdbc that handles the provided/runtime issue with jdbc-grpc? -->
                             <shadedArtifactId>jdbc</shadedArtifactId>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <extraArtifacts>
-                                <artifact>com.salesforce.datacloud:jdbc-grpc</artifact>
-                            </extraArtifacts>
+                            <!--                            <extraArtifacts>-->
+                            <!--                                <artifact>com.salesforce.datacloud:jdbc-grpc:0.23.0-SNAPSHOT</artifact>-->
+                            <!--                            </extraArtifacts>-->
                             <relocations>
                                 <relocation>
                                     <pattern>com.salesforce.datacloud</pattern>
@@ -285,12 +280,12 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"/>
                             </transformers>
                         </configuration>
+                    </execution>
+                    <execution>
                         <goals>
                             <goal>shade</goal>
                         </goals>
                         <phase>package</phase>
-                    </execution>
-                    <execution>
                         <configuration>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>shaded</shadedClassifierName>
@@ -388,10 +383,6 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"/>
                             </transformers>
                         </configuration>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <phase>package</phase>
                     </execution>
                 </executions>
             </plugin>
@@ -421,24 +412,6 @@
                             <goal>single</goal>
                         </goals>
                         <phase>package</phase>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.projectlombok</groupId>
-                <artifactId>lombok-maven-plugin</artifactId>
-                <version>1.18.20.0</version>
-                <executions>
-                    <execution>
-                        <id>delombok</id>
-                        <goals>
-                            <goal>delombok</goal>
-                        </goals>
-                        <configuration>
-                            <addOutputDirectory>false</addOutputDirectory>
-                            <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
-                            <outputDirectory>${project.build.directory}/delombok</outputDirectory>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -525,6 +498,16 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <delimiters>
+                        <delimiter>${*}</delimiter>
+                    </delimiters>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
                 <version>${spotless.version}</version>
@@ -557,7 +540,7 @@
                         <importOrder/>
                         <removeUnusedImports/>
                         <licenseHeader>
-                            <file>${pom.basedir}/license-header.txt</file>
+                            <file>license-header.txt</file>
                         </licenseHeader>
                     </java>
                 </configuration>
@@ -602,16 +585,6 @@
                     <generateJUnitSoftAssertions>false</generateJUnitSoftAssertions>
                     <generateBddAssertions>false</generateBddAssertions>
                     <generateSoftAssertions>true</generateSoftAssertions>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>3.2.0</version>
-                <configuration>
-                    <delimiters>
-                        <delimiter>${*}</delimiter>
-                    </delimiters>
                 </configuration>
             </plugin>
             <plugin>

@@ -15,26 +15,9 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.QueryResultSetMetadata;
 import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
-import java.math.BigDecimal;
-import java.sql.Date;
-import java.sql.JDBCType;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.sql.Types;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
 import lombok.val;
 import lombok.var;
 import org.apache.arrow.vector.types.DateUnit;
@@ -56,6 +39,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
+import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.JDBCType;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 @ExtendWith(SoftAssertionsExtension.class)
 class ArrowUtilsTest {
