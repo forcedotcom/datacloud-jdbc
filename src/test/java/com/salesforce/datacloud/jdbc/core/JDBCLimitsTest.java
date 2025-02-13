@@ -50,7 +50,9 @@ public class JDBCLimitsTest extends HyperTestBase {
                     .isThrownBy(() -> {
                         statement.executeQuery(query);
                     })
-                    .withMessageEndingWith("<truncated>");
+                    // Also verify that we don't explode exception sizes by keeping the full query
+                    .withMessageEndingWith("<truncated>")
+                    .satisfies(t -> assertThat(t.getMessage()).hasSizeLessThan(16500));
         });
     }
 
