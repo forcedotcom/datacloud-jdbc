@@ -15,6 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc;
 
+import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
+import static com.salesforce.datacloud.jdbc.core.StreamingResultSetTest.query;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
+
 import com.google.common.collect.ImmutableSet;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
@@ -22,18 +27,6 @@ import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
 import com.salesforce.datacloud.jdbc.util.ThrowingBiFunction;
-import lombok.Getter;
-import lombok.SneakyThrows;
-import lombok.Value;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import lombok.var;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIf;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -50,12 +43,17 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
-import static com.salesforce.datacloud.jdbc.core.StreamingResultSetTest.query;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * To run this test, set the environment variables for the various AuthenticationSettings strategies. Right-click the
@@ -167,7 +165,7 @@ class OrgIntegrationTest {
             assertThat(rs.isReady()).isTrue();
             assertThat(rs).isInstanceOf(StreamingResultSet.class);
 
-            var expected = 0;
+            int expected = 0;
             while (rs.next()) {
                 expected++;
             }
@@ -316,12 +314,12 @@ class OrgIntegrationTest {
         queries.put(Types.INTEGER, "SELECT 82 as  \"Integer_column\"");
         try (val connection = getConnection();
                 val statement = connection.createStatement()) {
-            for (var entry : queries.entrySet()) {
-                val resultSet = statement.executeQuery(entry.getValue().toString());
+            for (val entry : queries.entrySet()) {
+                val resultSet = statement.executeQuery(entry.getValue());
                 val metadata = resultSet.getMetaData();
                 log.info("columntypename: {}", metadata.getColumnTypeName(1));
-                log.info("columntype: {}", Integer.toString(metadata.getColumnType(1)));
-                assertEquals(
+                log.info("columntype: {}", metadata.getColumnType(1));
+                Assertions.assertEquals(
                         Integer.toString(metadata.getColumnType(1)),
                         entry.getKey().toString());
             }
@@ -356,7 +354,7 @@ class OrgIntegrationTest {
             ResultSet resultSet = statement.executeAdaptiveQuery(query);
             log.info("Query executed in {}ms", System.currentTimeMillis() - startTime);
 
-            var expected = 0;
+            int expected = 0;
             while (resultSet.next()) {
                 expected++;
             }

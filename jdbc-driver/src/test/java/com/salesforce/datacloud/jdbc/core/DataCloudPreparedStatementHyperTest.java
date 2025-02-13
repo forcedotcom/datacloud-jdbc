@@ -15,16 +15,13 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import lombok.var;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
+import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -32,8 +29,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Calendar;
 import java.util.TimeZone;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.junit.jupiter.api.Test;
 
 @Slf4j
 public class DataCloudPreparedStatementHyperTest extends HyperTestBase {
@@ -49,7 +48,7 @@ public class DataCloudPreparedStatementHyperTest extends HyperTestBase {
                     val sqlDate = Date.valueOf(date);
                     preparedStatement.setDate(1, sqlDate);
 
-                    try (var resultSet = preparedStatement.executeQuery()) {
+                    try (ResultSet resultSet = preparedStatement.executeQuery()) {
                         while (resultSet.next()) {
                             assertThat(resultSet.getDate("a"))
                                     .isEqualTo(sqlDate)
@@ -87,7 +86,7 @@ public class DataCloudPreparedStatementHyperTest extends HyperTestBase {
                     val expected =
                             Date.valueOf(convertedDateTime.toLocalDateTime().toLocalDate());
 
-                    try (var resultSet = preparedStatement.executeQuery()) {
+                    try (ResultSet resultSet = preparedStatement.executeQuery()) {
                         while (resultSet.next()) {
                             val actual = resultSet.getDate("a");
                             assertThat(actual)
@@ -179,7 +178,7 @@ public class DataCloudPreparedStatementHyperTest extends HyperTestBase {
                     val sqlTimestamp = Timestamp.valueOf(dateTime);
                     preparedStatement.setTimestamp(1, sqlTimestamp);
 
-                    try (var resultSet = preparedStatement.executeQuery()) {
+                    try (ResultSet resultSet = preparedStatement.executeQuery()) {
                         while (resultSet.next()) {
                             val actual = resultSet.getTimestamp("a", utcCalendar);
                             assertThat(actual)
@@ -219,7 +218,7 @@ public class DataCloudPreparedStatementHyperTest extends HyperTestBase {
                     val convertedDateTime = zonedDateTime.withZoneSameInstant(utcTimeZone.toZoneId());
                     val expected = Timestamp.valueOf(convertedDateTime.toLocalDateTime());
 
-                    try (var resultSet = preparedStatement.executeQuery()) {
+                    try (ResultSet resultSet = preparedStatement.executeQuery()) {
                         while (resultSet.next()) {
                             val actual = resultSet.getTimestamp("a", utcCalendar);
                             assertThat(actual)
