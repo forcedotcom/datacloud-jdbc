@@ -4,7 +4,7 @@
     <groupId>com.salesforce.datacloud</groupId>
     <artifactId>jdbc-parent</artifactId>
     <!-- TODO: add https://www.mojohaus.org/versions/versions-maven-plugin/update-parent-mojo.html to control versions of submodules -->
-    <version>0.23.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <packaging>pom</packaging>
     <name>Salesforce Data Cloud JDBC Driver</name>
     <description>Salesforce Data Cloud JDBC Driver</description>
@@ -38,6 +38,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <protobuf.version>3.25.5</protobuf.version>
+        <revision>0.23.0-SNAPSHOT</revision>
         <shadeBase>com.salesforce.datacloud.jdbc.internal.shaded</shadeBase>
         <slf4j.version>1.7.32</slf4j.version>
         <spotless.version>2.30.0</spotless.version>
@@ -214,6 +215,31 @@
     </dependencyManagement>
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                        <phase>process-resources</phase>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <phase>clean</phase>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -498,16 +524,6 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>3.2.0</version>
-                <configuration>
-                    <delimiters>
-                        <delimiter>${*}</delimiter>
-                    </delimiters>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
                 <version>${spotless.version}</version>
@@ -592,6 +608,7 @@
                 <artifactId>sortpom-maven-plugin</artifactId>
                 <version>3.0.1</version>
                 <configuration>
+                    <pomFile>pom.xml</pomFile>
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <predefinedSortOrder>custom_1</predefinedSortOrder>
                     <nrOfIndentSpace>4</nrOfIndentSpace>
