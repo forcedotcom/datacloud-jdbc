@@ -33,10 +33,9 @@ public class QueryExceptionHandler {
     private static final int MAX_QUERY_LENGTH_IN_EXCEPTION = 16 * 1024;
 
     public static DataCloudJDBCException createQueryException(String query, Exception e) {
-        String exceptionQuery = query;
-        if (exceptionQuery.length() > MAX_QUERY_LENGTH_IN_EXCEPTION) {
-            exceptionQuery = exceptionQuery.substring(0, MAX_QUERY_LENGTH_IN_EXCEPTION) + "<truncated>";
-        }
+        String exceptionQuery = query.length() > MAX_QUERY_LENGTH_IN_EXCEPTION
+                ? query.substring(0, MAX_QUERY_LENGTH_IN_EXCEPTION) + "<truncated>"
+                : query;
         return QueryExceptionHandler.createException("Failed to execute query: " + exceptionQuery, e);
     }
 
