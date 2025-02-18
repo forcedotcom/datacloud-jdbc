@@ -28,6 +28,16 @@ import salesforce.cdp.hyperdb.v1.ErrorInfo;
 @Slf4j
 @UtilityClass
 public class QueryExceptionHandler {
+    // We introduce a limit to avoid truncating important details from the log due to large queries.
+    // When testing with 60 MB queries the exception formatting also took multi second hangs.
+    private static final int MAX_QUERY_LENGTH_IN_EXCEPTION = 16 * 1024;
+
+    public static DataCloudJDBCException createQueryException(String query, Exception e) {
+        String exceptionQuery = query.length() > MAX_QUERY_LENGTH_IN_EXCEPTION
+                ? query.substring(0, MAX_QUERY_LENGTH_IN_EXCEPTION) + "<truncated>"
+                : query;
+        return QueryExceptionHandler.createException("Failed to execute query: " + exceptionQuery, e);
+    }
 
     public static DataCloudJDBCException createException(String message, Exception e) {
         if (e instanceof StatusRuntimeException) {

@@ -69,7 +69,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
             return result;
         } catch (Exception ex) {
-            throw QueryExceptionHandler.createException(QUERY_FAILURE + sql, ex);
+            throw QueryExceptionHandler.createQueryException(sql, ex);
         }
     }
 
@@ -87,6 +87,4 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     public boolean isReady() {
         return listener.isReady();
     }
-
-    private static final String QUERY_FAILURE = "Failed to execute query: ";
 }
