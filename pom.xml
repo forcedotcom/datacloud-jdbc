@@ -11,6 +11,7 @@
     <modules>
         <module>jdbc-grpc</module>
         <module>jdbc-driver</module>
+        <module>jdbc-proto</module>
     </modules>
     <properties>
         <arrow.version>17.0.0</arrow.version>
