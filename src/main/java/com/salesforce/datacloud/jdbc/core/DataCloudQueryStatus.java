@@ -21,6 +21,15 @@ import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
+/**
+ * Represents the status of a query.
+ * The {@link CompletionStatus} enum defines the possible states of the query, which are:
+ * <ul>
+ *   <li><b>RUNNING</b>: The query is still running or its status is unspecified.</li>
+ *   <li><b>RESULTS_PRODUCED</b>: The query has completed, and the results are ready for retrieval.</li>
+ *   <li><b>FINISHED</b>: The query has finished execution and its results have been persisted, guaranteed to be available until the expiration time.</li>
+ * </ul>
+ */
 @Value
 public class DataCloudQueryStatus {
     public enum CompletionStatus {
@@ -39,10 +48,20 @@ public class DataCloudQueryStatus {
 
     CompletionStatus completionStatus;
 
-    public boolean isResultsProduced() {
+    /**
+     * Checks if the query's results have been produced.
+     *
+     * @return {@code true} if the query's results are available for retrieval, otherwise {@code false}.
+     */
+    public boolean isResultProduced() {
         return completionStatus == CompletionStatus.RESULTS_PRODUCED;
     }
 
+    /**
+     * Checks if the query execution is finished.
+     *
+     * @return {@code true} if the query has completed execution and results have been persisted, otherwise {@code false}.
+     */
     public boolean isExecutionFinished() {
         return completionStatus == CompletionStatus.FINISHED;
     }

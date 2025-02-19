@@ -176,9 +176,18 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     /**
-     * Use getQueryStatus to determine if your query is "ready" then use this to get a collection of rows.
-     * When using {@link RowBased.Mode#FULL_RANGE} this method is not responsible for calculating the offset near the end of available rows,
-     * you must calculate the correct "pages" of offset and limit.
+     * Retrieves a collection of rows for the specified query once it is ready.
+     * Use {@link #getQueryStatus(String)} to check if the query has produced results or finished execution before calling this method.
+     * <p>
+     * When using {@link RowBased.Mode#FULL_RANGE}, this method does not handle pagination near the end of available rows.
+     * The caller is responsible for calculating the correct offset and limit to avoid out-of-range errors.
+     *
+     * @param queryId The identifier of the query to fetch results for.
+     * @param offset  The starting row offset.
+     * @param limit   The maximum number of rows to retrieve.
+     * @param mode    The fetching mode—either {@link RowBased.Mode#SINGLE_RPC} for a single request or
+     *                {@link RowBased.Mode#FULL_RANGE} to iterate through all available rows.
+     * @return A {@link DataCloudResultSet} containing the query results.
      */
     public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit, RowBased.Mode mode) {
         val iterator = RowBased.of(executor, queryId, offset, limit, mode);

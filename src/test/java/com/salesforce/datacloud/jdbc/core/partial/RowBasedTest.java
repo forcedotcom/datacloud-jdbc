@@ -122,7 +122,7 @@ class RowBasedTest extends HyperTestBase {
         final long rows;
         try (val conn = getHyperQueryConnection()) {
             rows = conn.getQueryStatus(small)
-                    .filter(t -> t.isResultsProduced() || t.isExecutionFinished())
+                    .filter(t -> t.isResultProduced() || t.isExecutionFinished())
                     .map(DataCloudQueryStatus::getRowCount)
                     .findFirst()
                     .orElseThrow(() -> new RuntimeException("boom"));
@@ -180,7 +180,7 @@ class RowBasedTest extends HyperTestBase {
     }
 
     private boolean isReady(DataCloudConnection connection, String queryId) {
-        return connection.getQueryStatus(queryId).anyMatch(t -> t.isExecutionFinished() || t.isResultsProduced());
+        return connection.getQueryStatus(queryId).anyMatch(t -> t.isExecutionFinished() || t.isResultProduced());
     }
 
     private static List<Integer> rangeClosed(int start, int end) {
