@@ -54,7 +54,7 @@ import salesforce.cdp.hyperdb.v1.ResultRange;
 @Slf4j
 @Builder(toBuilder = true)
 public class HyperGrpcClientExecutor implements AutoCloseable {
-    private static final int GRPC_INBOUND_MESSAGE_MAX_SIZE = 128 * 1024 * 1024;
+    private static final int GRPC_INBOUND_MESSAGE_MAX_SIZE = 64 * 1024 * 1024;
 
     @NonNull private final ManagedChannel channel;
 

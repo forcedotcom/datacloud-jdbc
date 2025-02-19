@@ -75,7 +75,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
             return result;
         } catch (Exception ex) {
-            throw QueryExceptionHandler.createException(QUERY_FAILURE + sql, ex);
+            throw QueryExceptionHandler.createQueryException(sql, ex);
         }
     }
 
@@ -116,25 +116,5 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     @Override
     public boolean isReady() {
         return listener.isReady();
-    }
-
-    private static final String QUERY_FAILURE = "Failed to execute query: ";
-
-    @Value
-    private static class AlreadyReadyNoopListener implements QueryStatusListener {
-        String queryId;
-        String status = "Status should be determined via DataCloudConnection::getStatus";
-        String query = null;
-        boolean ready = true;
-
-        @Override
-        public DataCloudResultSet generateResultSet() {
-            return null;
-        }
-
-        @Override
-        public Stream<QueryResult> stream() {
-            return Stream.empty();
-        }
     }
 }
