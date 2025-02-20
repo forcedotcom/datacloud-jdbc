@@ -6,8 +6,6 @@
         <artifactId>jdbc-parent</artifactId>
         <version>${revision}</version>
     </parent>
-
-    <!-- TODO: should we name this jdbc-driver, and have another package that includes jdbc, jdbc-grpc, etc. for ease of use? -->
     <artifactId>jdbc-slim</artifactId>
 
     <properties>
@@ -71,7 +69,6 @@
             <groupId>com.salesforce.datacloud</groupId>
             <artifactId>jdbc-grpc</artifactId>
             <version>${project.version}</version>
-            <!-- TODO: make sure 'provided' doesn't break dbeaver, it allows you to pull in "optional" dependencies, but I don't know if this also means adding provided dependencies at runtime: https://dbeaver.com/docs/dbeaver/How-to-add-additional-artifacts-to-the-driver/#dependency-declaration -->
             <scope>provided</scope>
         </dependency>
         <dependency>
