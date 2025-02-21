@@ -10,7 +10,7 @@
     <description>Salesforce Data Cloud JDBC Driver</description>
     <modules>
         <module>jdbc-grpc</module>
-        <module>jdbc-driver</module>
+        <module>jdbc</module>
         <module>jdbc-proto</module>
         <module>jdbc-slim</module>
     </modules>
