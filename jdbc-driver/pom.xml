@@ -7,7 +7,7 @@
         <version>${revision}</version>
     </parent>
 
-    <artifactId>jdbc-driver</artifactId>
+    <artifactId>jdbc</artifactId>
 
     <properties>
         <maven.compiler.source>${java.version}</maven.compiler.source>
