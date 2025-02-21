@@ -4,7 +4,7 @@
     <groupId>com.salesforce.datacloud</groupId>
     <artifactId>jdbc-parent</artifactId>
     <!-- TODO: add https://www.mojohaus.org/versions/versions-maven-plugin/update-parent-mojo.html to control versions of submodules -->
-    <version>${revision}</version>
+    <version>0.24.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Salesforce Data Cloud JDBC Driver</name>
     <description>Salesforce Data Cloud JDBC Driver</description>
@@ -40,7 +40,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <protobuf.version>3.25.5</protobuf.version>
-        <revision>0.23.0-SNAPSHOT</revision>
+        <revision>${project.version}</revision>
         <shadeBase>com.salesforce.datacloud.jdbc.internal.shaded</shadeBase>
         <slf4j.version>1.7.32</slf4j.version>
         <spotless.version>2.30.0</spotless.version>
