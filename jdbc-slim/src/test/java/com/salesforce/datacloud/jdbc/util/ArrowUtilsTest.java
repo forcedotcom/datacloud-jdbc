@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import lombok.val;
-import lombok.var;
 import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.IntervalUnit;
@@ -128,7 +127,7 @@ class ArrowUtilsTest {
                 JDBCType.valueOf(Types.ARRAY).getName(),
                 ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.List()), null)));
 
-        for (var entry : testCases.entrySet()) {
+        for (val entry : testCases.entrySet()) {
             List<ColumnMetaData> actual = ArrowUtils.toColumnMetaData(entry.getValue());
             softly.assertThat(actual.get(0).type.name).isEqualTo(entry.getKey());
         }
