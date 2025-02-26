@@ -190,6 +190,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * @return A {@link DataCloudResultSet} containing the query results.
      */
     public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit, RowBased.Mode mode) {
+        log.info("Get row-based result set. queryId={}, offset={}, limit={}, mode={}", queryId, offset, limit, mode);
         val iterator = RowBased.of(executor, queryId, offset, limit, mode);
         return StreamingResultSet.of(queryId, executor, iterator);
     }

@@ -65,13 +65,6 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
         statement = new DataCloudStatement(connection);
     }
 
-    @Test
-    @SneakyThrows
-    public void forwardOnly() {
-        assertThat(statement.getFetchDirection()).isEqualTo(ResultSet.FETCH_FORWARD);
-        assertThat(statement.getResultSetType()).isEqualTo(ResultSet.TYPE_FORWARD_ONLY);
-    }
-
     private static Stream<Executable> unsupportedBatchExecutes() {
         return Stream.of(
                 () -> statement.execute("", 1),

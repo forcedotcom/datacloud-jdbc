@@ -206,7 +206,7 @@
                         </goals>
                         <configuration>
                             <addOutputDirectory>false</addOutputDirectory>
-                            <sourceDirectory>jdbc-driver/src/main/java</sourceDirectory>
+                            <sourceDirectory>jdbc-slim/src/main/java</sourceDirectory>
                             <outputDirectory>${project.build.directory}/delombok</outputDirectory>
                         </configuration>
                     </execution>

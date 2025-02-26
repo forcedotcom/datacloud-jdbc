@@ -44,6 +44,7 @@ public class DataCloudStatement implements Statement {
     protected static final String NOT_SUPPORTED_IN_DATACLOUD_QUERY = "Write is not supported in Data Cloud query";
     protected static final String BATCH_EXECUTION_IS_NOT_SUPPORTED =
             "Batch execution is not supported in Data Cloud query";
+    protected static final String CHANGE_FETCH_DIRECTION_IS_NOT_SUPPORTED = "Changing fetch direction is not supported";
     private static final String QUERY_TIMEOUT = "queryTimeout";
     public static final int DEFAULT_QUERY_TIMEOUT = 3 * 60 * 60;
 
@@ -246,11 +247,14 @@ public class DataCloudStatement implements Statement {
     }
 
     @Override
-    public void setFetchDirection(int direction) {}
+    public void setFetchDirection(int direction) throws SQLException {
+        throw new DataCloudJDBCException(CHANGE_FETCH_DIRECTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+    }
 
     @Override
-    public int getFetchDirection() {
-        return ResultSet.FETCH_FORWARD;
+    public int getFetchDirection() throws SQLException {
+        assertQueryExecuted();
+        return resultSet.getFetchDirection();
     }
 
     @Override
@@ -262,13 +266,15 @@ public class DataCloudStatement implements Statement {
     }
 
     @Override
-    public int getResultSetConcurrency() {
-        return 0;
+    public int getResultSetConcurrency() throws SQLException {
+        assertQueryExecuted();
+        return resultSet.getConcurrency();
     }
 
     @Override
-    public int getResultSetType() {
-        return ResultSet.TYPE_FORWARD_ONLY;
+    public int getResultSetType() throws SQLException {
+        assertQueryExecuted();
+        return resultSet.getType();
     }
 
     @Override

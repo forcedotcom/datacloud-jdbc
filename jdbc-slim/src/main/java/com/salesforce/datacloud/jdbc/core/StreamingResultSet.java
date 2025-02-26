@@ -19,6 +19,7 @@ import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
+import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -136,5 +137,20 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
         public Stream<QueryResult> stream() {
             return Stream.empty();
         }
+    }
+
+    @Override
+    public int getType() {
+        return ResultSet.TYPE_FORWARD_ONLY;
+    }
+
+    @Override
+    public int getConcurrency() {
+        return ResultSet.CONCUR_READ_ONLY;
+    }
+
+    @Override
+    public int getFetchDirection() {
+        return ResultSet.FETCH_FORWARD;
     }
 }
