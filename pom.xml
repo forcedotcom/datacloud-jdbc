@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.salesforce.datacloud</groupId>
     <artifactId>jdbc-parent</artifactId>
-    <version>0.24.0</version>
+    <version>0.24.1-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Salesforce Data Cloud JDBC Driver</name>
     <description>Salesforce Data Cloud JDBC Driver</description>
@@ -738,7 +738,7 @@
         <connection>scm:git:https://github.com/forcedotcom/datacloud-jdbc.git</connection>
         <developerConnection>scm:git:git@github.com:forcedotcom/datacloud-jdbc.git</developerConnection>
         <url>https://github.com/forcedotcom/datacloud-jdbc</url>
-        <tag>jdbc-parent-0.24.0</tag>
+        <tag>HEAD</tag>
     </scm>
     <issueManagement>
         <system>GitHub Issues</system>
