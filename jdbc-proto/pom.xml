@@ -5,8 +5,13 @@
         <groupId>com.salesforce.datacloud</groupId>
         <artifactId>jdbc-parent</artifactId>
         <version>0.24.1-SNAPSHOT</version>
+        <relativePath>../jdbc-parent</relativePath>
     </parent>
 
     <artifactId>jdbc-proto</artifactId>
+
+    <properties>
+        <rootDirectory>${project.basedir}/../</rootDirectory>
+    </properties>
 
 </project>

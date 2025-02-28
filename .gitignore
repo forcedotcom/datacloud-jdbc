@@ -22,3 +22,5 @@ jdbc-driver/src/main/resources/config/config.properties
 *.iml
 pom.xml.bak
 .codegenie
+
+.vscode

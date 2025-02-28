@@ -5,6 +5,7 @@
         <groupId>com.salesforce.datacloud</groupId>
         <artifactId>jdbc-parent</artifactId>
         <version>0.24.1-SNAPSHOT</version>
+        <relativePath>../jdbc-parent</relativePath>
     </parent>
 
     <artifactId>jdbc-grpc</artifactId>
@@ -13,14 +14,10 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <rootDirectory>${project.basedir}/../</rootDirectory>
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>com.salesforce.datacloud</groupId>
-            <artifactId>jdbc-proto</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty</artifactId>
@@ -36,6 +33,13 @@
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.salesforce.datacloud</groupId>
+            <artifactId>jdbc-proto</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 

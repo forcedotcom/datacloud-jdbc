@@ -5,13 +5,13 @@
         <groupId>com.salesforce.datacloud</groupId>
         <artifactId>jdbc-parent</artifactId>
         <version>0.24.1-SNAPSHOT</version>
+        <relativePath>../jdbc-parent</relativePath>
     </parent>
+
     <artifactId>jdbc-slim</artifactId>
 
     <properties>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <rootDirectory>${project.basedir}/../</rootDirectory>
     </properties>
 
     <dependencies>
@@ -170,9 +170,26 @@
         </resources>
         <plugins>
             <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <phase>test</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
-                <version>3.2.0</version>
                 <executions>
                     <execution>
                         <goals>
