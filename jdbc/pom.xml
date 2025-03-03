@@ -5,7 +5,7 @@
         <groupId>com.salesforce.datacloud</groupId>
         <artifactId>jdbc-parent</artifactId>
         <version>0.24.1-SNAPSHOT</version>
-        <!-- <relativePath>jdbc-parent</relativePath> -->
+         <relativePath>../jdbc-parent</relativePath>
     </parent>
 
     <artifactId>jdbc</artifactId>
@@ -14,7 +14,7 @@
     <description>Salesforce Data Cloud JDBC Driver</description>
 
     <properties>
-        <!-- <rootDirectory>${project.basedir}/../</rootDirectory> -->
+         <rootDirectory>${project.basedir}/../</rootDirectory>
     </properties>
 
     <dependencies>
@@ -45,12 +45,8 @@
                         <phase>package</phase>
                         <configuration>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
-                            <!-- TODO: can we use the maven-shade-plugin to produce a jar com.salesforce.datacloud:jdbc that handles the provided/runtime issue with jdbc-grpc? -->
                             <shadedArtifactId>jdbc</shadedArtifactId>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <!--                            <extraArtifacts>-->
-                            <!--                                <artifact>com.salesforce.datacloud:jdbc-grpc:0.23.0-SNAPSHOT</artifact>-->
-                            <!--                            </extraArtifacts>-->
                             <relocations>
                                 <relocation>
                                     <pattern>com.salesforce.datacloud</pattern>

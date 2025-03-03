@@ -10,8 +10,20 @@
 
     <artifactId>jdbc-proto</artifactId>
 
+    <description>Salesforce Data Cloud Query API proto files</description>
+
     <properties>
         <rootDirectory>${project.basedir}/../</rootDirectory>
     </properties>
 
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/proto</directory>
+                <includes>
+                    <include>**/*.proto</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
 </project>

@@ -28,12 +28,13 @@
         <java.version>1.8</java.version>
         <jjwt.version>0.12.6</jjwt.version>
         <lombok.version>1.18.34</lombok.version>
+        <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
 
-        <maven.compiler.release>${java.version}</maven.compiler.release>
+        <maven-javadoc-plugin.version>3.11.1</maven-javadoc-plugin.version>
+
+        <maven.compiler.release>8</maven.compiler.release>
         <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.source>{java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <maven.compiler.target>{java.version}</maven.compiler.target>
         <mockito-bom.version>4.11.0</mockito-bom.version>
         <okhttp.version>4.12.0</okhttp.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -215,19 +216,6 @@
         </dependencies>
     </dependencyManagement>
 
-    <dependencies>
-        <!--        <dependency>-->
-        <!--            <groupId>com.salesforce.datacloud</groupId>-->
-        <!--            <artifactId>jdbc-grpc</artifactId>-->
-        <!--            <version>${project.version}</version>-->
-        <!--        </dependency>-->
-        <!--        <dependency>-->
-        <!--            <groupId>com.salesforce.datacloud</groupId>-->
-        <!--            <artifactId>jdbc-slim</artifactId>-->
-        <!--            <version>${project.version}</version>-->
-        <!--        </dependency>-->
-    </dependencies>
-
     <build>
         <pluginManagement>
             <plugins>
@@ -235,6 +223,20 @@
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>${jacoco.maven.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                    <configuration>
+                        <showDeprecation>true</showDeprecation>
+                        <showWarnings>true</showWarnings>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>3.11.1</version>
                 </plugin>
             </plugins>
         </pluginManagement>

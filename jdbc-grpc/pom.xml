@@ -34,13 +34,6 @@
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.salesforce.datacloud</groupId>
-            <artifactId>jdbc-proto</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
     </dependencies>
 
     <build>
@@ -54,7 +47,7 @@
                     <pluginId>grpc-java</pluginId>
                     <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
                     <attachProtoSources>false</attachProtoSources>
-                    <protoSourceRoot>${project.parent.basedir}/jdbc-proto/src/main/proto</protoSourceRoot>
+                    <protoSourceRoot>${project.basedir}/../jdbc-proto/src/main/proto</protoSourceRoot>
                 </configuration>
                 <executions>
                     <execution>
