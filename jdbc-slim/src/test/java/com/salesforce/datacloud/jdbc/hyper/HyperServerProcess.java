@@ -42,7 +42,7 @@ public class HyperServerProcess {
     public HyperServerProcess() {
         log.info("starting hyperd, this might take a few seconds");
 
-        val executable = new File("./target/hyper/hyperd");
+        val executable = new File("../target/hyper/hyperd");
         val properties = Paths.get(requireNonNull(HyperTestBase.class.getResource("/hyper.yaml"))
                         .toURI())
                 .toFile();

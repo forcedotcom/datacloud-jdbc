@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  MAVEN_ARGS: --batch-mode --no-transfer-progress -V -e -Dstyle.color=always
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,7 +25,8 @@ jobs:
       - name: Get hyperd version
         id: evaluate-property
         run: |
-          echo "HYPER_VERSION=$(mvn help:evaluate -Dexpression=hyperapi.version -q -DforceStdout)" >> $GITHUB_ENV
+          HYPER_VERSION=$(grep "<hyperapi.version>" pom.xml | sed -n 's/.*<hyperapi.version>\(.*\)<\/hyperapi.version>.*/\1/p')
+          echo "HYPER_VERSION=$HYPER_VERSION" >> $GITHUB_ENV
       - name: Cache hyperd
         uses: actions/cache@v3
         with:
@@ -32,4 +36,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
       - name: Maven package
-        run: mvn --batch-mode --no-transfer-progress clean package --file pom.xml
+        run: mvn $MAVEN_ARGS clean package --file pom.xml

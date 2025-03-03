@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.salesforce.datacloud</groupId>
         <artifactId>jdbc-build</artifactId>
-        <version>0.24.1-SNAPSHOT</version>
+        <version>0.25.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>jdbc-parent</artifactId>
@@ -14,31 +14,31 @@
     <description>Parent POM for all Salesforce Data Cloud JDBC modules</description>
 
     <properties>
-
-        <!-- Dependencies -->
         <arrow.version>17.0.0</arrow.version>
         <assertj.version>3.26.3</assertj.version>
         <avatica.version>1.25.0</avatica.version>
+        <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
         <commons-lang3.version>3.17.0</commons-lang3.version>
-        <grpc.version>1.68.1</grpc.version>
+        <grpc.version>1.70.0</grpc.version>
         <grpcmock-junit5.version>0.13.0</grpcmock-junit5.version>
-        <guava.version>33.2.1-jre</guava.version>
+        <guava.version>33.4.0-jre</guava.version>
         <jackson.version>2.18.0</jackson.version>
         <jacoco.maven.plugin.version>0.8.12</jacoco.maven.plugin.version>
         <java.version>1.8</java.version>
         <jjwt.version>0.12.6</jjwt.version>
         <lombok.version>1.18.34</lombok.version>
         <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
-
-        <maven-javadoc-plugin.version>3.11.1</maven-javadoc-plugin.version>
-
+        <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+        <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
         <maven.compiler.release>8</maven.compiler.release>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
+        <maven.deploy.skip>true</maven.deploy.skip>
         <mockito-bom.version>4.11.0</mockito-bom.version>
         <okhttp.version>4.12.0</okhttp.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
         <protobuf.version>3.25.5</protobuf.version>
         <revision>${project.version}</revision>
         <rootDirectory>${project.basedir}/../</rootDirectory>
@@ -215,7 +215,6 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
-
     <build>
         <pluginManagement>
             <plugins>
@@ -235,8 +234,8 @@
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.11.1</version>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>${maven-source-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>

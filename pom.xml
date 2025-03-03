@@ -3,33 +3,36 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.salesforce.datacloud</groupId>
     <artifactId>jdbc-build</artifactId>
-    <version>0.24.1-SNAPSHOT</version>
+    <version>0.25.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Salesforce Data Cloud JDBC Build</name>
     <description>Salesforce Data Cloud JDBC Build</description>
     <modules>
         <module>jdbc-parent</module>
-        <module>jdbc-slim</module>
         <module>jdbc-grpc</module>
         <module>jdbc-proto</module>
+        <module>jdbc-slim</module>
+        <module>jdbc</module>
     </modules>
     <properties>
         <download.cache.directory>${project.build.directory}/.cache</download.cache.directory>
-
         <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
         <git-build-hook-maven-plugin.version>3.5.0</git-build-hook-maven-plugin.version>
-
         <!-- https://tableau.github.io/hyper-db/docs/releases#download -->
         <hyperapi.version>0.0.21200.re11c8cb9</hyperapi.version>
         <hyperd.directory>${project.build.directory}/hyper</hyperd.directory>
         <junit-bom.version>5.11.3</junit-bom.version>
+        <maven-depndency-plugin.version>3.8.1</maven-depndency-plugin.version>
         <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
-        <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
+        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
+        <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
+        <maven.deploy.skip>true</maven.deploy.skip>
         <nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <release.profile.active>false</release.profile.active>
+        <rootDirectory>${project.basedir}</rootDirectory>
         <spotless-maven-plugin.version>2.30.0</spotless-maven-plugin.version>
     </properties>
 
@@ -38,45 +41,8 @@
             <plugins>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>3.11.1</version>
-                    <configuration>
-                        <additionalOptions>
-                            <additionalOption>-html5</additionalOption>
-                            <additionalOption>--allow-script-in-comments</additionalOption>
-                        </additionalOptions>
-
-                        <sourcepath>${project.build.directory}/delombok;${project.build.directory}/generated-sources/protobuf</sourcepath>
-                        <source>${java.version}</source>
-                        <quiet>true</quiet>
-                        <excludePackageNames>salesforce.cdp.hyperdb.v1.*</excludePackageNames>
-                        <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
-                        <failOnWarnings>false</failOnWarnings>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>jar</goal>
-                            </goals>
-                            <phase>package</phase>
-                        </execution>
-                    </executions>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-gpg-plugin</artifactId>
                     <version>${maven-gpg-plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-release-plugin</artifactId>
-                    <version>${maven-release-plugin.version}</version>
-                    <configuration>
-                        <autoVersionSubmodules>true</autoVersionSubmodules>
-                        <useReleaseProfile>false</useReleaseProfile>
-                        <releaseProfiles>release</releaseProfiles>
-                        <goals>deploy</goals>
-                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -88,10 +54,45 @@
                     <artifactId>maven-resources-plugin</artifactId>
                     <version>${maven-resources-plugin.version}</version>
                 </plugin>
-
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>${maven-javadoc-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonatype.plugins</groupId>
+                    <artifactId>nexus-staging-maven-plugin</artifactId>
+                    <version>${nexus-staging-maven-plugin.version}</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <additionalOptions>
+                        <additionalOption>--allow-script-in-comments</additionalOption>
+                    </additionalOptions>
+                    <source>${java.version}</source>
+                    <quiet>true</quiet>
+                    <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
+                    <failOnWarnings>false</failOnWarnings>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
@@ -101,6 +102,71 @@
                         <include>com.salesforce.datacloud:*</include>
                     </includes>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.googlecode.maven-download-plugin</groupId>
+                <artifactId>download-maven-plugin</artifactId>
+                <version>1.11.3</version>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>download-hyper-cpp</id>
+                        <goals>
+                            <goal>wget</goal>
+                        </goals>
+                        <phase>process-test-resources</phase>
+                        <configuration>
+                            <url>${hyper-download-url}.${hyperapi.version}.zip</url>
+                            <unpack>true</unpack>
+                            <outputDirectory>${download.cache.directory}/hyper-unzipped</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <inherited>false</inherited>
+                <executions>
+                    <execution>
+                        <id>flatten-hyperd</id>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <phase>process-test-resources</phase>
+                        <configuration>
+                            <target>
+                                <copy overwrite="false" todir="${hyperd.directory}">
+                                    <fileset dir="${download.cache.directory}/hyper-unzipped">
+                                        <include name="**/lib/hyper/hyperd"/>
+                                        <include name="**/lib/hyper/hyperd.exe"/>
+                                        <include name="**/lib/**/*.dylib"/>
+                                        <include name="**/lib/**/*.dll"/>
+                                        <include name="**/lib/**/*.so"/>
+                                    </fileset>
+                                    <flattenmapper/>
+                                </copy>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>chmod-hyperd</id>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <phase>process-test-resources</phase>
+                        <configuration>
+                            <target>
+                                <chmod perm="700">
+                                    <fileset dir="${hyperd.directory}">
+                                        <include name="**/hyperd"/>
+                                    </fileset>
+                                </chmod>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -142,20 +208,6 @@
                         <id>make-assembly</id>
                         <goals>
                             <goal>single</goal>
-                        </goals>
-                        <phase>package</phase>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>3.3.1</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>jar</goal>
                         </goals>
                         <phase>package</phase>
                     </execution>
@@ -255,23 +307,6 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>org.assertj</groupId>
-                <artifactId>assertj-assertions-generator-maven-plugin</artifactId>
-                <version>2.2.0</version>
-                <configuration>
-                    <classes>
-                        <class>com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor</class>
-                    </classes>
-                    <hierarchical>false</hierarchical>
-                    <targetDir>src/test/java</targetDir>
-                    <cleanTargetDir>false</cleanTargetDir>
-                    <generateAssertions>true</generateAssertions>
-                    <generateJUnitSoftAssertions>false</generateJUnitSoftAssertions>
-                    <generateBddAssertions>false</generateBddAssertions>
-                    <generateSoftAssertions>true</generateSoftAssertions>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>com.github.ekryd.sortpom</groupId>
                 <artifactId>sortpom-maven-plugin</artifactId>
                 <version>3.0.1</version>
@@ -304,65 +339,14 @@
                 </executions>
             </plugin>
             <plugin>
-                <groupId>com.googlecode.maven-download-plugin</groupId>
-                <artifactId>download-maven-plugin</artifactId>
-                <version>1.11.3</version>
-                <executions>
-                    <execution>
-                        <id>download-hyper-cpp</id>
-                        <goals>
-                            <goal>wget</goal>
-                        </goals>
-                        <phase>process-test-resources</phase>
-                        <configuration>
-                            <url>${hyper-download-url}.${hyperapi.version}.zip</url>
-                            <unpack>true</unpack>
-                            <outputDirectory>${download.cache.directory}/hyper-unzipped</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-antrun-plugin</artifactId>
-                <version>3.1.0</version>
+                <artifactId>maven-source-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>flatten-hyperd</id>
+                        <id>attach-javadoc</id>
                         <goals>
-                            <goal>run</goal>
+                            <goal>jar-no-fork</goal>
                         </goals>
-                        <phase>process-test-resources</phase>
-                        <configuration>
-                            <target>
-                                <copy overwrite="false" todir="${hyperd.directory}">
-                                    <fileset dir="${download.cache.directory}/hyper-unzipped">
-                                        <include name="**/lib/hyper/hyperd"/>
-                                        <include name="**/lib/hyper/hyperd.exe"/>
-                                        <include name="**/lib/**/*.dylib"/>
-                                        <include name="**/lib/**/*.dll"/>
-                                        <include name="**/lib/**/*.so"/>
-                                    </fileset>
-                                    <flattenmapper/>
-                                </copy>
-                            </target>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>chmod-hyperd</id>
-                        <goals>
-                            <goal>run</goal>
-                        </goals>
-                        <phase>process-test-resources</phase>
-                        <configuration>
-                            <target>
-                                <chmod perm="700">
-                                    <fileset dir="${hyperd.directory}">
-                                        <include name="**/hyperd"/>
-                                    </fileset>
-                                </chmod>
-                            </target>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -473,23 +457,24 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-dependency-plugin</artifactId>
-                        <version>3.8.1</version>
+                        <version>${maven-depndency-plugin.version}</version>
                     </plugin>
                     <plugin>
                         <groupId>org.sonatype.plugins</groupId>
                         <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <version>1.7.0</version>
+                        <version>${nexus-staging-maven-plugin.version}</version>
                         <extensions>true</extensions>
                         <configuration>
                             <serverId>ossrh</serverId>
                             <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                             <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                            <skipNexusStagingDeployMojo>${maven.deploy.skip}</skipNexusStagingDeployMojo>
                         </configuration>
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.2.7</version>
+                        <version>${maven-gpg-plugin.version}</version>
                         <configuration>
                             <gpgArguments>
                                 <arg>--pinentry-mode</arg>

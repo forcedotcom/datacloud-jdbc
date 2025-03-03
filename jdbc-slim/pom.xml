@@ -4,13 +4,14 @@
     <parent>
         <groupId>com.salesforce.datacloud</groupId>
         <artifactId>jdbc-parent</artifactId>
-        <version>0.24.1-SNAPSHOT</version>
+        <version>0.25.0-SNAPSHOT</version>
         <relativePath>../jdbc-parent</relativePath>
     </parent>
 
-    <artifactId>jdbc-slim</artifactId>
+    <artifactId>jdbc-core</artifactId>
 
     <properties>
+        <maven.deploy.skip>false</maven.deploy.skip>
         <rootDirectory>${project.basedir}/../</rootDirectory>
     </properties>
 
@@ -235,13 +236,41 @@
                         </goals>
                         <configuration>
                             <addOutputDirectory>false</addOutputDirectory>
-                            <sourceDirectory>jdbc-slim/src/main/java</sourceDirectory>
+                            <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
                             <outputDirectory>${project.build.directory}/delombok</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <sourcepath>${project.build.directory}/delombok;${project.parent.basedir}/jdbc-grpc/generated-sources/protobuf</sourcepath>
+                    <source>${java.version}</source>
+                    <quiet>true</quiet>
+                    <excludePackageNames>salesforce.cdp.hyperdb.v1.*</excludePackageNames>
+                    <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
+                    <failOnWarnings>false</failOnWarnings>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-assertions-generator-maven-plugin</artifactId>
+                <version>2.2.0</version>
+                <configuration>
+                    <classes>
+                        <class>com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor</class>
+                    </classes>
+                    <hierarchical>false</hierarchical>
+                    <targetDir>src/test/java</targetDir>
+                    <cleanTargetDir>false</cleanTargetDir>
+                    <generateAssertions>true</generateAssertions>
+                    <generateJUnitSoftAssertions>false</generateJUnitSoftAssertions>
+                    <generateBddAssertions>false</generateBddAssertions>
+                    <generateSoftAssertions>true</generateSoftAssertions>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
-
 </project>

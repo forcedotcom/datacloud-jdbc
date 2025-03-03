@@ -4,8 +4,8 @@
     <parent>
         <groupId>com.salesforce.datacloud</groupId>
         <artifactId>jdbc-parent</artifactId>
-        <version>0.24.1-SNAPSHOT</version>
-         <relativePath>../jdbc-parent</relativePath>
+        <version>0.25.0-SNAPSHOT</version>
+        <relativePath>../jdbc-parent</relativePath>
     </parent>
 
     <artifactId>jdbc</artifactId>
@@ -14,18 +14,19 @@
     <description>Salesforce Data Cloud JDBC Driver</description>
 
     <properties>
-         <rootDirectory>${project.basedir}/../</rootDirectory>
+        <maven.deploy.skip>false</maven.deploy.skip>
+        <rootDirectory>${project.basedir}/../</rootDirectory>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.salesforce.datacloud</groupId>
-            <artifactId>jdbc-grpc</artifactId>
+            <artifactId>jdbc-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.salesforce.datacloud</groupId>
-            <artifactId>jdbc-slim</artifactId>
+            <artifactId>jdbc-grpc</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
@@ -34,77 +35,28 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <doclint>none</doclint>
+                    <additionalJOption>-Xdoclint:none</additionalJOption>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>${maven-shade-plugin.version}</version>
                 <executions>
                     <execution>
-                        <id>default-shade</id>
                         <goals>
                             <goal>shade</goal>
                         </goals>
                         <phase>package</phase>
                         <configuration>
-                            <shadedArtifactAttached>true</shadedArtifactAttached>
-                            <shadedArtifactId>jdbc</shadedArtifactId>
-                            <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <relocations>
-                                <relocation>
-                                    <pattern>com.salesforce.datacloud</pattern>
-                                </relocation>
-                            </relocations>
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>META-INF/LICENSE*</exclude>
-                                        <exclude>META-INF/NOTICE*</exclude>
-                                        <exclude>META-INF/DEPENDENCIES</exclude>
-                                        <exclude>META-INF/maven/**</exclude>
-                                        <exclude>META-INF/services/com.fasterxml.*</exclude>
-                                        <exclude>META-INF/*.xml</exclude>
-                                        <exclude>META-INF/*.SF</exclude>
-                                        <exclude>META-INF/*.DSA</exclude>
-                                        <exclude>META-INF/*.RSA</exclude>
-                                        <exclude>.netbeans_automatic_build</exclude>
-                                        <exclude>git.properties</exclude>
-                                        <exclude>google-http-client.properties</exclude>
-                                        <exclude>storage.v1.json</exclude>
-                                        <!-- This is just a documentation file, not needed-->
-                                        <exclude>pipes-fork-server-default-log4j2.xml</exclude>
-                                        <exclude>dependencies.properties</exclude>
-                                        <exclude>pipes-fork-server-default-log4j2.xml</exclude>
-                                    </excludes>
-                                </filter>
-                                <filter>
-                                    <artifact>org.apache.arrow:arrow-vector</artifact>
-                                    <excludes>
-                                        <!-- codegen directory is used to generate java code for arrow vector package. Excludes them since we only need class file -->
-                                        <exclude>codegen/**</exclude>
-                                    </excludes>
-                                </filter>
-                                <filter>
-                                    <artifact>org.apache.calcite.avatica:avatica</artifact>
-                                    <excludes>
-                                        <exclude>org/apache/calcite/avatica/**/Driver.class</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                            <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"/>
-                            </transformers>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
+                            <useDependencyReducedPomInJar>true</useDependencyReducedPomInJar>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>shaded</shadedClassifierName>
-                            <shadedArtifactId>jdbc-shaded</shadedArtifactId>
-                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <shadedArtifactId>jdbc</shadedArtifactId>
+                            <createDependencyReducedPom>true</createDependencyReducedPom>
                             <relocations>
                                 <relocation>
                                     <pattern>org.apache</pattern>

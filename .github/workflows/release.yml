@@ -4,10 +4,12 @@ on:
   release:
     types: [ "created" ]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+env:
+  MAVEN_ARGS: --batch-mode --no-transfer-progress -V -e -Dstyle.color=always
 
+jobs:
+  release:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 8
@@ -23,7 +25,8 @@ jobs:
       - name: Get hyperd version
         id: evaluate-property
         run: |
-          echo "HYPER_VERSION=$(mvn help:evaluate -Dexpression=hyperapi.version -q -DforceStdout)" >> $GITHUB_ENV
+          HYPER_VERSION=$(grep "<hyperapi.version>" pom.xml | sed -n 's/.*<hyperapi.version>\(.*\)<\/hyperapi.version>.*/\1/p')
+          echo "HYPER_VERSION=$HYPER_VERSION" >> $GITHUB_ENV
       - name: Cache hyperd
         uses: actions/cache@v3
         with:
@@ -33,9 +36,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
       - name: Set version
-        run: mvn versions:set --no-transfer-progress -DnewVersion=${{ github.event.release.tag_name }}
-      - name: Build with Maven
-        run: mvn --batch-mode --no-transfer-progress clean deploy -P release --file pom.xml
+        run: mvn $MAVEN_ARGS versions:set -DnewVersion=${{ github.event.release.tag_name }}
+      - name: Deploy with Maven
+        run: mvn $MAVEN_ARGS clean deploy -Prelease --file pom.xml
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}

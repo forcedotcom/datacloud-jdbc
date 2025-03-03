@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.salesforce.datacloud</groupId>
         <artifactId>jdbc-parent</artifactId>
-        <version>0.24.1-SNAPSHOT</version>
+        <version>0.25.0-SNAPSHOT</version>
         <relativePath>../jdbc-parent</relativePath>
     </parent>
 
@@ -13,6 +13,7 @@
     <description>Salesforce Data Cloud Query API proto files</description>
 
     <properties>
+        <maven.deploy.skip>false</maven.deploy.skip>
         <rootDirectory>${project.basedir}/../</rootDirectory>
     </properties>
 
@@ -25,5 +26,23 @@
                 </includes>
             </resource>
         </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <phase>package</phase>
+                        <configuration>
+                            <classifier>javadoc</classifier>
+                            <classesDirectory>${project.basedir}/src/main/javadoc</classesDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 </project>

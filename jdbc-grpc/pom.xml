@@ -4,16 +4,14 @@
     <parent>
         <groupId>com.salesforce.datacloud</groupId>
         <artifactId>jdbc-parent</artifactId>
-        <version>0.24.1-SNAPSHOT</version>
+        <version>0.25.0-SNAPSHOT</version>
         <relativePath>../jdbc-parent</relativePath>
     </parent>
 
     <artifactId>jdbc-grpc</artifactId>
 
     <properties>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.deploy.skip>false</maven.deploy.skip>
         <rootDirectory>${project.basedir}/../</rootDirectory>
     </properties>
 
@@ -37,11 +35,31 @@
     </dependencies>
 
     <build>
+        <sourceDirectory>${project.build.directory}/generated-sources/protobuf</sourceDirectory>
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>${build-helper-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/protobuf/grpc-java</source>
+                                <source>${project.build.directory}/generated-sources/protobuf/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
-                <version>0.6.1</version>
+                <version>${protobuf-maven-plugin.version}</version>
                 <configuration>
                     <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
                     <pluginId>grpc-java</pluginId>
@@ -57,6 +75,19 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <doclint>none</doclint>
+                    <additionalJOption>-Xdoclint:none</additionalJOption>
+                    <sourcepath>${project.build.directory}/generated-sources/protobuf/java;${project.build.directory}/generated-sources/protobuf/grpc-java;</sourcepath>
+                    <source>${java.version}</source>
+                    <quiet>true</quiet>
+                    <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
+                    <failOnWarnings>false</failOnWarnings>
+                </configuration>
             </plugin>
         </plugins>
     </build>
