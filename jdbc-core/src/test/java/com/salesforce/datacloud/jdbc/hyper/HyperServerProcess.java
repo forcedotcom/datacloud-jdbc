@@ -17,8 +17,18 @@ package com.salesforce.datacloud.jdbc.hyper;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.*;
+import com.google.common.collect.ImmutableMap;
+import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
+import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
+import io.grpc.ManagedChannelBuilder;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Paths;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,19 +41,23 @@ import lombok.val;
 import org.junit.jupiter.api.Assertions;
 
 @Slf4j
-public class HyperServerProcess {
+public class HyperServerProcess implements AutoCloseable {
     private static final Pattern PORT_PATTERN = Pattern.compile(".*gRPC listening on 127.0.0.1:([0-9]+).*");
 
     private final Process hyperProcess;
     private final ExecutorService hyperMonitors;
     private Integer port;
 
-    @SneakyThrows
     public HyperServerProcess() {
+        this(HyperServerConfig.builder());
+    }
+
+    @SneakyThrows
+    public HyperServerProcess(HyperServerConfig.HyperServerConfigBuilder config) {
         log.info("starting hyperd, this might take a few seconds");
 
         val executable = new File("../target/hyper/hyperd");
-        val properties = Paths.get(requireNonNull(HyperTestBase.class.getResource("/hyper.yaml"))
+        val yaml = Paths.get(requireNonNull(HyperTestBase.class.getResource("/hyper.yaml"))
                         .toURI())
                 .toFile();
 
@@ -53,7 +67,13 @@ public class HyperServerProcess {
         }
 
         hyperProcess = new ProcessBuilder()
-                .command(executable.getAbsolutePath(), "--config", properties.getAbsolutePath(), "--no-password", "run")
+                .command(
+                        executable.getAbsolutePath(),
+                        config.build().toString(),
+                        "--config",
+                        yaml.getAbsolutePath(),
+                        "--no-password",
+                        "run")
                 .start();
 
         // Wait until process is listening and extract port on which it is listening
@@ -72,18 +92,6 @@ public class HyperServerProcess {
         if (!latch.await(30, TimeUnit.SECONDS)) {
             Assertions.fail("failed to start instance of hyper within 30 seconds");
         }
-    }
-
-    @SneakyThrows
-    void shutdown() throws InterruptedException {
-        if (hyperProcess != null && hyperProcess.isAlive()) {
-            log.info("destroy hyper process");
-            hyperProcess.destroy();
-            hyperProcess.waitFor();
-        }
-
-        log.info("shutdown hyper monitors");
-        hyperMonitors.shutdown();
     }
 
     int getPort() {
@@ -105,5 +113,33 @@ public class HyperServerProcess {
         } catch (Exception e) {
             log.error("Caught unexpected exception", e);
         }
+    }
+
+    @Override
+    public void close() throws Exception {
+        if (hyperProcess != null && hyperProcess.isAlive()) {
+            log.info("destroy hyper process");
+            hyperProcess.destroy();
+            hyperProcess.waitFor();
+        }
+
+        log.info("shutdown hyper monitors");
+        hyperMonitors.shutdown();
+    }
+
+    public DataCloudConnection getConnection() {
+        return getConnection(ImmutableMap.of());
+    }
+
+    @SneakyThrows
+    public DataCloudConnection getConnection(Map<String, String> connectionSettings) {
+        val properties = new Properties();
+        properties.putAll(connectionSettings);
+        val auth = AuthorizationHeaderInterceptor.of(new HyperTestBase.NoopTokenSupplier());
+        log.info("Creating connection to port {}", getPort());
+        ManagedChannelBuilder<?> channel =
+                ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext();
+
+        return DataCloudConnection.fromTokenSupplier(auth, channel, properties);
     }
 }

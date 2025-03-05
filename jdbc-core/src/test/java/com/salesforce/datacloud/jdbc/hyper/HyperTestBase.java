@@ -21,10 +21,8 @@ import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
-import io.grpc.ManagedChannelBuilder;
 import java.sql.ResultSet;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -74,24 +72,15 @@ public class HyperTestBase {
         return getHyperQueryConnection(ImmutableMap.of());
     }
 
-    @SneakyThrows
     public static DataCloudConnection getHyperQueryConnection(Map<String, String> connectionSettings) {
-
-        val properties = new Properties();
-        properties.putAll(connectionSettings);
-        val auth = AuthorizationHeaderInterceptor.of(new NoopTokenSupplier());
-        log.info("Creating connection to port {}", instance.getPort());
-        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", instance.getPort())
-                .usePlaintext();
-
-        return DataCloudConnection.fromTokenSupplier(auth, channel, properties);
+        return instance.getConnection(connectionSettings);
     }
 
     @SneakyThrows
     @AfterAll
     @Timeout(5_000)
     public void afterAll() {
-        instance.shutdown();
+        instance.close();
     }
 
     @SneakyThrows
