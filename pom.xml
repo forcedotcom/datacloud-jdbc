@@ -11,7 +11,7 @@
         <module>jdbc-parent</module>
         <module>jdbc-grpc</module>
         <module>jdbc-proto</module>
-        <module>jdbc-slim</module>
+        <module>jdbc-core</module>
         <module>jdbc</module>
     </modules>
     <properties>
