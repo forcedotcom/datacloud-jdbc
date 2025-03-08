@@ -22,6 +22,7 @@ import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProcessor;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
+import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.ClientBuilder;
@@ -193,6 +194,18 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         log.info("Get row-based result set. queryId={}, offset={}, limit={}, mode={}", queryId, offset, limit, mode);
         val iterator = RowBased.of(executor, queryId, offset, limit, mode);
         return StreamingResultSet.of(queryId, executor, iterator);
+    }
+
+    @Unstable
+    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit) {
+        log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
+        val iterator = ChunkBased.of(executor, queryId, chunkId, limit);
+        return StreamingResultSet.of(queryId, executor, iterator);
+    }
+
+    @Unstable
+    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) {
+        return getChunkBasedResultSet(queryId, chunkId, 1);
     }
 
     /**
