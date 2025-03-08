@@ -91,32 +91,25 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
 
         mockParameterManager = mock(ParameterManager.class);
 
-        preparedStatement = new DataCloudPreparedStatement(mockConnection, mockParameterManager);
+        preparedStatement = new DataCloudPreparedStatement(mockConnection, "SELECT * FROM table", mockParameterManager);
     }
 
     @Test
     @SneakyThrows
     public void testExecuteQuery() {
-        setupHyperGrpcClientWithMockedResultSet("query id", ImmutableList.of());
-        ResultSet resultSet = preparedStatement.executeQuery("SELECT * FROM table");
-        assertNotNull(resultSet);
-        assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(3);
-        assertThat(resultSet.getMetaData().getColumnName(1)).isEqualTo("id");
-        assertThat(resultSet.getMetaData().getColumnName(2)).isEqualTo("name");
-        assertThat(resultSet.getMetaData().getColumnName(3)).isEqualTo("grade");
+        assertThatThrownBy(() -> preparedStatement.executeQuery("SELECT * FROM table"))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessage(
+                        "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::executeQuery() instead.");
     }
 
     @Test
     @SneakyThrows
     public void testExecute() {
-        setupHyperGrpcClientWithMockedResultSet("query id", ImmutableList.of());
-        preparedStatement.execute("SELECT * FROM table");
-        ResultSet resultSet = preparedStatement.getResultSet();
-        assertNotNull(resultSet);
-        assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(3);
-        assertThat(resultSet.getMetaData().getColumnName(1)).isEqualTo("id");
-        assertThat(resultSet.getMetaData().getColumnName(2)).isEqualTo("name");
-        assertThat(resultSet.getMetaData().getColumnName(3)).isEqualTo("grade");
+        assertThatThrownBy(() -> preparedStatement.execute("SELECT * FROM table"))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessage(
+                        "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::execute() instead.");
     }
 
     @SneakyThrows
@@ -127,13 +120,13 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
         p.setProperty(Constants.FORCE_SYNC, Boolean.toString(forceSync));
         when(mockConnection.getProperties()).thenReturn(p);
 
-        val statement = new DataCloudPreparedStatement(mockConnection, mockParameterManager);
+        val statement = new DataCloudPreparedStatement(mockConnection, "SELECT * FROM table", mockParameterManager);
 
         setupHyperGrpcClientWithMockedResultSet(
                 "query id",
                 ImmutableList.of(),
                 forceSync ? QueryParam.TransferMode.SYNC : QueryParam.TransferMode.ADAPTIVE);
-        ResultSet response = statement.executeQuery("SELECT * FROM table");
+        ResultSet response = statement.executeQuery();
         AssertionsForClassTypes.assertThat(statement.isReady()).isTrue();
         assertNotNull(response);
         AssertionsForClassTypes.assertThat(response.getMetaData().getColumnCount())
@@ -147,7 +140,7 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
         GrpcMock.stubFor(GrpcMock.unaryMethod(HyperServiceGrpc.getExecuteQueryMethod())
                 .willReturn(GrpcMock.exception(fakeException)));
 
-        assertThrows(DataCloudJDBCException.class, () -> preparedStatement.executeQuery("SELECT * FROM table"));
+        assertThrows(DataCloudJDBCException.class, () -> preparedStatement.executeQuery());
     }
 
     @Test

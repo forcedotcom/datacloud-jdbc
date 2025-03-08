@@ -23,6 +23,7 @@ import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
+import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
 import com.salesforce.datacloud.jdbc.util.Constants;
@@ -53,6 +54,7 @@ import java.time.Duration;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.TimeZone;
+import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -86,18 +88,19 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
-        this.sql = sql;
-        return executeQuery();
+        throw new DataCloudJDBCException(
+                "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::executeQuery() instead.");
     }
 
     @Override
     public boolean execute(String sql) throws SQLException {
-        resultSet = executeQuery(sql);
-        return true;
+        throw new DataCloudJDBCException(
+                "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::execute() instead.");
     }
 
     @Override
-    public ResultSet executeQuery() throws SQLException {
+    @SneakyThrows
+    protected HyperGrpcClientExecutor getQueryExecutor() {
         final byte[] encodedRow;
         try {
             encodedRow = ArrowUtils.toArrowByteArray(parameterManager.getParameters(), calendar);
@@ -105,14 +108,26 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
             throw new DataCloudJDBCException("Failed to encode parameters on prepared statement", e);
         }
 
-        val queryParamBuilder = QueryParam.newBuilder()
+        val preparedQueryParams = QueryParam.newBuilder()
                 .setParamStyle(QueryParam.ParameterStyle.QUESTION_MARK)
                 .setArrowParameters(QueryParameterArrow.newBuilder()
                         .setData(ByteString.copyFrom(encodedRow))
                         .build())
                 .build();
 
-        val client = getQueryExecutor(queryParamBuilder);
+        return getQueryExecutor(preparedQueryParams);
+    }
+
+    @Override
+    public boolean execute() throws SQLException {
+        val client = getQueryExecutor();
+        listener = AsyncQueryStatusListener.of(sql, client);
+        return true;
+    }
+
+    @Override
+    public ResultSet executeQuery() throws SQLException {
+        val client = getQueryExecutor();
         val timeout = Duration.ofSeconds(getQueryTimeout());
 
         val useSync = optional(this.dataCloudConnection.getProperties(), Constants.FORCE_SYNC)
@@ -244,12 +259,6 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
             String message = "Object type not supported for: " + x.getClass().getSimpleName() + " (value: " + x + ")";
             throw new DataCloudJDBCException(new SQLFeatureNotSupportedException(message));
         }
-    }
-
-    @Override
-    public boolean execute() throws SQLException {
-        resultSet = executeQuery();
-        return true;
     }
 
     @Override

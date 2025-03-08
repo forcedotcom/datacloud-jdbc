@@ -119,14 +119,17 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @Test
     @SneakyThrows
     public void testExecute() {
-        setupHyperGrpcClientWithMockedResultSet("query id", ImmutableList.of());
-        statement.execute("SELECT * FROM table");
-        ResultSet response = statement.getResultSet();
-        assertNotNull(response);
-        assertThat(response.getMetaData().getColumnCount()).isEqualTo(3);
-        assertThat(response.getMetaData().getColumnName(1)).isEqualTo("id");
-        assertThat(response.getMetaData().getColumnName(2)).isEqualTo("name");
-        assertThat(response.getMetaData().getColumnName(3)).isEqualTo("grade");
+        try (val connection = getInterceptedClientConnection();
+                val statement = connection.createStatement()) {
+            statement.execute(
+                    "SELECT md5(random()::text) AS id, md5(random()::text) AS name, round((random() * 3 + 1)::numeric, 2) AS grade FROM generate_series(1, 3);");
+            val response = statement.getResultSet();
+            assertNotNull(response);
+            assertThat(response.getMetaData().getColumnCount()).isEqualTo(3);
+            assertThat(response.getMetaData().getColumnName(1)).isEqualTo("id");
+            assertThat(response.getMetaData().getColumnName(2)).isEqualTo("name");
+            assertThat(response.getMetaData().getColumnName(3)).isEqualTo("grade");
+        }
     }
 
     @Test

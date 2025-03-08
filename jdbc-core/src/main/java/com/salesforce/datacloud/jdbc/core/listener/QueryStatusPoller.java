@@ -19,6 +19,10 @@ import java.sql.SQLException;
 import java.util.Optional;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
+/**
+ * Marked as deprecated since the streaming form of GetQueryInfo makes this construct mostly unnecessary.
+ */
+@Deprecated
 public interface QueryStatusPoller {
     QueryStatus pollQueryStatus();
 

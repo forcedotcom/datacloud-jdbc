@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
@@ -23,7 +24,6 @@ import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
-import java.util.Optional;
 import java.util.function.UnaryOperator;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -34,7 +34,6 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryResult;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Slf4j
 @Builder(access = AccessLevel.PRIVATE)
@@ -66,17 +65,21 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
     }
 
     @Override
-    public boolean isReady() {
-        return getPoller().pollIsReady();
+    public boolean isReady() throws DataCloudJDBCException {
+        try {
+            return client.getQueryStatus(queryId).anyMatch(t -> t.isResultProduced() || t.isExecutionFinished());
+        } catch (StatusRuntimeException ex) {
+            throw QueryExceptionHandler.createQueryException(query, ex);
+        }
     }
 
     @Override
     public String getStatus() {
-        return Optional.of(getPoller())
-                .map(AsyncQueryStatusPoller::pollQueryStatus)
-                .map(QueryStatus::getCompletionStatus)
+        return client.getQueryStatus(queryId)
+                .map(DataCloudQueryStatus::getCompletionStatus)
                 .map(Enum::name)
-                .orElse(null);
+                .findFirst()
+                .orElse("UNKNOWN");
     }
 
     @Override

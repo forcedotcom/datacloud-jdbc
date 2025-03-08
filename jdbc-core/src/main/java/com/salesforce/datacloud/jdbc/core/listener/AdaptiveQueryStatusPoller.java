@@ -44,7 +44,7 @@ public class AdaptiveQueryStatusPoller implements QueryStatusPoller {
     @SneakyThrows
     private Iterator<QueryInfo> getQueryInfoStreaming() {
         try {
-            return client.getQueryInfoStreaming(queryId);
+            return client.getQueryInfo(queryId);
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createException("Failed when getting query status", ex);
         }

@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
+import lombok.SneakyThrows;
 import org.assertj.core.api.AbstractObjectAssert;
 import org.assertj.core.util.Objects;
 
@@ -98,6 +99,7 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
      * @return this assertion object.
      * @throws AssertionError - if the actual QueryStatusListener is not ready.
      */
+    @SneakyThrows
     public QueryStatusListenerAssert isReady() {
         // check that actual QueryStatusListener we want to make assertions on is not null.
         isNotNull();
@@ -117,6 +119,7 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
      * @return this assertion object.
      * @throws AssertionError - if the actual QueryStatusListener is ready.
      */
+    @SneakyThrows
     public QueryStatusListenerAssert isNotReady() {
         // check that actual QueryStatusListener we want to make assertions on is not null.
         isNotNull();

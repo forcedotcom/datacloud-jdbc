@@ -41,6 +41,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import salesforce.cdp.hyperdb.v1.CancelQueryParam;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.OutputFormat;
@@ -135,11 +136,6 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         return getStub(queryId).getQueryInfo(param);
     }
 
-    public Iterator<QueryInfo> getQueryInfoStreaming(String queryId) {
-        val param = getQueryInfoParamStreaming(queryId);
-        return getStub(queryId).getQueryInfo(param);
-    }
-
     @Unstable
     public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) {
         val iterator = getQueryInfo(queryId);
@@ -147,6 +143,12 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
                 .map(DataCloudQueryStatus::of)
                 .filter(Optional::isPresent)
                 .map(Optional::get);
+    }
+
+    public void cancel(String queryId) {
+        val request = CancelQueryParam.newBuilder().setQueryId(queryId).build();
+        val stub = getStub(queryId);
+        stub.cancelQuery(request);
     }
 
     public Iterator<QueryResult> getQueryResult(String queryId, long offset, long limit, boolean omitSchema) {
@@ -196,10 +198,6 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
     }
 
     private QueryInfoParam getQueryInfoParam(String queryId) {
-        return QueryInfoParam.newBuilder().setQueryId(queryId).build();
-    }
-
-    private QueryInfoParam getQueryInfoParamStreaming(String queryId) {
         return QueryInfoParam.newBuilder()
                 .setQueryId(queryId)
                 .setStreaming(true)

@@ -238,6 +238,11 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         }
     }
 
+    @Unstable
+    public void cancel(String queryId) {
+        getExecutor().cancel(queryId);
+    }
+
     @Override
     public boolean isClosed() {
         return closed.get();

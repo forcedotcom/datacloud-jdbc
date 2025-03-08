@@ -43,7 +43,7 @@ public class StreamingResultSetTest extends HyperTestBase {
                 inline("executeSyncQuery", DataCloudStatement::executeSyncQuery, size),
                 inline("executeAdaptiveQuery", DataCloudStatement::executeAdaptiveQuery, size),
                 deferred("executeAsyncQuery", DataCloudStatement::executeAsyncQuery, true, size),
-                deferred("execute", DataCloudStatement::execute, false, size),
+                deferred("execute", DataCloudStatement::execute, true, size),
                 deferred("executeQuery", DataCloudStatement::executeQuery, false, size));
     }
 

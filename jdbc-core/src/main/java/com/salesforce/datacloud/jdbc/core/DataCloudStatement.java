@@ -38,7 +38,7 @@ import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 
 @Slf4j
-public class DataCloudStatement implements Statement {
+public class DataCloudStatement implements Statement, AutoCloseable {
     protected ResultSet resultSet;
 
     protected static final String NOT_SUPPORTED_IN_DATACLOUD_QUERY = "Write is not supported in Data Cloud query";
@@ -96,14 +96,15 @@ public class DataCloudStatement implements Statement {
         return listener.getQueryId();
     }
 
-    public boolean isReady() {
+    public boolean isReady() throws DataCloudJDBCException {
         return listener.isReady();
     }
 
     @Override
     public boolean execute(String sql) throws SQLException {
         log.debug("Entering execute");
-        this.resultSet = executeQuery(sql);
+        val client = getQueryExecutor();
+        listener = AsyncQueryStatusListener.of(sql, client);
         return true;
     }
 
@@ -211,7 +212,16 @@ public class DataCloudStatement implements Statement {
     }
 
     @Override
-    public void cancel() {}
+    public void cancel() throws SQLException {
+        if (listener == null) {
+            log.warn("There was no in-progress query registered with this statement to cancel");
+            return;
+        }
+
+        val queryId = getQueryId();
+        val executor = dataCloudConnection.getExecutor();
+        executor.cancel(queryId);
+    }
 
     @Override
     public SQLWarning getWarnings() {

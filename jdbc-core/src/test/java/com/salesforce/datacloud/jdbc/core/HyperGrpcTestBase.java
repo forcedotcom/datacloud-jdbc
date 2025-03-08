@@ -21,6 +21,7 @@ import static org.mockito.Mockito.mock;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
+import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import java.io.IOException;
@@ -46,7 +47,7 @@ import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @ExtendWith(InProcessGrpcMockExtension.class)
-public class HyperGrpcTestBase {
+public class HyperGrpcTestBase extends HyperTestBase {
 
     protected static HyperGrpcClientExecutor hyperGrpcClient;
 
@@ -168,28 +169,6 @@ public class HyperGrpcTestBase {
                         && req.getChunkId() == chunkId
                         && req.getOmitSchema() == chunkId > 0)
                 .willReturn(results));
-    }
-
-    public void setupAdaptiveInitialResults(
-            String sql,
-            String queryId,
-            int parts,
-            Integer chunks,
-            QueryStatus.CompletionStatus status,
-            List<RealisticArrowGenerator.Student> students) {
-        val results = IntStream.range(0, parts)
-                .mapToObj(i -> RealisticArrowGenerator.getMockedData(students))
-                .flatMap(UnaryOperator.identity())
-                .map(r -> ExecuteQueryResponse.newBuilder().setQueryResult(r).build());
-
-        val response = Stream.concat(
-                        Stream.of(executeQueryResponse(queryId, null, null)),
-                        Stream.concat(results, Stream.of(executeQueryResponse(queryId, status, chunks))))
-                .collect(Collectors.toList());
-
-        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
-                .withRequest(req -> req.getQuery().equals(sql))
-                .willReturn(response));
     }
 
     public static ExecuteQueryResponse executeQueryResponseWithData(List<RealisticArrowGenerator.Student> students) {

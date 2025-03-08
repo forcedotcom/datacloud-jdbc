@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.ResultSet;
 
 public interface DataCloudResultSet extends ResultSet {
@@ -22,5 +23,5 @@ public interface DataCloudResultSet extends ResultSet {
 
     String getStatus();
 
-    boolean isReady();
+    boolean isReady() throws DataCloudJDBCException;
 }

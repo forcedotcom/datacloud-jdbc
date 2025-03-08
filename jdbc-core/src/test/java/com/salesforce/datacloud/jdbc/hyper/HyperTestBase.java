@@ -21,19 +21,30 @@ import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.MethodDescriptor;
+import io.grpc.inprocess.InProcessChannelBuilder;
 import java.sql.ResultSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.assertj.core.api.ThrowingConsumer;
+import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
+import salesforce.cdp.hyperdb.v1.QueryInfoParam;
+import salesforce.cdp.hyperdb.v1.QueryResultParam;
 
 @Slf4j
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -99,5 +110,58 @@ public class HyperTestBase {
         public String getToken() {
             return "";
         }
+    }
+
+    @SneakyThrows
+    protected DataCloudConnection getInterceptedClientConnection() {
+        val mocked = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
+                .usePlaintext();
+
+        val auth = AuthorizationHeaderInterceptor.of(new HyperTestBase.NoopTokenSupplier());
+        val channel = ManagedChannelBuilder.forAddress("127.0.0.1", instance.getPort())
+                .usePlaintext()
+                .intercept(auth)
+                .maxInboundMessageSize(64 * 1024 * 1024)
+                .build();
+
+        val stub = HyperServiceGrpc.newBlockingStub(channel);
+
+        proxyStreamingMethod(
+                stub,
+                HyperServiceGrpc.getExecuteQueryMethod(),
+                HyperServiceGrpc.HyperServiceBlockingStub::executeQuery);
+        proxyStreamingMethod(
+                stub,
+                HyperServiceGrpc.getGetQueryInfoMethod(),
+                HyperServiceGrpc.HyperServiceBlockingStub::getQueryInfo);
+        proxyStreamingMethod(
+                stub,
+                HyperServiceGrpc.getGetQueryResultMethod(),
+                HyperServiceGrpc.HyperServiceBlockingStub::getQueryResult);
+
+        return DataCloudConnection.fromTokenSupplier(auth, mocked, new Properties());
+    }
+
+    public static <ReqT, RespT> void proxyStreamingMethod(
+            HyperServiceGrpc.HyperServiceBlockingStub stub,
+            MethodDescriptor<ReqT, RespT> mock,
+            BiFunction<HyperServiceGrpc.HyperServiceBlockingStub, ReqT, Iterator<RespT>> method) {
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(mock).willProxyTo((request, observer) -> {
+            final String queryId;
+            if (request instanceof salesforce.cdp.hyperdb.v1.QueryInfoParam) {
+                queryId = ((QueryInfoParam) request).getQueryId();
+            } else if (request instanceof salesforce.cdp.hyperdb.v1.QueryResultParam) {
+                queryId = ((QueryResultParam) request).getQueryId();
+            } else {
+                queryId = null;
+            }
+
+            val response = method.apply(
+                    queryId == null ? stub : stub.withInterceptors(new QueryIdHeaderInterceptor(queryId)), request);
+            while (response.hasNext()) {
+                observer.onNext(response.next());
+            }
+            observer.onCompleted();
+        }));
     }
 }

@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
+import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import io.grpc.ManagedChannelBuilder;
 import java.io.BufferedReader;
@@ -66,15 +67,17 @@ public class HyperServerProcess implements AutoCloseable {
                     + executable.getAbsolutePath());
         }
 
-        hyperProcess = new ProcessBuilder()
+        val builder = new ProcessBuilder()
                 .command(
                         executable.getAbsolutePath(),
                         config.build().toString(),
                         "--config",
                         yaml.getAbsolutePath(),
                         "--no-password",
-                        "run")
-                .start();
+                        "run");
+
+        log.info("hyper command: {}", builder.command());
+        hyperProcess = builder.start();
 
         // Wait until process is listening and extract port on which it is listening
         val latch = new CountDownLatch(1);
@@ -129,6 +132,15 @@ public class HyperServerProcess implements AutoCloseable {
 
     public DataCloudConnection getConnection() {
         return getConnection(ImmutableMap.of());
+    }
+
+    @SneakyThrows
+    public HyperGrpcClientExecutor getRawClient() {
+        val auth = AuthorizationHeaderInterceptor.of(new HyperTestBase.NoopTokenSupplier());
+        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", getPort())
+                .usePlaintext()
+                .intercept(auth);
+        return HyperGrpcClientExecutor.of(channel, new Properties());
     }
 
     @SneakyThrows

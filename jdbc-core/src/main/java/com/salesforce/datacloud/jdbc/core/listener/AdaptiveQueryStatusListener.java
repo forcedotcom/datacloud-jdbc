@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.core.listener;
 import static com.salesforce.datacloud.jdbc.util.ThrowingSupplier.rethrowLongSupplier;
 import static com.salesforce.datacloud.jdbc.util.ThrowingSupplier.rethrowSupplier;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
@@ -30,6 +31,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.LongStream;
@@ -37,12 +39,10 @@ import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.QueryResult;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Slf4j
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -61,8 +61,6 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     private final AdaptiveQueryStatusPoller headPoller;
 
-    private final AsyncQueryStatusPoller tailPoller;
-
     public static AdaptiveQueryStatusListener of(String query, HyperGrpcClientExecutor client, Duration timeout)
             throws SQLException {
         try {
@@ -70,13 +68,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
             val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
             return new AdaptiveQueryStatusListener(
-                    queryId,
-                    query,
-                    client,
-                    timeout,
-                    response,
-                    new AdaptiveQueryStatusPoller(queryId, client),
-                    new AsyncQueryStatusPoller(queryId, client));
+                    queryId, query, client, timeout, response, new AdaptiveQueryStatusPoller(queryId, client));
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createQueryException(query, ex);
         }
@@ -89,12 +81,11 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     @Override
     public String getStatus() {
-        val poller = headPoller.pollChunkCount() > 1 ? tailPoller : headPoller;
-        return Optional.of(poller)
-                .map(QueryStatusPoller::pollQueryStatus)
-                .map(QueryStatus::getCompletionStatus)
+        return client.getQueryStatus(queryId)
+                .map(DataCloudQueryStatus::getCompletionStatus)
                 .map(Enum::name)
-                .orElse(QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED.name());
+                .findFirst()
+                .orElse("UNKNOWN");
     }
 
     @Override
@@ -126,8 +117,8 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     private long getChunkLimit() throws SQLException {
         if (headPoller.pollChunkCount() > 1) {
-            blockUntilReady(tailPoller, timeout);
-            return tailPoller.pollChunkCount() - 1;
+            val status = blockUntilReady(timeout);
+            return status.getChunkCount() - 1;
         }
 
         return 0;
@@ -146,23 +137,19 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
                 .orElse(Stream.empty());
     }
 
-    @SneakyThrows
-    private void blockUntilReady(QueryStatusPoller poller, Duration timeout) {
-        val end = Instant.now().plus(timeout);
-        int millis = 1000;
-        while (!poller.pollIsReady() && Instant.now().isBefore(end)) {
-            log.info(
-                    "Waiting for additional query results. queryId={}, timeout={}, sleep={}",
-                    queryId,
-                    timeout,
-                    Duration.ofSeconds(millis));
+    private DataCloudQueryStatus blockUntilReady(Duration timeout) throws DataCloudJDBCException {
+        val deadline = Instant.now().plus(timeout);
+        val last = new AtomicReference<DataCloudQueryStatus>();
 
-            Thread.sleep(millis);
-            millis *= 2;
+        while (Instant.now().isBefore(deadline)) {
+            val isReady = client.getQueryStatus(queryId)
+                    .peek(last::set)
+                    .anyMatch(t -> t.isResultProduced() || t.isExecutionFinished());
+            if (isReady) {
+                return last.get();
+            }
         }
 
-        if (!tailPoller.pollIsReady()) {
-            throw new DataCloudJDBCException(BEFORE_READY + ". queryId=" + queryId + ", timeout=" + timeout);
-        }
+        throw new DataCloudJDBCException(BEFORE_READY + ". queryId=" + queryId + ", timeout=" + timeout);
     }
 }

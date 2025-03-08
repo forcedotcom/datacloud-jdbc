@@ -31,6 +31,10 @@ public class HyperServerConfig {
     @JsonProperty("grpc-request-timeout")
     String grpcRequestTimeoutSeconds = null;
 
+    @Builder.Default
+    @JsonProperty("experimental_pg_sleep")
+    boolean experimentalPgSleep = false;
+
     @Override
     public String toString() {
         val mapper = new ObjectMapper();

@@ -25,7 +25,6 @@ import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.Random;
 import java.util.UUID;
@@ -38,7 +37,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
@@ -48,22 +47,14 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
     private final QueryParam.TransferMode mode = QueryParam.TransferMode.ASYNC;
 
     @ParameterizedTest
-    @ValueSource(
-            ints = {
-                QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED_VALUE,
-                QueryStatus.CompletionStatus.RESULTS_PRODUCED_VALUE,
-                QueryStatus.CompletionStatus.FINISHED_VALUE
-            })
-    void itCanGetStatus(int value) {
-        val status = QueryStatus.CompletionStatus.forNumber(value);
-
+    @CsvSource({"0, RUNNING", "1, RESULTS_PRODUCED", "2, FINISHED"})
+    void itCanGetStatus(int value, String expected) {
         val queryId = UUID.randomUUID().toString();
         setupExecuteQuery(queryId, query, mode);
         val listener = sut(query);
 
-        setupGetQueryInfo(queryId, status);
-        assertThat(listener.getStatus())
-                .isEqualTo(Objects.requireNonNull(status).name());
+        setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.forNumber(value));
+        assertThat(listener.getStatus()).isEqualTo(expected);
     }
 
     @Test

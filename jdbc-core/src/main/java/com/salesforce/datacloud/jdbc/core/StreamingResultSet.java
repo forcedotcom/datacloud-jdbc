@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
@@ -115,7 +116,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     }
 
     @Override
-    public boolean isReady() {
+    public boolean isReady() throws DataCloudJDBCException {
         return listener.isReady();
     }
 

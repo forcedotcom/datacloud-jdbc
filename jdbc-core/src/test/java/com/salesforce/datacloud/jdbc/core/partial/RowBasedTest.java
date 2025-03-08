@@ -44,11 +44,12 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 @Slf4j
-class RowBasedTest extends HyperTestBase {
+public class RowBasedTest extends HyperTestBase {
     private List<Integer> sut(String queryId, long offset, long limit, RowBased.Mode mode) {
-        val connection = getHyperQueryConnection();
-        val resultSet = connection.getRowBasedResultSet(queryId, offset, limit, mode);
-        return toList(resultSet);
+        try (val connection = getHyperQueryConnection()) {
+            val resultSet = connection.getRowBasedResultSet(queryId, offset, limit, mode);
+            return toList(resultSet);
+        }
     }
 
     private static final int tinySize = 8;
@@ -204,7 +205,7 @@ class RowBasedTest extends HyperTestBase {
         return IntStream.rangeClosed(start, end).boxed().collect(Collectors.toList());
     }
 
-    private static Stream<Integer> toStream(DataCloudResultSet resultSet) {
+    public static Stream<Integer> toStream(DataCloudResultSet resultSet) {
         val iterator = new Iterator<Integer>() {
             @SneakyThrows
             @Override
