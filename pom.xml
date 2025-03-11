@@ -19,7 +19,7 @@
         <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
         <git-build-hook-maven-plugin.version>3.5.0</git-build-hook-maven-plugin.version>
         <!-- https://tableau.github.io/hyper-db/docs/releases#download -->
-        <hyperapi.version>0.0.21200.re11c8cb9</hyperapi.version>
+        <hyperapi.version>0.0.21408.rf5a406c0</hyperapi.version>
         <hyperd.directory>${project.build.directory}/hyper</hyperd.directory>
         <junit-bom.version>5.11.3</junit-bom.version>
         <maven-depndency-plugin.version>3.8.1</maven-depndency-plugin.version>

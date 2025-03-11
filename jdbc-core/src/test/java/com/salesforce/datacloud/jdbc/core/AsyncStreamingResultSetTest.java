@@ -36,7 +36,7 @@ public class AsyncStreamingResultSetTest extends HyperTestBase {
     @SneakyThrows
     public void testThrowsOnNonsenseQueryAsync() {
         val ex = Assertions.assertThrows(DataCloudJDBCException.class, () -> {
-            try (val connection = HyperTestBase.getHyperQueryConnection();
+            try (val connection = getHyperQueryConnection();
                     val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
                 val rs = statement.executeAsyncQuery("select * from nonsense");
                 waitUntilReady(statement);

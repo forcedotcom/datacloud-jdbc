@@ -49,10 +49,10 @@ import salesforce.cdp.hyperdb.v1.QueryResultParam;
 @Slf4j
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class HyperTestBase {
-    private static HyperServerProcess instance;
+    public HyperServerProcess instance;
 
     @SneakyThrows
-    public static void assertEachRowIsTheSame(ResultSet rs, AtomicInteger prev) {
+    public final void assertEachRowIsTheSame(ResultSet rs, AtomicInteger prev) {
         val expected = prev.incrementAndGet();
         val a = rs.getBigDecimal(1).intValue();
         assertThat(expected).isEqualTo(a);
@@ -60,7 +60,7 @@ public class HyperTestBase {
 
     @SafeVarargs
     @SneakyThrows
-    public static void assertWithConnection(
+    public final void assertWithConnection(
             ThrowingConsumer<DataCloudConnection> assertion, Map.Entry<String, String>... settings) {
         try (val connection =
                 getHyperQueryConnection(settings == null ? ImmutableMap.of() : ImmutableMap.ofEntries(settings))) {
@@ -70,7 +70,7 @@ public class HyperTestBase {
 
     @SafeVarargs
     @SneakyThrows
-    public static void assertWithStatement(
+    public final void assertWithStatement(
             ThrowingConsumer<DataCloudStatement> assertion, Map.Entry<String, String>... settings) {
         try (val connection = getHyperQueryConnection(
                         settings == null ? ImmutableMap.of() : ImmutableMap.ofEntries(settings));
@@ -79,11 +79,11 @@ public class HyperTestBase {
         }
     }
 
-    public static DataCloudConnection getHyperQueryConnection() {
+    public DataCloudConnection getHyperQueryConnection() {
         return getHyperQueryConnection(ImmutableMap.of());
     }
 
-    public static DataCloudConnection getHyperQueryConnection(Map<String, String> connectionSettings) {
+    public DataCloudConnection getHyperQueryConnection(Map<String, String> connectionSettings) {
         return instance.getConnection(connectionSettings);
     }
 

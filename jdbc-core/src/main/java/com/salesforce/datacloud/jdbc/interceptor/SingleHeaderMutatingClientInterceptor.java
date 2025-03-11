@@ -18,7 +18,7 @@ package com.salesforce.datacloud.jdbc.interceptor;
 import io.grpc.Metadata;
 import lombok.NonNull;
 
-interface SingleHeaderMutatingClientInterceptor extends HeaderMutatingClientInterceptor {
+public interface SingleHeaderMutatingClientInterceptor extends HeaderMutatingClientInterceptor {
     @NonNull Metadata.Key<String> getKey();
 
     @NonNull String getValue();

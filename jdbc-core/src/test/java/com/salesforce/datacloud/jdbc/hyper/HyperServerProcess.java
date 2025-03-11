@@ -97,7 +97,7 @@ public class HyperServerProcess implements AutoCloseable {
         }
     }
 
-    int getPort() {
+    public int getPort() {
         return port;
     }
 

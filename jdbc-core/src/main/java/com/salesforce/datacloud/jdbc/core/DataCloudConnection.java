@@ -90,9 +90,14 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     @Getter(AccessLevel.PACKAGE)
     @NonNull private final HyperGrpcClientExecutor executor;
 
+    /**
+     * This creates a Data Cloud connection with minimal adjustments to the channels.
+     * The only added interceptors are those for handling connection parameters that influence headers.
+     * This will not provide auth / tracing, users of this API are expected to wire their own
+     */
     public static DataCloudConnection fromChannel(@NonNull ManagedChannelBuilder<?> builder, Properties properties)
             throws SQLException {
-        val interceptors = getClientInterceptors(null, properties);
+        val interceptors = getPropertyDerivedClientInterceptors(properties);
         val executor = HyperGrpcClientExecutor.of(builder.intercept(interceptors), properties);
 
         return DataCloudConnection.builder()
@@ -122,17 +127,36 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                 .build();
     }
 
-    static List<ClientInterceptor> getClientInterceptors(
-            AuthorizationHeaderInterceptor authInterceptor, Properties properties) {
+    /**
+     * Initializes a list of interceptors that handle channel level concerns that can be defined through properties
+     * @param properties - The connection properties
+     * @return a list of client interceptors
+     */
+    static List<ClientInterceptor> getPropertyDerivedClientInterceptors(Properties properties) {
         return Stream.of(
-                        authInterceptor,
-                        TracingHeadersInterceptor.of(),
                         HyperExternalClientContextHeaderInterceptor.of(properties),
                         HyperWorkloadHeaderInterceptor.of(properties),
                         DataspaceHeaderInterceptor.of(properties))
                 .filter(Objects::nonNull)
-                .peek(t -> log.info("Registering interceptor. interceptor={}", t))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Initializes the full set of client interceptors from property handling to tracing and auth
+     * @param authInterceptor an optional auth interceptor, is allowed to be null
+     * @param properties the connection properties
+     * @return a list of client interceptors
+     */
+    static List<ClientInterceptor> getClientInterceptors(
+            AuthorizationHeaderInterceptor authInterceptor, Properties properties) {
+        val list = getPropertyDerivedClientInterceptors(properties);
+        list.add(TracingHeadersInterceptor.of());
+        if (authInterceptor != null) {
+            list.add(authInterceptor);
+        }
+        ;
+        log.info("Registering interceptor. interceptor={}", list);
+        return list;
     }
 
     public static DataCloudConnection of(String url, Properties properties) throws SQLException {
@@ -179,6 +203,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     /**
      * Retrieves a collection of rows for the specified query once it is ready.
      * Use {@link #getQueryStatus(String)} to check if the query has produced results or finished execution before calling this method.
+     * You can get the Query Id from the executeQuery `DataCloudResultSet`.
      * <p>
      * When using {@link RowBased.Mode#FULL_RANGE}, this method does not handle pagination near the end of available rows.
      * The caller is responsible for calculating the correct offset and limit to avoid out-of-range errors.
