@@ -49,6 +49,15 @@ public class DataCloudQueryStatus {
     CompletionStatus completionStatus;
 
     /**
+     * Checks if all the query's results are ready, the row count and chunk count are stable.
+     *
+     * @return {@code true} if the query's results are ready, otherwise {@code false}.
+     */
+    public boolean allResultsProduced() {
+        return isResultProduced() || isExecutionFinished();
+    }
+
+    /**
      * Checks if the query's results have been produced.
      *
      * @return {@code true} if the query's results are available for retrieval, otherwise {@code false}.
