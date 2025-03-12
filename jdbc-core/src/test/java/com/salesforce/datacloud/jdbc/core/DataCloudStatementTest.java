@@ -29,6 +29,7 @@ import com.salesforce.datacloud.jdbc.util.RequestRecordingInterceptor;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import io.grpc.StatusRuntimeException;
 import java.sql.ResultSet;
+import java.time.Duration;
 import java.util.Properties;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -120,9 +121,10 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @SneakyThrows
     public void testExecute() {
         try (val connection = getInterceptedClientConnection();
-                val statement = connection.createStatement()) {
+                val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
             statement.execute(
                     "SELECT md5(random()::text) AS id, md5(random()::text) AS name, round((random() * 3 + 1)::numeric, 2) AS grade FROM generate_series(1, 3);");
+            connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30));
             val response = statement.getResultSet();
             assertNotNull(response);
             assertThat(response.getMetaData().getColumnCount()).isEqualTo(3);

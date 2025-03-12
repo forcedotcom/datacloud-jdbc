@@ -76,7 +76,7 @@ public class HyperServerProcess implements AutoCloseable {
                         "--no-password",
                         "run");
 
-        log.info("hyper command: {}", builder.command());
+        log.warn("hyper command: {}", builder.command());
         hyperProcess = builder.start();
 
         // Wait until process is listening and extract port on which it is listening
@@ -84,7 +84,7 @@ public class HyperServerProcess implements AutoCloseable {
         hyperMonitors = Executors.newFixedThreadPool(2);
         hyperMonitors.execute(() -> logStream(hyperProcess.getErrorStream(), log::error));
         hyperMonitors.execute(() -> logStream(hyperProcess.getInputStream(), line -> {
-            log.info(line);
+            log.warn(line);
             val matcher = PORT_PATTERN.matcher(line);
             if (matcher.matches()) {
                 port = Integer.valueOf(matcher.group(1));
@@ -121,12 +121,12 @@ public class HyperServerProcess implements AutoCloseable {
     @Override
     public void close() throws Exception {
         if (hyperProcess != null && hyperProcess.isAlive()) {
-            log.info("destroy hyper process");
+            log.warn("destroy hyper process");
             hyperProcess.destroy();
             hyperProcess.waitFor();
         }
 
-        log.info("shutdown hyper monitors");
+        log.warn("shutdown hyper monitors");
         hyperMonitors.shutdown();
     }
 

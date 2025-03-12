@@ -26,7 +26,9 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,18 +38,22 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.assertj.core.api.ThrowingConsumer;
 import org.grpcmock.GrpcMock;
+import org.grpcmock.junit5.InProcessGrpcMockExtension;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
+import salesforce.cdp.hyperdb.v1.CancelQueryParam;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 import salesforce.cdp.hyperdb.v1.QueryResultParam;
 
 @Slf4j
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ExtendWith(InProcessGrpcMockExtension.class)
 public class HyperTestBase {
     public HyperServerProcess instance;
 
@@ -119,13 +125,34 @@ public class HyperTestBase {
         }
     }
 
-    @SneakyThrows
+    private final List<HyperServerProcess> servers = new ArrayList<>();
+
+    @AfterAll
+    public void cleanUpServers() {
+        servers.forEach(s -> {
+            try {
+                s.close();
+            } catch (Exception e) {
+                log.error("Failed to clean up hyper server process", e);
+            }
+        });
+    }
+
     protected DataCloudConnection getInterceptedClientConnection() {
+        return getInterceptedClientConnection(HyperServerConfig.builder().build());
+    }
+
+    @SneakyThrows
+    protected DataCloudConnection getInterceptedClientConnection(HyperServerConfig config) {
+        GrpcMock.resetMappings();
         val mocked = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
                 .usePlaintext();
 
+        val server = config.start();
+        servers.add(server);
+
         val auth = AuthorizationHeaderInterceptor.of(new HyperTestBase.NoopTokenSupplier());
-        val channel = ManagedChannelBuilder.forAddress("127.0.0.1", instance.getPort())
+        val channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.getPort())
                 .usePlaintext()
                 .intercept(auth)
                 .maxInboundMessageSize(64 * 1024 * 1024)
@@ -155,10 +182,12 @@ public class HyperTestBase {
             BiFunction<HyperServiceGrpc.HyperServiceBlockingStub, ReqT, Iterator<RespT>> method) {
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(mock).willProxyTo((request, observer) -> {
             final String queryId;
-            if (request instanceof salesforce.cdp.hyperdb.v1.QueryInfoParam) {
+            if (request instanceof QueryInfoParam) {
                 queryId = ((QueryInfoParam) request).getQueryId();
-            } else if (request instanceof salesforce.cdp.hyperdb.v1.QueryResultParam) {
+            } else if (request instanceof QueryResultParam) {
                 queryId = ((QueryResultParam) request).getQueryId();
+            } else if (request instanceof CancelQueryParam) {
+                queryId = ((CancelQueryParam) request).getQueryId();
             } else {
                 queryId = null;
             }

@@ -18,11 +18,12 @@ package com.salesforce.datacloud.jdbc.core.partial;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
-import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
+import com.salesforce.datacloud.jdbc.core.client.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import io.grpc.StatusRuntimeException;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -49,10 +50,16 @@ class ChunkBasedTest extends HyperTestBase {
     private String small;
     private String large;
 
+    @SneakyThrows
     @BeforeAll
     void setupQueries() {
         small = getQueryId(smallSize);
         large = getQueryId(largeSize);
+
+        try (val client = getHyperQueryConnection()) {
+            client.waitForResultsProduced(small, Duration.ofSeconds(30));
+            client.waitForResultsProduced(large, Duration.ofSeconds(30));
+        }
     }
 
     @SneakyThrows

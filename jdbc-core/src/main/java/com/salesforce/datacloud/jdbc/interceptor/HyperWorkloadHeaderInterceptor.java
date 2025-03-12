@@ -27,7 +27,6 @@ import lombok.ToString;
 import lombok.val;
 
 @Getter
-@ToString
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class HyperWorkloadHeaderInterceptor implements SingleHeaderMutatingClientInterceptor {
     public static HyperWorkloadHeaderInterceptor of(Properties properties) {
