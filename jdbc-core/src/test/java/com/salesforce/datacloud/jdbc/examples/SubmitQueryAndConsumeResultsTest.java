@@ -152,13 +152,9 @@ public class SubmitQueryAndConsumeResultsTest extends HyperTestBase {
                     if (allResultsProduced(cachedStatus.get())) {
                         break;
                     } else {
-                        // NIT: Enable non sleep based flow
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
                         // We need to fetch a new status in the next iteration
+                        // Due to the long-polling nature of `conn.getQueryStatus` this doesn't result in a busy
+                        // spinning loop even if the query is still executing
                         cachedStatus = Optional.empty();
                         continue;
                     }

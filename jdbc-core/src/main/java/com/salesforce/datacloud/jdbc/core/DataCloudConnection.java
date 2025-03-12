@@ -150,9 +150,9 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     static List<ClientInterceptor> getClientInterceptors(
             AuthorizationHeaderInterceptor authInterceptor, Properties properties) {
         val list = getPropertyDerivedClientInterceptors(properties);
-        list.add(TracingHeadersInterceptor.of());
+        list.add(0, TracingHeadersInterceptor.of());
         if (authInterceptor != null) {
-            list.add(authInterceptor);
+            list.add(0, authInterceptor);
         }
         ;
         log.info("Registering interceptor. interceptor={}", list);

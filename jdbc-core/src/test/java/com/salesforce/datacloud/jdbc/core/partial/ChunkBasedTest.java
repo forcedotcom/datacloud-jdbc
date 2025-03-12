@@ -103,7 +103,7 @@ class ChunkBasedTest extends HyperTestBase {
 
         try (val client = getHyperQueryConnection();
                 val statement = client.createStatement().unwrap(DataCloudStatement.class)) {
-            statement.executeAsyncQuery(query);
+            statement.executeQuery(query);
             return statement.getQueryId();
         }
     }

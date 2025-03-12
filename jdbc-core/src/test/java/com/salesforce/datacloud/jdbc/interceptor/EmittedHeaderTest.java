@@ -117,7 +117,7 @@ public class EmittedHeaderTest {
                 .start();
         val channel = InProcessChannelBuilder.forName(name).usePlaintext();
 
-        try (val connection = DataCloudConnection.fromChannel(channel, properties);
+        try (val connection = DataCloudConnection.fromTokenSupplier(null, channel, properties);
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
             statement.executeAsyncQuery("select 1");
         }

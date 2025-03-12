@@ -83,8 +83,15 @@ public class HyperTestBase {
         return getHyperQueryConnection(ImmutableMap.of());
     }
 
+    @SneakyThrows
     public DataCloudConnection getHyperQueryConnection(Map<String, String> connectionSettings) {
-        return instance.getConnection(connectionSettings);
+        val properties = new Properties();
+        properties.putAll(connectionSettings);
+        log.info("Creating connection to port {}", instance.getPort());
+        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", instance.getPort())
+                .usePlaintext();
+
+        return DataCloudConnection.fromChannel(channel, properties);
     }
 
     @SneakyThrows
