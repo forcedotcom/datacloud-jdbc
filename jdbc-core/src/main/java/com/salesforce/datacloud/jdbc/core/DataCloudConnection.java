@@ -22,6 +22,7 @@ import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProcessor;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
+import com.salesforce.datacloud.jdbc.core.client.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -49,6 +50,7 @@ import java.sql.SQLXML;
 import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -226,6 +228,33 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
         val iterator = ChunkBased.of(executor, queryId, chunkId, limit);
         return StreamingResultSet.of(queryId, executor, iterator);
+    }
+
+    /**
+     * Checks if all the query's results are ready, the row count and chunk count will be stable.
+     * @param queryId The identifier of the query to check
+     * @param offset The starting row offset.
+     * @param limit The quantity of rows relative to the offset to wait for
+     * @param timeout The duration to wait for the engine have results produced.
+     * @param allowLessThan Whether or not to return early when the available rows is less than {@code offset + limit}
+     * @return The final {@link DataCloudQueryStatus} the server replied with.
+     */
+    @Unstable
+    public DataCloudQueryStatus waitForRowsAvailable(
+            String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
+            throws DataCloudJDBCException {
+        return executor.waitForRowsAvailable(queryId, offset, limit, timeout, allowLessThan);
+    }
+
+    /**
+     * Checks if all the query's results are ready, the row count and chunk count will be stable.
+     * @param queryId The identifier of the query to check
+     * @param timeout The duration to wait for the engine have results produced.
+     * @return The final {@link DataCloudQueryStatus} the server replied with.
+     */
+    @Unstable
+    public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration timeout) throws DataCloudJDBCException {
+        return executor.waitForResultsProduced(queryId, timeout);
     }
 
     @Unstable

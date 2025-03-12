@@ -40,7 +40,7 @@ class QueryStatusListenerTest extends HyperGrpcTestBase {
             case SYNC:
                 return SyncQueryStatusListener.of(query, hyperGrpcClient);
             case ASYNC:
-                return AsyncQueryStatusListener.of(query, hyperGrpcClient);
+                return AsyncQueryStatusListener.of(query, hyperGrpcClient, timeout);
             case ADAPTIVE:
                 return AdaptiveQueryStatusListener.of(query, hyperGrpcClient, timeout);
             default:

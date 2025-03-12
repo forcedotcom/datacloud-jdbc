@@ -24,6 +24,7 @@ import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
+import java.time.Duration;
 import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Random;
@@ -162,6 +163,6 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
 
     @SneakyThrows
     QueryStatusListener sut(String query) {
-        return AsyncQueryStatusListener.of(query, hyperGrpcClient);
+        return AsyncQueryStatusListener.of(query, hyperGrpcClient, Duration.ofSeconds(5));
     }
 }

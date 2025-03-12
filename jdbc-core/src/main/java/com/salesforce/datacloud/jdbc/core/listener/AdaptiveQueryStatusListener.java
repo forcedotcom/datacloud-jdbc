@@ -15,30 +15,26 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
-import static com.salesforce.datacloud.jdbc.util.ThrowingSupplier.rethrowLongSupplier;
-import static com.salesforce.datacloud.jdbc.util.ThrowingSupplier.rethrowSupplier;
-
-import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
+import com.salesforce.datacloud.jdbc.core.client.DataCloudQueryStatus;
+import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
-import java.util.stream.LongStream;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
@@ -46,6 +42,7 @@ import salesforce.cdp.hyperdb.v1.QueryResult;
 
 @Slf4j
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Deprecated
 public class AdaptiveQueryStatusListener implements QueryStatusListener {
     @Getter
     private final String queryId;
@@ -59,7 +56,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     private final Iterator<ExecuteQueryResponse> response;
 
-    private final AdaptiveQueryStatusPoller headPoller;
+    private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
 
     public static AdaptiveQueryStatusListener of(String query, HyperGrpcClientExecutor client, Duration timeout)
             throws SQLException {
@@ -67,8 +64,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
             val response = client.executeAdaptiveQuery(query);
             val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
-            return new AdaptiveQueryStatusListener(
-                    queryId, query, client, timeout, response, new AdaptiveQueryStatusPoller(queryId, client));
+            return new AdaptiveQueryStatusListener(queryId, query, client, timeout, response);
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createQueryException(query, ex);
         }
@@ -95,61 +91,38 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     @Override
     public Stream<QueryResult> stream() throws SQLException {
-        return Stream.<Supplier<Stream<QueryResult>>>of(this::head, rethrowSupplier(this::tail))
-                .flatMap(Supplier::get);
+        return Stream.<Supplier<Stream<QueryResult>>>of(this::head, this::tail).flatMap(Supplier::get);
     }
 
     private Stream<QueryResult> head() {
         return StreamUtilities.toStream(response)
-                .map(headPoller::map)
+                .map(this::mapHead)
                 .filter(Optional::isPresent)
                 .map(Optional::get);
     }
 
-    private Stream<QueryResult> tail() throws SQLException {
-        return StreamUtilities.lazyLimitedStream(this::infiniteChunks, rethrowLongSupplier(this::getChunkLimit))
-                .flatMap(UnaryOperator.identity());
+    private Optional<QueryResult> mapHead(ExecuteQueryResponse item) {
+        Optional.ofNullable(item)
+                .map(ExecuteQueryResponse::getQueryInfo)
+                .flatMap(DataCloudQueryStatus::of)
+                .ifPresent(lastStatus::set);
+        return Optional.ofNullable(item).map(ExecuteQueryResponse::getQueryResult);
     }
 
-    private Stream<Stream<QueryResult>> infiniteChunks() {
-        return LongStream.iterate(1, n -> n + 1).mapToObj(this::tryGetQueryResult);
-    }
-
-    private long getChunkLimit() throws SQLException {
-        if (headPoller.pollChunkCount() > 1) {
-            val status = blockUntilReady(timeout);
-            return status.getChunkCount() - 1;
+    @SneakyThrows
+    private Stream<QueryResult> tail() {
+        val last = lastStatus.get();
+        if (last != null && last.getChunkCount() < 2) {
+            return Stream.empty();
         }
 
-        return 0;
-    }
+        val status = client.waitForResultsProduced(queryId, timeout);
 
-    private Stream<QueryResult> tryGetQueryResult(long chunkId) {
-        return StreamUtilities.tryTimes(
-                        3,
-                        () -> client.getQueryResult(queryId, chunkId, true),
-                        throwable -> log.warn(
-                                "Error when getting chunk for query. queryId={}, chunkId={}",
-                                queryId,
-                                chunkId,
-                                throwable))
-                .map(StreamUtilities::toStream)
-                .orElse(Stream.empty());
-    }
-
-    private DataCloudQueryStatus blockUntilReady(Duration timeout) throws DataCloudJDBCException {
-        val deadline = Instant.now().plus(timeout);
-        val last = new AtomicReference<DataCloudQueryStatus>();
-
-        while (Instant.now().isBefore(deadline)) {
-            val isReady = client.getQueryStatus(queryId)
-                    .peek(last::set)
-                    .anyMatch(t -> t.isResultProduced() || t.isExecutionFinished());
-            if (isReady) {
-                return last.get();
-            }
+        if (!status.allResultsProduced()) {
+            throw new DataCloudJDBCException(BEFORE_READY + ". queryId=" + queryId + ", timeout=" + timeout);
         }
 
-        throw new DataCloudJDBCException(BEFORE_READY + ". queryId=" + queryId + ", timeout=" + timeout);
+        val iterator = ChunkBased.of(client, queryId, 1, status.getChunkCount() - 1, true);
+        return StreamUtilities.toStream(iterator);
     }
 }

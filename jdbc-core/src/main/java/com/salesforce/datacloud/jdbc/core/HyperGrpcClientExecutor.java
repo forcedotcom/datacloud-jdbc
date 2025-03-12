@@ -18,6 +18,9 @@ package com.salesforce.datacloud.jdbc.core;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
+import com.salesforce.datacloud.jdbc.core.client.DataCloudQueryStatus;
+import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
@@ -52,8 +55,13 @@ import salesforce.cdp.hyperdb.v1.QueryResult;
 import salesforce.cdp.hyperdb.v1.QueryResultParam;
 import salesforce.cdp.hyperdb.v1.ResultRange;
 
+/**
+ * Although this class is public, we do not consider it to be part of our API.
+ * It is for internal use only until it stabilizes.
+ */
 @Slf4j
 @Builder(toBuilder = true)
+@Unstable
 public class HyperGrpcClientExecutor implements AutoCloseable {
     private static final int GRPC_INBOUND_MESSAGE_MAX_SIZE = 64 * 1024 * 1024;
 
@@ -134,6 +142,18 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
     public Iterator<QueryInfo> getQueryInfo(String queryId) {
         val param = getQueryInfoParam(queryId);
         return getStub(queryId).getQueryInfo(param);
+    }
+
+    public DataCloudQueryStatus waitForRowsAvailable(
+            String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
+            throws DataCloudJDBCException {
+        val stub = getStub(queryId);
+        return DataCloudQueryPolling.waitForRowsAvailable(stub, queryId, offset, limit, timeout, allowLessThan);
+    }
+
+    public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration timeout) throws DataCloudJDBCException {
+        val stub = getStub(queryId);
+        return DataCloudQueryPolling.waitForResultsProduced(stub, queryId, timeout);
     }
 
     @Unstable

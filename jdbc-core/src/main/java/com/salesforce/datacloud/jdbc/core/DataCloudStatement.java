@@ -104,7 +104,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     public boolean execute(String sql) throws SQLException {
         log.debug("Entering execute");
         val client = getQueryExecutor();
-        listener = AsyncQueryStatusListener.of(sql, client);
+        listener = AsyncQueryStatusListener.of(sql, client, getQueryTimeoutDuration());
         return true;
     }
 
@@ -136,13 +136,12 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     public DataCloudResultSet executeAdaptiveQuery(String sql) throws SQLException {
         log.debug("Entering executeAdaptiveQuery");
         val client = getQueryExecutor();
-        val timeout = Duration.ofSeconds(getQueryTimeout());
-        return executeAdaptiveQuery(sql, client, timeout);
+        return executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
     }
 
     protected DataCloudResultSet executeAdaptiveQuery(String sql, HyperGrpcClientExecutor client, Duration timeout)
             throws SQLException {
-        listener = AdaptiveQueryStatusListener.of(sql, client, timeout);
+        listener = AdaptiveQueryStatusListener.of(sql, client, resolveQueryTimeout(timeout));
         resultSet = listener.generateResultSet();
         log.info("executeAdaptiveQuery completed. queryId={}", listener.getQueryId());
         return (DataCloudResultSet) resultSet;
@@ -155,7 +154,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     }
 
     protected DataCloudStatement executeAsyncQuery(String sql, HyperGrpcClientExecutor client) throws SQLException {
-        listener = AsyncQueryStatusListener.of(sql, client);
+        listener = AsyncQueryStatusListener.of(sql, client, getQueryTimeoutDuration());
         log.info("executeAsyncQuery completed. queryId={}", listener.getQueryId());
         return this;
     }
@@ -196,6 +195,14 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     @Override
     public void setEscapeProcessing(boolean enable) {}
+
+    protected Duration resolveQueryTimeout(Duration timeout) {
+        return timeout == null ? getQueryTimeoutDuration() : timeout;
+    }
+
+    protected Duration getQueryTimeoutDuration() {
+        return Duration.ofSeconds(getQueryTimeout());
+    }
 
     @Override
     public int getQueryTimeout() {

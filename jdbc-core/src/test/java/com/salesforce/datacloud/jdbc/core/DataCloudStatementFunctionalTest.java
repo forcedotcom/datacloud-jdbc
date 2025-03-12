@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
+import com.salesforce.datacloud.jdbc.core.client.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
@@ -29,7 +30,7 @@ import org.junit.jupiter.api.Test;
 
 public class DataCloudStatementFunctionalTest extends HyperTestBase {
     private static final HyperServerConfig configWithSleep =
-            HyperServerConfig.builder().experimentalPgSleep(true).build();
+            HyperServerConfig.builder().build();
 
     @Test
     @SneakyThrows

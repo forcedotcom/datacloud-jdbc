@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import io.grpc.StatusRuntimeException;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import lombok.SneakyThrows;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class AsyncStreamingResultSetTest extends HyperTestBase {
+
     private static final String sql =
             "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, 1024 * 1024 * 10) as s(a) order by a asc";
 
@@ -39,7 +41,7 @@ public class AsyncStreamingResultSetTest extends HyperTestBase {
             try (val connection = getHyperQueryConnection();
                     val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
                 val rs = statement.executeAsyncQuery("select * from nonsense");
-                waitUntilReady(statement);
+                connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(5));
                 rs.getResultSet().next();
             }
         });
@@ -55,10 +57,11 @@ public class AsyncStreamingResultSetTest extends HyperTestBase {
         assertWithStatement(statement -> {
             statement.executeAsyncQuery(sql);
 
-            val asyncReady = waitUntilReady(statement);
+            val status = statement.dataCloudConnection.waitForResultsProduced(
+                    statement.getQueryId(), Duration.ofSeconds(30));
 
             val rs = statement.getResultSet();
-            assertThat(asyncReady).isTrue();
+            assertThat(status.allResultsProduced()).isTrue();
             assertThat(rs).isInstanceOf(StreamingResultSet.class);
 
             val expected = new AtomicInteger(0);
@@ -76,26 +79,23 @@ public class AsyncStreamingResultSetTest extends HyperTestBase {
     public void testQueryIdChangesInHeaderAsync() {
         try (val connection = getHyperQueryConnection();
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
-            val rs = statement.executeAsyncQuery(sql);
-            waitUntilReady(statement);
-            rs.getResultSet().next();
 
-            rs.executeAsyncQuery(sql);
-            waitUntilReady(statement);
+            val a = statement.executeAsyncQuery("select 4");
+            val aQueryId = a.getQueryId();
+            val b = statement.executeAsyncQuery("select 8");
+            val bQueryId = b.getQueryId();
+
+            assertThat(a).isSameAs(b);
+            assertThat(aQueryId).isNotEqualTo(bQueryId);
+
+            connection.waitForResultsProduced(bQueryId, Duration.ofSeconds(30));
+
+            val rs = b.getResultSet();
+            rs.next();
+
+            assertThat(rs.getInt(1)).isEqualTo(8);
         } catch (StatusRuntimeException e) {
             Assertions.fail(e);
         }
-    }
-
-    @SneakyThrows
-    static boolean waitUntilReady(DataCloudStatement statement) {
-        while (!statement.isReady()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                return false;
-            }
-        }
-        return true;
     }
 }

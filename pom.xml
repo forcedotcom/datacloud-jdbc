@@ -217,6 +217,10 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.3.0</version>
+                <configuration>
+                    <!--                    <parallel>all</parallel>-->
+                    <!--                    <perCoreThreadCount>true</perCoreThreadCount>-->
+                </configuration>
                 <dependencies>
                     <dependency>
                         <groupId>org.junit.jupiter</groupId>

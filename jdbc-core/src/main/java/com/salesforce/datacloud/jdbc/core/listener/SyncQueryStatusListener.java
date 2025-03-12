@@ -40,6 +40,7 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Slf4j
 @Builder(access = AccessLevel.PRIVATE)
+@Deprecated
 public class SyncQueryStatusListener implements QueryStatusListener {
     @Getter
     private final String queryId;

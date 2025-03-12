@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
+import com.salesforce.datacloud.jdbc.core.client.DataCloudQueryStatus;
 import java.util.UUID;
 import java.util.function.Consumer;
 import lombok.val;

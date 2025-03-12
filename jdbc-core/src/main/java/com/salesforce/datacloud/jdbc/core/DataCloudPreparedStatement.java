@@ -50,7 +50,6 @@ import java.sql.SQLXML;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
-import java.time.Duration;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.TimeZone;
@@ -121,19 +120,19 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     @Override
     public boolean execute() throws SQLException {
         val client = getQueryExecutor();
-        listener = AsyncQueryStatusListener.of(sql, client);
+        listener = AsyncQueryStatusListener.of(sql, client, getQueryTimeoutDuration());
         return true;
     }
 
     @Override
     public ResultSet executeQuery() throws SQLException {
         val client = getQueryExecutor();
-        val timeout = Duration.ofSeconds(getQueryTimeout());
 
         val useSync = optional(this.dataCloudConnection.getProperties(), Constants.FORCE_SYNC)
                 .map(Boolean::parseBoolean)
                 .orElse(false);
-        resultSet = useSync ? executeSyncQuery(sql, client) : executeAdaptiveQuery(sql, client, timeout);
+        resultSet =
+                useSync ? executeSyncQuery(sql, client) : executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
         return resultSet;
     }
 
