@@ -32,6 +32,15 @@ mvn clean install
 
 ## Usage
 
+> [!INFO]
+> Our API is versioned based on semantic versioning rules around our supported API.
+> This supported API includes:
+> 1. Any construct available through the JDBC specification we have implemented
+> 2. The DataCloudQueryStatus class
+> 3. The public methods in DataCloudConnection, DataCloudStatement, DataCloudResultSet, and DataCloudPreparedStatement -- note that these will be refactored to be interfaces that will make the API more obvious in the near future
+>
+> Usage of any other public classes or methods not listed above should be considered relatively unsafe, though we will strive to not make changes and will use semantic versioning from 1.0.0 and on.
+
 ### Connection string
 
 Use `jdbc:salesforce-datacloud://login.salesforce.com`

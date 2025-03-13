@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.salesforce.datacloud.jdbc.core.client;
+package com.salesforce.datacloud.query.v3;
 
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import java.util.Optional;

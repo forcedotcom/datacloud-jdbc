@@ -15,9 +15,9 @@
  */
 package com.salesforce.datacloud.jdbc.core.partial;
 
-import com.salesforce.datacloud.jdbc.core.client.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Unstable;
+import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.time.Duration;
 import java.time.Instant;
