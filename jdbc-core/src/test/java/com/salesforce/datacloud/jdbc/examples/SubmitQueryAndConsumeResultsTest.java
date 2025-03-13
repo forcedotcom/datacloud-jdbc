@@ -18,10 +18,10 @@ package com.salesforce.datacloud.jdbc.examples;
 import static java.lang.Math.min;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
-import com.salesforce.datacloud.jdbc.core.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.ResultSet;
 import java.sql.SQLException;

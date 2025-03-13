@@ -22,7 +22,6 @@ import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProcessor;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
-import com.salesforce.datacloud.jdbc.core.client.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -33,6 +32,7 @@ import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeade
 import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
 import com.salesforce.datacloud.jdbc.util.Unstable;
+import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.Array;

@@ -19,9 +19,9 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
-import com.salesforce.datacloud.jdbc.core.client.DataCloudQueryStatus;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.time.Duration;
 import java.util.List;
