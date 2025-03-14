@@ -29,11 +29,7 @@ import lombok.val;
 public class HyperServerConfig {
     @Builder.Default
     @JsonProperty("grpc-request-timeout")
-    String grpcRequestTimeoutSeconds = null;
-
-    @Builder.Default
-    @JsonProperty("experimental_pg_sleep")
-    boolean experimentalPgSleep = false;
+    String grpcRequestTimeoutSeconds = "120s";
 
     @Override
     public String toString() {

@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.salesforce.datacloud.jdbc.core;
+package com.salesforce.datacloud.query.v3;
 
+import com.salesforce.datacloud.jdbc.util.Unstable;
 import java.util.Optional;
 import lombok.Value;
 import lombok.val;
@@ -31,6 +32,7 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  * </ul>
  */
 @Value
+@Unstable
 public class DataCloudQueryStatus {
     public enum CompletionStatus {
         RUNNING,
@@ -47,6 +49,15 @@ public class DataCloudQueryStatus {
     double progress;
 
     CompletionStatus completionStatus;
+
+    /**
+     * Checks if all the query's results are ready, the row count and chunk count are stable.
+     *
+     * @return {@code true} if the query's results are ready, otherwise {@code false}.
+     */
+    public boolean allResultsProduced() {
+        return isResultProduced() || isExecutionFinished();
+    }
 
     /**
      * Checks if the query's results have been produced.
@@ -66,11 +77,11 @@ public class DataCloudQueryStatus {
         return completionStatus == CompletionStatus.FINISHED;
     }
 
-    static Optional<DataCloudQueryStatus> of(QueryInfo queryInfo) {
+    public static Optional<DataCloudQueryStatus> of(QueryInfo queryInfo) {
         return Optional.ofNullable(queryInfo).map(QueryInfo::getQueryStatus).map(DataCloudQueryStatus::of);
     }
 
-    private static DataCloudQueryStatus of(QueryStatus s) {
+    public static DataCloudQueryStatus of(QueryStatus s) {
         val completionStatus = of(s.getCompletionStatus());
         return new DataCloudQueryStatus(
                 s.getQueryId(), s.getChunkCount(), s.getRowCount(), s.getProgress(), completionStatus);

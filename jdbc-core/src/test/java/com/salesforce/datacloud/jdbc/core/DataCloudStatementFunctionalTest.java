@@ -21,6 +21,7 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import java.sql.ResultSet;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
@@ -29,7 +30,7 @@ import org.junit.jupiter.api.Test;
 
 public class DataCloudStatementFunctionalTest extends HyperTestBase {
     private static final HyperServerConfig configWithSleep =
-            HyperServerConfig.builder().experimentalPgSleep(true).build();
+            HyperServerConfig.builder().build();
 
     @Test
     @SneakyThrows

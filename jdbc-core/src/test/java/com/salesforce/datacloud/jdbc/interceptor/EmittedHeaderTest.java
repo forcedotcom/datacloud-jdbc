@@ -59,18 +59,19 @@ public class EmittedHeaderTest {
 
     @Test
     void traceAndSpanIdsAreSet() {
-        val tracer = Tracer.get();
-        val actual = getHeadersFor(new Properties());
+        val interceptor = new TracingHeadersInterceptor(
+                () -> Tracer.get().nextId(), () -> Tracer.get().nextSpanId());
+        val actual = getHeadersFor(new Properties(), interceptor);
         assertThat(actual)
-                .hasEntrySatisfying("x-b3-traceid", e -> assertThat(tracer.isValidTraceId(e))
+                .hasEntrySatisfying("x-b3-traceid", e -> assertThat(Tracer.get().isValidTraceId(e))
                         .isTrue())
-                .hasEntrySatisfying(
-                        "x-b3-spanid", e -> assertThat(tracer.isValidSpanId(e)).isTrue());
+                .hasEntrySatisfying("x-b3-spanid", e -> assertThat(Tracer.get().isValidSpanId(e))
+                        .isTrue());
     }
 
     @Test
     void userAgentHeaderIncludesVersionDetails() {
-        val actual = getHeadersFor(new Properties());
+        val actual = getHeadersFor(new Properties(), null);
 
         assertThat(actual)
                 .hasEntrySatisfying("user-agent", e -> assertThat(e).contains(DriverVersion.formatDriverInfo()));
@@ -96,7 +97,7 @@ public class EmittedHeaderTest {
             properties.put(key, value);
         }
 
-        val actual = getHeadersFor(properties);
+        val actual = getHeadersFor(properties, null);
         if (expected == null) {
             assertThat(actual).doesNotContainKey(header);
         } else {
@@ -105,7 +106,7 @@ public class EmittedHeaderTest {
     }
 
     @SneakyThrows
-    private static Map<String, String> getHeadersFor(Properties properties) {
+    private static Map<String, String> getHeadersFor(Properties properties, TracingHeadersInterceptor tracer) {
         val interceptor = new HeaderCapturingInterceptor();
 
         val name = InProcessServerBuilder.generateName();
@@ -117,7 +118,11 @@ public class EmittedHeaderTest {
                 .start();
         val channel = InProcessChannelBuilder.forName(name).usePlaintext();
 
-        try (val connection = DataCloudConnection.fromTokenSupplier(null, channel, properties);
+        if (tracer != null) {
+            channel.intercept(tracer);
+        }
+
+        try (val connection = DataCloudConnection.fromChannel(channel, properties);
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
             statement.executeAsyncQuery("select 1");
         }

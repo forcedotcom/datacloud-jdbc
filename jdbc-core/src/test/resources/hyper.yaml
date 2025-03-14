@@ -6,3 +6,4 @@ no-password: true
 use_v3_new_endpoints: true
 grpc_persist_results: true
 log_pipelines: true
+experimental_pg_sleep: true
