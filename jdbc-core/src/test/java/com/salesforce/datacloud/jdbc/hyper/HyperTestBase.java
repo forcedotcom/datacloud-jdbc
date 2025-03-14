@@ -145,8 +145,6 @@ public class HyperTestBase {
     @SneakyThrows
     protected DataCloudConnection getInterceptedClientConnection(HyperServerConfig config) {
         GrpcMock.resetMappings();
-        val mocked = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
-                .usePlaintext();
 
         val server = config.start();
         servers.add(server);
@@ -157,6 +155,10 @@ public class HyperTestBase {
                 .intercept(auth)
                 .maxInboundMessageSize(64 * 1024 * 1024)
                 .build();
+
+        val mocked = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
+                .intercept(auth)
+                .usePlaintext();
 
         val stub = HyperServiceGrpc.newBlockingStub(channel);
 
@@ -173,7 +175,7 @@ public class HyperTestBase {
                 HyperServiceGrpc.getGetQueryResultMethod(),
                 HyperServiceGrpc.HyperServiceBlockingStub::getQueryResult);
 
-        return DataCloudConnection.fromTokenSupplier(auth, mocked, new Properties());
+        return DataCloudConnection.fromChannel(mocked, new Properties());
     }
 
     public static <ReqT, RespT> void proxyStreamingMethod(

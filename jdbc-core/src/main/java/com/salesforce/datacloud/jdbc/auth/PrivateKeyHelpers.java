@@ -63,7 +63,7 @@ enum Audience {
 
 @UtilityClass
 class JwtParts {
-    public static String buildJwt(PrivateKeyAuthenticationSettings settings) throws SQLException {
+    public static String buildJwt(PrivateKeyAuthenticationSettings settings) throws DataCloudJDBCException {
         try {
             Instant now = Instant.now();
             Audience audience = Audience.of(settings.getLoginUrl());

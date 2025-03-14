@@ -160,7 +160,7 @@ public class DataCloudTokenProcessor implements TokenProcessor {
         return response;
     }
 
-    public static DataCloudTokenProcessor of(Properties properties) throws SQLException {
+    public static DataCloudTokenProcessor of(Properties properties) throws DataCloudJDBCException {
         val settings = AuthenticationSettings.of(properties);
         val strategy = AuthenticationStrategy.of(settings);
         val client = ClientBuilder.buildOkHttpClient(properties);

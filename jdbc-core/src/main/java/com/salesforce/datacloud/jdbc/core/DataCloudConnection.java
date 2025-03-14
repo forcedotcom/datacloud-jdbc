@@ -30,7 +30,6 @@ import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
@@ -51,7 +50,6 @@ import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -65,7 +63,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
@@ -84,11 +81,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     @NonNull @Builder.Default
     private final Properties properties = new Properties();
 
-    @Getter(AccessLevel.PACKAGE)
-    @Setter
-    @Builder.Default
-    private List<ClientInterceptor> interceptors = new ArrayList<>();
-
+    @Unstable
     @Getter(AccessLevel.PACKAGE)
     @NonNull private final HyperGrpcClientExecutor executor;
 
@@ -108,33 +101,12 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                 .build();
     }
 
-    /** This flow is not supported by the JDBC Driver Manager, only use it if you know what you're doing. */
-    public static DataCloudConnection fromTokenSupplier(
-            AuthorizationHeaderInterceptor authInterceptor, @NonNull String host, int port, Properties properties)
-            throws SQLException {
-        val channel = ManagedChannelBuilder.forAddress(host, port);
-        return fromTokenSupplier(authInterceptor, channel, properties);
-    }
-
-    /** This flow is not supported by the JDBC Driver Manager, only use it if you know what you're doing. */
-    public static DataCloudConnection fromTokenSupplier(
-            AuthorizationHeaderInterceptor authInterceptor, ManagedChannelBuilder<?> builder, Properties properties)
-            throws SQLException {
-        val interceptors = getClientInterceptors(authInterceptor, properties);
-        val executor = HyperGrpcClientExecutor.of(builder.intercept(interceptors), properties);
-
-        return DataCloudConnection.builder()
-                .executor(executor)
-                .properties(properties)
-                .build();
-    }
-
     /**
      * Initializes a list of interceptors that handle channel level concerns that can be defined through properties
      * @param properties - The connection properties
      * @return a list of client interceptors
      */
-    static List<ClientInterceptor> getPropertyDerivedClientInterceptors(Properties properties) {
+    private static List<ClientInterceptor> getPropertyDerivedClientInterceptors(Properties properties) {
         return Stream.of(
                         HyperExternalClientContextHeaderInterceptor.of(properties),
                         HyperWorkloadHeaderInterceptor.of(properties),
@@ -143,22 +115,13 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Initializes the full set of client interceptors from property handling to tracing and auth
-     * @param authInterceptor an optional auth interceptor, is allowed to be null
-     * @param properties the connection properties
-     * @return a list of client interceptors
-     */
-    static List<ClientInterceptor> getClientInterceptors(
-            AuthorizationHeaderInterceptor authInterceptor, Properties properties) {
-        val list = getPropertyDerivedClientInterceptors(properties);
-        list.add(0, TracingHeadersInterceptor.of());
-        if (authInterceptor != null) {
-            list.add(0, authInterceptor);
+    private static DataCloudTokenProcessor getDataCloudTokenProcessor(Properties properties)
+            throws DataCloudJDBCException {
+        if (!AuthenticationSettings.hasAny(properties)) {
+            throw new DataCloudJDBCException("No authentication settings provided");
         }
-        ;
-        log.info("Registering interceptor. interceptor={}", list);
-        return list;
+
+        return DataCloudTokenProcessor.of(properties);
     }
 
     public static DataCloudConnection of(String url, Properties properties) throws SQLException {
@@ -167,17 +130,15 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         connectionString.withParameters(properties);
         properties.setProperty(LOGIN_URL, connectionString.getLoginUrl());
 
-        if (!AuthenticationSettings.hasAny(properties)) {
-            throw new DataCloudJDBCException("No authentication settings provided");
-        }
-
-        val tokenProcessor = DataCloudTokenProcessor.of(properties);
+        val tokenProcessor = getDataCloudTokenProcessor(properties);
+        val authInterceptor = AuthorizationHeaderInterceptor.of(tokenProcessor);
 
         val host = tokenProcessor.getDataCloudToken().getTenantUrl();
         val builder = ManagedChannelBuilder.forAddress(host, DEFAULT_PORT);
-        val authInterceptor = AuthorizationHeaderInterceptor.of(tokenProcessor);
 
-        val interceptors = getClientInterceptors(authInterceptor, properties);
+        val interceptors = getPropertyDerivedClientInterceptors(properties);
+        interceptors.add(0, authInterceptor);
+
         val executor = HyperGrpcClientExecutor.of(builder.intercept(interceptors), properties);
 
         return DataCloudConnection.builder()

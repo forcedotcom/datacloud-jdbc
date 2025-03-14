@@ -25,7 +25,6 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.sql.SQLException;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,7 +36,7 @@ import lombok.val;
 
 @Getter
 public abstract class AuthenticationSettings {
-    public static AuthenticationSettings of(@NonNull Properties properties) throws SQLException {
+    public static AuthenticationSettings of(@NonNull Properties properties) throws DataCloudJDBCException {
         checkNotEmpty(properties);
         checkHasAllRequired(properties);
 
@@ -72,14 +71,14 @@ public abstract class AuthenticationSettings {
         return hasAll(properties, Keys.REFRESH_TOKEN_KEYS);
     }
 
-    private static void checkNotEmpty(@NonNull Properties properties) throws SQLException {
+    private static void checkNotEmpty(@NonNull Properties properties) throws DataCloudJDBCException {
         if (properties.isEmpty()) {
             throw new DataCloudJDBCException(
                     Messages.PROPERTIES_EMPTY, "28000", new IllegalArgumentException(Messages.PROPERTIES_EMPTY));
         }
     }
 
-    private static void checkHasAllRequired(Properties properties) throws SQLException {
+    private static void checkHasAllRequired(Properties properties) throws DataCloudJDBCException {
         if (hasAll(properties, Keys.REQUIRED_KEYS)) {
             return;
         }
@@ -91,7 +90,7 @@ public abstract class AuthenticationSettings {
         throw new DataCloudJDBCException(missing, "28000", new IllegalArgumentException(missing));
     }
 
-    final URI getLoginUri() throws SQLException {
+    final URI getLoginUri() throws DataCloudJDBCException {
         try {
             return new URI(loginUrl);
         } catch (URISyntaxException ex) {
@@ -99,7 +98,7 @@ public abstract class AuthenticationSettings {
         }
     }
 
-    protected AuthenticationSettings(@NonNull Properties properties) throws SQLException {
+    protected AuthenticationSettings(@NonNull Properties properties) throws DataCloudJDBCException {
         checkNotEmpty(properties);
 
         this.relevantProperties = copy(properties, Keys.ALL);
@@ -172,7 +171,7 @@ public abstract class AuthenticationSettings {
 
 @Getter
 class PasswordAuthenticationSettings extends AuthenticationSettings {
-    protected PasswordAuthenticationSettings(@NonNull Properties properties) throws SQLException {
+    protected PasswordAuthenticationSettings(@NonNull Properties properties) throws DataCloudJDBCException {
         super(properties);
 
         this.password = required(this.getRelevantProperties(), Keys.PASSWORD);
@@ -185,7 +184,7 @@ class PasswordAuthenticationSettings extends AuthenticationSettings {
 
 @Getter
 class PrivateKeyAuthenticationSettings extends AuthenticationSettings {
-    protected PrivateKeyAuthenticationSettings(@NonNull Properties properties) throws SQLException {
+    protected PrivateKeyAuthenticationSettings(@NonNull Properties properties) throws DataCloudJDBCException {
         super(properties);
 
         this.privateKey = required(this.getRelevantProperties(), Keys.PRIVATE_KEY);
@@ -198,7 +197,7 @@ class PrivateKeyAuthenticationSettings extends AuthenticationSettings {
 
 @Getter
 class RefreshTokenAuthenticationSettings extends AuthenticationSettings {
-    protected RefreshTokenAuthenticationSettings(@NonNull Properties properties) throws SQLException {
+    protected RefreshTokenAuthenticationSettings(@NonNull Properties properties) throws DataCloudJDBCException {
         super(properties);
 
         this.refreshToken = required(this.getRelevantProperties(), Keys.REFRESH_TOKEN);

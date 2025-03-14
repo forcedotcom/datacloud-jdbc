@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
-import com.salesforce.datacloud.jdbc.util.RequestRecordingInterceptor;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import io.grpc.StatusRuntimeException;
 import java.sql.ResultSet;
@@ -132,23 +131,6 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
             assertThat(response.getMetaData().getColumnName(2)).isEqualTo("name");
             assertThat(response.getMetaData().getColumnName(3)).isEqualTo("grade");
         }
-    }
-
-    @Test
-    @SneakyThrows
-    public void testExecuteQueryIncludesInterceptorsProvidedByCaller() {
-        setupHyperGrpcClientWithMockedResultSet("abc", ImmutableList.of());
-        val interceptor = new RequestRecordingInterceptor();
-        Mockito.when(connection.getInterceptors()).thenReturn(ImmutableList.of(interceptor));
-
-        assertThat(interceptor.getQueries().size()).isEqualTo(0);
-        statement.executeQuery("SELECT * FROM table");
-        assertThat(interceptor.getQueries().size()).isEqualTo(1);
-        statement.executeQuery("SELECT * FROM table");
-        assertThat(interceptor.getQueries().size()).isEqualTo(2);
-        statement.executeQuery("SELECT * FROM table");
-        assertThat(interceptor.getQueries().size()).isEqualTo(3);
-        assertDoesNotThrow(() -> statement.close());
     }
 
     @Test
