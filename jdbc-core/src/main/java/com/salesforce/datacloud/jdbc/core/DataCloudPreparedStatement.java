@@ -53,7 +53,6 @@ import java.sql.Types;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.TimeZone;
-import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -97,9 +96,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
                 "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::execute() instead.");
     }
 
-    @Override
-    @SneakyThrows
-    protected HyperGrpcClientExecutor getQueryExecutor() {
+    private HyperGrpcClientExecutor getQueryExecutor() throws DataCloudJDBCException {
         final byte[] encodedRow;
         try {
             encodedRow = ArrowUtils.toArrowByteArray(parameterManager.getParameters(), calendar);
@@ -114,7 +111,10 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
                         .build())
                 .build();
 
-        return getQueryExecutor(preparedQueryParams);
+        return dataCloudConnection.getExecutor().toBuilder()
+                .additionalQueryParams(preparedQueryParams)
+                .queryTimeout(getQueryTimeout())
+                .build();
     }
 
     @Override

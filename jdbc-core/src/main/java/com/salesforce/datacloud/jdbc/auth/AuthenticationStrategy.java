@@ -30,12 +30,12 @@ import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 
 interface AuthenticationStrategy {
-    static AuthenticationStrategy of(@NonNull Properties properties) throws SQLException {
+    static AuthenticationStrategy of(@NonNull Properties properties) throws DataCloudJDBCException {
         val settings = AuthenticationSettings.of(properties);
         return of(settings);
     }
 
-    static AuthenticationStrategy of(@NonNull AuthenticationSettings settings) throws SQLException {
+    static AuthenticationStrategy of(@NonNull AuthenticationSettings settings) throws DataCloudJDBCException {
         if (settings instanceof PasswordAuthenticationSettings) {
             return new PasswordAuthenticationStrategy((PasswordAuthenticationSettings) settings);
         } else if (settings instanceof PrivateKeyAuthenticationSettings) {
@@ -67,7 +67,7 @@ interface AuthenticationStrategy {
 }
 
 abstract class SharedAuthenticationStrategy implements AuthenticationStrategy {
-    protected final FormCommand.Builder builder(HttpCommandPath path) throws SQLException {
+    protected final FormCommand.Builder builder(HttpCommandPath path) throws DataCloudJDBCException {
         val settings = getSettings();
         val builder = FormCommand.builder();
 
@@ -95,7 +95,7 @@ class PasswordAuthenticationStrategy extends SharedAuthenticationStrategy {
      * password flow docs</a>
      */
     @Override
-    public FormCommand buildAuthenticate() throws SQLException {
+    public FormCommand buildAuthenticate() throws DataCloudJDBCException {
         val builder = super.builder(HttpCommandPath.AUTHENTICATE);
 
         builder.bodyEntry(Keys.GRANT_TYPE, GRANT_TYPE);
@@ -122,7 +122,7 @@ class RefreshTokenAuthenticationStrategy extends SharedAuthenticationStrategy {
      * token flow docs</a>
      */
     @Override
-    public FormCommand buildAuthenticate() throws SQLException {
+    public FormCommand buildAuthenticate() throws DataCloudJDBCException {
         val builder = super.builder(HttpCommandPath.AUTHENTICATE);
 
         builder.bodyEntry(Keys.GRANT_TYPE, GRANT_TYPE);
@@ -147,7 +147,7 @@ class PrivateKeyAuthenticationStrategy extends SharedAuthenticationStrategy {
      * docs</a>
      */
     @Override
-    public FormCommand buildAuthenticate() throws SQLException {
+    public FormCommand buildAuthenticate() throws DataCloudJDBCException {
         val builder = super.builder(HttpCommandPath.AUTHENTICATE);
 
         builder.bodyEntry(Keys.GRANT_TYPE, GRANT_TYPE);

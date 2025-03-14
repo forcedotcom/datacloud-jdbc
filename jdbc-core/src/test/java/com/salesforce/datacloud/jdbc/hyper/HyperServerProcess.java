@@ -149,9 +149,10 @@ public class HyperServerProcess implements AutoCloseable {
         properties.putAll(connectionSettings);
         val auth = AuthorizationHeaderInterceptor.of(new HyperTestBase.NoopTokenSupplier());
         log.info("Creating connection to port {}", getPort());
-        ManagedChannelBuilder<?> channel =
-                ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext();
+        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", getPort())
+                .intercept(auth)
+                .usePlaintext();
 
-        return DataCloudConnection.fromTokenSupplier(auth, channel, properties);
+        return DataCloudConnection.fromChannel(channel, properties);
     }
 }

@@ -35,7 +35,6 @@ import java.time.Duration;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import salesforce.cdp.hyperdb.v1.QueryParam;
 
 @Slf4j
 public class DataCloudStatement implements Statement, AutoCloseable {
@@ -59,20 +58,10 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     protected QueryStatusListener listener;
 
-    protected HyperGrpcClientExecutor getQueryExecutor() {
-        return getQueryExecutor(null);
-    }
-
-    protected HyperGrpcClientExecutor getQueryExecutor(QueryParam additionalQueryParams) {
-        val clientBuilder = dataCloudConnection.getExecutor().toBuilder();
-
-        clientBuilder.interceptors(dataCloudConnection.getInterceptors());
-
-        if (additionalQueryParams != null) {
-            clientBuilder.additionalQueryParams(additionalQueryParams);
-        }
-
-        return clientBuilder.queryTimeout(getQueryTimeout()).build();
+    private HyperGrpcClientExecutor getQueryExecutor() {
+        return dataCloudConnection.getExecutor().toBuilder()
+                .queryTimeout(getQueryTimeout())
+                .build();
     }
 
     private void assertQueryExecuted() throws SQLException {
