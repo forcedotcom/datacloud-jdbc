@@ -184,11 +184,14 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return StreamingResultSet.of(queryId, executor, iterator);
     }
 
-    @Unstable
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit) {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
         val iterator = ChunkBased.of(executor, queryId, chunkId, limit);
         return StreamingResultSet.of(queryId, executor, iterator);
+    }
+
+    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) {
+        return getChunkBasedResultSet(queryId, chunkId, 1);
     }
 
     /**
@@ -200,7 +203,6 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * @param allowLessThan Whether or not to return early when the available rows is less than {@code offset + limit}
      * @return The final {@link DataCloudQueryStatus} the server replied with.
      */
-    @Unstable
     public DataCloudQueryStatus waitForRowsAvailable(
             String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
             throws DataCloudJDBCException {
@@ -213,20 +215,13 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * @param timeout The duration to wait for the engine have results produced.
      * @return The final {@link DataCloudQueryStatus} the server replied with.
      */
-    @Unstable
     public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration timeout) throws DataCloudJDBCException {
         return executor.waitForResultsProduced(queryId, timeout);
-    }
-
-    @Unstable
-    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) {
-        return getChunkBasedResultSet(queryId, chunkId, 1);
     }
 
     /**
      * Use this to determine when a given query is complete by filtering the responses and a subsequent findFirst()
      */
-    @Unstable
     public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) {
         return executor.getQueryStatus(queryId);
     }

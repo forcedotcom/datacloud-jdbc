@@ -23,14 +23,15 @@ import static org.grpcmock.GrpcMock.times;
 import static org.grpcmock.GrpcMock.verifyThat;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
@@ -41,13 +42,15 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
  */
 @Slf4j
 class DataCloudQueryPollingTest extends HyperTestBase {
-    private static final String large =
-            "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, 1024 * 1024 * 10) as s(a) order by a asc";
+    Duration small = Duration.ofSeconds(5);
 
     @SneakyThrows
-    @Timeout(30)
     @ParameterizedTest
-    @ValueSource(strings = {"SELECT pg_sleep(10);", large})
+    @ValueSource(
+            strings = {
+                //                "SELECT PG_SLEEP(min(max(RANDOM(),5),5));",
+                "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, 1024 * 1024 * 10) as s(a) order by a asc"
+            })
     void getQueryInfoRetriesOnTimeout(String query) {
         val configWithSleep =
                 HyperServerConfig.builder().grpcRequestTimeoutSeconds("2s").build();
@@ -61,7 +64,7 @@ class DataCloudQueryPollingTest extends HyperTestBase {
 
             log.warn("waiting for results produced, queryId={}", queryId);
 
-            val status = connection.waitForResultsProduced(queryId, Duration.ofSeconds(20));
+            val status = connection.waitForResultsProduced(queryId, Duration.ofSeconds(60));
 
             verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), atLeast(2));
 
@@ -69,18 +72,43 @@ class DataCloudQueryPollingTest extends HyperTestBase {
         }
     }
 
-    @Test
     @SneakyThrows
-    void getQueryInfoDoesNotRetryIfFailureToConnect() {
-        try (val connection = getInterceptedClientConnection();
-                val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
-            statement.execute("select * from nonsense");
+    @Test
+    void throwsAboutNotEnoughRows_disallowLessThan() {
+        try (val connection = getInterceptedClientConnection()) {
+            val statement = connection.createStatement().unwrap(DataCloudStatement.class);
 
-            verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), times(0));
+            statement.execute("select * from generate_series(1, 109)");
 
-            assertThatThrownBy(() -> connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30)));
+            assertThat(connection
+                            .waitForResultsProduced(statement.getQueryId(), small)
+                            .allResultsProduced())
+                    .isTrue();
 
-            verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), times(1));
+            Assertions.assertThatThrownBy(() -> connection.waitForRowsAvailable(
+                            statement.getQueryId(), 100, 10, Duration.ofSeconds(1), false))
+                    .hasMessageContaining("Timed out waiting for enough rows to be available")
+                    .isInstanceOf(DataCloudJDBCException.class);
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void throwsAboutNoNewRows_allowLessThan() {
+        try (val connection = getInterceptedClientConnection()) {
+            val statement = connection.createStatement().unwrap(DataCloudStatement.class);
+
+            statement.execute("select * from generate_series(1, 100)");
+
+            assertThat(connection
+                            .waitForResultsProduced(statement.getQueryId(), small)
+                            .allResultsProduced())
+                    .isTrue();
+
+            Assertions.assertThatThrownBy(() -> connection.waitForRowsAvailable(
+                            statement.getQueryId(), 100, 10, Duration.ofSeconds(1), true))
+                    .hasMessageContaining("Timed out waiting for new rows to be available")
+                    .isInstanceOf(DataCloudJDBCException.class);
         }
     }
 

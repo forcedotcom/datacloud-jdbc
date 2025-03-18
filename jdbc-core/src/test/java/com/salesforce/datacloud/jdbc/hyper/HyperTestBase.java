@@ -22,8 +22,10 @@ import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
+import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
+import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -40,6 +42,7 @@ import org.assertj.core.api.ThrowingConsumer;
 import org.grpcmock.GrpcMock;
 import org.grpcmock.junit5.InProcessGrpcMockExtension;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -127,13 +130,33 @@ public class HyperTestBase {
 
     private final List<HyperServerProcess> servers = new ArrayList<>();
 
-    @AfterAll
+    private final List<ManagedChannel> channels = new ArrayList<>();
+
+    private final List<DataCloudConnection> connections = new ArrayList<>();
+
+    @AfterEach
     public void cleanUpServers() {
         servers.forEach(s -> {
             try {
                 s.close();
             } catch (Exception e) {
                 log.error("Failed to clean up hyper server process", e);
+            }
+        });
+
+        channels.forEach(c -> {
+            try{
+                c.shutdownNow();
+            } catch (Exception e) {
+                log.error("Failed to clean up channel", e);
+            }
+        });
+
+        connections.forEach(c -> {
+            try {
+                c.close();
+            } catch (Exception e) {
+                log.error("Failed to close data cloud connection", e);
             }
         });
     }
@@ -144,7 +167,6 @@ public class HyperTestBase {
 
     @SneakyThrows
     protected DataCloudConnection getInterceptedClientConnection(HyperServerConfig config) {
-        GrpcMock.resetMappings();
 
         val server = config.start();
         servers.add(server);
@@ -156,9 +178,13 @@ public class HyperTestBase {
                 .maxInboundMessageSize(64 * 1024 * 1024)
                 .build();
 
+        channels.add(channel);
+
         val mocked = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
                 .intercept(auth)
                 .usePlaintext();
+
+        GrpcMock.resetMappings();
 
         val stub = HyperServiceGrpc.newBlockingStub(channel);
 
@@ -175,7 +201,9 @@ public class HyperTestBase {
                 HyperServiceGrpc.getGetQueryResultMethod(),
                 HyperServiceGrpc.HyperServiceBlockingStub::getQueryResult);
 
-        return DataCloudConnection.fromChannel(mocked, new Properties());
+        val conn = DataCloudConnection.fromChannel(mocked, new Properties());
+        connections.add(conn);
+        return conn;
     }
 
     public static <ReqT, RespT> void proxyStreamingMethod(
@@ -196,9 +224,16 @@ public class HyperTestBase {
 
             val response = method.apply(
                     queryId == null ? stub : stub.withInterceptors(new QueryIdHeaderInterceptor(queryId)), request);
-            while (response.hasNext()) {
-                observer.onNext(response.next());
+
+            try {
+                while (response.hasNext()) {
+                    observer.onNext(response.next());
+                }
+            } catch (StatusRuntimeException ex) {
+                observer.onError(ex);
+                return;
             }
+
             observer.onCompleted();
         }));
     }

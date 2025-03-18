@@ -36,9 +36,10 @@ public class DataCloudStatementFunctionalTest extends HyperTestBase {
     @SneakyThrows
     public void canCancelStatementQuery() {
         try (val server = configWithSleep.start();
-                val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class)) {
+             val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class);
+             val client = server.getRawClient()) {
             statement.execute("select pg_sleep(5000000);");
-            val client = server.getRawClient();
+
             val queryId = statement.getQueryId();
             val a = client.getQueryStatus(queryId).findFirst().get();
             assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
@@ -56,10 +57,12 @@ public class DataCloudStatementFunctionalTest extends HyperTestBase {
         try (val server = configWithSleep.start();
                 val statement = server.getConnection()
                         .prepareStatement("select pg_sleep(?)")
-                        .unwrap(DataCloudPreparedStatement.class)) {
+                        .unwrap(DataCloudPreparedStatement.class);
+             val client = server.getRawClient()) {
+
             statement.setInt(1, 5000000);
             statement.execute();
-            val client = server.getRawClient();
+
             val queryId = statement.getQueryId();
             val a = client.getQueryStatus(queryId).findFirst().get();
             assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
@@ -75,13 +78,12 @@ public class DataCloudStatementFunctionalTest extends HyperTestBase {
     @SneakyThrows
     public void canCancelAnotherQueryById() {
         try (val server = configWithSleep.start();
-                val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class);
-                val cancel = server.getConnection().unwrap(DataCloudConnection.class)) {
+             val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class);
+             val cancel = server.getConnection().unwrap(DataCloudConnection.class);
+             val client = server.getRawClient()) {
 
             statement.execute("select pg_sleep(5000000);");
             val queryId = statement.getQueryId();
-
-            val client = server.getRawClient();
 
             val a = client.getQueryStatus(queryId).findFirst().get();
             assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
@@ -111,6 +113,8 @@ public class DataCloudStatementFunctionalTest extends HyperTestBase {
 
             assertThat(rs.getType()).isEqualTo(ResultSet.TYPE_FORWARD_ONLY);
             assertThat(rs.getConcurrency()).isEqualTo(ResultSet.CONCUR_READ_ONLY);
+
+            assertThat(rs.getRow()).isEqualTo(0);
         });
     }
 

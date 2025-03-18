@@ -23,6 +23,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -56,6 +57,7 @@ class PropertyBasedHeadersTests {
 
     @ParameterizedTest
     @MethodSource("optionalPropertyInterceptors")
+    @SneakyThrows
     void testOptionalPropertyInterceptorsWithValue(
             String key, String header, Function<Properties, HeaderMutatingClientInterceptor> function) {
         val expected = UUID.randomUUID().toString();

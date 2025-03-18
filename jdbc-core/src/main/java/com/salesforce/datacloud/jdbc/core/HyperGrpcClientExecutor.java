@@ -261,5 +261,15 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         }
 
         channel.shutdown();
+
+        try {
+            channel.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            log.error("Failed to shutdown channel within 5 seconds", e);
+        } finally {
+            if (!channel.isTerminated()) {
+                channel.shutdownNow();
+            }
+        }
     }
 }

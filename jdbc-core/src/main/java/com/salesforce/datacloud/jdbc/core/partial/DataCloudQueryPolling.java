@@ -19,11 +19,6 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Predicate;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +29,12 @@ import net.jodah.failsafe.RetryPolicy;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
+
 @Unstable
 @Slf4j
 @UtilityClass
@@ -43,16 +44,31 @@ public class DataCloudQueryPolling {
             String queryId,
             long offset,
             long limit,
-            Duration timeout,
+            Duration timeoutDuration,
             boolean allowLessThan)
             throws DataCloudJDBCException {
-        return waitForQueryStatus(stub, queryId, timeout, status -> {
+
+        Predicate<DataCloudQueryStatus> predicate = status -> {
             if (allowLessThan) {
                 return status.getRowCount() > offset;
             } else {
                 return status.getRowCount() >= offset + limit;
             }
-        });
+        };
+
+        val result = waitForQueryStatus(stub, queryId, timeoutDuration, predicate);
+
+        if (predicate.test(result)) {
+            return result;
+        } else {
+            if (allowLessThan) {
+                throw new DataCloudJDBCException(
+                        "Timed out waiting for new rows to be available. queryId=" + queryId + ", status=" + result);
+            } else {
+                throw new DataCloudJDBCException(
+                        "Timed out waiting for enough rows to be available. queryId=" + queryId + ", status=" + result);
+            }
+        }
     }
 
     public static DataCloudQueryStatus waitForResultsProduced(
@@ -64,17 +80,21 @@ public class DataCloudQueryPolling {
     public static DataCloudQueryStatus waitForQueryStatus(
             HyperServiceGrpc.HyperServiceBlockingStub stub,
             String queryId,
-            Duration timeout,
+            Duration timeoutDuration,
             Predicate<DataCloudQueryStatus> predicate)
             throws DataCloudJDBCException {
         val last = new AtomicReference<DataCloudQueryStatus>();
-        val deadline = Instant.now().plus(timeout);
-        val attempts = new AtomicInteger(1);
+        val deadline = Instant.now().plus(timeoutDuration);
+        val attempts = new AtomicInteger(0);
 
-        val retry = new RetryPolicy<DataCloudQueryStatus>()
-                .withMaxDuration(timeout)
-                .handle(StatusRuntimeException.class)
+        val retryPolicy = new RetryPolicy<DataCloudQueryStatus>()
+                .withMaxDuration(timeoutDuration)
                 .handleIf(e -> {
+                    if (!(e instanceof StatusRuntimeException)) {
+                        log.error("Got an unexpected exception when getting query status for queryId={}", queryId, e);
+                        return false;
+                    }
+
                     if (last.get() == null) {
                         log.error(
                                 "Failed to get query status response, will not try again. queryId={}, attempts={}",
@@ -103,7 +123,7 @@ public class DataCloudQueryPolling {
                 });
 
         try {
-            return Failsafe.with(retry)
+            return Failsafe.with(retryPolicy)
                     .get(() -> waitForQueryStatusWithoutRetry(stub, queryId, deadline, last, attempts, predicate));
         } catch (FailsafeException ex) {
             throw new DataCloudJDBCException(
@@ -126,14 +146,21 @@ public class DataCloudQueryPolling {
         times.getAndIncrement();
         val param = QueryInfoParam.newBuilder().setQueryId(queryId).build();
         while (Instant.now().isBefore(deadline)) {
-            val info = stub.getQueryInfo(param);
+            val timeRemaining = Duration.between(Instant.now(), deadline);
+            val info = stub.withDeadlineAfter(timeRemaining).getQueryInfo(param);
             while (info.hasNext()) {
-                val next = DataCloudQueryStatus.of(info.next());
-                next.ifPresent(last::set);
-                if (predicate.test(last.get())) {
+                val matched = DataCloudQueryStatus.of(info.next())
+                        .map(next -> {
+                            last.set(next);
+                            return predicate.test(next);
+                        })
+                        .orElse(false);
+
+                if (matched) {
                     return last.get();
                 }
             }
+            log.info("end of info stream, maybe starting a new one: {}", last.get());
         }
         return last.get();
     }

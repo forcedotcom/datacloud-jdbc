@@ -23,6 +23,7 @@ import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.ThrowingBiFunction;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -59,15 +60,17 @@ public class StreamingResultSetTest extends HyperTestBase {
         val expected = new AtomicInteger(0);
 
         assertWithConnection(conn -> {
-            try (val statement = conn.prepareStatement(sql)) {
+            try (val statement = conn.prepareStatement(sql).unwrap(DataCloudPreparedStatement.class)) {
                 statement.setInt(1, large);
 
                 val rs = statement.executeQuery();
+                conn.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30));
                 assertThat(rs).isInstanceOf(StreamingResultSet.class);
                 assertThat(((StreamingResultSet) rs).isReady()).isTrue();
 
                 while (rs.next()) {
                     assertEachRowIsTheSame(rs, expected);
+                    assertThat(rs.getRow()).isEqualTo(expected.get());
                 }
             }
         });
@@ -85,6 +88,7 @@ public class StreamingResultSetTest extends HyperTestBase {
 
         assertWithStatement(statement -> {
             val rs = queryMode.apply(statement, sql);
+
             assertThat(rs).isInstanceOf(StreamingResultSet.class);
             assertThat(rs.isReady()).isTrue();
 
@@ -133,7 +137,8 @@ public class StreamingResultSetTest extends HyperTestBase {
                     impl.apply(s, x);
 
                     if (wait) {
-                        waitUntilReady(s);
+                        val conn = s.getConnection().unwrap(DataCloudConnection.class);
+                        conn.waitForResultsProduced(s.getQueryId(), Duration.ofSeconds(30));
                     }
 
                     return (DataCloudResultSet) s.getResultSet();
@@ -141,15 +146,4 @@ public class StreamingResultSetTest extends HyperTestBase {
         return arguments(named(String.format("%s; getResultSet -> DataCloudResultSet", name), deferred), size);
     }
 
-    @SneakyThrows
-    static boolean waitUntilReady(DataCloudStatement statement) {
-        while (!statement.isReady()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                return false;
-            }
-        }
-        return true;
-    }
 }

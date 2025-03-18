@@ -27,7 +27,7 @@ import lombok.SneakyThrows;
 
 @FunctionalInterface
 public interface HeaderMutatingClientInterceptor extends ClientInterceptor {
-    void mutate(final Metadata headers);
+    void mutate(final Metadata headers) throws DataCloudJDBCException;
 
     @Override
     default <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
