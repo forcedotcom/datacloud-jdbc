@@ -15,20 +15,23 @@
  */
 package com.salesforce.datacloud.jdbc.examples;
 
-import static java.lang.Math.min;
-
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ManagedChannelBuilder;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Test;
+import java.util.Optional;
+import java.util.Properties;
+
+import static java.lang.Math.min;
 
 /**
  * This example uses a locally spawned Hyper instance to demonstrate best practices around connecting to Hyper.
@@ -36,7 +39,8 @@ import org.junit.jupiter.api.Test;
  * examples.
  */
 @Slf4j
-public class SubmitQueryAndConsumeResultsTest extends HyperTestBase {
+@ExtendWith(HyperTestBase.class)
+public class SubmitQueryAndConsumeResultsTest {
     /**
      * This example shows how to create a Data Cloud Connection while still having full control over concerns like
      * authorization and tracing.
@@ -48,7 +52,7 @@ public class SubmitQueryAndConsumeResultsTest extends HyperTestBase {
 
         // You can bring your own gRPC channels, setup in the way you like (mTLS / Plaintext / ...) and your own
         // interceptors as well as executors.
-        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", instance.getPort())
+        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
 
         // Use the JDBC Driver interface
@@ -100,7 +104,7 @@ public class SubmitQueryAndConsumeResultsTest extends HyperTestBase {
 
         // You can bring your own gRPC channels, setup in the way you like (mTLS / Plaintext / ...) and your own
         // interceptors as well as executors.
-        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", instance.getPort())
+        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
 
         try (DataCloudConnection conn = DataCloudConnection.fromChannel(channel, properties)) {

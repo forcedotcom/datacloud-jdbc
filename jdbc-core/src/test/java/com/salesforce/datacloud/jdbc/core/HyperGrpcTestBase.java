@@ -15,24 +15,22 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerProcess;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.MethodDescriptor;
+import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.Properties;
-import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.grpcmock.GrpcMock;
 import org.grpcmock.junit5.InProcessGrpcMockExtension;
@@ -46,8 +44,24 @@ import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Properties;
+import java.util.function.BiFunction;
+import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+
+@Slf4j
 @ExtendWith(InProcessGrpcMockExtension.class)
-public class HyperGrpcTestBase extends HyperTestBase {
+public class HyperGrpcTestBase {
 
     protected static HyperGrpcClientExecutor hyperGrpcClient;
 
@@ -59,6 +73,116 @@ public class HyperGrpcTestBase extends HyperTestBase {
 
     @Mock
     protected AuthenticationSettings mockSettings;
+
+    private final List<HyperServerProcess> servers = new ArrayList<>();
+
+    private final List<ManagedChannel> channels = new ArrayList<>();
+
+    private final List<DataCloudConnection> connections = new ArrayList<>();
+
+    @AfterEach
+    public void cleanUpServers() {
+        servers.forEach(s -> {
+            try {
+                s.close();
+            } catch (Exception e) {
+                log.error("Failed to clean up hyper server process", e);
+            }
+        });
+
+        channels.forEach(c -> {
+            try{
+                c.shutdownNow();
+            } catch (Exception e) {
+                log.error("Failed to clean up channel", e);
+            }
+        });
+
+        connections.forEach(c -> {
+            try {
+                c.close();
+            } catch (Exception e) {
+                log.error("Failed to close data cloud connection", e);
+            }
+        });
+    }
+
+    protected DataCloudConnection getInterceptedClientConnection() {
+        return getInterceptedClientConnection(HyperServerConfig.builder().build());
+    }
+
+    @SneakyThrows
+    protected DataCloudConnection getInterceptedClientConnection(HyperServerConfig config) {
+
+        val server = config.start();
+        servers.add(server);
+
+        val auth = AuthorizationHeaderInterceptor.of(new HyperTestBase.NoopTokenSupplier());
+        val channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.getPort())
+                .usePlaintext()
+                .intercept(auth)
+                .maxInboundMessageSize(64 * 1024 * 1024)
+                .build();
+
+        channels.add(channel);
+
+        val mocked = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
+                .intercept(auth)
+                .usePlaintext();
+
+        GrpcMock.resetMappings();
+
+        val stub = HyperServiceGrpc.newBlockingStub(channel);
+
+        proxyStreamingMethod(
+                stub,
+                HyperServiceGrpc.getExecuteQueryMethod(),
+                HyperServiceGrpc.HyperServiceBlockingStub::executeQuery);
+        proxyStreamingMethod(
+                stub,
+                HyperServiceGrpc.getGetQueryInfoMethod(),
+                HyperServiceGrpc.HyperServiceBlockingStub::getQueryInfo);
+        proxyStreamingMethod(
+                stub,
+                HyperServiceGrpc.getGetQueryResultMethod(),
+                HyperServiceGrpc.HyperServiceBlockingStub::getQueryResult);
+
+        val conn = DataCloudConnection.fromChannel(mocked, new Properties());
+        connections.add(conn);
+        return conn;
+    }
+
+    public static <ReqT, RespT> void proxyStreamingMethod(
+            HyperServiceGrpc.HyperServiceBlockingStub stub,
+            MethodDescriptor<ReqT, RespT> mock,
+            BiFunction<HyperServiceGrpc.HyperServiceBlockingStub, ReqT, Iterator<RespT>> method) {
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(mock).willProxyTo((request, observer) -> {
+            final String queryId;
+            if (request instanceof salesforce.cdp.hyperdb.v1.QueryInfoParam) {
+                queryId = ((salesforce.cdp.hyperdb.v1.QueryInfoParam) request).getQueryId();
+            } else if (request instanceof salesforce.cdp.hyperdb.v1.QueryResultParam) {
+                queryId = ((salesforce.cdp.hyperdb.v1.QueryResultParam) request).getQueryId();
+            } else if (request instanceof salesforce.cdp.hyperdb.v1.CancelQueryParam) {
+                queryId = ((salesforce.cdp.hyperdb.v1.CancelQueryParam) request).getQueryId();
+            } else {
+                queryId = null;
+            }
+
+            val response = method.apply(
+                    queryId == null ? stub : stub.withInterceptors(new QueryIdHeaderInterceptor(queryId)), request);
+
+            try {
+                while (response.hasNext()) {
+                    observer.onNext(response.next());
+                }
+            } catch (StatusRuntimeException ex) {
+                observer.onError(ex);
+                return;
+            }
+
+            observer.onCompleted();
+        }));
+    }
 
     @BeforeEach
     public void setUpClient() throws SQLException, IOException {

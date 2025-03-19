@@ -15,21 +15,27 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import io.grpc.StatusRuntimeException;
-import java.time.Duration;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-public class AsyncStreamingResultSetTest extends HyperTestBase {
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
+
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static org.assertj.core.api.Assertions.assertThat;
+
+@ExtendWith(HyperTestBase.class)
+public class AsyncStreamingResultSetTest {
 
     private static final String sql =
             "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, 1024 * 1024 * 10) as s(a) order by a asc";

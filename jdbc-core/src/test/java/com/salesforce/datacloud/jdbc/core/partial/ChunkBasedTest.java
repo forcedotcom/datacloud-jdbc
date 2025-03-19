@@ -15,27 +15,31 @@
  */
 package com.salesforce.datacloud.jdbc.core.partial;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
-
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
-import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 @Slf4j
-class ChunkBasedTest extends HyperTestBase {
+@ExtendWith(HyperTestBase.class)
+class ChunkBasedTest {
     private List<Integer> sut(String queryId, long chunkId, long limit) {
         try (val connection = getHyperQueryConnection()) {
             val rs = limit == 1
@@ -47,12 +51,12 @@ class ChunkBasedTest extends HyperTestBase {
 
     private static final int smallSize = 5;
     private static final int largeSize = 1024 * 1024 * 10;
-    private String small;
-    private String large;
+    private static String small;
+    private static String large;
 
     @SneakyThrows
     @BeforeAll
-    void setupQueries() {
+    static void setupQueries() {
         small = getQueryId(smallSize);
         large = getQueryId(largeSize);
 
@@ -103,7 +107,7 @@ class ChunkBasedTest extends HyperTestBase {
     }
 
     @SneakyThrows
-    private String getQueryId(int max) {
+    private static String getQueryId(int max) {
         val query = String.format(
                 "select a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c, cast(a as numeric(38,18)) d from generate_series(1, %d) as s(a) order by a asc",
                 max);

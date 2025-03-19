@@ -15,10 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core.partial;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
-import static org.mockito.Mockito.mock;
-
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudPreparedStatement;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
@@ -28,23 +24,32 @@ import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.time.Duration;
+import java.util.Iterator;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
+import static org.mockito.Mockito.mock;
+
 @Slf4j
-public class RowBasedTest extends HyperTestBase {
+@ExtendWith(HyperTestBase.class)
+public class RowBasedTest {
     private List<Integer> sut(String queryId, long offset, long limit, RowBased.Mode mode) {
         try (val connection = getHyperQueryConnection()) {
             val resultSet = connection.getRowBasedResultSet(queryId, offset, limit, mode);
@@ -56,12 +61,12 @@ public class RowBasedTest extends HyperTestBase {
     private static final int smallSize = 32;
     private static final int largeSize = 1024 * 1024 * 10;
 
-    private String tiny;
-    private String small;
-    private String large;
+    private static String tiny;
+    private static String small;
+    private static String large;
 
     @BeforeAll
-    void setupQueries() {
+    static void setupQueries() {
         large = getQueryId(largeSize);
         small = getQueryId(smallSize);
         tiny = getQueryId(tinySize);
@@ -117,7 +122,7 @@ public class RowBasedTest extends HyperTestBase {
                         tinySize, tinySize));
     }
 
-    Stream<Arguments> querySizeAndPageSize() {
+    static Stream<Arguments> querySizeAndPageSize() {
         val sizes = IntStream.rangeClosed(0, 13).mapToObj(i -> 1 << i).collect(Collectors.toList());
         return sizes.stream().flatMap(left -> sizes.stream().map(right -> Arguments.of(left, right)));
     }
@@ -176,7 +181,7 @@ public class RowBasedTest extends HyperTestBase {
     }
 
     @SneakyThrows
-    private String getQueryId(int max) {
+    private static String getQueryId(int max) {
         val query = String.format(
                 "select a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c, cast(a as numeric(38,18)) d from generate_series(1, %d) as s(a) order by a asc",
                 max);
@@ -189,11 +194,9 @@ public class RowBasedTest extends HyperTestBase {
     }
 
     @SneakyThrows
-    private void waitForQuery(String queryId) {
+    private static void waitForQuery(String queryId) {
         try (val conn = getHyperQueryConnection()) {
-            while (!isReady(conn, queryId)) {
-                Thread.sleep(250);
-            }
+            conn.waitForResultsProduced(queryId, Duration.ofSeconds(30));
         }
     }
 

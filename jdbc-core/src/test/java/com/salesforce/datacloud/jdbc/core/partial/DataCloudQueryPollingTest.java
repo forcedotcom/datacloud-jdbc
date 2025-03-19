@@ -15,6 +15,23 @@
  */
 package com.salesforce.datacloud.jdbc.core.partial;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
+import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
+import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
+
+import java.time.Duration;
+
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.grpcmock.GrpcMock.atLeast;
@@ -22,26 +39,13 @@ import static org.grpcmock.GrpcMock.calledMethod;
 import static org.grpcmock.GrpcMock.times;
 import static org.grpcmock.GrpcMock.verifyThat;
 
-import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import java.time.Duration;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.assertj.core.api.Assertions;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
-
 /**
  * Note that these tests do not use Statement::executeQuery which attempts to iterate immediately,
  * getQueryResult is not resilient to server timeout, only getQueryInfo.
  */
 @Slf4j
-class DataCloudQueryPollingTest extends HyperTestBase {
+@ExtendWith(HyperTestBase.class)
+class DataCloudQueryPollingTest extends HyperGrpcTestBase {
     Duration small = Duration.ofSeconds(5);
 
     @SneakyThrows

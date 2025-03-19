@@ -15,27 +15,34 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Named.named;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
-
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.ThrowingBiFunction;
 import io.grpc.StatusRuntimeException;
-import java.sql.SQLException;
-import java.time.Duration;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-public class StreamingResultSetTest extends HyperTestBase {
+import java.sql.SQLException;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
+
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithConnection;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+
+@ExtendWith(HyperTestBase.class)
+public class StreamingResultSetTest {
     private static final int small = 10;
     private static final int large = 10 * 1024 * 1024;
 
