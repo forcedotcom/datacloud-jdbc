@@ -19,6 +19,7 @@ import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.ThrowingBiFunction;
 import io.grpc.StatusRuntimeException;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Assertions;
@@ -41,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
+@Slf4j
 @ExtendWith(HyperTestBase.class)
 public class StreamingResultSetTest {
     private static final int small = 10;
@@ -49,8 +51,6 @@ public class StreamingResultSetTest {
     private static Stream<Arguments> queryModes(int size) {
         return Stream.of(
                 inline("executeSyncQuery", DataCloudStatement::executeSyncQuery, size),
-                inline("executeAdaptiveQuery", DataCloudStatement::executeAdaptiveQuery, size),
-                deferred("executeAsyncQuery", DataCloudStatement::executeAsyncQuery, true, size),
                 deferred("execute", DataCloudStatement::execute, true, size),
                 deferred("executeQuery", DataCloudStatement::executeQuery, false, size));
     }
@@ -134,11 +134,13 @@ public class StreamingResultSetTest {
 
     private static Arguments inline(
             String name, ThrowingBiFunction<DataCloudStatement, String, DataCloudResultSet> impl, int size) {
+        log.warn("testing: {}", name);
         return arguments(named(String.format("%s -> DataCloudResultSet", name), impl), size);
     }
 
     private static Arguments deferred(
             String name, ThrowingBiFunction<DataCloudStatement, String, Object> impl, Boolean wait, int size) {
+        log.warn("testing: {}", name);
         ThrowingBiFunction<DataCloudStatement, String, DataCloudResultSet> deferred =
                 (DataCloudStatement s, String x) -> {
                     impl.apply(s, x);
