@@ -37,3 +37,12 @@ jobs:
             ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
       - name: Maven package
         run: mvn $MAVEN_ARGS clean package --file pom.xml
+      - name: Upload hyper logs on failure
+        if: ${{ failure() || steps.main-process.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            **/target/surefire-reports/*.txt
+            target/hyper/*.log
+          retention-days: 5

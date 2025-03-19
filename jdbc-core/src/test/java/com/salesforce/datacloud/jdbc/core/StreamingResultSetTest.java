@@ -79,7 +79,15 @@ public class StreamingResultSetTest {
                     assertEachRowIsTheSame(rs, expected);
                     assertThat(rs.getRow()).isEqualTo(expected.get());
                 }
+                val status = conn.getQueryStatus(statement.getQueryId()).findFirst();
+
+                assertThat(status).isPresent().hasValueSatisfying(t -> assertThat(t.getRowCount()).as("row count: " + status).isEqualTo(large));
+
+
+
+
             }
+
         });
 
         assertThat(expected.get()).isEqualTo(large);
@@ -102,6 +110,10 @@ public class StreamingResultSetTest {
             while (rs.next()) {
                 assertEachRowIsTheSame(rs, actual);
             }
+
+            val status = statement.getConnection().unwrap(DataCloudConnection.class).getQueryStatus(statement.getQueryId()).findFirst();
+            assertThat(status).isPresent().hasValueSatisfying(t -> assertThat(t.getRowCount()).as("row count: " + status).isEqualTo(max));
+
         });
 
         assertThat(actual.get()).isEqualTo(max);
