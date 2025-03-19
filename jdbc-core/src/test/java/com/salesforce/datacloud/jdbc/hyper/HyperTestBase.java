@@ -20,13 +20,14 @@ import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import io.grpc.ManagedChannelBuilder;
+import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.assertj.core.api.ThrowingConsumer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -34,13 +35,16 @@ import java.sql.ResultSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
-public class HyperTestBase implements BeforeAllCallback, AfterAllCallback, ExtensionContext.Store.CloseableResource {
-    public static final AtomicReference<HyperServerProcess> instance = new AtomicReference<>();
+public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.CloseableResource {
+    @Getter(lazy = true, value = AccessLevel.PRIVATE)
+    private static final HyperServerProcess instance = new HyperServerProcess();
+
+    private static boolean isRegistered = false;
+
 
     @SneakyThrows
     public static void assertEachRowIsTheSame(ResultSet rs, AtomicInteger prev) {
@@ -85,30 +89,30 @@ public class HyperTestBase implements BeforeAllCallback, AfterAllCallback, Exten
     }
 
     public static int getInstancePort() {
-        val hyper = instance.get();
+        val hyper = getInstance();
         Assertions.assertTrue((hyper != null) && hyper.isHealthy(), "Hyper wasn't started, failing test");
         return hyper.getPort();
     }
 
     @Override
     public void beforeAll(ExtensionContext context) {
-        if (instance.get() == null) {
-            instance.set(new HyperServerProcess());
+        synchronized (HyperTestBase.class) {
+            if (!isRegistered) {
+                context.getRoot().getStore(ExtensionContext.Namespace.GLOBAL)
+                        .put(HyperTestBase.class.getName(), this);
+                isRegistered = true;
+                System.out.println("Registered database shutdown hook");
+            }
         }
     }
 
     @Override
     @Timeout(5_000)
     public void close() throws Throwable {
-        val hyper = instance.get();
-        if (hyper != null) {
-            hyper.close();
+        val instance = getInstance();
+        if (instance != null) {
+            instance.close();
         }
-    }
-
-    @Override
-    public void afterAll(ExtensionContext context) throws Exception {
-
     }
 
     public static class NoopTokenSupplier implements AuthorizationHeaderInterceptor.TokenSupplier {
