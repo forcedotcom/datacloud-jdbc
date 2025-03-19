@@ -64,33 +64,32 @@ public class StreamingResultSetTest {
     public void exercisePreparedStatement() {
         val sql =
                 "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, ?) as s(a) order by a asc";
-        val expected = new AtomicInteger(0);
+        val witnessed = new AtomicInteger(0);
 
         assertWithConnection(conn -> {
             try (val statement = conn.prepareStatement(sql).unwrap(DataCloudPreparedStatement.class)) {
                 statement.setInt(1, large);
 
                 val rs = statement.executeQuery();
-                conn.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30));
+
+                val status = statement.getConnection().unwrap(DataCloudConnection.class).waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30));
+
+                assertThat(status).as("Status: " + status).satisfies(s -> {
+                    assertThat(s.allResultsProduced()).isTrue();
+                    assertThat(s.getRowCount()).isEqualTo(large);
+                });
+
                 assertThat(rs).isInstanceOf(StreamingResultSet.class);
                 assertThat(((StreamingResultSet) rs).isReady()).isTrue();
 
                 while (rs.next()) {
-                    assertEachRowIsTheSame(rs, expected);
-                    assertThat(rs.getRow()).isEqualTo(expected.get());
+                    assertEachRowIsTheSame(rs, witnessed);
+                    assertThat(rs.getRow()).isEqualTo(witnessed.get());
                 }
-                val status = conn.getQueryStatus(statement.getQueryId()).findFirst();
-
-                assertThat(status).isPresent().hasValueSatisfying(t -> assertThat(t.getRowCount()).as("row count: " + status).isEqualTo(large));
-
-
-
-
             }
-
         });
 
-        assertThat(expected.get()).isEqualTo(large);
+        assertThat(witnessed.get()).isEqualTo(large);
     }
 
     @SneakyThrows
@@ -104,16 +103,19 @@ public class StreamingResultSetTest {
         assertWithStatement(statement -> {
             val rs = queryMode.apply(statement, sql);
 
+            val status = statement.getConnection().unwrap(DataCloudConnection.class).waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30));
+
+            assertThat(status).as("Status: " + status).satisfies(s -> {
+                assertThat(s.allResultsProduced()).isTrue();
+                assertThat(s.getRowCount()).isEqualTo(max);
+            });
+
             assertThat(rs).isInstanceOf(StreamingResultSet.class);
             assertThat(rs.isReady()).isTrue();
 
             while (rs.next()) {
                 assertEachRowIsTheSame(rs, actual);
             }
-
-            val status = statement.getConnection().unwrap(DataCloudConnection.class).getQueryStatus(statement.getQueryId()).findFirst();
-            assertThat(status).isPresent().hasValueSatisfying(t -> assertThat(t.getRowCount()).as("row count: " + status).isEqualTo(max));
-
         });
 
         assertThat(actual.get()).isEqualTo(max);

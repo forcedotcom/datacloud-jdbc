@@ -26,6 +26,7 @@ import lombok.val;
 import org.assertj.core.api.ThrowingConsumer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -38,7 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Slf4j
-public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.CloseableResource {
+public class HyperTestBase implements BeforeAllCallback, AfterAllCallback, ExtensionContext.Store.CloseableResource {
     public static final AtomicReference<HyperServerProcess> instance = new AtomicReference<>();
 
     @SneakyThrows
@@ -103,6 +104,11 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
         if (hyper != null) {
             hyper.close();
         }
+    }
+
+    @Override
+    public void afterAll(ExtensionContext context) throws Exception {
+
     }
 
     public static class NoopTokenSupplier implements AuthorizationHeaderInterceptor.TokenSupplier {
