@@ -9,7 +9,7 @@ env:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-xlarge
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 8
