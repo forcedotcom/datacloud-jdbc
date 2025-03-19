@@ -73,6 +73,7 @@ public class StreamingResultSetTest {
                 val rs = statement.executeQuery();
 
                 val status = statement.getConnection().unwrap(DataCloudConnection.class).waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30));
+                log.warn("Status: {}", status);
 
                 assertThat(status).as("Status: " + status).satisfies(s -> {
                     assertThat(s.allResultsProduced()).isTrue();
@@ -104,6 +105,7 @@ public class StreamingResultSetTest {
             val rs = queryMode.apply(statement, sql);
 
             val status = statement.getConnection().unwrap(DataCloudConnection.class).waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30));
+            log.warn("Status: {}", status);
 
             assertThat(status).as("Status: " + status).satisfies(s -> {
                 assertThat(s.allResultsProduced()).isTrue();

@@ -60,7 +60,8 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelPreparedStatementQuery() {
         try (val server = configWithSleep.start();
-                val statement = server.getConnection()
+             val connection = server.getConnection();
+                val statement = connection
                         .prepareStatement("select pg_sleep(?)")
                         .unwrap(DataCloudPreparedStatement.class);
              val client = server.getRawClient()) {
@@ -83,8 +84,8 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelAnotherQueryById() {
         try (val server = configWithSleep.start();
-             val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class);
-             val cancel = server.getConnection().unwrap(DataCloudConnection.class);
+             val connection = server.getConnection().unwrap(DataCloudConnection.class);
+             val statement = connection.createStatement().unwrap(DataCloudStatement.class);
              val client = server.getRawClient()) {
 
             statement.execute("select pg_sleep(5000000);");
@@ -93,7 +94,7 @@ public class DataCloudStatementFunctionalTest {
             val a = client.getQueryStatus(queryId).findFirst().get();
             assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
 
-            cancel.cancel(queryId);
+            connection.cancel(queryId);
 
             assertThatThrownBy(() -> client.getQueryStatus(queryId).collect(Collectors.toList()))
                     .hasMessage("FAILED_PRECONDITION: canceled");
