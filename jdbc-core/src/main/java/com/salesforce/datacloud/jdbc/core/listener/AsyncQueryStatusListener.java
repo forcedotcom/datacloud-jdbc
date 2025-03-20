@@ -24,15 +24,16 @@ import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
-import java.sql.SQLException;
-import java.time.Duration;
-import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryResult;
+
+import java.sql.SQLException;
+import java.time.Duration;
+import java.util.stream.Stream;
 
 @Slf4j
 @Builder(access = AccessLevel.PRIVATE)
@@ -52,10 +53,12 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
             throws SQLException {
         try {
             val result = client.executeAsyncQuery(query).next();
-            val id = result.getQueryInfo().getQueryStatus().getQueryId();
+            val queryId = result.getQueryInfo().getQueryStatus().getQueryId();
+
+            log.warn("Executing async query. queryId={}, timeout={}", queryId, timeout);
 
             return AsyncQueryStatusListener.builder()
-                    .queryId(id)
+                    .queryId(queryId)
                     .query(query)
                     .client(client)
                     .timeout(timeout)
@@ -96,13 +99,13 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
     @Override
     public Stream<QueryResult> stream() throws SQLException {
-        val status = client.waitForResultsProduced(queryId, timeout);
-
-        if (!status.allResultsProduced()) {
+        if (!isReady()) {
             throw new DataCloudJDBCException(BEFORE_READY);
         }
 
+        val status = client.waitForResultsProduced(queryId, timeout);
         val iterator = ChunkBased.of(client, queryId, 0, status.getChunkCount(), false);
+
         return StreamUtilities.toStream(iterator);
     }
 }

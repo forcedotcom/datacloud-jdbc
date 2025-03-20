@@ -125,11 +125,11 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public ResultSet executeQuery() throws SQLException {
-        val useSync = dataCloudConnection.useSync();
         val client = getQueryExecutor();
 
-        resultSet =
-                useSync ? executeSyncQuery(sql, client) : executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
+        resultSet = useSync()
+                ? executeSyncQuery(sql, client)
+                : executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
         return resultSet;
     }
 

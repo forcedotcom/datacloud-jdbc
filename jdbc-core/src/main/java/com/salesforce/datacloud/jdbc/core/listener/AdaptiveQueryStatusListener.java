@@ -116,6 +116,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     private Stream<QueryResult> tail() {
         val last = lastStatus.get();
         if (last != null && last.getChunkCount() < 2) {
+            log.warn("Adaptive query has no tail. {}", last);
             return Stream.empty();
         }
 

@@ -20,6 +20,7 @@ import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.SyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import lombok.NonNull;
@@ -34,6 +35,7 @@ import java.sql.Statement;
 import java.time.Duration;
 
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 @Slf4j
 public class DataCloudStatement implements Statement, AutoCloseable {
@@ -56,6 +58,12 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     }
 
     protected QueryStatusListener listener;
+
+    protected boolean useSync() {
+        return optional(dataCloudConnection.getProperties(), Constants.FORCE_SYNC)
+                .map(Boolean::parseBoolean)
+                .orElse(false);
+    }
 
     private HyperGrpcClientExecutor getQueryExecutor() {
         return dataCloudConnection.getExecutor().toBuilder()
@@ -99,10 +107,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         log.debug("Entering executeQuery");
-
-        val useSync = dataCloudConnection.useSync();
-        resultSet = useSync ? executeSyncQuery(sql) : executeAdaptiveQuery(sql);
-
+        resultSet = useSync() ? executeSyncQuery(sql) : executeAdaptiveQuery(sql);
         return resultSet;
     }
 

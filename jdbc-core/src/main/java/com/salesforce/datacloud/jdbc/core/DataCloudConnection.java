@@ -26,7 +26,6 @@ import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
@@ -67,7 +66,6 @@ import java.util.stream.Stream;
 import static com.salesforce.datacloud.jdbc.util.Constants.LOGIN_URL;
 import static com.salesforce.datacloud.jdbc.util.Constants.USER;
 import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 @Slf4j
 @Builder(access = AccessLevel.PACKAGE)
@@ -87,12 +85,6 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     @Unstable
     @Getter(AccessLevel.PACKAGE)
     @NonNull private final HyperGrpcClientExecutor executor;
-
-    boolean useSync() {
-        return optional(getProperties(), Constants.FORCE_SYNC)
-                .map(Boolean::parseBoolean)
-                .orElse(false);
-    }
 
     /**
      * This creates a Data Cloud connection with minimal adjustments to the channels.
