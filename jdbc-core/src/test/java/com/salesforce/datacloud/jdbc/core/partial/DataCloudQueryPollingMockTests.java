@@ -22,7 +22,6 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.assertj.core.api.AssertionsForClassTypes;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,7 +39,6 @@ import static org.grpcmock.GrpcMock.verifyThat;
 public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
     @Test
     @SneakyThrows
-    @Disabled
     void getQueryInfoDoesNotRetryIfFailureToConnect() {
         try (val connection = getInterceptedClientConnection();
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
