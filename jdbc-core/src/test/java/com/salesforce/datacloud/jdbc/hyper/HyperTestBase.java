@@ -79,13 +79,17 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
     }
 
     @SneakyThrows
-    public static DataCloudConnection getHyperQueryConnection(Map<String, String> connectionSettings) {
-        val properties = new Properties();
-        properties.putAll(connectionSettings);
+    public static DataCloudConnection getHyperQueryConnection(Properties properties) {
         val port = getInstancePort();
         log.info("Creating connection to port {}", port);
         ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", port).usePlaintext();
         return DataCloudConnection.fromChannel(channel, properties);
+    }
+
+    public static DataCloudConnection getHyperQueryConnection(Map<String, String> connectionSettings) {
+        val properties = new Properties();
+        properties.putAll(connectionSettings);
+        return getHyperQueryConnection(properties);
     }
 
     public static int getInstancePort() {

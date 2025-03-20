@@ -151,6 +151,12 @@ public class DataCloudQueryPolling {
             while (info.hasNext()) {
                 val matched = DataCloudQueryStatus.of(info.next())
                         .map(next -> {
+                            log.warn("querying next");
+                            try {
+                                Thread.sleep(100);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
                             last.set(next);
                             return predicate.test(next);
                         })

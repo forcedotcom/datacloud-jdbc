@@ -15,11 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc;
 
-import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
-import static com.salesforce.datacloud.jdbc.core.StreamingResultSetTest.query;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertThrows;
-
 import com.google.common.collect.ImmutableSet;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
@@ -27,6 +22,18 @@ import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
 import com.salesforce.datacloud.jdbc.util.ThrowingBiFunction;
+import lombok.Getter;
+import lombok.SneakyThrows;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -43,17 +50,11 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import lombok.Getter;
-import lombok.SneakyThrows;
-import lombok.Value;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIf;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
+
+import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
+import static com.salesforce.datacloud.jdbc.core.StreamingResultSetTest.query;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 
 /**
  * To run this test, set the environment variables for the various AuthenticationSettings strategies. Right-click the
@@ -157,7 +158,7 @@ class OrgIntegrationTest {
     @MethodSource("com.salesforce.datacloud.jdbc.core.StreamingResultSetTest#queryModesWithMax")
     public void exerciseQueryMode(
             ThrowingBiFunction<DataCloudStatement, String, DataCloudResultSet> queryMode, int max) {
-        val sql = query(max);
+        val sql = query(Integer.toString(max));
         try (val connection = getConnection();
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
             val rs = queryMode.apply(statement, sql);
@@ -344,7 +345,7 @@ class OrgIntegrationTest {
     @SneakyThrows
     void testMainQuery() {
         int max = 100;
-        val query = query(100);
+        val query = query("100");
 
         try (val connection = getConnection();
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
