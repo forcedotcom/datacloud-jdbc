@@ -55,7 +55,7 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
             val result = client.executeAsyncQuery(query).next();
             val queryId = result.getQueryInfo().getQueryStatus().getQueryId();
 
-            log.warn("Executing async query. queryId={}, timeout={}", queryId, timeout);
+            log.info("Executing async query. queryId={}, timeout={}", queryId, timeout);
 
             return AsyncQueryStatusListener.builder()
                     .queryId(queryId)

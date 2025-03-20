@@ -146,17 +146,11 @@ public class DataCloudQueryPolling {
         times.getAndIncrement();
         val param = QueryInfoParam.newBuilder().setQueryId(queryId).build();
         while (Instant.now().isBefore(deadline)) {
-            val timeRemaining = Duration.between(Instant.now(), deadline);
+            val timeRemaining = remaining(deadline);
             val info = stub.withDeadlineAfter(timeRemaining).getQueryInfo(param);
             while (info.hasNext()) {
                 val matched = DataCloudQueryStatus.of(info.next())
                         .map(next -> {
-                            log.warn("querying next");
-                            try {
-                                Thread.sleep(100);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
                             last.set(next);
                             return predicate.test(next);
                         })
@@ -166,8 +160,12 @@ public class DataCloudQueryPolling {
                     return last.get();
                 }
             }
-            log.info("end of info stream, maybe starting a new one: {}", last.get());
+            log.warn("end of info stream, starting a new one if the timeout allows. last={}, remaining={}", last.get(), remaining(deadline));
         }
         return last.get();
+    }
+
+    private Duration remaining(Instant deadline) {
+        return Duration.between(Instant.now(), deadline);
     }
 }

@@ -45,6 +45,8 @@ import java.util.stream.Stream;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Deprecated
 public class AdaptiveQueryStatusListener implements QueryStatusListener {
+    private static final String BEFORE_READY = "The remaining adaptive results were requested before ready";
+
     @Getter
     private final String queryId;
 
@@ -65,7 +67,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
             val response = client.executeAdaptiveQuery(query);
             val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
-            log.warn("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);
+            log.info("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);
 
             return new AdaptiveQueryStatusListener(queryId, query, client, timeout, response);
         } catch (StatusRuntimeException ex) {
@@ -114,12 +116,6 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     @SneakyThrows
     private Stream<QueryResult> tail() {
-        val last = lastStatus.get();
-        if (last != null && last.getChunkCount() < 2) {
-            log.warn("Adaptive query has no tail. {}", last);
-            return Stream.empty();
-        }
-
         val status = client.waitForResultsProduced(queryId, timeout);
 
         if (!status.allResultsProduced()) {

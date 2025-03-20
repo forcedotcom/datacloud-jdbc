@@ -61,7 +61,7 @@ public class ChunkBased implements Iterator<QueryResult> {
     @Override
     public boolean hasNext() {
         if (iterator == null) {
-            log.warn("Fetching chunk based query result stream. queryId={}, chunkId={}, limit={}", queryId, chunkId, limitId);
+            log.info("Fetching chunk based query result stream. queryId={}, chunkId={}, limit={}", queryId, chunkId, limitId);
             iterator = client.getQueryResult(queryId, chunkId.getAndIncrement(), omitSchema.getAndSet(true));
         }
 
@@ -70,7 +70,7 @@ public class ChunkBased implements Iterator<QueryResult> {
         }
 
         if (chunkId.get() < limitId) {
-            log.warn("Fetching new chunk based query result stream. queryId={}, chunkId={}, limit={}", queryId, chunkId, limitId);
+            log.info("Fetching new chunk based query result stream. queryId={}, chunkId={}, limit={}", queryId, chunkId, limitId);
             iterator = client.getQueryResult(queryId, chunkId.getAndIncrement(), omitSchema.get());
         }
 
