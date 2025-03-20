@@ -15,26 +15,25 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
-
 import com.salesforce.datacloud.jdbc.core.listener.AdaptiveQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.SyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import com.salesforce.datacloud.jdbc.util.Unstable;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.time.Duration;
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
+
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
 
 @Slf4j
 public class DataCloudStatement implements Statement, AutoCloseable {
@@ -101,14 +100,13 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     public ResultSet executeQuery(String sql) throws SQLException {
         log.debug("Entering executeQuery");
 
-        val useSync = optional(this.dataCloudConnection.getProperties(), Constants.FORCE_SYNC)
-                .map(Boolean::parseBoolean)
-                .orElse(false);
+        val useSync = dataCloudConnection.useSync();
         resultSet = useSync ? executeSyncQuery(sql) : executeAdaptiveQuery(sql);
 
         return resultSet;
     }
 
+    @Deprecated
     public DataCloudResultSet executeSyncQuery(String sql) throws SQLException {
         log.debug("Entering executeSyncQuery");
         val client = getQueryExecutor();
@@ -122,6 +120,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         return (DataCloudResultSet) resultSet;
     }
 
+    @Deprecated
     public DataCloudResultSet executeAdaptiveQuery(String sql) throws SQLException {
         log.debug("Entering executeAdaptiveQuery");
         val client = getQueryExecutor();
@@ -136,6 +135,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         return (DataCloudResultSet) resultSet;
     }
 
+    @Deprecated
     public DataCloudStatement executeAsyncQuery(String sql) throws SQLException {
         log.debug("Entering executeAsyncQuery");
         val client = getQueryExecutor();

@@ -17,15 +17,18 @@ package com.salesforce.datacloud.jdbc.core.partial;
 
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.util.Unstable;
+import lombok.AccessLevel;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import salesforce.cdp.hyperdb.v1.QueryResult;
+
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import lombok.AccessLevel;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-import salesforce.cdp.hyperdb.v1.QueryResult;
 
+@Slf4j
 @Unstable
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class ChunkBased implements Iterator<QueryResult> {
@@ -58,6 +61,7 @@ public class ChunkBased implements Iterator<QueryResult> {
     @Override
     public boolean hasNext() {
         if (iterator == null) {
+            log.warn("Fetching chunk based query result stream. queryId={}, chunkId={}, limit={}", queryId, chunkId, limitId);
             iterator = client.getQueryResult(queryId, chunkId.getAndIncrement(), omitSchema.getAndSet(true));
         }
 
@@ -66,6 +70,7 @@ public class ChunkBased implements Iterator<QueryResult> {
         }
 
         if (chunkId.get() < limitId) {
+            log.warn("Fetching new chunk based query result stream. queryId={}, chunkId={}, limit={}", queryId, chunkId, limitId);
             iterator = client.getQueryResult(queryId, chunkId.getAndIncrement(), omitSchema.get());
         }
 

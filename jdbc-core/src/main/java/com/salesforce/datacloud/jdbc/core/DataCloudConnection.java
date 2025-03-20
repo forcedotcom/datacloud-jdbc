@@ -15,10 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.util.Constants.LOGIN_URL;
-import static com.salesforce.datacloud.jdbc.util.Constants.USER;
-import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
-
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProcessor;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
@@ -30,10 +26,18 @@ import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -59,12 +63,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
+
+import static com.salesforce.datacloud.jdbc.util.Constants.LOGIN_URL;
+import static com.salesforce.datacloud.jdbc.util.Constants.USER;
+import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 @Slf4j
 @Builder(access = AccessLevel.PACKAGE)
@@ -84,6 +87,12 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     @Unstable
     @Getter(AccessLevel.PACKAGE)
     @NonNull private final HyperGrpcClientExecutor executor;
+
+    boolean useSync() {
+        return optional(getProperties(), Constants.FORCE_SYNC)
+                .map(Boolean::parseBoolean)
+                .orElse(false);
+    }
 
     /**
      * This creates a Data Cloud connection with minimal adjustments to the channels.

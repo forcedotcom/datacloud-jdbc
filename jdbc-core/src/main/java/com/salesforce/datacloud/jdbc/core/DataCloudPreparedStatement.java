@@ -15,19 +15,19 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCDateFromDateAndCalendar;
-import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimeFromTimeAndCalendar;
-import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimestampFromTimestampAndCalendar;
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
+import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import salesforce.cdp.hyperdb.v1.QueryParam;
+import salesforce.cdp.hyperdb.v1.QueryParameterArrow;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -53,11 +53,10 @@ import java.sql.Types;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.TimeZone;
-import lombok.experimental.UtilityClass;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import salesforce.cdp.hyperdb.v1.QueryParam;
-import salesforce.cdp.hyperdb.v1.QueryParameterArrow;
+
+import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCDateFromDateAndCalendar;
+import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimeFromTimeAndCalendar;
+import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimestampFromTimestampAndCalendar;
 
 @Slf4j
 public class DataCloudPreparedStatement extends DataCloudStatement implements PreparedStatement {
@@ -126,11 +125,9 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public ResultSet executeQuery() throws SQLException {
+        val useSync = dataCloudConnection.useSync();
         val client = getQueryExecutor();
 
-        val useSync = optional(this.dataCloudConnection.getProperties(), Constants.FORCE_SYNC)
-                .map(Boolean::parseBoolean)
-                .orElse(false);
         resultSet =
                 useSync ? executeSyncQuery(sql, client) : executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
         return resultSet;

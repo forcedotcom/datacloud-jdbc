@@ -41,11 +41,11 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelStatementQuery() {
         try (val server = configWithSleep.start();
-             val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class);
+             val statement = server.getConnection().createStatement();
              val client = server.getRawClient()) {
             statement.execute("select pg_sleep(5000000);");
 
-            val queryId = statement.getQueryId();
+            val queryId = statement.unwrap(DataCloudStatement.class).getQueryId();
             val a = client.getQueryStatus(queryId).findFirst().get();
             assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
 
