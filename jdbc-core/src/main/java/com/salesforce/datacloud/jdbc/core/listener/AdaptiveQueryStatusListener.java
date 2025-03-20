@@ -122,6 +122,10 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
             throw new DataCloudJDBCException(BEFORE_READY + ". queryId=" + queryId + ", timeout=" + timeout);
         }
 
+        if (status.getChunkCount() < 2) {
+            return Stream.empty();
+        }
+
         val iterator = ChunkBased.of(client, queryId, 1, status.getChunkCount() - 1, true);
         return StreamUtilities.toStream(iterator);
     }

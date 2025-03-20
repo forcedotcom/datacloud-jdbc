@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.jdbc.core.partial;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
@@ -31,6 +32,7 @@ import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
@@ -144,24 +146,25 @@ public class DataCloudQueryPolling {
             AtomicInteger times,
             Predicate<DataCloudQueryStatus> predicate) {
         times.getAndIncrement();
-        val param = QueryInfoParam.newBuilder().setQueryId(queryId).build();
+        val param = QueryInfoParam.newBuilder().setQueryId(queryId).setStreaming(true).build();
         while (Instant.now().isBefore(deadline)) {
-            val timeRemaining = remaining(deadline);
-            val info = stub.withDeadlineAfter(timeRemaining).getQueryInfo(param);
-            while (info.hasNext()) {
-                val matched = DataCloudQueryStatus.of(info.next())
-                        .map(next -> {
-                            last.set(next);
-                            return predicate.test(next);
-                        })
-                        .orElse(false);
+            val info = stub.getQueryInfo(param);
+            val matched = StreamUtilities.toStream(info)
+                    .map(DataCloudQueryStatus::of)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .peek(last::set)
+                    .filter(predicate::test)
+                    .findFirst();
 
-                if (matched) {
-                    return last.get();
-                }
+            if (matched.isPresent()) {
+                return matched.get();
             }
+
             log.warn("end of info stream, starting a new one if the timeout allows. last={}, remaining={}", last.get(), remaining(deadline));
         }
+
+        log.warn("exceeded deadline getting query info. last={}", last.get());
         return last.get();
     }
 
