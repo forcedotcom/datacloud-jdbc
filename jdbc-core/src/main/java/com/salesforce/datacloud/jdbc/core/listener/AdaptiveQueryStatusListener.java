@@ -65,6 +65,8 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
             val response = client.executeAdaptiveQuery(query);
             val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
+            log.warn("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);
+
             return new AdaptiveQueryStatusListener(queryId, query, client, timeout, response);
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createQueryException(query, ex);
