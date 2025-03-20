@@ -54,6 +54,10 @@ class PrivateKeyHelpersTest {
         assertThat(audience).isEqualTo(Audience.PROD);
         assertThat(audience.getUrl()).isEqualTo("login.salesforce.com");
 
+        audience = Audience.of("https://test.salesforce.com");
+        assertThat(audience).isEqualTo(Audience.TEST);
+        assertThat(audience.getUrl()).isEqualTo("test.salesforce.com");
+
         audience = Audience.of("https://login.test1.pc-rnd.salesforce.com");
         assertThat(audience).isEqualTo(Audience.DEV);
         assertThat(audience.getUrl()).isEqualTo("login.test1.pc-rnd.salesforce.com");

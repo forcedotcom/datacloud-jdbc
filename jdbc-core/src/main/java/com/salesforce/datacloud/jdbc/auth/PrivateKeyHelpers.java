@@ -33,6 +33,7 @@ import lombok.val;
 @Getter
 enum Audience {
     DEV("login.test1.pc-rnd.salesforce.com"),
+    TEST("test.salesforce.com"),
     PROD("login.salesforce.com");
 
     public final String url;
@@ -42,8 +43,10 @@ enum Audience {
     }
 
     public static Audience of(String url) throws SQLException {
-        if (url.contains(TEST_SUFFIX)) {
+        if (url.contains(DEV_SUFFIX)) {
             return Audience.DEV;
+        } else if (url.contains(TEST_SUFFIX)) {
+            return Audience.TEST;
         } else if (url.endsWith(PROD_SUFFIX)) {
             return Audience.PROD;
         } else {
@@ -54,7 +57,8 @@ enum Audience {
     }
 
     private static final String PROD_SUFFIX = ".salesforce.com";
-    private static final String TEST_SUFFIX = ".test1.pc-rnd.salesforce.com";
+    private static final String TEST_SUFFIX = "test.salesforce.com";
+    private static final String DEV_SUFFIX = ".test1.pc-rnd.salesforce.com";
 }
 
 @UtilityClass

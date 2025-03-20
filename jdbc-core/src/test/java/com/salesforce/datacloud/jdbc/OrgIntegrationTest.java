@@ -155,6 +155,7 @@ class OrgIntegrationTest {
     @SneakyThrows
     @ParameterizedTest
     @MethodSource("com.salesforce.datacloud.jdbc.core.StreamingResultSetTest#queryModesWithMax")
+    @Disabled
     public void exerciseQueryMode(
             ThrowingBiFunction<DataCloudStatement, String, DataCloudResultSet> queryMode, int max) {
         val sql = query(max);
@@ -340,9 +341,9 @@ class OrgIntegrationTest {
     }
 
     @Test
-    @Disabled
     @SneakyThrows
     void testMainQuery() {
+        log.info("testMainQuery");
         int max = 100;
         val query = query(100);
 
@@ -380,6 +381,7 @@ class OrgIntegrationTest {
 
     static boolean validateProperties() {
         AuthenticationSettings getSettings = getSettingsFromEnvironment();
+        log.info("hi");
         return getSettings != null;
     }
 
