@@ -18,7 +18,7 @@ package com.salesforce.datacloud.jdbc.hyper;
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
-import com.salesforce.datacloud.jdbc.util.Constants;
+import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 import io.grpc.ManagedChannelBuilder;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
-import java.sql.DriverManager;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -147,9 +146,9 @@ public class HyperServerProcess implements AutoCloseable {
     @SneakyThrows
     public DataCloudConnection getConnection(Map<String, String> connectionSettings) {
         val properties = new Properties();
-        properties.put(Constants.DIRECT, "true");
+        properties.put(DirectDataCloudConnection.DIRECT, "true");
         properties.putAll(connectionSettings);
         val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getPort();
-        return DriverManager.getConnection(url, properties).unwrap(DataCloudConnection.class);
+        return DirectDataCloudConnection.of(url, properties);
     }
 }

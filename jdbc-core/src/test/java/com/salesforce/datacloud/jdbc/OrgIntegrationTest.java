@@ -368,17 +368,6 @@ class OrgIntegrationTest {
         }
     }
 
-    @Test
-    @Disabled
-    @SneakyThrows
-    void testMetadataUrlRoundTrip() {
-        try (val connection = getConnection()) {
-            val url = connection.getMetaData().getURL();
-            val driver = DriverManager.getDriver(url);
-            assertThat(driver).isInstanceOf(DataCloudJDBCDriver.class);
-        }
-    }
-
     static boolean validateProperties() {
         AuthenticationSettings getSettings = getSettingsFromEnvironment();
         return getSettings != null;

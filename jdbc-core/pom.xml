@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.salesforce.datacloud</groupId>
         <artifactId>jdbc-parent</artifactId>
-        <version>0.25.0-SNAPSHOT</version>
+        <version>0.25.6-SNAPSHOT</version>
         <relativePath>../jdbc-parent</relativePath>
     </parent>
 

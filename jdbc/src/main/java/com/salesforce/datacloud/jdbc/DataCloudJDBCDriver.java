@@ -18,13 +18,8 @@ package com.salesforce.datacloud.jdbc;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Constants;
-import io.grpc.ManagedChannelBuilder;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
+import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 
-import java.net.URI;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -33,11 +28,10 @@ import java.sql.SQLException;
 import java.util.Properties;
 import java.util.logging.Logger;
 
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getBooleanOrDefault;
 
-@Slf4j
 public class DataCloudJDBCDriver implements Driver {
     private static Driver registeredDriver;
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DataCloudJDBCDriver.class);
 
     static {
         try {
@@ -71,9 +65,8 @@ public class DataCloudJDBCDriver implements Driver {
             return null;
         }
 
-        val direct = getBooleanOrDefault(info, Constants.DIRECT, false);
-        if (direct) {
-            return directConnection(url, info);
+        if (DirectDataCloudConnection.isDirect(info)) {
+            return DirectDataCloudConnection.of(url, info);
         }
 
         return DataCloudConnection.of(url, info);
@@ -107,21 +100,5 @@ public class DataCloudJDBCDriver implements Driver {
     @Override
     public Logger getParentLogger() {
         return null;
-    }
-
-    private static DataCloudConnection directConnection(String url, Properties properties) throws SQLException {
-        val skipAuth = getBooleanOrDefault(properties, Constants.DIRECT, false);
-        if (!skipAuth) {
-            throw new DataCloudJDBCException("Cannot establish direct connection without " + Constants.DIRECT + " enabled");
-        }
-
-        val connString = DataCloudConnectionString.of(url);
-        val uri = URI.create(connString.getLoginUrl());
-
-        log.info("Creating data cloud connection {}", uri);
-
-        ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(uri.getHost(), uri.getPort()).usePlaintext();
-
-        return DataCloudConnection.fromChannel(builder, properties);
     }
 }
