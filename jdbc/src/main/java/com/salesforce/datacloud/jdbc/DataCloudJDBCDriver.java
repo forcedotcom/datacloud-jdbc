@@ -21,8 +21,6 @@ import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import io.grpc.ManagedChannelBuilder;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 
 import java.net.URI;
 import java.sql.Connection;
@@ -35,9 +33,10 @@ import java.util.logging.Logger;
 
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getBooleanOrDefault;
 
-@Slf4j
+
 public class DataCloudJDBCDriver implements Driver {
     private static Driver registeredDriver;
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DataCloudJDBCDriver.class);
 
     static {
         try {
@@ -71,7 +70,7 @@ public class DataCloudJDBCDriver implements Driver {
             return null;
         }
 
-        val direct = getBooleanOrDefault(info, Constants.DIRECT, false);
+        final boolean direct = getBooleanOrDefault(info, Constants.DIRECT, false);
         if (direct) {
             return directConnection(url, info);
         }
@@ -110,13 +109,13 @@ public class DataCloudJDBCDriver implements Driver {
     }
 
     private static DataCloudConnection directConnection(String url, Properties properties) throws SQLException {
-        val skipAuth = getBooleanOrDefault(properties, Constants.DIRECT, false);
-        if (!skipAuth) {
+        final boolean direct = getBooleanOrDefault(properties, Constants.DIRECT, false);
+        if (!direct) {
             throw new DataCloudJDBCException("Cannot establish direct connection without " + Constants.DIRECT + " enabled");
         }
 
-        val connString = DataCloudConnectionString.of(url);
-        val uri = URI.create(connString.getLoginUrl());
+        final DataCloudConnectionString connString = DataCloudConnectionString.of(url);
+        final URI uri = URI.create(connString.getLoginUrl());
 
         log.info("Creating data cloud connection {}", uri);
 
