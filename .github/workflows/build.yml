@@ -27,6 +27,9 @@ jobs:
         run: |
           HYPER_VERSION=$(grep "<hyperapi.version>" pom.xml | sed -n 's/.*<hyperapi.version>\(.*\)<\/hyperapi.version>.*/\1/p')
           echo "HYPER_VERSION=$HYPER_VERSION" >> $GITHUB_ENV
+      - name: Ensure SNAPSHOT version
+        run: |
+          ./scripts/ensure-snapshot.sh
       - name: Cache hyperd
         uses: actions/cache@v3
         with:
@@ -36,7 +39,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
       - name: Maven package
-        run: mvn $MAVEN_ARGS clean package --file pom.xml
+        run: mvn $MAVEN_ARGS clean package deploy --file pom.xml
       - name: Upload hyper logs on failure
         if: ${{ failure() || steps.main-process.outcome == 'failure' }}
         uses: actions/upload-artifact@v4

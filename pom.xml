@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.salesforce.datacloud</groupId>
     <artifactId>jdbc-build</artifactId>
-    <version>0.25.0-SNAPSHOT</version>
+    <version>0.25.6-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Salesforce Data Cloud JDBC Build</name>
     <description>Salesforce Data Cloud JDBC Build</description>
@@ -28,7 +28,7 @@
         <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
-        <maven.deploy.skip>false</maven.deploy.skip>
+        <maven.deploy.skip>true</maven.deploy.skip>
         <nexus-staging-maven-plugin.version>1.7.0</nexus-staging-maven-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -172,10 +172,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <configuration>
-                    <updatePomFile>true</updatePomFile>
-                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
-                </configuration>
                 <executions>
                     <execution>
                         <id>flatten</id>
@@ -183,9 +179,16 @@
                             <goal>flatten</goal>
                         </goals>
                         <phase>process-resources</phase>
+                        <configuration>
+                            <updatePomFile>true</updatePomFile>
+                            <flattenMode>ossrh</flattenMode>
+                            <pomElements>
+                                <build>remove</build>
+                            </pomElements>
+                        </configuration>
                     </execution>
                     <execution>
-                        <id>flatten.clean</id>
+                        <id>flatten-clean</id>
                         <goals>
                             <goal>clean</goal>
                         </goals>
@@ -496,8 +499,9 @@
                         <configuration>
                             <serverId>ossrh</serverId>
                             <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                            <autoReleaseAfterClose>false</autoReleaseAfterClose>
                             <skipNexusStagingDeployMojo>${maven.deploy.skip}</skipNexusStagingDeployMojo>
+                            <!--                            <pomFile>.flattened-pom.xml</pomFile>-->
                         </configuration>
                     </plugin>
                     <plugin>
