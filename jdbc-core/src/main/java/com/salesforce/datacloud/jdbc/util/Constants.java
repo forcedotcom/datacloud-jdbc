@@ -32,6 +32,7 @@ public final class Constants {
     public static final String USER_NAME = "userName";
     public static final String PRIVATE_KEY = "privateKey";
     public static final String FORCE_SYNC = "force-sync";
+    public static final String DIRECT = "direct";
 
     // Http/grpc client constants
     public static final String AUTHORIZATION = "Authorization";

@@ -15,11 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.interceptor;
 
-import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
-
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
 import io.grpc.Metadata;
-import java.sql.SQLException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
@@ -27,11 +24,16 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+import java.sql.SQLException;
+
+import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
+
 @Slf4j
 @ToString
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class AuthorizationHeaderInterceptor implements HeaderMutatingClientInterceptor {
 
+    @FunctionalInterface
     public interface TokenSupplier {
         String getToken() throws SQLException;
 

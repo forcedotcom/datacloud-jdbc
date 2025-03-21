@@ -161,7 +161,7 @@ public class DataCloudQueryPolling {
                 return matched.get();
             }
 
-            log.warn("end of info stream, starting a new one if the timeout allows. last={}, remaining={}", last.get(), remaining(deadline));
+            log.info("end of info stream, starting a new one if the timeout allows. last={}, remaining={}", last.get(), remaining(deadline));
         }
 
         log.warn("exceeded deadline getting query info. last={}", last.get());

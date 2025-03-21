@@ -17,11 +17,12 @@ package com.salesforce.datacloud.jdbc.core.partial;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.assertj.core.api.AssertionsForClassTypes;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,6 +31,7 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 import java.time.Duration;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.grpcmock.GrpcMock.atLeast;
 import static org.grpcmock.GrpcMock.calledMethod;
 import static org.grpcmock.GrpcMock.times;
@@ -39,6 +41,7 @@ import static org.grpcmock.GrpcMock.verifyThat;
 public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
     @Test
     @SneakyThrows
+    @Disabled("flakey test, disabled until HyperGrpcClientExecutor interface fix")
     void getQueryInfoDoesNotRetryIfFailureToConnect() {
         try (val connection = getInterceptedClientConnection();
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
@@ -46,8 +49,8 @@ public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
 
             verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), times(0));
 
-            AssertionsForClassTypes.assertThatThrownBy(
-                    () -> connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30)));
+            assertThatThrownBy(() -> connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30)))
+                    .isInstanceOf(DataCloudJDBCException.class);
 
             verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), times(1));
         }

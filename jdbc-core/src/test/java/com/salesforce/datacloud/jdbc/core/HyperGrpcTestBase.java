@@ -20,8 +20,6 @@ import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerProcess;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
 import io.grpc.ManagedChannel;
@@ -117,18 +115,14 @@ public class HyperGrpcTestBase {
         val server = config.start();
         servers.add(server);
 
-        val auth = AuthorizationHeaderInterceptor.of(new HyperTestBase.NoopTokenSupplier());
         val channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.getPort())
                 .usePlaintext()
-                .intercept(auth)
                 .maxInboundMessageSize(64 * 1024 * 1024)
                 .build();
 
         channels.add(channel);
 
-        val mocked = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
-                .intercept(auth)
-                .usePlaintext();
+        val mocked = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName()).usePlaintext();
 
         GrpcMock.resetMappings();
 

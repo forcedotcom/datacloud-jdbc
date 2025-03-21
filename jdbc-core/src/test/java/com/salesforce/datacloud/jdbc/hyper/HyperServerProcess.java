@@ -15,19 +15,23 @@
  */
 package com.salesforce.datacloud.jdbc.hyper;
 
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
-import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.util.Constants;
 import io.grpc.ManagedChannelBuilder;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.junit.jupiter.api.Assertions;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
+import java.sql.DriverManager;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -36,10 +40,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.junit.jupiter.api.Assertions;
+
+import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
+import static java.util.Objects.requireNonNull;
 
 @Slf4j
 public class HyperServerProcess implements AutoCloseable {
@@ -136,23 +139,17 @@ public class HyperServerProcess implements AutoCloseable {
 
     @SneakyThrows
     public HyperGrpcClientExecutor getRawClient() {
-        val auth = AuthorizationHeaderInterceptor.of(new HyperTestBase.NoopTokenSupplier());
-        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", getPort())
-                .usePlaintext()
-                .intercept(auth);
+
+        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext();
         return HyperGrpcClientExecutor.of(channel, new Properties());
     }
 
     @SneakyThrows
     public DataCloudConnection getConnection(Map<String, String> connectionSettings) {
         val properties = new Properties();
+        properties.put(Constants.DIRECT, "true");
         properties.putAll(connectionSettings);
-        val auth = AuthorizationHeaderInterceptor.of(new HyperTestBase.NoopTokenSupplier());
-        log.info("Creating connection to port {}", getPort());
-        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", getPort())
-                .intercept(auth)
-                .usePlaintext();
-
-        return DataCloudConnection.fromChannel(channel, properties);
+        val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getPort();
+        return DriverManager.getConnection(url, properties).unwrap(DataCloudConnection.class);
     }
 }
