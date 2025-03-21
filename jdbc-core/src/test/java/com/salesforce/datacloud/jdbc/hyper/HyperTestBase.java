@@ -19,7 +19,7 @@ import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.util.Constants;
+import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.util.Map;
 import java.util.Properties;
@@ -82,8 +81,9 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
 
     @SneakyThrows
     public static DataCloudConnection getHyperQueryConnection(Properties properties) {
-        properties.put(Constants.DIRECT, "true");
-        return DriverManager.getConnection(CONNECTION_PROTOCOL + "//127.0.0.1:" + getInstancePort(), properties).unwrap(DataCloudConnection.class);
+        properties.put(DirectDataCloudConnection.DIRECT, "true");
+        val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getInstancePort();
+        return DirectDataCloudConnection.of(url, properties);
     }
 
     public static DataCloudConnection getHyperQueryConnection(Map<String, String> connectionSettings) {

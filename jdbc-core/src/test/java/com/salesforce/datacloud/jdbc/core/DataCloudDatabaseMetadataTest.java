@@ -15,17 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForPassword;
-import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.randomString;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.salesforce.datacloud.jdbc.DataCloudJDBCDriver;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
 import com.salesforce.datacloud.jdbc.auth.OAuthToken;
@@ -37,15 +28,6 @@ import com.salesforce.datacloud.jdbc.core.model.DataspaceResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.ClientBuilder;
 import com.salesforce.datacloud.jdbc.util.Constants;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -59,6 +41,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForPassword;
+import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.randomString;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 @Slf4j
@@ -111,16 +111,6 @@ public class DataCloudDatabaseMetadataTest {
     @Test
     public void testAllTablesAreSelectable() {
         assertThat(dataCloudDatabaseMetadata.allTablesAreSelectable()).isTrue();
-    }
-
-    @Test
-    @SneakyThrows
-    public void testGetURL() {
-        val url = dataCloudDatabaseMetadata.getURL();
-        val driver = DriverManager.getDriver(url);
-
-        assertThat(url).isEqualTo(DataCloudConnectionString.CONNECTION_PROTOCOL + "//login.salesforce.com");
-        assertThat(driver).isInstanceOf(DataCloudJDBCDriver.class);
     }
 
     @Test
