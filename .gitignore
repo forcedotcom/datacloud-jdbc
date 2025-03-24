@@ -18,9 +18,11 @@ buildNumber.properties
 .classpath
 jdbc-driver/src/main/resources/config/config.properties
 .flattened-pom.xml
+build
 
 *.iml
 pom.xml.bak
 .codegenie
 
 .vscode
+.gradle
