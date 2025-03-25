@@ -29,8 +29,20 @@ protobuf {
             it.plugins {
                 id("grpc") { }
             }
+            it.generateDescriptorSet = true
         }
     }
+}
+
+tasks.jar {
+    val tasks = sourceSets.map { sourceSet ->
+        from(sourceSet.output)
+        sourceSet.getCompileTaskName("java")
+    }.toTypedArray()
+
+    dependsOn(tasks)
+
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
 tasks.withType<JavaCompile> {

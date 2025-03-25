@@ -1,0 +1,82 @@
+name: Reusable Build and Publish
+
+on:
+  workflow_call:
+    inputs:
+      publish:
+        required: true
+        type: boolean
+        description: 'Whether to publish or not'
+      version:
+        required: false
+        type: string
+        description: 'Version to publish (tag name or snapshot)'
+        default: ''
+    # Optional: Add secrets if needed for publishing
+    secrets:
+      registry-token:
+        required: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Java with 8 and 17 toolchains
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: |
+            8
+            17
+          cache: gradle
+          cache-dependency-path: |
+            gradle/libs.versions.toml
+            gradle/wrapper/gradle-wrapper.properties
+            buildSrc/**/*.gradle.kts
+            **/build.gradle.kts
+      - name: Get hyperd version
+        run: |
+          HYPER_VERSION=$(sed -n 's/^hyperApiVersion=\(.*\)/\1/p' gradle.properties)
+          echo "HYPER_VERSION=$HYPER_VERSION" >> $GITHUB_ENV
+      - name: Cache hyperd zip
+        uses: actions/cache@v3
+        with:
+          path: build/hyper-${{ env.HYPER_VERSION }}.zip
+          key: ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
+          restore-keys: ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          dependency-graph: generate-and-submit
+          build-scan-publish: true
+          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          build-scan-terms-of-use-agree: "yes"
+      - name: Gradle build
+        id: build
+        run: ./gradlew clean build
+
+      - name: Publish on release
+        id: publish
+        if: ${{ inputs.publish && (success() || steps.build.outcome == 'success') }}
+        run: |
+          # Publishing logic
+          echo "Publishing version: '${{ inputs.version }}''"
+          # Use the registry token if needed
+          # ${{ secrets.registry-token }}
+        env:
+          MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
+          RELEASE_VERSION: ${{ inputs.version }}
+
+      - name: Upload hyper logs on failure
+        if: ${{ failure() || steps.build.outcome == 'failure' || steps.publish.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            **/build/reports/
+            build/hyperd/*.log
+          retention-days: 5

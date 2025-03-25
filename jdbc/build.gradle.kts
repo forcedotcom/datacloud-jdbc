@@ -1,5 +1,6 @@
 plugins {
     id("java-conventions")
+    id("publishing-conventions")
     alias(libs.plugins.shadow)
     alias(libs.plugins.lombok)
 }
@@ -7,7 +8,6 @@ plugins {
 dependencies {
     implementation(project(":jdbc-core"))
     implementation(project(":jdbc-grpc"))
-
     implementation(libs.slf4j.api)
 
     testImplementation(platform(libs.junit.bom))
@@ -23,10 +23,17 @@ tasks.shadowJar {
     archiveBaseName = "jdbc"
     archiveClassifier = "shaded"
 
-    duplicatesStrategy = DuplicatesStrategy.FAIL
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     mergeServiceFiles()
 
     relocate("org.apache", "$shadeBase.apache")
+    relocate("org.apache.calcite.avatica", "$shadeBase.org.apache.calcite.avatica") {
+        exclude("org.apache.calcite.avatica.remote.Driver")
+    }
+
+
+    relocate("okhttp3", "$shadeBase.okhttp3")
     relocate("io.netty", "$shadeBase.io.netty")
     relocate("io.grpc", "$shadeBase.io.grpc")
     relocate("com.fasterxml.jackson", "$shadeBase.com.fasterxml.jackson")
@@ -38,6 +45,8 @@ tasks.shadowJar {
     relocate("javax.annotation", "$shadeBase.javax.annotation")
     relocate("com.google.protobuf", "$shadeBase.com.google.protobuf")
     relocate("org.slf4j", "$shadeBase.org.slf4j")
+    relocate("lombok", "$shadeBase.lombok")
+    relocate("kotlin", "$shadeBase.kotlin")
 
     exclude("META-INF/LICENSE*")
     exclude("META-INF/NOTICE*")
@@ -55,7 +64,18 @@ tasks.shadowJar {
     exclude("pipes-fork-server-default-log4j2.xml")
     exclude("dependencies.properties")
 
-    minimize()
+//    minimize()
+
+//    minimize {
+//        exclude(dependency("org.apache.arrow:arrow-vector")) {
+//            exclude("codegen/**")
+//        }
+//
+//        // Exclude Driver class from avatica
+//        exclude(dependency('org.apache.calcite.avatica:avatica')) {
+//            exclude 'org/apache/calcite/avatica/**/Driver.class'
+//        }
+//    }
 }
 
 tasks.named("compileJava") {

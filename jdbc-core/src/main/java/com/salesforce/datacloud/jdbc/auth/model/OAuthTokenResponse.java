@@ -21,7 +21,7 @@ import lombok.Data;
 
 /**
  * The shape of this response can be found <a
- * href="https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_jwt_flow.htm&type=5">here</a> under the
+ * href="https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_jwt_flow.htm">here</a> under the
  * heading "Salesforce Grants a New Access Token"
  */
 @Data

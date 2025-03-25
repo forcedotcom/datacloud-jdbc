@@ -1,15 +1,22 @@
 plugins {
     id("java-conventions")
+    id("publishing-conventions")
     alias(libs.plugins.lombok)
 }
 
 description = "Salesforce Data Cloud JDBC Core"
 
 dependencies {
-    api(libs.slf4j.api)
     api(project(":jdbc-grpc"))
 
+    implementation(libs.slf4j.api)
+
+    implementation(libs.bundles.grpc)
+
+    implementation(libs.bundles.arrow)
+
     implementation(libs.apache.calcite.avatica)
+
     implementation(libs.guava)
 
     implementation(libs.jackson.databind)
@@ -20,19 +27,11 @@ dependencies {
 
     implementation(libs.apache.commons.lang3)
 
-    implementation(libs.apache.arrow.vector)
-    runtimeOnly(libs.apache.arrow.memory.netty)
-
-
     implementation(libs.jjwt.api)
+
     runtimeOnly(libs.jjwt.impl)
+
     runtimeOnly(libs.jjwt.jackson)
-
-    testImplementation(project(":jdbc-grpc"))
-
-    testImplementation(libs.grpc.netty)
-    testImplementation(libs.grpc.protobuf)
-    testImplementation(libs.grpc.stub)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.bundles.testing)
@@ -49,9 +48,10 @@ tasks.register("generateVersionProperties") {
         val propertiesFile = resourcesDir.get().file("driver-version.properties")
         propertiesFile.asFile.parentFile.mkdirs()
         propertiesFile.asFile.writeText("version=$version")
+        logger.lifecycle("written version to driver-version.properties. version=$version")
     }
 }
 
 tasks.named("compileJava") {
-    dependsOn("generateVersionProperties", ":jdbc-grpc:build")
+    dependsOn("generateVersionProperties", ":jdbc-grpc:compileJava")
 }

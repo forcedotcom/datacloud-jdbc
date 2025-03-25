@@ -1,7 +1,7 @@
 plugins {
     id("base-conventions")
     `java-library`
-    id("com.diffplug.spotless")
+//    id("com.diffplug.spotless")
 }
 
 repositories {
@@ -52,13 +52,11 @@ tasks.withType<Test>().configureEach {
     jvmArgs("-Xmx2g", "-Xms512m")
 }
 
-spotless {
-    ratchetFrom("origin/main")
-
-    java {
-        palantirJavaFormat()
-        licenseHeaderFile(layout.projectDirectory.file("../license-header.txt"))
-    }
-}
-
-
+//spotless {
+//    ratchetFrom("origin/main")
+//
+//    java {
+//        palantirJavaFormat()
+//        licenseHeaderFile(layout.projectDirectory.file("../license-header.txt"))
+//    }
+//}

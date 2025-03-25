@@ -58,26 +58,30 @@ tasks.register<Delete>("cleanupHyperZip") {
     )
 }
 
-tasks.withType<Test>().configureEach {
-    dependsOn("hyper")
-}
-
-spotless {
-//    val licenseHeaderTxt = layout.projectDirectory.file("license-header.txt")
-
-    ratchetFrom("origin/main")
-
-//    protobuf {
-//        buf()
-//        ratchetFrom("origin/main")
-//        licenseHeaderFile(licenseHeaderTxt)
-//    }
-
-    format("misc") {
-        target("*.md", ".gitattributes", ".gitignore")
-
-        trimTrailingWhitespace()
-        leadingSpacesToTabs()
-        endWithNewline()
+subprojects {
+    plugins.withId("java-conventions") {
+        tasks.withType<Test>().configureEach {
+            dependsOn(rootProject.tasks.named("hyper"))
+        }
     }
 }
+
+//spotless {
+////    val licenseHeaderTxt = layout.projectDirectory.file("license-header.txt")
+//
+//    ratchetFrom("origin/main")
+//
+////    protobuf {
+////        buf()
+////        ratchetFrom("origin/main")
+////        licenseHeaderFile(licenseHeaderTxt)
+////    }
+//
+//    format("misc") {
+//        target(".gitattributes", ".gitignore")
+//
+//        trimTrailingWhitespace()
+//        leadingSpacesToTabs()
+//        endWithNewline()
+//    }
+//}
