@@ -65,23 +65,3 @@ subprojects {
         }
     }
 }
-
-//spotless {
-////    val licenseHeaderTxt = layout.projectDirectory.file("license-header.txt")
-//
-//    ratchetFrom("origin/main")
-//
-////    protobuf {
-////        buf()
-////        ratchetFrom("origin/main")
-////        licenseHeaderFile(licenseHeaderTxt)
-////    }
-//
-//    format("misc") {
-//        target(".gitattributes", ".gitignore")
-//
-//        trimTrailingWhitespace()
-//        leadingSpacesToTabs()
-//        endWithNewline()
-//    }
-//}

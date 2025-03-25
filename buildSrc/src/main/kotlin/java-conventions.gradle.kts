@@ -51,12 +51,3 @@ tasks.withType<Test>().configureEach {
 
     jvmArgs("-Xmx2g", "-Xms512m")
 }
-
-//spotless {
-//    ratchetFrom("origin/main")
-//
-//    java {
-//        palantirJavaFormat()
-//        licenseHeaderFile(layout.projectDirectory.file("../license-header.txt"))
-//    }
-//}

@@ -34,26 +34,31 @@ protobuf {
     }
 }
 
+tasks.withType<JavaCompile> {
+    dependsOn("generateProto")
+}
+
+val protoJar by tasks.registering(Jar::class) {
+    group = LifecycleBasePlugin.BUILD_GROUP
+    archiveClassifier.set("proto")
+    from(project.projectDir.resolve("src/main/proto"))
+}
+
 tasks.jar {
     val tasks = sourceSets.map { sourceSet ->
         from(sourceSet.output)
         sourceSet.getCompileTaskName("java")
     }.toTypedArray()
 
-    dependsOn(tasks)
+    dependsOn(protoJar, *tasks)
 
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
-tasks.withType<JavaCompile> {
-    dependsOn("generateProto")
-}
-
-tasks.withType<Javadoc> {
-    dependsOn("protoJar")
-}
-
-tasks.register<Jar>("protoJar") {
-    archiveClassifier.set("proto")
-    from(project.projectDir.resolve("src/main/proto"))
+publishing {
+    publications {
+        named<MavenPublication>("mavenJava") {
+            artifact(protoJar)
+        }
+    }
 }
