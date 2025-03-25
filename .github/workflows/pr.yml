@@ -9,4 +9,4 @@ jobs:
   call-reusable-workflow:
     uses: './.github/workflows/reusable-build-publish.yml'
     with:
-      publish: false
+      publish: true

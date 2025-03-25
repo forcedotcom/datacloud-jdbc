@@ -1,7 +1,7 @@
 name: Build, test, and publish main as snapshot
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
@@ -10,4 +10,3 @@ jobs:
     uses: './.github/workflows/reusable-build-publish.yml'
     with:
       publish: true
-      version: ${{ github.event.release.tag_name }}

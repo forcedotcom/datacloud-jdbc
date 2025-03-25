@@ -30,6 +30,12 @@ Use the following command to build and test the driver:
 ./gradlew clean build
 ```
 
+To inspect the jars that will be published run and take a look in `build/maven-repo`:
+
+```shell
+./gradlew build publishAllPublicationsToRootBuildDirRepository
+```
+
 ## Usage
 
 > [!INFO]
