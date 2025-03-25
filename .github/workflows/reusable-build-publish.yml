@@ -12,10 +12,6 @@ on:
         type: string
         description: 'Version to publish (tag name or snapshot)'
         default: ''
-    # Optional: Add secrets if needed for publishing
-    secrets:
-      registry-token:
-        required: false
 
 jobs:
   build-and-publish:
@@ -29,12 +25,6 @@ jobs:
           java-version: |
             8
             17
-          cache: gradle
-          cache-dependency-path: |
-            gradle/libs.versions.toml
-            gradle/wrapper/gradle-wrapper.properties
-            buildSrc/**/*.gradle.kts
-            **/build.gradle.kts
       - name: Get hyperd version
         run: |
           HYPER_VERSION=$(sed -n 's/^hyperApiVersion=\(.*\)/\1/p' gradle.properties)
@@ -55,7 +45,6 @@ jobs:
       - name: Gradle build
         id: build
         run: ./gradlew clean build
-
       - name: Publish on release
         id: publish
         if: ${{ inputs.publish && (success() || steps.build.outcome == 'success') }}
@@ -63,10 +52,9 @@ jobs:
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_KEY_PASSWORD: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
           RELEASE_VERSION: ${{ inputs.version }}
-
       - name: Upload hyper logs on failure
         if: ${{ failure() || steps.build.outcome == 'failure' || steps.publish.outcome == 'failure' }}
         uses: actions/upload-artifact@v4

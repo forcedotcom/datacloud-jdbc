@@ -5,8 +5,9 @@ plugins {
     id("dev.adamko.dev-publish")
 }
 
-val signingKey: String? by project
-val signingPassword: String? by project
+val signingKey = System.getenv("GPG_SIGNING_KEY")
+val signingPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD")
+
 val revision: String by project
 
 val mavenCentralRepoName = "MavenCentral"
