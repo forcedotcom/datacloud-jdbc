@@ -1,5 +1,7 @@
 plugins {
+    id("base-conventions")
     `java-library`
+    idea
     id("com.palantir.java-format")
 }
 
@@ -25,15 +27,33 @@ tasks.withType<JavaCompile> {
     options.release.set(8)
 }
 
+tasks.withType<Javadoc> {
+    options.encoding = "UTF-8"
+    (options as StandardJavadocDocletOptions).apply {
+        addStringOption("Xdoclint:none", "-quiet")
+        addBooleanOption("html5", true)
+    }
+    onlyIf { gradle.taskGraph.hasTask("publish") }
+}
 
+tasks.named<Jar>("sourcesJar") {
+    onlyIf { gradle.taskGraph.hasTask("publish") }
+}
 
 tasks.withType<Test>().configureEach {
+
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+
     useJUnitPlatform()
 
     testLogging {
-        events("passed", "skipped", "failed")
-        // showExceptions true
-        // showStandardStreams true
-        // showStackTraces true
+        events("skipped", "failed")
+        showExceptions = true
+        showStandardStreams = true
+        showStackTraces = true
     }
+
+    jvmArgs("-Xmx2g", "-Xms512m")
 }

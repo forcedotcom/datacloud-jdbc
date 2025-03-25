@@ -59,7 +59,7 @@ public class HyperServerProcess implements AutoCloseable {
     public HyperServerProcess(HyperServerConfig.HyperServerConfigBuilder config) {
         log.info("starting hyperd, this might take a few seconds");
 
-        val executable = new File("../target/hyper/hyperd");
+        val executable = new File("../build/hyperd/hyperd");
         val yaml = Paths.get(requireNonNull(HyperTestBase.class.getResource("/hyper.yaml"))
                         .toURI())
                 .toFile();

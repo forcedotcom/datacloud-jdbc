@@ -96,7 +96,7 @@ class DriverVersionInfo {
     }
 
     static DriverVersionInfo of() {
-        val properties = ResourceReader.readResourceAsProperties("/version.properties");
+        val properties = ResourceReader.readResourceAsProperties("/driver-version.properties");
         return of(properties);
     }
 }

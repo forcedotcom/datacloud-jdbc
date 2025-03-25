@@ -1,4 +1,5 @@
 plugins {
+    id("base-conventions")
     signing
     `maven-publish`
     id("dev.adamko.dev-publish")

@@ -31,7 +31,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            target/.cache
+            build/hyper-*.zip
           key: ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
           restore-keys: |
             ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}

@@ -16,12 +16,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - name: Set up JDK 8
+      - name: Set up JDKs
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
+          java-version: |
+            8
+            17
           distribution: 'temurin'
-          cache: maven
+          cache: gradle
           server-id: ossrh
           server-username: 'MAVEN_USERNAME'
           server-password: 'MAVEN_PASSWORD'
@@ -30,32 +32,29 @@ jobs:
       - name: Get hyperd version
         id: evaluate-property
         run: |
-          HYPER_VERSION=$(grep "<hyperapi.version>" pom.xml | sed -n 's/.*<hyperapi.version>\(.*\)<\/hyperapi.version>.*/\1/p')
+          HYPER_VERSION=$(sed -n 's/^hyperApiVersion=\(.*\)/\1/p' gradle.properties)
           echo "HYPER_VERSION=$HYPER_VERSION" >> $GITHUB_ENV
-      - name: Ensure SNAPSHOT version
-        run: |
-          ./scripts/ensure-snapshot.sh
       - name: Cache hyperd
         uses: actions/cache@v3
         with:
           path: |
-            target/.cache
+            build/hyper-*.zip
           key: ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
           restore-keys: |
             ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
-      - name: Maven package
-        run: mvn $MAVEN_ARGS clean deploy -Prelease --file pom.xml
-        env:
-          MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
+#      - name: Maven package
+#        run: mvn $MAVEN_ARGS clean deploy -Prelease --file pom.xml
+#        env:
+#          MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
+#          MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+#          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
       - name: Upload hyper logs on failure
         if: ${{ failure() || steps.main-process.outcome == 'failure' }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: |
-            **/target/surefire-reports/*.txt
-            **/target/surefire-reports/*.xml
-            target/hyper/*.log
+            **/build/surefire-reports/*.txt
+            **/build/surefire-reports/*.xml
+            build/hyperd/*.log
           retention-days: 5

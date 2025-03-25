@@ -1,21 +1,23 @@
+import com.google.protobuf.gradle.*
+
 plugins {
     id("java-conventions")
     id("publishing-conventions")
+    id("com.google.osdetector")
     alias(libs.plugins.protobuf)
-    alias(libs.plugins.osdetector)
 }
 
 dependencies {
-    protobuf(project(":jdbc-proto"))
-
+    api(platform(libs.grpc.bom))
     api(libs.grpc.netty)
     api(libs.grpc.protobuf)
     api(libs.grpc.stub)
     api(libs.javax.annotation.javax.annotation.api)
 }
 
-description = "jdbc-grpc"
+description = "Salesforce Data Cloud Query v3 gRPC stubs"
 
+// Based on: https://github.com/google/protobuf-gradle-plugin/blob/master/examples/exampleKotlinDslProject
 protobuf {
     protoc {
         artifact = libs.protoc.get().toString()
@@ -26,16 +28,25 @@ protobuf {
         }
     }
     generateProtoTasks {
-        all().forEach { task ->
-            task.plugins {
-                create("grpc")
+        ofSourceSet("main").forEach {
+            it.plugins {
+                id("grpc") { }
             }
         }
+//        all().forEach { task ->
+//            task.plugins {
+//                create("grpc")
+//            }
+//        }
     }
 }
 
 tasks.withType<JavaCompile> {
     dependsOn("generateProto")
+}
+
+tasks.withType<Javadoc> {
+    dependsOn("protoJar")
 }
 
 tasks.register<Jar>("protoJar") {
