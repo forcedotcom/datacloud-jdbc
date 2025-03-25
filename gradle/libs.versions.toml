@@ -1,4 +1,5 @@
 # https://docs.gradle.org/current/userguide/platforms.html#sub::toml-dependencies-format
+# https://docs.gradle.org/current/userguide/version_catalogs.html
 
 [versions]
 com-fasterxml-jackson-core-jackson-databind = "2.18.0"
@@ -22,28 +23,30 @@ slf4j = "1.7.32"
 plugin-com-google-protobuf = "0.9.4"
 plugin-com-gradleup-shadow = "8.3.6"
 plugin-freefair-lombok = "8.13"
+plugin-build-buf = "0.10.2"
 
 
 [libraries]
-com-fasterxml-jackson-core-jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "com-fasterxml-jackson-core-jackson-databind" }
-com-google-guava = { module = "com.google.guava:guava", version.ref = "com-google-guava-guava" }
-com-squareup-okhttp3-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "com-squareup-okhttp3-mockwebserver" }
-com-squareup-okhttp3-okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "com-squareup-okhttp3-okhttp" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "com-fasterxml-jackson-core-jackson-databind" }
+guava = { module = "com.google.guava:guava", version.ref = "com-google-guava-guava" }
+okhttp3-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "com-squareup-okhttp3-mockwebserver" }
+okhttp3 = { module = "com.squareup.okhttp3:okhttp", version.ref = "com-squareup-okhttp3-okhttp" }
 grpc-bom = { module = "io.grpc:grpc-bom", version.ref = "grpc" }
 grpc-netty = { module = "io.grpc:grpc-netty", version.ref = "grpc" }
 grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
 grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
 grpc-protoc = { group = "io.grpc", name = "protoc-gen-grpc-java", version.ref = "grpc" }
 
-io-jsonwebtoken-jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
-io-jsonwebtoken-jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
-io-jsonwebtoken-jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
-javax-annotation-javax-annotation-api = { module = "javax.annotation:javax.annotation-api", version.ref = "javax-annotation-javax-annotation-api" }
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+
+javax-annotation-api = { module = "javax.annotation:javax.annotation-api", version.ref = "javax-annotation-javax-annotation-api" }
 failsafe = { module = "net.jodah:failsafe", version.ref = "net-jodah-failsafe" }
 apache-arrow-memory-netty = { module = "org.apache.arrow:arrow-memory-netty", version.ref = "arrow" }
 apache-arrow-vector = { module = "org.apache.arrow:arrow-vector", version.ref = "arrow" }
-apache-calcite-avatica-avatica = { module = "org.apache.calcite.avatica:avatica", version.ref = "org-apache-calcite-avatica-avatica" }
-apache-commons-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "org-apache-commons-commons-lang3" }
+apache-calcite-avatica = { module = "org.apache.calcite.avatica:avatica", version.ref = "org-apache-calcite-avatica-avatica" }
+apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "org-apache-commons-commons-lang3" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "org-assertj-assertj-core" }
 grpcmock = { module = "org.grpcmock:grpcmock-junit5", version.ref = "org-grpcmock-grpcmock-junit5" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "org-junit-bom" }
@@ -59,11 +62,13 @@ slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 protoc = { group = "com.google.protobuf", name = "protoc", version.ref = "protobuf" }
 
 [bundles]
+grpc = ["grpc-netty", "grpc-protobuf", "grpc-stub", "javax-annotation-api"]
 testing = ["junit-jupiter-base", "junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "junit-platform-launcher", "assertj", "slf4j-simple"]
-mocking = ["mockito-inline", "mockito-junit-jupiter", "grpcmock", "com-squareup-okhttp3-mockwebserver"]
+mocking = ["mockito-inline", "mockito-junit-jupiter", "grpcmock", "okhttp3-mockwebserver"]
 
 
 [plugins]
 protobuf = { id = "com.google.protobuf", version.ref = "plugin-com-google-protobuf" }
 shadow = { id = "com.gradleup.shadow", version.ref = "plugin-com-gradleup-shadow" }
 lombok = { id = "io.freefair.lombok", version.ref = "plugin-freefair-lombok"}
+buf = { id = "build.buf", version.ref = "plugin-build-buf" }

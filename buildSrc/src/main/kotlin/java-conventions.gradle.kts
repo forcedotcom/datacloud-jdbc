@@ -1,8 +1,7 @@
 plugins {
     id("base-conventions")
     `java-library`
-    idea
-    id("com.palantir.java-format")
+    id("com.diffplug.spotless")
 }
 
 repositories {
@@ -33,11 +32,6 @@ tasks.withType<Javadoc> {
         addStringOption("Xdoclint:none", "-quiet")
         addBooleanOption("html5", true)
     }
-    onlyIf { gradle.taskGraph.hasTask("publish") }
-}
-
-tasks.named<Jar>("sourcesJar") {
-    onlyIf { gradle.taskGraph.hasTask("publish") }
 }
 
 tasks.withType<Test>().configureEach {
@@ -57,3 +51,14 @@ tasks.withType<Test>().configureEach {
 
     jvmArgs("-Xmx2g", "-Xms512m")
 }
+
+spotless {
+    ratchetFrom("origin/main")
+
+    java {
+        palantirJavaFormat()
+        licenseHeaderFile(layout.projectDirectory.file("../license-header.txt"))
+    }
+}
+
+

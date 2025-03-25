@@ -9,10 +9,7 @@ plugins {
 
 dependencies {
     api(platform(libs.grpc.bom))
-    api(libs.grpc.netty)
-    api(libs.grpc.protobuf)
-    api(libs.grpc.stub)
-    api(libs.javax.annotation.javax.annotation.api)
+    implementation(libs.bundles.grpc)
 }
 
 description = "Salesforce Data Cloud Query v3 gRPC stubs"
@@ -33,11 +30,6 @@ protobuf {
                 id("grpc") { }
             }
         }
-//        all().forEach { task ->
-//            task.plugins {
-//                create("grpc")
-//            }
-//        }
     }
 }
 

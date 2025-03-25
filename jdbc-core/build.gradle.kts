@@ -6,57 +6,38 @@ plugins {
 description = "Salesforce Data Cloud JDBC Core"
 
 dependencies {
+    api(libs.slf4j.api)
     api(project(":jdbc-grpc"))
 
-    api(libs.com.fasterxml.jackson.core.jackson.databind)
-    api(libs.com.google.guava)
-    api(libs.com.squareup.okhttp3.okhttp)
-    api(libs.io.jsonwebtoken.jjwt.api)
-    api(libs.javax.annotation.javax.annotation.api)
-    api(libs.failsafe)
-    api(libs.apache.arrow.vector)
-    api(libs.apache.calcite.avatica.avatica)
-    api(libs.apache.commons.commons.lang3)
-    api(libs.slf4j.api)
+    implementation(libs.apache.calcite.avatica)
+    implementation(libs.guava)
 
-    runtimeOnly(libs.io.jsonwebtoken.jjwt.impl)
-    runtimeOnly(libs.io.jsonwebtoken.jjwt.jackson)
+    implementation(libs.jackson.databind)
+
+    implementation(libs.okhttp3)
+
+    implementation(libs.failsafe)
+
+    implementation(libs.apache.commons.lang3)
+
+    implementation(libs.apache.arrow.vector)
     runtimeOnly(libs.apache.arrow.memory.netty)
+
+
+    implementation(libs.jjwt.api)
+    runtimeOnly(libs.jjwt.impl)
+    runtimeOnly(libs.jjwt.jackson)
 
     testImplementation(project(":jdbc-grpc"))
 
     testImplementation(libs.grpc.netty)
     testImplementation(libs.grpc.protobuf)
     testImplementation(libs.grpc.stub)
-    testImplementation(libs.javax.annotation.javax.annotation.api)
-
-    testImplementation(libs.com.fasterxml.jackson.core.jackson.databind)
-    testImplementation(libs.com.google.guava)
-    testImplementation(libs.com.squareup.okhttp3.okhttp)
-    testImplementation(libs.io.jsonwebtoken.jjwt.api)
-    testImplementation(libs.javax.annotation.javax.annotation.api)
-    testImplementation(libs.failsafe)
-    testImplementation(libs.apache.arrow.vector)
-    testImplementation(libs.apache.calcite.avatica.avatica)
-    testImplementation(libs.apache.commons.commons.lang3)
-
-    testImplementation(libs.com.fasterxml.jackson.core.jackson.databind)
-    testImplementation(libs.com.google.guava)
-    testImplementation(libs.com.squareup.okhttp3.okhttp)
-    testImplementation(libs.io.jsonwebtoken.jjwt.api)
-    testImplementation(libs.javax.annotation.javax.annotation.api)
-    testImplementation(libs.failsafe)
-    testImplementation(libs.apache.arrow.vector)
-    testImplementation(libs.apache.calcite.avatica.avatica)
-    testImplementation(libs.apache.commons.commons.lang3)
-    testImplementation(libs.slf4j.api)
-
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.bundles.testing)
     testImplementation(libs.bundles.mocking)
-
-    testImplementation(libs.apache.arrow.memory.netty)
+    testImplementation(libs.bundles.grpc)
 }
 
 tasks.register("generateVersionProperties") {
@@ -72,5 +53,5 @@ tasks.register("generateVersionProperties") {
 }
 
 tasks.named("compileJava") {
-    dependsOn("generateVersionProperties")
+    dependsOn("generateVersionProperties", ":jdbc-grpc:build")
 }

@@ -8,14 +8,10 @@ dependencies {
     implementation(project(":jdbc-core"))
     implementation(project(":jdbc-grpc"))
 
-    api(libs.slf4j.api)
+    implementation(libs.slf4j.api)
 
     testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter.api)
-    testImplementation(libs.junit.jupiter.engine)
-    testImplementation(libs.junit.jupiter.params)
-    testImplementation(libs.junit.platform.launcher)
-    testImplementation(libs.assertj)
+    testImplementation(libs.bundles.testing)
 }
 
 description = "Salesforce Data Cloud JDBC Driver"

@@ -2,6 +2,7 @@ plugins {
     id("base-conventions")
     id("de.undercouch.download")
     id("com.google.osdetector")
+    id("com.diffplug.spotless")
 }
 
 val hyperApiVersion: String by project
@@ -59,4 +60,24 @@ tasks.register<Delete>("cleanupHyperZip") {
 
 tasks.withType<Test>().configureEach {
     dependsOn("hyper")
+}
+
+spotless {
+//    val licenseHeaderTxt = layout.projectDirectory.file("license-header.txt")
+
+    ratchetFrom("origin/main")
+
+//    protobuf {
+//        buf()
+//        ratchetFrom("origin/main")
+//        licenseHeaderFile(licenseHeaderTxt)
+//    }
+
+    format("misc") {
+        target("*.md", ".gitattributes", ".gitignore")
+
+        trimTrailingWhitespace()
+        leadingSpacesToTabs()
+        endWithNewline()
+    }
 }
