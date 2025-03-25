@@ -124,11 +124,12 @@ public class JDBCLimitsTest {
         // We can send requests of up to 64MB so this parameter should fail
         String value = StringUtils.repeat('x', 64 * 1024 * 1024);
         assertWithConnection(connection -> {
-            assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
-                val stmt = connection.prepareStatement("SELECT length(?)");
-                stmt.setString(1, value);
-                stmt.executeQuery();
-            });
+            try (val stmt = connection.prepareStatement("SELECT length(?)")) {
+                assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
+                    stmt.setString(1, value);
+                    stmt.executeQuery();
+                });
+            }
         });
     }
 

@@ -59,11 +59,7 @@ jobs:
       - name: Publish on release
         id: publish
         if: ${{ inputs.publish && (success() || steps.build.outcome == 'success') }}
-        run: |
-          # Publishing logic
-          echo "Publishing version: '${{ inputs.version }}''"
-          # Use the registry token if needed
-          # ${{ secrets.registry-token }}
+        run: ./gradlew publishAllPublicationsToMavenCentralRepository
         env:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}

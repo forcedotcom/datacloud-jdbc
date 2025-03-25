@@ -72,7 +72,6 @@ publishing {
             }
         }
         maven(rootDir.resolve("build/maven-repo")) {
-            // Run ./gradlew publishAllPublicationsToRootBuildDirRepository, and check `$rootDir/build/maven-repo/`
             name = "RootBuildDir"
         }
     }
