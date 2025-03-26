@@ -5,9 +5,6 @@ plugins {
     id("dev.adamko.dev-publish")
 }
 
-val signingKey = System.getenv("GPG_SIGNING_KEY")
-val signingPassword = System.getenv("GPG_SIGNING_KEY_PASSWORD")
-
 val revision: String by project
 
 val mavenCentralRepoName = "MavenCentral"
@@ -29,9 +26,13 @@ group = "com.salesforce.datacloud"
 version = ci.resolvedVersion
 
 signing {
+    val signingKeyId: String? by project
+    val signingKey: String? by project
+    val signingPassword: String? by project
+
     if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
-        useGpgCmd()
-        useInMemoryPgpKeys(signingKey, signingPassword)
+//        useGpgCmd()
+        useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
     }
     sign(publishing.publications)
     setRequired { ci.isRelease }
