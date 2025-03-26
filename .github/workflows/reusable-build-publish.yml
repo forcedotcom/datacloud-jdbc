@@ -54,8 +54,9 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
           # https://docs.gradle.org/current/userguide/signing_plugin.html#sec:in-memory-keys
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
+          # gpg --export-secret-key --armor <short id> | base64 | pbcopy
+          BASE64_ENCODED_ASCII_ARMORED_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
       - name: Upload hyper logs on failure
         if: ${{ failure() || steps.build.outcome == 'failure' || steps.publish.outcome == 'failure' }}
         uses: actions/upload-artifact@v4

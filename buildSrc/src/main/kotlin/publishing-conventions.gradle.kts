@@ -25,37 +25,33 @@ private val ci = object {
 group = "com.salesforce.datacloud"
 version = ci.resolvedVersion
 
-val signingKey: String? by project
-
-val signingPassword: String? by project
+val signingPassword: String? = System.getenv("SIGNING_PASSWORD")
+val signingKey: String? = System.getenv("BASE64_ENCODED_ASCII_ARMORED_SIGNING_KEY")?.let {
+    java.util.Base64.getDecoder().decode(it)
+}?.let {
+    String(it, java.nio.charset.StandardCharsets.UTF_8)
+}
 
 signing {
     if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
         useInMemoryPgpKeys(signingKey, signingPassword)
     }
     sign(publishing.publications)
-    setRequired { true }
-//    setRequired { ci.isRelease }
-
-
-//    publishing.publications.withType<MavenPublication>().configureEach {
-//        sign(this)
-//        project.logger.lifecycle("Signing publication: ${this.name} for project ${project.name}")
-//    }
+    setRequired { ci.isRelease }
 }
 
 gradle.taskGraph.whenReady {
-//    val isPublishingToMavenCentral = allTasks
-//        .filterIsInstance<PublishToMavenRepository>()
-//        .any { it.repository?.name == mavenCentralRepoName }
-//
-//    signing.setRequired({ isPublishingToMavenCentral || ci.isRelease })
-//
-//    tasks.withType<Sign> {
-//        val isPublishingToMavenCentralCustom = isPublishingToMavenCentral
-//        inputs.property("isPublishingToMavenCentral", isPublishingToMavenCentralCustom)
-//        onlyIf("publishing to Maven Central") { isPublishingToMavenCentralCustom }
-//    }
+    val isPublishingToMavenCentral = allTasks
+        .filterIsInstance<PublishToMavenRepository>()
+        .any { it.repository?.name == mavenCentralRepoName }
+
+    signing.setRequired({ isPublishingToMavenCentral || ci.isRelease })
+
+    tasks.withType<Sign> {
+        val isPublishingToMavenCentralCustom = isPublishingToMavenCentral
+        inputs.property("isPublishingToMavenCentral", isPublishingToMavenCentralCustom)
+        onlyIf("publishing to Maven Central") { isPublishingToMavenCentralCustom }
+    }
 }
 
 /**
