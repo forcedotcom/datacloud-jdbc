@@ -25,33 +25,32 @@ private val ci = object {
 group = "com.salesforce.datacloud"
 version = ci.resolvedVersion
 
-val signingPassword: String? = System.getenv("SIGNING_PASSWORD")
-val signingKey: String? = System.getenv("BASE64_ENCODED_ASCII_ARMORED_SIGNING_KEY")?.let {
-    java.util.Base64.getDecoder().decode(it)
-}?.let {
-    String(it, java.nio.charset.StandardCharsets.UTF_8)
-}
+val signingPassword: String? by project
+val signingKey: String? by project
 
 signing {
     if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
-        useInMemoryPgpKeys(signingKey, signingPassword)
+        val decoded = java.util.Base64.getDecoder().decode(signingKey)
+        val key = String(decoded, java.nio.charset.StandardCharsets.UTF_8)
+
+        useInMemoryPgpKeys(key, signingPassword)
     }
     sign(publishing.publications)
-    setRequired { ci.isRelease }
+    setRequired { true }
 }
 
 gradle.taskGraph.whenReady {
-    val isPublishingToMavenCentral = allTasks
-        .filterIsInstance<PublishToMavenRepository>()
-        .any { it.repository?.name == mavenCentralRepoName }
-
-    signing.setRequired({ isPublishingToMavenCentral || ci.isRelease })
-
-    tasks.withType<Sign> {
-        val isPublishingToMavenCentralCustom = isPublishingToMavenCentral
-        inputs.property("isPublishingToMavenCentral", isPublishingToMavenCentralCustom)
-        onlyIf("publishing to Maven Central") { isPublishingToMavenCentralCustom }
-    }
+//    val isPublishingToMavenCentral = allTasks
+//        .filterIsInstance<PublishToMavenRepository>()
+//        .any { it.repository?.name == mavenCentralRepoName }
+//
+//    signing.setRequired({ isPublishingToMavenCentral || ci.isRelease })
+//
+//    tasks.withType<Sign> {
+//        val isPublishingToMavenCentralCustom = isPublishingToMavenCentral
+//        inputs.property("isPublishingToMavenCentral", isPublishingToMavenCentralCustom)
+//        onlyIf("publishing to Maven Central") { isPublishingToMavenCentralCustom }
+//    }
 }
 
 /**
