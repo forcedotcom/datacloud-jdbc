@@ -24,6 +24,7 @@ java {
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.release.set(8)
+//    options.setIncremental(true)
 }
 
 tasks.withType<Javadoc> {
@@ -43,7 +44,7 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 
     testLogging {
-        events("skipped", "failed")
+        events("passed", "skipped", "failed")
         showExceptions = true
         showStandardStreams = true
         showStackTraces = true
