@@ -10,9 +10,9 @@ val revision: String by project
 val mavenCentralRepoName = "MavenCentral"
 
 private val ci = object {
-    private val snapshotVersion = when (val githubBuildNumber = System.getenv("GITHUB_RUN_NUMBER")) {
+    private val snapshotVersion = when (System.getenv("GITHUB_RUN_NUMBER")) {
         null -> "$revision-LOCAL"
-        else -> "$revision.${githubBuildNumber}-SNAPSHOT"
+        else -> "$revision-SNAPSHOT"
     }
 
     private val releaseVersion = System.getenv("RELEASE_VERSION")?.ifBlank { null }
