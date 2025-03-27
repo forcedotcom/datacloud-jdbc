@@ -48,7 +48,7 @@ tasks.register("generateVersionProperties") {
         val propertiesFile = resourcesDir.get().file("driver-version.properties")
         propertiesFile.asFile.parentFile.mkdirs()
         propertiesFile.asFile.writeText("version=$version")
-        logger.lifecycle("written version to driver-version.properties. version=$version")
+        logger.lifecycle("version written to driver-version.properties. version=$version")
     }
 }
 

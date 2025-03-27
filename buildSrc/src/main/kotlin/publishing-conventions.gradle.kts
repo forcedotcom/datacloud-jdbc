@@ -29,38 +29,26 @@ signing {
     val signingPassword: String? by project
     val signingKey: String? by project
 
-    val pw = "$signingPassword"
-    val key = "$signingKey"
-
-    logger.error("--- keylen: ${key.length}")
-    logger.error("--- pwlen: ${pw.length}")
-
-    val pwenv = System.getenv("ORG_GRADLE_PROJECT_signingPassword") ?: ""
-    val keyenv = System.getenv("ORG_GRADLE_PROJECT_signingKey") ?: ""
-
-    logger.error("--- keylen: ${pwenv.length}")
-    logger.error("--- pwlen: ${keyenv.length}")
-
-    if (key.isNotBlank() && pw.isNotBlank()) {
-        useInMemoryPgpKeys(key, pw)
+    if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
     }
 
     sign(publishing.publications)
-    setRequired { true }
+    setRequired { ci.isRelease }
 }
 
 gradle.taskGraph.whenReady {
-//    val isPublishingToMavenCentral = allTasks
-//        .filterIsInstance<PublishToMavenRepository>()
-//        .any { it.repository?.name == mavenCentralRepoName }
-//
-//    signing.setRequired({ isPublishingToMavenCentral || ci.isRelease })
-//
-//    tasks.withType<Sign> {
-//        val isPublishingToMavenCentralCustom = isPublishingToMavenCentral
-//        inputs.property("isPublishingToMavenCentral", isPublishingToMavenCentralCustom)
-//        onlyIf("publishing to Maven Central") { isPublishingToMavenCentralCustom }
-//    }
+    val isPublishingToMavenCentral = allTasks
+        .filterIsInstance<PublishToMavenRepository>()
+        .any { it.repository?.name == mavenCentralRepoName }
+
+    signing.setRequired({ isPublishingToMavenCentral || ci.isRelease })
+
+    tasks.withType<Sign> {
+        val isPublishingToMavenCentralCustom = isPublishingToMavenCentral
+        inputs.property("isPublishingToMavenCentral", isPublishingToMavenCentralCustom)
+        onlyIf("publishing to Maven Central") { isPublishingToMavenCentralCustom }
+    }
 }
 
 /**
@@ -76,8 +64,10 @@ publishing {
     repositories {
         maven {
             name = mavenCentralRepoName
-            val releasesRepoUrl = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
-            val snapshotsRepoUrl = uri("https://oss.sonatype.org/content/repositories/snapshots/")
+            val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+//            val releasesRepoUrl = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+//            val snapshotsRepoUrl = uri("https://oss.sonatype.org/content/repositories/snapshots/")
             url = if (ci.isRelease) releasesRepoUrl else snapshotsRepoUrl
             credentials {
                 username = System.getenv("OSSRH_USERNAME")
@@ -119,3 +109,15 @@ publishing {
         }
     }
 }
+
+abstract class MavenPublishLimiter : BuildService<BuildServiceParameters.None>
+
+val mavenPublishLimiter = gradle.sharedServices.registerIfAbsent("mavenPublishLimiter", MavenPublishLimiter::class) {
+    maxParallelUsages = 1
+}
+
+tasks.withType<PublishToMavenRepository>()
+    .matching { it.name.endsWith("PublicationTo${mavenCentralRepoName}Repository") }
+    .configureEach {
+        usesService(mavenPublishLimiter)
+    }

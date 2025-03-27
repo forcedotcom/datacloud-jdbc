@@ -17,6 +17,10 @@ on:
         required: false
       signing_key:
         required: false
+      publish_user:
+        required: false
+      publish_pass:
+        required: false
 
 
 jobs:
@@ -49,29 +53,27 @@ jobs:
           build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
           build-scan-terms-of-use-agree: "yes"
           gradle-version: "8.12"
-#      - name: Gradle build
-#        id: build
-#        run: gradle clean build -x test
+      - name: Gradle build
+        id: build
+        run: gradle clean build
       - name: Publish on release
         id: publish
         if: ${{ inputs.publish && (success() || steps.build.outcome == 'success') }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-          MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+          MAVEN_USERNAME: ${{ secrets.publish_user }}
+          MAVEN_PASSWORD: ${{ secrets.publish_pass }}
           # https://docs.gradle.org/current/userguide/signing_plugin.html#sec:in-memory-keys
           # https://central.sonatype.org/publish/requirements/gpg/#generating-a-key-pair
-          # gpg --export-secret-key --armor <short id> | pbcopy
+          # gpg --export-secret-key --armor <key id> | pbcopy
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.signing_key }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.signing_pass }}
-        run: |
-          gradle publishAllPublicationsToRootBuildDirRepository -x test
+        run: gradle publishAllPublicationsToMavenCentralRepository --no-scan
       - name: Upload hyper logs on failure
         if: ${{ failure() || steps.build.outcome == 'failure' || steps.publish.outcome == 'failure' }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: |
-            **/build/reports/
             build/hyperd/*.log
           retention-days: 5
