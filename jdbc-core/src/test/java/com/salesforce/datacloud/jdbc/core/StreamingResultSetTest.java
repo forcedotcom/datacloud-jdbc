@@ -66,7 +66,7 @@ public class StreamingResultSetTest {
     @Test
     public void testAsyncPreparedStatement() {
         withPrepared(none, preparedSql, (conn, stmt) -> {
-            stmt.execute();
+            stmt.executeAsyncQuery();
             conn.waitForResultsProduced(stmt.getQueryId(), Duration.ofSeconds(30));
             val rs = stmt.getResultSet().unwrap(DataCloudResultSet.class);
             assertThatResultSetIsCorrect(conn, rs);
@@ -77,7 +77,7 @@ public class StreamingResultSetTest {
     @Test
     public void testAsyncStatement() {
         withStatement(none, (conn, stmt) -> {
-            stmt.execute(regularSql);
+            stmt.executeAsyncQuery(regularSql);
             conn.waitForResultsProduced(stmt.getQueryId(), Duration.ofSeconds(30));
             val rs = stmt.getResultSet().unwrap(DataCloudResultSet.class);
             assertThatResultSetIsCorrect(conn, rs);

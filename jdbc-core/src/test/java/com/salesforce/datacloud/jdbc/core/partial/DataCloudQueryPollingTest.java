@@ -84,11 +84,11 @@ class DataCloudQueryPollingTest {
 
     @SneakyThrows
     @Test
-    void userShouldWaitForQueryBeforeAccessingResultSet() {
+    void userShouldWaitForQueryBeforeAccessingAsyncResultSet() {
         try (val connection = getHyperQueryConnection();
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
 
-            statement.execute("SELECT pg_sleep(1000)");
+            statement.executeAsyncQuery("SELECT pg_sleep(1000)");
             assertThatThrownBy(statement::getResultSet).hasMessageContaining("query results were not ready");
         }
     }

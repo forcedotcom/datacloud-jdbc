@@ -116,10 +116,15 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
                 .build();
     }
 
-    @Override
-    public boolean execute() throws SQLException {
+    public boolean executeAsyncQuery() throws SQLException {
         val client = getQueryExecutor();
         listener = AsyncQueryStatusListener.of(sql, client, getQueryTimeoutDuration());
+        return true;
+    }
+
+    @Override
+    public boolean execute() throws SQLException {
+        resultSet = executeQuery();
         return true;
     }
 

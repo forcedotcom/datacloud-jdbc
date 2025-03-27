@@ -41,9 +41,9 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelStatementQuery() {
         try (val server = configWithSleep.start();
-             val statement = server.getConnection().createStatement();
+             val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class);
              val client = server.getRawClient()) {
-            statement.execute("select pg_sleep(5000000);");
+            statement.executeAsyncQuery("select pg_sleep(5000000);");
 
             val queryId = statement.unwrap(DataCloudStatement.class).getQueryId();
             val a = client.getQueryStatus(queryId).findFirst().get();
@@ -67,7 +67,7 @@ public class DataCloudStatementFunctionalTest {
              val client = server.getRawClient()) {
 
             statement.setInt(1, 5000000);
-            statement.execute();
+            statement.executeAsyncQuery();
 
             val queryId = statement.getQueryId();
             val a = client.getQueryStatus(queryId).findFirst().get();
@@ -88,7 +88,7 @@ public class DataCloudStatementFunctionalTest {
              val statement = connection.createStatement().unwrap(DataCloudStatement.class);
              val client = server.getRawClient()) {
 
-            statement.execute("select pg_sleep(5000000);");
+            statement.executeAsyncQuery("select pg_sleep(5000000);");
             val queryId = statement.getQueryId();
 
             val a = client.getQueryStatus(queryId).findFirst().get();

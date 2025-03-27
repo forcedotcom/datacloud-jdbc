@@ -100,7 +100,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     public boolean execute(String sql) throws SQLException {
         log.debug("Entering execute");
         val client = getQueryExecutor();
-        listener = AsyncQueryStatusListener.of(sql, client, getQueryTimeoutDuration());
+        resultSet = executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
         return true;
     }
 
@@ -140,7 +140,6 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         return (DataCloudResultSet) resultSet;
     }
 
-    @Deprecated
     public DataCloudStatement executeAsyncQuery(String sql) throws SQLException {
         log.debug("Entering executeAsyncQuery");
         val client = getQueryExecutor();

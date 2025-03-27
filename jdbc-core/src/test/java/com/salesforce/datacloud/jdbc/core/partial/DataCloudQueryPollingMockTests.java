@@ -70,7 +70,7 @@ public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
         try (val connection = getInterceptedClientConnection(configWithSleep)) {
             val statement = connection.createStatement().unwrap(DataCloudStatement.class);
 
-            statement.execute(query);
+            statement.executeAsyncQuery(query);
             val queryId = statement.getQueryId();
 
             verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), times(0));
