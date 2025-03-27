@@ -16,7 +16,6 @@ dependencies {
 
 description = "Salesforce Data Cloud JDBC Driver"
 
-// https://gradleup.com/shadow/
 tasks.shadowJar {
     val shadeBase = "com.salesforce.datacloud.jdbc.internal.shaded"
 
@@ -25,14 +24,17 @@ tasks.shadowJar {
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    mergeServiceFiles()
+    mergeServiceFiles {
+        exclude("META-INF/services/java.sql.Driver")
+    }
 
-    relocate("org.apache", "$shadeBase.apache")
     relocate("org.apache.calcite.avatica", "$shadeBase.org.apache.calcite.avatica") {
         exclude("org.apache.calcite.avatica.remote.Driver")
     }
 
-
+    relocate("org.apache", "$shadeBase.org.apache")
+    relocate("salesforce.cdp.hyperdb", "$shadeBase.salesforce.cdp.hyperdb")
+    relocate("okio", "$shadeBase.okio")
     relocate("okhttp3", "$shadeBase.okhttp3")
     relocate("io.netty", "$shadeBase.io.netty")
     relocate("io.grpc", "$shadeBase.io.grpc")
@@ -63,19 +65,8 @@ tasks.shadowJar {
     exclude("storage.v1.json")
     exclude("pipes-fork-server-default-log4j2.xml")
     exclude("dependencies.properties")
-
-//    minimize()
-
-//    minimize {
-//        exclude(dependency("org.apache.arrow:arrow-vector")) {
-//            exclude("codegen/**")
-//        }
-//
-//        // Exclude Driver class from avatica
-//        exclude(dependency('org.apache.calcite.avatica:avatica')) {
-//            exclude 'org/apache/calcite/avatica/**/Driver.class'
-//        }
-//    }
+    exclude("**/*.proto")
+    exclude("arrow-git.properties")
 }
 
 tasks.named("compileJava") {

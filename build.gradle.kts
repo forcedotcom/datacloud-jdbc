@@ -50,14 +50,6 @@ tasks.register<Copy>("hyper") {
     }
 }
 
-tasks.register<Delete>("cleanupHyperZip") {
-    group = "hyper"
-    delete(
-        project.layout.buildDirectory.file(hyperZipName),
-        project.layout.buildDirectory.dir("hyperd"),
-    )
-}
-
 subprojects {
     plugins.withId("java-conventions") {
         tasks.withType<Test>().configureEach {
