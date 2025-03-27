@@ -61,8 +61,8 @@ jobs:
         if: ${{ inputs.publish && (success() || steps.build.outcome == 'success') }}
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-          MAVEN_USERNAME: ${{ secrets.publish_user }}
-          MAVEN_PASSWORD: ${{ secrets.publish_pass }}
+          OSSRH_USERNAME: ${{ secrets.publish_user }}
+          OSSRH_PASSWORD: ${{ secrets.publish_pass }}
           # https://docs.gradle.org/current/userguide/signing_plugin.html#sec:in-memory-keys
           # https://central.sonatype.org/publish/requirements/gpg/#generating-a-key-pair
           # gpg --export-secret-key --armor <key id> | pbcopy

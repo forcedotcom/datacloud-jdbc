@@ -22,9 +22,13 @@ java {
 }
 
 tasks.withType<JavaCompile> {
+    javaCompiler = javaToolchains.compilerFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
     options.encoding = "UTF-8"
-    options.release.set(8)
-//    options.setIncremental(true)
+    options.setIncremental(true)
+//    options.release.set(8)
+    // This only works if we're on a newer toolchain, but java 8 is faster to build while we use lombok
 }
 
 tasks.withType<Javadoc> {
