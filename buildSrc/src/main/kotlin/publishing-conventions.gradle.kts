@@ -35,9 +35,16 @@ signing {
     logger.error("--- keylen: ${key.length}")
     logger.error("--- pwlen: ${pw.length}")
 
+    val pwenv = System.getenv("ORG_GRADLE_PROJECT_signingPassword") ?: ""
+    val keyenv = System.getenv("ORG_GRADLE_PROJECT_signingKey") ?: ""
+
+    logger.error("--- keylen: ${pwenv.length}")
+    logger.error("--- pwlen: ${keyenv.length}")
+
     if (key.isNotBlank() && pw.isNotBlank()) {
         useInMemoryPgpKeys(key, pw)
     }
+
     sign(publishing.publications)
     setRequired { true }
 }

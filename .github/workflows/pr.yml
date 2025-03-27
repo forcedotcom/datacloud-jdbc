@@ -10,3 +10,7 @@ jobs:
     uses: './.github/workflows/reusable-build-publish.yml'
     with:
       publish: true
+    secrets:
+      signing_key: ${{ secrets.GPG_SIGNING_KEY }}
+      signing_pass: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
+
