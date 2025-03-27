@@ -42,22 +42,23 @@ jobs:
           build-scan-publish: true
           build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
           build-scan-terms-of-use-agree: "yes"
-      - name: Gradle build
-        id: build
-        run: ./gradlew clean build -x test
+#      - name: Gradle build
+#        id: build
+#        run: ./gradlew clean build -x test
       - name: Publish on release
         id: publish
         if: ${{ inputs.publish && (success() || steps.build.outcome == 'success') }}
-        run: |
-          ./gradlew publishAllPublicationsToRootBuildDirRepository --max-workers 1 -x test
         env:
           RELEASE_VERSION: ${{ inputs.version }}
           MAVEN_USERNAME: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
           # https://docs.gradle.org/current/userguide/signing_plugin.html#sec:in-memory-keys
-          # gpg --export-secret-key --armor <short id> | base64 | pbcopy
-          ORG_GRADLE_PROJECT_signingKey: '${{ secrets.GPG_SIGNING_KEY }}'
-          ORG_GRADLE_PROJECT_signingPassword: '${{ secrets.GPG_SIGNING_KEY_PASSWORD }}'
+          # https://central.sonatype.org/publish/requirements/gpg/#generating-a-key-pair
+          # gpg --export-secret-key --armor <short id> | pbcopy
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
+        run: |
+          ./gradlew publishAllPublicationsToRootBuildDirRepository -x test
       - name: Upload hyper logs on failure
         if: ${{ failure() || steps.build.outcome == 'failure' || steps.publish.outcome == 'failure' }}
         uses: actions/upload-artifact@v4

@@ -25,15 +25,18 @@ private val ci = object {
 group = "com.salesforce.datacloud"
 version = ci.resolvedVersion
 
-val signingPassword: String? by project
-val signingKey: String? by project
-
 signing {
-    if (!signingKey.isNullOrBlank() && !signingPassword.isNullOrBlank()) {
-        val decoded = java.util.Base64.getDecoder().decode(signingKey)
-        val key = String(decoded, java.nio.charset.StandardCharsets.UTF_8)
+    val signingPassword: String? by project
+    val signingKey: String? by project
 
-        useInMemoryPgpKeys(key, signingPassword)
+    val pw = "$signingPassword"
+    val key = "$signingKey"
+
+    logger.error("--- keylen: ${key.length}")
+    logger.error("--- pwlen: ${pw.length}")
+
+    if (key.isNotBlank() && pw.isNotBlank()) {
+        useInMemoryPgpKeys(key, pw)
     }
     sign(publishing.publications)
     setRequired { true }
