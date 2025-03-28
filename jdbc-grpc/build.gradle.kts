@@ -4,11 +4,19 @@ plugins {
     id("java-conventions")
     id("publishing-conventions")
     id("com.google.osdetector")
+    id("com.diffplug.spotless")
     alias(libs.plugins.protobuf)
 }
 
 dependencies {
+    constraints {
+        implementation(libs.netty.common) {
+            because("https://www.mend.io/vulnerability-database/CVE-2024-47535")
+        }
+    }
+
     api(platform(libs.grpc.bom))
+
     implementation(libs.bundles.grpc)
 }
 

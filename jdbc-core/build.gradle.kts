@@ -5,6 +5,16 @@ plugins {
 }
 
 dependencies {
+    constraints {
+        implementation(libs.netty.common) {
+            because("https://www.mend.io/vulnerability-database/CVE-2024-47535")
+        }
+
+        implementation(libs.netty.handler) {
+            because("https://www.mend.io/vulnerability-database/CVE-2025-24970")
+        }
+    }
+
     api(project(":jdbc-grpc"))
 
     implementation(libs.slf4j.api)

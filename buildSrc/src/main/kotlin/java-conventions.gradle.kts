@@ -1,7 +1,7 @@
 plugins {
     id("base-conventions")
     `java-library`
-//    id("com.diffplug.spotless")
+    id("com.diffplug.spotless")
 }
 
 repositories {
