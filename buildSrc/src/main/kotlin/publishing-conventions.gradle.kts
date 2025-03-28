@@ -15,7 +15,10 @@ private val ci = object {
         else -> "$revision-SNAPSHOT"
     }
 
-    private val releaseVersion = System.getenv("RELEASE_VERSION")?.ifBlank { null }
+    private val releaseVersion = System.getenv("RELEASE_VERSION")?.ifBlank {
+        logger.lifecycle("env.RELEASE_VERSION not present, assuming snapshot")
+        null
+    }
 
     val isRelease = releaseVersion != null
 
