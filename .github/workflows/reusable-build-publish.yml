@@ -52,10 +52,16 @@ jobs:
           build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
           build-scan-terms-of-use-agree: "yes"
           gradle-version: "8.12"
-          cache-disabled: ${{ inputs.version != '' }}
       - name: Gradle build
         id: build
-        run: gradle clean build
+        run: |
+          if [[ "${{ inputs.version }}" != "" ]]; then
+            echo "Version specified, running clean build with no cache for ${{ inputs.version }}"
+            gradle clean build --no-build-cache --rerun-tasks
+          else
+            echo "No version specified, running normal build"
+            gradle clean build
+          fi
         env:
           RELEASE_VERSION: ${{ inputs.version }}
       - name: Publish on release
