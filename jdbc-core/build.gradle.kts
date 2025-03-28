@@ -4,8 +4,6 @@ plugins {
     alias(libs.plugins.lombok)
 }
 
-description = "Salesforce Data Cloud JDBC Core"
-
 dependencies {
     api(project(":jdbc-grpc"))
 

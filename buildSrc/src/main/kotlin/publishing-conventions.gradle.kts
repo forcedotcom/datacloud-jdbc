@@ -81,8 +81,9 @@ publishing {
     }
 
     publications.withType<MavenPublication>().configureEach {
+        updateName()
+        updateDescription()
         pom {
-            description.set(project.description)
             url.set("https://github.com/forcedotcom/datacloud-jdbc")
 
             scm {
@@ -122,3 +123,36 @@ tasks.withType<PublishToMavenRepository>()
     .configureEach {
         usesService(mavenPublishLimiter)
     }
+
+fun MavenPublication.updateName() {
+    val name = when (this.artifactId) {
+        "jdbc" -> "Salesforce Data Cloud JDBC Driver"
+        "jdbc-core" -> "Salesforce Data Cloud JDBC Core"
+        "jdbc-grpc" -> "Salesforce Data Cloud JDBC gRPC"
+        else -> {
+            logger.lifecycle("Unknown project, can't update name. artifactId=${this.artifactId}")
+            null
+        }
+    }
+
+    if (name != null) {
+        pom { this.name.set(name) }
+    }
+}
+
+
+fun MavenPublication.updateDescription() {
+    val description = when (this.artifactId) {
+        "jdbc" -> "Salesforce Data Cloud JDBC driver"
+        "jdbc-core" -> "Salesforce Data Cloud JDBC core implementation"
+        "jdbc-grpc" -> "Salesforce Data Cloud Query v3 API gRPC stubs"
+        else -> {
+            logger.lifecycle("Unknown project, can't update description. artifactId=${this.artifactId}")
+            null
+        }
+    }
+
+    if (description != null) {
+        pom { this.description.set(description) }
+    }
+}

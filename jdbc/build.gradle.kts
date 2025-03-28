@@ -14,8 +14,6 @@ dependencies {
     testImplementation(libs.bundles.testing)
 }
 
-description = "Salesforce Data Cloud JDBC Driver"
-
 tasks.shadowJar {
     val shadeBase = "com.salesforce.datacloud.jdbc.internal.shaded"
 

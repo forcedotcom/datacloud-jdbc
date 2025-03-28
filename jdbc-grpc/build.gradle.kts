@@ -12,8 +12,6 @@ dependencies {
     implementation(libs.bundles.grpc)
 }
 
-description = "Salesforce Data Cloud Query v3 gRPC stubs"
-
 // Based on: https://github.com/google/protobuf-gradle-plugin/blob/master/examples/exampleKotlinDslProject
 protobuf {
     protoc {
