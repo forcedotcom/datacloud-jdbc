@@ -38,11 +38,13 @@ tasks.withType<JavaCompile> {
 
 val protoJar by tasks.registering(Jar::class) {
     group = LifecycleBasePlugin.BUILD_GROUP
-    archiveClassifier.set("proto")
+    archiveBaseName.set("jdbc-proto")
     from(project.projectDir.resolve("src/main/proto"))
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.jar {
+    archiveBaseName.set("jdbc-grpc")
     val tasks = sourceSets.map { sourceSet ->
         from(sourceSet.output)
         sourceSet.getCompileTaskName("java")
@@ -50,13 +52,30 @@ tasks.jar {
 
     dependsOn(protoJar, *tasks)
 
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+val emptySourcesJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("sources")
+    archiveBaseName.set("jdbc-proto")
+}
+
+val emptyJavadocJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("javadoc")
+    archiveBaseName.set("jdbc-proto")
 }
 
 publishing {
     publications {
         named<MavenPublication>("mavenJava") {
+            artifactId = "jdbc-grpc"
+        }
+
+        create<MavenPublication>("mavenProto") {
+            artifactId = "jdbc-proto"
             artifact(protoJar)
+            artifact(emptySourcesJar)
+            artifact(emptyJavadocJar)
         }
     }
 }

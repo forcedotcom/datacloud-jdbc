@@ -61,7 +61,6 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
-//            artifact(tasks())
         }
     }
     repositories {
@@ -129,6 +128,7 @@ fun MavenPublication.updateName() {
         "jdbc" -> "Salesforce Data Cloud JDBC Driver"
         "jdbc-core" -> "Salesforce Data Cloud JDBC Core"
         "jdbc-grpc" -> "Salesforce Data Cloud JDBC gRPC"
+        "jdbc-proto" -> "Salesforce Data Cloud JDBC Proto Files"
         else -> {
             logger.lifecycle("Unknown project, can't update name. artifactId=${this.artifactId}")
             null
@@ -146,6 +146,7 @@ fun MavenPublication.updateDescription() {
         "jdbc" -> "Salesforce Data Cloud JDBC driver"
         "jdbc-core" -> "Salesforce Data Cloud JDBC core implementation"
         "jdbc-grpc" -> "Salesforce Data Cloud Query v3 API gRPC stubs"
+        "jdbc-proto" -> "Salesforce Data Cloud Query API proto files"
         else -> {
             logger.lifecycle("Unknown project, can't update description. artifactId=${this.artifactId}")
             null
