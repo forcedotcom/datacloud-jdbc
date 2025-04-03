@@ -28,3 +28,4 @@ pom.xml.bak
 .gradle
 .hyper
 .kotlin
+bin

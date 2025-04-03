@@ -4,7 +4,7 @@ plugins {
 }
 
 val hyperApiVersion: String by project
-val hypzerZipPath = ".hyper/hyper-$hyperApiVersion.zip"
+val hyperZipPath = ".hyper/hyper-$hyperApiVersion.zip"
 
 tasks.register<de.undercouch.gradle.tasks.download.Download>("downloadHyper") {
     group = "hyper"
@@ -18,7 +18,7 @@ tasks.register<de.undercouch.gradle.tasks.download.Download>("downloadHyper") {
     val url = "$urlBase.$hyperApiVersion.zip"
 
     src(url)
-    dest(project.layout.projectDirectory.file(hypzerZipPath))
+    dest(project.layout.projectDirectory.file(hyperZipPath))
     overwrite(false)
 }
 
@@ -29,7 +29,7 @@ tasks.register<Copy>("extractHyper") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     includeEmptyDirs = false
 
-    from(zipTree(project.layout.projectDirectory.file(hypzerZipPath))) {
+    from(zipTree(project.layout.projectDirectory.file(hyperZipPath))) {
         include("**/lib/hyper/hyperd")
         include("**/lib/hyper/hyperd.exe")
         include("**/lib/**/*.dylib")
