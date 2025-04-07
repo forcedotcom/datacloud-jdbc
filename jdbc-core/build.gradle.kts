@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-    api(project(":jdbc-grpc"))
+    compileOnly(project(":jdbc-grpc"))
 
     implementation(libs.slf4j.api)
 
@@ -31,6 +31,7 @@ dependencies {
 
     runtimeOnly(libs.jjwt.jackson)
 
+    testImplementation(project(":jdbc-grpc"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.bundles.testing)
     testImplementation(libs.bundles.mocking)

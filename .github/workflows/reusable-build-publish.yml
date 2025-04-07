@@ -57,10 +57,10 @@ jobs:
         run: |
           if [[ "${{ inputs.version }}" != "" ]]; then
             echo "Version specified, running clean build with no cache for ${{ inputs.version }}"
-            gradle clean build --no-build-cache --rerun-tasks
+            gradle clean check --no-build-cache --rerun-tasks
           else
             echo "No version specified, running normal build"
-            gradle clean build
+            gradle clean check 
           fi
         env:
           RELEASE_VERSION: ${{ inputs.version }}
@@ -77,6 +77,9 @@ jobs:
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.signing_key }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.signing_pass }}
         run: gradle publishAllPublicationsToMavenCentralRepository --no-scan --no-configuration-cache
+      - name: Look at files in verification
+        if: ${{ failure() || steps.build.outcome == 'failure' || steps.publish.outcome == 'failure' }}
+        run: ls -lR verification
       - name: Upload hyper logs on failure
         if: ${{ failure() || steps.build.outcome == 'failure' || steps.publish.outcome == 'failure' }}
         uses: actions/upload-artifact@v4

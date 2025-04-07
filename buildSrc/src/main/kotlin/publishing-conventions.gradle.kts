@@ -1,32 +1,13 @@
 plugins {
     id("base-conventions")
+    id("version-conventions")
     signing
     `maven-publish`
     id("dev.adamko.dev-publish")
 }
 
-val revision: String by project
-
 val mavenCentralRepoName = "MavenCentral"
-
-private val ci = object {
-    private val snapshotVersion = when (System.getenv("GITHUB_RUN_NUMBER")) {
-        null -> "$revision-LOCAL"
-        else -> "$revision-SNAPSHOT"
-    }
-
-    private val releaseVersion = System.getenv("RELEASE_VERSION")?.ifBlank {
-        logger.lifecycle("env.RELEASE_VERSION not present, assuming snapshot")
-        null
-    }
-
-    val isRelease = releaseVersion != null
-
-    val resolvedVersion = releaseVersion ?: snapshotVersion
-}
-
-group = "com.salesforce.datacloud"
-version = ci.resolvedVersion
+val isRelease = !System.getenv("RELEASE_VERSION").isNullOrBlank()
 
 signing {
     val signingPassword: String? by project
@@ -37,7 +18,7 @@ signing {
     }
 
     sign(publishing.publications)
-    setRequired { ci.isRelease }
+    setRequired { isRelease }
 }
 
 gradle.taskGraph.whenReady {
@@ -45,7 +26,7 @@ gradle.taskGraph.whenReady {
         .filterIsInstance<PublishToMavenRepository>()
         .any { it.repository?.name == mavenCentralRepoName }
 
-    signing.setRequired({ isPublishingToMavenCentral || ci.isRelease })
+    signing.setRequired({ isPublishingToMavenCentral || isRelease })
 
     tasks.withType<Sign> {
         val isPublishingToMavenCentralCustom = isPublishingToMavenCentral
@@ -61,7 +42,6 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
-//            artifact(tasks())
         }
     }
     repositories {
@@ -69,7 +49,7 @@ publishing {
             name = mavenCentralRepoName
             val releasesRepoUrl = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
             val snapshotsRepoUrl = uri("https://oss.sonatype.org/content/repositories/snapshots/")
-            url = if (ci.isRelease) releasesRepoUrl else snapshotsRepoUrl
+            url = if (isRelease) releasesRepoUrl else snapshotsRepoUrl
             credentials {
                 username = System.getenv("OSSRH_USERNAME")
                 password = System.getenv("OSSRH_PASSWORD")
@@ -129,6 +109,7 @@ fun MavenPublication.updateName() {
         "jdbc" -> "Salesforce Data Cloud JDBC Driver"
         "jdbc-core" -> "Salesforce Data Cloud JDBC Core"
         "jdbc-grpc" -> "Salesforce Data Cloud JDBC gRPC"
+        "jdbc-proto" -> "Salesforce Data Cloud JDBC Proto Files"
         else -> {
             logger.lifecycle("Unknown project, can't update name. artifactId=${this.artifactId}")
             null
@@ -146,6 +127,7 @@ fun MavenPublication.updateDescription() {
         "jdbc" -> "Salesforce Data Cloud JDBC driver"
         "jdbc-core" -> "Salesforce Data Cloud JDBC core implementation"
         "jdbc-grpc" -> "Salesforce Data Cloud Query v3 API gRPC stubs"
+        "jdbc-proto" -> "Salesforce Data Cloud Query API proto files"
         else -> {
             logger.lifecycle("Unknown project, can't update description. artifactId=${this.artifactId}")
             null
