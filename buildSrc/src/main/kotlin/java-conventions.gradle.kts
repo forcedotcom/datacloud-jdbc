@@ -1,7 +1,7 @@
 plugins {
     id("base-conventions")
     `java-library`
-//    id("com.diffplug.spotless")
+    id("com.diffplug.spotless")
 }
 
 repositories {
@@ -54,4 +54,23 @@ tasks.withType<Test>().configureEach {
     }
 
     jvmArgs("-Xmx2g", "-Xms512m")
+}
+
+spotless {
+    ratchetFrom("origin/main")
+
+    format("misc") {
+        target(".gitattributes", ".gitignore")
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    
+    java {
+        target("src/main/java/**/*.java", "src/test/java/**/*.java")
+        palantirJavaFormat("2.62.0")
+        formatAnnotations()
+        importOrder()
+        removeUnusedImports()
+        licenseHeaderFile(rootProject.file("license-header.txt"))
+    }
 }
