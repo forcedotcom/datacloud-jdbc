@@ -27,6 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - run: git fetch --no-tags --depth=1 origin main
       - name: Setup Java with 8 and 17 toolchains
         uses: actions/setup-java@v4
         with:
