@@ -15,21 +15,20 @@
  */
 package com.salesforce.datacloud.jdbc.core.partial;
 
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.time.Duration;
-
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 /**
  * Note that these tests do not use Statement::executeQuery which attempts to iterate immediately,
@@ -39,8 +38,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 @ExtendWith(HyperTestBase.class)
 class DataCloudQueryPollingTest {
     Duration small = Duration.ofSeconds(5);
-
-
 
     @SneakyThrows
     @Test

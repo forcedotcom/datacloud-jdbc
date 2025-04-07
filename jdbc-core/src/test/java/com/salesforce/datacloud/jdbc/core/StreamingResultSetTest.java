@@ -15,28 +15,29 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.Constants;
+import java.sql.SQLException;
+import java.time.Duration;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.sql.SQLException;
-import java.time.Duration;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
-import static org.assertj.core.api.Assertions.assertThat;
-
 @Slf4j
 @ExtendWith(HyperTestBase.class)
 public class StreamingResultSetTest {
     public static String query(String arg) {
-        return String.format("select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, %s) as s(a) order by a asc", arg);
+        return String.format(
+                "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, %s) as s(a) order by a asc",
+                arg);
     }
 
     private static final Properties none = new Properties();
@@ -103,17 +104,21 @@ public class StreamingResultSetTest {
     }
 
     @SneakyThrows
-    private void withStatement(Properties properties, ThrowingBiConsumer<DataCloudConnection, DataCloudStatement> func) {
-        try(val conn = getHyperQueryConnection(properties).unwrap(DataCloudConnection.class);
-            val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
+    private void withStatement(
+            Properties properties, ThrowingBiConsumer<DataCloudConnection, DataCloudStatement> func) {
+        try (val conn = getHyperQueryConnection(properties).unwrap(DataCloudConnection.class);
+                val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
             func.accept(conn, stmt);
         }
     }
 
     @SneakyThrows
-    private void withPrepared(Properties properties, String sql, ThrowingBiConsumer<DataCloudConnection, DataCloudPreparedStatement> func) {
-        try(val conn = getHyperQueryConnection(properties).unwrap(DataCloudConnection.class);
-            val stmt = conn.prepareStatement(sql).unwrap(DataCloudPreparedStatement.class)) {
+    private void withPrepared(
+            Properties properties,
+            String sql,
+            ThrowingBiConsumer<DataCloudConnection, DataCloudPreparedStatement> func) {
+        try (val conn = getHyperQueryConnection(properties).unwrap(DataCloudConnection.class);
+                val stmt = conn.prepareStatement(sql).unwrap(DataCloudPreparedStatement.class)) {
             stmt.setInt(1, large);
             func.accept(conn, stmt);
         }
@@ -141,7 +146,9 @@ public class StreamingResultSetTest {
             assertThat(rs.getRow()).isEqualTo(witnessed.get());
         }
 
-        assertThat(witnessed.get()).as("last value seen from query: " + status.getQueryId()).isEqualTo(large);
+        assertThat(witnessed.get())
+                .as("last value seen from query: " + status.getQueryId())
+                .isEqualTo(large);
     }
 
     private static Properties sync() {

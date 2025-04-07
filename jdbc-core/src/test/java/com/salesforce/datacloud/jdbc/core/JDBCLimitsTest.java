@@ -15,6 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithConnection;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+
 import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
@@ -23,11 +28,6 @@ import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithConnection;
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
 @ExtendWith(HyperTestBase.class)
 public class JDBCLimitsTest {

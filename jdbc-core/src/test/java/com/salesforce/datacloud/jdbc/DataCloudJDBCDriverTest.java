@@ -15,19 +15,4 @@
  */
 package com.salesforce.datacloud.jdbc;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
-
-import com.salesforce.datacloud.jdbc.config.DriverVersion;
-import java.sql.Driver;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.util.Properties;
-import java.util.regex.Pattern;
-import lombok.val;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
-class DataCloudJDBCDriverTest {
-
-}
+class DataCloudJDBCDriverTest {}

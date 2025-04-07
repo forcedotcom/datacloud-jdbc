@@ -15,16 +15,14 @@
  */
 package com.salesforce.datacloud.jdbc.hyper;
 
+import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 import io.grpc.ManagedChannelBuilder;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.junit.jupiter.api.Assertions;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -39,9 +37,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
-
-import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
-import static java.util.Objects.requireNonNull;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.junit.jupiter.api.Assertions;
 
 @Slf4j
 public class HyperServerProcess implements AutoCloseable {
@@ -139,7 +138,8 @@ public class HyperServerProcess implements AutoCloseable {
     @SneakyThrows
     public HyperGrpcClientExecutor getRawClient() {
 
-        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext();
+        ManagedChannelBuilder<?> channel =
+                ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext();
         return HyperGrpcClientExecutor.of(channel, new Properties());
     }
 

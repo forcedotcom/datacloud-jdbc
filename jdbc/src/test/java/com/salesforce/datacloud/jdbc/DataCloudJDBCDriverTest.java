@@ -15,20 +15,18 @@
  */
 package com.salesforce.datacloud.jdbc;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
+import static org.assertj.core.api.AssertionsForClassTypes.fail;
+
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
-import org.junit.jupiter.api.Test;
-
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.regex.Pattern;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
-import static org.assertj.core.api.AssertionsForClassTypes.fail;
-
+import org.junit.jupiter.api.Test;
 
 public class DataCloudJDBCDriverTest {
     public static final String VALID_URL = "jdbc:salesforce-datacloud://login.salesforce.com";
@@ -43,7 +41,7 @@ public class DataCloudJDBCDriverTest {
     }
 
     @Test
-    public void  testNullUrlNotAllowedWhenConnecting() {
+    public void testNullUrlNotAllowedWhenConnecting() {
         final Driver driver = new DataCloudJDBCDriver();
         Properties properties = new Properties();
 
@@ -51,7 +49,7 @@ public class DataCloudJDBCDriverTest {
     }
 
     @Test
-    public void  testUnsupportedPrefixUrlNotAllowedWhenConnecting() throws Exception {
+    public void testUnsupportedPrefixUrlNotAllowedWhenConnecting() throws Exception {
         final Driver driver = new DataCloudJDBCDriver();
         Properties properties = new Properties();
 
@@ -59,39 +57,39 @@ public class DataCloudJDBCDriverTest {
     }
 
     @Test
-    public void  testInvalidPrefixUrlNotAccepted() throws Exception {
+    public void testInvalidPrefixUrlNotAccepted() throws Exception {
         final Driver driver = new DataCloudJDBCDriver();
 
         assertThat(driver.acceptsURL("jdbc:mysql://localhost:3306")).isFalse();
     }
 
     @Test
-    public void  testGetMajorVersion() {
+    public void testGetMajorVersion() {
         final Driver driver = new DataCloudJDBCDriver();
         assertThat(driver.getMajorVersion()).isEqualTo(DriverVersion.getMajorVersion());
     }
 
     @Test
-    public void  testGetMinorVersion() {
+    public void testGetMinorVersion() {
         final Driver driver = new DataCloudJDBCDriver();
         assertThat(driver.getMinorVersion()).isEqualTo(DriverVersion.getMinorVersion());
     }
 
     @Test
-    public void  testValidUrlPrefixAccepted() throws Exception {
+    public void testValidUrlPrefixAccepted() throws Exception {
         final Driver driver = new DataCloudJDBCDriver();
 
         assertThat(driver.acceptsURL(VALID_URL)).isTrue();
     }
 
     @Test
-    public void  testjdbcCompliant() {
+    public void testjdbcCompliant() {
         final Driver driver = new DataCloudJDBCDriver();
         assertThat(driver.jdbcCompliant()).isFalse();
     }
 
     @Test
-    public void  testSuccessfulDriverVersion() {
+    public void testSuccessfulDriverVersion() {
         assertThat(DriverVersion.getDriverName()).isEqualTo(DRIVER_NAME);
         assertThat(DriverVersion.getProductName()).isEqualTo(PRODUCT_NAME);
         assertThat(DriverVersion.getProductVersion()).isEqualTo(PRODUCT_VERSION);

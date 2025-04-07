@@ -15,11 +15,18 @@
  */
 package com.salesforce.datacloud.jdbc.hyper;
 
+import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
+import java.sql.ResultSet;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -31,21 +38,12 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import java.sql.ResultSet;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
-import static org.assertj.core.api.Assertions.assertThat;
-
 @Slf4j
 public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.CloseableResource {
     @Getter(lazy = true, value = AccessLevel.PRIVATE)
     private static final HyperServerProcess instance = new HyperServerProcess();
 
     private static boolean isRegistered = false;
-
 
     @SneakyThrows
     public static void assertEachRowIsTheSame(ResultSet rs, AtomicInteger prev) {
@@ -102,8 +100,7 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
     public void beforeAll(ExtensionContext context) {
         synchronized (HyperTestBase.class) {
             if (!isRegistered) {
-                context.getRoot().getStore(ExtensionContext.Namespace.GLOBAL)
-                        .put(HyperTestBase.class.getName(), this);
+                context.getRoot().getStore(ExtensionContext.Namespace.GLOBAL).put(HyperTestBase.class.getName(), this);
                 isRegistered = true;
                 System.out.println("Registered database shutdown hook");
             }

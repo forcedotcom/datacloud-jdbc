@@ -15,24 +15,23 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import io.grpc.StatusRuntimeException;
+import java.time.Duration;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.time.Duration;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
-
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
-import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(HyperTestBase.class)
 public class AsyncStreamingResultSetTest {

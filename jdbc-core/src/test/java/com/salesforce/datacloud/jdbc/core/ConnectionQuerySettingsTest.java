@@ -15,15 +15,15 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
-import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(HyperTestBase.class)
 public class ConnectionQuerySettingsTest {

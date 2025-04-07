@@ -15,6 +15,9 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
@@ -27,6 +30,17 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Properties;
+import java.util.function.BiFunction;
+import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -41,21 +55,6 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Properties;
-import java.util.function.BiFunction;
-import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
 
 @Slf4j
 @ExtendWith(InProcessGrpcMockExtension.class)
@@ -89,7 +88,7 @@ public class HyperGrpcTestBase {
         });
 
         channels.forEach(c -> {
-            try{
+            try {
                 c.shutdownNow();
             } catch (Exception e) {
                 log.error("Failed to clean up channel", e);
@@ -122,7 +121,8 @@ public class HyperGrpcTestBase {
 
         channels.add(channel);
 
-        val mocked = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName()).usePlaintext();
+        val mocked = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
+                .usePlaintext();
 
         GrpcMock.resetMappings();
 

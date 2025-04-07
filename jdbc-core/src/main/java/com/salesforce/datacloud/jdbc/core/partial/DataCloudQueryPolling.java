@@ -20,6 +20,12 @@ import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -29,13 +35,6 @@ import net.jodah.failsafe.FailsafeException;
 import net.jodah.failsafe.RetryPolicy;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryInfoParam;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Predicate;
 
 @Unstable
 @Slf4j
@@ -146,7 +145,10 @@ public class DataCloudQueryPolling {
             AtomicInteger times,
             Predicate<DataCloudQueryStatus> predicate) {
         times.getAndIncrement();
-        val param = QueryInfoParam.newBuilder().setQueryId(queryId).setStreaming(true).build();
+        val param = QueryInfoParam.newBuilder()
+                .setQueryId(queryId)
+                .setStreaming(true)
+                .build();
         while (Instant.now().isBefore(deadline)) {
             val info = stub.getQueryInfo(param);
             val matched = StreamUtilities.toStream(info)
@@ -161,7 +163,10 @@ public class DataCloudQueryPolling {
                 return matched.get();
             }
 
-            log.info("end of info stream, starting a new one if the timeout allows. last={}, remaining={}", last.get(), remaining(deadline));
+            log.info(
+                    "end of info stream, starting a new one if the timeout allows. last={}, remaining={}",
+                    last.get(),
+                    remaining(deadline));
         }
 
         log.warn("exceeded deadline getting query info. last={}", last.get());

@@ -22,6 +22,11 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import io.grpc.StatusRuntimeException;
+import java.sql.SQLException;
+import java.util.Iterator;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,12 +37,6 @@ import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
-
-import java.sql.SQLException;
-import java.util.Iterator;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Stream;
 
 @Slf4j
 @Builder(access = AccessLevel.PRIVATE)

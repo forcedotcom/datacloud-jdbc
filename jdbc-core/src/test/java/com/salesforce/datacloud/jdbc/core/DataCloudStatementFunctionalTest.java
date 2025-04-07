@@ -15,22 +15,21 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
-import lombok.SneakyThrows;
-import lombok.val;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.sql.ResultSet;
-import java.util.stream.Collectors;
-
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithConnection;
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
+
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
+import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import java.sql.ResultSet;
+import java.util.stream.Collectors;
+import lombok.SneakyThrows;
+import lombok.val;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(HyperTestBase.class)
 public class DataCloudStatementFunctionalTest {
@@ -41,8 +40,8 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelStatementQuery() {
         try (val server = configWithSleep.start();
-             val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class);
-             val client = server.getRawClient()) {
+                val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class);
+                val client = server.getRawClient()) {
             statement.executeAsyncQuery("select pg_sleep(5000000);");
 
             val queryId = statement.unwrap(DataCloudStatement.class).getQueryId();
@@ -60,11 +59,10 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelPreparedStatementQuery() {
         try (val server = configWithSleep.start();
-             val connection = server.getConnection();
-                val statement = connection
-                        .prepareStatement("select pg_sleep(?)")
-                        .unwrap(DataCloudPreparedStatement.class);
-             val client = server.getRawClient()) {
+                val connection = server.getConnection();
+                val statement =
+                        connection.prepareStatement("select pg_sleep(?)").unwrap(DataCloudPreparedStatement.class);
+                val client = server.getRawClient()) {
 
             statement.setInt(1, 5000000);
             statement.executeAsyncQuery();
@@ -84,9 +82,9 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelAnotherQueryById() {
         try (val server = configWithSleep.start();
-             val connection = server.getConnection().unwrap(DataCloudConnection.class);
-             val statement = connection.createStatement().unwrap(DataCloudStatement.class);
-             val client = server.getRawClient()) {
+                val connection = server.getConnection().unwrap(DataCloudConnection.class);
+                val statement = connection.createStatement().unwrap(DataCloudStatement.class);
+                val client = server.getRawClient()) {
 
             statement.executeAsyncQuery("select pg_sleep(5000000);");
             val queryId = statement.getQueryId();

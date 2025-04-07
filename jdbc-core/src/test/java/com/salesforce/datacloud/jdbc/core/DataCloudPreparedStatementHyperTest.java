@@ -15,13 +15,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
+import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -33,9 +30,11 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Calendar;
 import java.util.TimeZone;
-
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 @Slf4j
 @ExtendWith(HyperTestBase.class)

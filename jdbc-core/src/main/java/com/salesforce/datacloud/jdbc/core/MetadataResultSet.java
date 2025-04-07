@@ -18,6 +18,10 @@ package com.salesforce.datacloud.jdbc.core;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.TimeZone;
 import lombok.experimental.UtilityClass;
 import lombok.val;
 import org.apache.calcite.avatica.AvaticaResultSet;
@@ -25,11 +29,6 @@ import org.apache.calcite.avatica.AvaticaResultSetMetaData;
 import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.QueryState;
-
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.TimeZone;
 
 @UtilityClass
 public class MetadataResultSet {

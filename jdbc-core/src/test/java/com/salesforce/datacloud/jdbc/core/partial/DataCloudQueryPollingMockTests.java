@@ -15,10 +15,17 @@
  */
 package com.salesforce.datacloud.jdbc.core.partial;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.grpcmock.GrpcMock.atLeast;
+import static org.grpcmock.GrpcMock.calledMethod;
+import static org.grpcmock.GrpcMock.times;
+import static org.grpcmock.GrpcMock.verifyThat;
+
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
+import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -28,14 +35,6 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
-
-import java.time.Duration;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.grpcmock.GrpcMock.atLeast;
-import static org.grpcmock.GrpcMock.calledMethod;
-import static org.grpcmock.GrpcMock.times;
-import static org.grpcmock.GrpcMock.verifyThat;
 
 @Slf4j
 public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
@@ -61,8 +60,8 @@ public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
     @Timeout(60)
     @ValueSource(
             strings = {
-                    "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, 1024 * 1024 * 1024) as s(a) order by a asc;",
-                    "SELECT PG_SLEEP(10);"
+                "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, 1024 * 1024 * 1024) as s(a) order by a asc;",
+                "SELECT PG_SLEEP(10);"
             })
     void getQueryInfoRetriesOnTimeout(String query) {
         val configWithSleep =
@@ -80,14 +79,14 @@ public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
             try {
                 connection.waitForResultsProduced(queryId, Duration.ofSeconds(30));
             } catch (Exception ex) {
-                log.error("Caught exception when querying for status on a long running query with a short grpc timeout, \n" +
-                        "hyper seems to cancel queries after some number of query-infos and the query is still running.\n" +
-                        "This doesn't fail the test because we just want to know that we have successfully retried getQueryInfo", ex);
+                log.error(
+                        "Caught exception when querying for status on a long running query with a short grpc timeout, \n"
+                                + "hyper seems to cancel queries after some number of query-infos and the query is still running.\n"
+                                + "This doesn't fail the test because we just want to know that we have successfully retried getQueryInfo",
+                        ex);
             }
 
-
             verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), atLeast(2));
-
         }
     }
 }

@@ -15,6 +15,9 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
+
 import com.salesforce.datacloud.jdbc.core.listener.AdaptiveQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
@@ -23,19 +26,15 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import com.salesforce.datacloud.jdbc.util.Unstable;
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.time.Duration;
-
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 @Slf4j
 public class DataCloudStatement implements Statement, AutoCloseable {
