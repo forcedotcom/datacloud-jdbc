@@ -35,11 +35,12 @@ import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.logging.Logger;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+@Slf4j
 public class DataCloudJDBCDriver implements Driver {
     private static Driver registeredDriver;
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(DataCloudJDBCDriver.class);
 
     static {
         try {
