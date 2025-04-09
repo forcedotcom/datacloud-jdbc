@@ -33,9 +33,6 @@ public final class Constants {
     public static final String PRIVATE_KEY = "privateKey";
     public static final String FORCE_SYNC = "force-sync";
 
-    // Http/grpc client constants
-    public static final String AUTHORIZATION = "Authorization";
-    public static final String CONTENT_TYPE_JSON = "application/json";
     public static final String POST = "POST";
 
     // Column Types

@@ -1,0 +1,84 @@
+/*
+ * Copyright (c) 2024, Salesforce, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.salesforce.datacloud.jdbc.http;
+
+import lombok.SneakyThrows;
+import okhttp3.Interceptor;
+import okhttp3.MediaType;
+import okhttp3.Protocol;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+
+public class MetadataCacheInterceptorTest {
+
+    private Interceptor.Chain chain;
+
+    private MetadataCacheInterceptor metadataCacheInterceptor;
+
+    @BeforeEach
+    public void init() {
+        chain = Mockito.mock(Interceptor.Chain.class);
+        metadataCacheInterceptor = new MetadataCacheInterceptor();
+        Mockito.doReturn(buildRequest()).when(chain).request();
+    }
+
+    @Test
+    @SneakyThrows
+    public void testMetadataRequestWithNoCachePresent() {
+        Mockito.doReturn(buildResponse(200, ResponseEnum.EMPTY_RESPONSE))
+                .doReturn(buildResponse(200, ResponseEnum.QUERY_RESPONSE))
+                .when(chain)
+                .proceed(ArgumentMatchers.any(Request.class));
+        metadataCacheInterceptor.intercept(chain);
+        Mockito.verify(chain, Mockito.times(1)).proceed(ArgumentMatchers.any(Request.class));
+    }
+
+    @Test
+    @SneakyThrows
+    public void testMetadataFromCache() {
+        MetadataCacheUtil.cacheMetadata(
+                "https://mjrgg9bzgy2dsyzvmjrgkmzzg1.c360a.salesforce.com" + Constants.CDP_URL + Constants.METADATA_URL,
+                ResponseEnum.TABLE_METADATA.getResponse());
+        metadataCacheInterceptor.intercept(chain);
+        Mockito.verify(chain, Mockito.times(0)).proceed(ArgumentMatchers.any(Request.class));
+    }
+
+    private Request buildRequest() {
+        return new Request.Builder()
+                .url("https://mjrgg9bzgy2dsyzvmjrgkmzzg1.c360a.salesforce.com"
+                        + Constants.CDP_URL
+                        + Constants.METADATA_URL)
+                .method(Constants.POST, RequestBody.create("{test: test}", MediaType.parse("application/json")))
+                .build();
+    }
+
+    private Response buildResponse(int statusCode, ResponseEnum responseEnum) {
+        String jsonString = responseEnum.getResponse();
+        return new Response.Builder()
+                .code(statusCode)
+                .request(buildRequest())
+                .protocol(Protocol.HTTP_1_1)
+                .message("Redirected")
+                .body(ResponseBody.create(jsonString, MediaType.parse("application/json")))
+                .build();
+    }
+}

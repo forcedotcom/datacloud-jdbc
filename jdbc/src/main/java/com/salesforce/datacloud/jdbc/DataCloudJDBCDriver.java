@@ -15,10 +15,20 @@
  */
 package com.salesforce.datacloud.jdbc;
 
+import static com.salesforce.datacloud.jdbc.util.Constants.LOGIN_URL;
+import static com.salesforce.datacloud.jdbc.util.Constants.USER;
+import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
+
+import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
+import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProcessor;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.soql.DataspaceClient;
 import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
+import io.grpc.ManagedChannelBuilder;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -26,6 +36,7 @@ import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.logging.Logger;
+import lombok.val;
 
 public class DataCloudJDBCDriver implements Driver {
     private static Driver registeredDriver;
@@ -67,7 +78,7 @@ public class DataCloudJDBCDriver implements Driver {
             return DirectDataCloudConnection.of(url, info);
         }
 
-        return DataCloudConnection.of(url, info);
+        return oauthBasedConnection(url, info);
     }
 
     @Override
@@ -98,5 +109,38 @@ public class DataCloudJDBCDriver implements Driver {
     @Override
     public Logger getParentLogger() {
         return null;
+    }
+
+    private static DataCloudTokenProcessor getDataCloudTokenProcessor(Properties properties)
+            throws DataCloudJDBCException {
+        if (!AuthenticationSettings.hasAny(properties)) {
+            throw new DataCloudJDBCException("No authentication settings provided");
+        }
+
+        return DataCloudTokenProcessor.of(properties);
+    }
+
+    private static DataCloudConnection oauthBasedConnection(String url, Properties properties) throws SQLException {
+        val connectionString = DataCloudConnectionString.of(url);
+        addClientUsernameIfRequired(properties);
+        connectionString.withParameters(properties);
+        properties.setProperty(LOGIN_URL, connectionString.getLoginUrl());
+
+        val tokenProcessor = getDataCloudTokenProcessor(properties);
+        val authInterceptor = AuthorizationHeaderInterceptor.of(tokenProcessor);
+
+        val host = tokenProcessor.getDataCloudToken().getTenantUrl();
+        val builder = ManagedChannelBuilder.forAddress(host, DataCloudConnection.DEFAULT_PORT);
+
+        val dataspaceClient = new DataspaceClient(properties, tokenProcessor);
+
+        return DataCloudConnection.fromOauth(
+                builder, properties, authInterceptor, tokenProcessor::getLakehouse, dataspaceClient);
+    }
+
+    static void addClientUsernameIfRequired(Properties properties) {
+        if (properties.containsKey(USER)) {
+            properties.computeIfAbsent(USER_NAME, p -> properties.get(USER));
+        }
     }
 }

@@ -17,18 +17,13 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static com.google.common.collect.Maps.immutableEntry;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.salesforce.datacloud.jdbc.auth.OAuthToken;
-import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
 import com.salesforce.datacloud.jdbc.config.QueryResources;
-import com.salesforce.datacloud.jdbc.core.model.DataspaceResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.http.FormCommand;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
-import com.salesforce.datacloud.jdbc.util.Constants;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -37,14 +32,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TimeZone;
-import java.util.stream.Collectors;
-import lombok.SneakyThrows;
+import java.util.function.Supplier;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import okhttp3.OkHttpClient;
 import org.apache.calcite.avatica.AvaticaResultSet;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
@@ -60,8 +52,6 @@ class QueryMetadataUtil {
     static final int NUM_SCHEMA_METADATA_COLUMNS = 2;
     static final int NUM_TABLE_TYPES_METADATA_COLUMNS = 1;
     static final int NUM_CATALOG_METADATA_COLUMNS = 1;
-    private static final String SOQL_ENDPOINT_SUFFIX = "services/data/v61.0/query/";
-    private static final String SOQL_QUERY_PARAM_KEY = "q";
 
     private static final int TABLE_CATALOG_INDEX = 0;
     private static final int TABLE_SCHEMA_INDEX = 1;
@@ -107,15 +97,16 @@ class QueryMetadataUtil {
             immutableEntry("array", SqlType.ARRAY.toString()));
 
     public static ResultSet createTableResultSet(
-            String schemaPattern, String tableNamePattern, String[] types, DataCloudStatement dataCloudStatement)
-            throws SQLException {
+            String schemaPattern, String tableNamePattern, String[] types, Connection connection) throws SQLException {
+        final List<Object> data;
 
-        String tablesQuery = getTablesQuery(schemaPattern, tableNamePattern, types);
-        ResultSet resultSet = dataCloudStatement.executeQuery(tablesQuery);
-        List<Object> data = constructTableData(resultSet);
-        QueryDBMetadata queryDbMetadata = QueryDBMetadata.GET_TABLES;
+        try (val statement = connection.createStatement()) {
+            val tablesQuery = getTablesQuery(schemaPattern, tableNamePattern, types);
+            val resultSet = statement.executeQuery(tablesQuery);
+            data = constructTableData(resultSet);
+        }
 
-        return getMetadataResultSet(queryDbMetadata, NUM_TABLE_METADATA_COLUMNS, data);
+        return getMetadataResultSet(QueryDBMetadata.GET_TABLES, NUM_TABLE_METADATA_COLUMNS, data);
     }
 
     static AvaticaResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, int columnsCount, List<Object> data)
@@ -181,18 +172,18 @@ class QueryMetadataUtil {
     }
 
     public static ResultSet createColumnResultSet(
-            String schemaPattern,
-            String tableNamePattern,
-            String columnNamePattern,
-            DataCloudStatement dataCloudStatement)
+            String schemaPattern, String tableNamePattern, String columnNamePattern, Connection connection)
             throws SQLException {
 
-        String getColumnsQuery = getColumnsQuery(schemaPattern, tableNamePattern, columnNamePattern);
-        ResultSet resultSet = dataCloudStatement.executeQuery(getColumnsQuery);
-        List<Object> data = constructColumnData(resultSet);
-        QueryDBMetadata queryDbMetadata = QueryDBMetadata.GET_COLUMNS;
+        final List<Object> data;
 
-        return getMetadataResultSet(queryDbMetadata, NUM_COLUMN_METADATA_COLUMNS, data);
+        try (val statement = connection.createStatement()) {
+            val getColumnsQuery = getColumnsQuery(schemaPattern, tableNamePattern, columnNamePattern);
+            val resultSet = statement.executeQuery(getColumnsQuery);
+            data = constructColumnData(resultSet);
+        }
+
+        return getMetadataResultSet(QueryDBMetadata.GET_COLUMNS, NUM_COLUMN_METADATA_COLUMNS, data);
     }
 
     private static String getColumnsQuery(String schemaPattern, String tableNamePattern, String columnNamePattern) {
@@ -304,15 +295,17 @@ class QueryMetadataUtil {
         return data;
     }
 
-    public static ResultSet createSchemaResultSet(String schemaPattern, DataCloudStatement dataCloudStatement)
-            throws SQLException {
+    public static ResultSet createSchemaResultSet(String schemaPattern, Connection connection) throws SQLException {
 
-        String schemasQuery = getSchemasQuery(schemaPattern);
-        ResultSet resultSet = dataCloudStatement.executeQuery(schemasQuery);
-        List<Object> data = constructSchemaData(resultSet);
-        QueryDBMetadata queryDbMetadata = QueryDBMetadata.GET_SCHEMAS;
+        final List<Object> data;
 
-        return getMetadataResultSet(queryDbMetadata, NUM_SCHEMA_METADATA_COLUMNS, data);
+        try (val statement = connection.createStatement()) {
+            val schemasQuery = getSchemasQuery(schemaPattern);
+            val resultSet = statement.executeQuery(schemasQuery);
+            data = constructSchemaData(resultSet);
+        }
+
+        return getMetadataResultSet(QueryDBMetadata.GET_SCHEMAS, NUM_SCHEMA_METADATA_COLUMNS, data);
     }
 
     private static String getSchemasQuery(String schemaPattern) {
@@ -356,71 +349,19 @@ class QueryMetadataUtil {
         return data;
     }
 
-    @SneakyThrows
-    static List<Object> getLakehouse(Optional<TokenProcessor> tokenProcessor) {
-        if (!tokenProcessor.isPresent()) {
+    static List<Object> getLakehouse(Supplier<String> lakehouseSupplier) {
+        val lakehouse = lakehouseSupplier.get();
+
+        if (Strings.isNullOrEmpty(lakehouse)) {
             return ImmutableList.of();
         }
-
-        val tenantId = tokenProcessor.get().getDataCloudToken().getTenantId();
-        val dataspace = tokenProcessor.get().getSettings().getDataspace();
-        val lakehouse =
-                "lakehouse:" + tenantId + ";" + Optional.ofNullable(dataspace).orElse("");
 
         return ImmutableList.of(ImmutableList.of(lakehouse));
     }
 
-    public static ResultSet createCatalogsResultSet(Optional<TokenProcessor> tokenProcessor) throws SQLException {
-        val data = getLakehouse(tokenProcessor);
-        val queryDbMetadata = QueryDBMetadata.GET_CATALOGS;
-
-        return getMetadataResultSet(queryDbMetadata, NUM_CATALOG_METADATA_COLUMNS, data);
-    }
-
-    public static List<String> createDataspacesResponse(Optional<TokenProcessor> tokenProcessor, OkHttpClient client)
-            throws SQLException {
-
-        try {
-
-            val dataspaceResponse = getDataSpaceResponse(tokenProcessor, client, false);
-            return dataspaceResponse.getRecords().stream()
-                    .map(DataspaceResponse.DataSpaceAttributes::getName)
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new DataCloudJDBCException(e);
-        }
-    }
-
-    private FormCommand buildGetDataspaceFormCommand(OAuthToken oAuthToken) throws URISyntaxException {
-        val builder = FormCommand.builder();
-        builder.url(oAuthToken.getInstanceUrl());
-        builder.suffix(new URI(SOQL_ENDPOINT_SUFFIX));
-        builder.queryParameters(ImmutableMap.of(SOQL_QUERY_PARAM_KEY, "SELECT+name+from+Dataspace"));
-        builder.header(Constants.AUTHORIZATION, oAuthToken.getBearerToken());
-        builder.header(FormCommand.CONTENT_TYPE_HEADER_NAME, Constants.CONTENT_TYPE_JSON);
-        builder.header("User-Agent", "cdp/jdbc");
-        builder.header("enable-stream-flow", "false");
-        return builder.build();
-    }
-
-    private static DataspaceResponse getDataSpaceResponse(
-            Optional<TokenProcessor> tokenProcessor, OkHttpClient client, boolean isGetCatalog) throws SQLException {
-        String errorMessage = isGetCatalog
-                ? "Token processor is empty. getCatalogs() cannot be executed"
-                : "Token processor is empty. getDataspaces() cannot be executed";
-
-        if (!tokenProcessor.isPresent()) {
-            throw new DataCloudJDBCException(errorMessage);
-        }
-        try {
-            val oAuthToken = tokenProcessor.get().getOAuthToken();
-            FormCommand httpFormCommand = buildGetDataspaceFormCommand(oAuthToken);
-
-            return FormCommand.get(client, httpFormCommand, DataspaceResponse.class);
-
-        } catch (Exception e) {
-            throw new DataCloudJDBCException(e);
-        }
+    public static ResultSet createCatalogsResultSet(Supplier<String> lakehouseSupplier) throws SQLException {
+        val data = getLakehouse(lakehouseSupplier);
+        return getMetadataResultSet(QueryDBMetadata.GET_CATALOGS, NUM_CATALOG_METADATA_COLUMNS, data);
     }
 
     private static final Map<String, Map<String, String>> tableTypeClauses = ImmutableMap.ofEntries(

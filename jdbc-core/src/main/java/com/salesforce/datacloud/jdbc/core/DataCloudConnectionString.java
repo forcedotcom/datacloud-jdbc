@@ -122,7 +122,7 @@ public class DataCloudConnectionString {
         }
     }
 
-    void withParameters(Properties properties) {
+    public void withParameters(Properties properties) {
         properties.putAll(parameters);
     }
 }

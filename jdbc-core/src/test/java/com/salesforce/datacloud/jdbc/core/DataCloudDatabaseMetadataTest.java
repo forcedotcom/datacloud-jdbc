@@ -26,12 +26,10 @@ import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.auth.model.OAuthTokenResponse;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
-import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
 import com.salesforce.datacloud.jdbc.auth.OAuthToken;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
-import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
-import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
 import com.salesforce.datacloud.jdbc.config.KeywordResources;
 import com.salesforce.datacloud.jdbc.core.model.DataspaceResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -40,10 +38,12 @@ import com.salesforce.datacloud.jdbc.util.Constants;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -72,16 +72,13 @@ public class DataCloudDatabaseMetadataTest {
     private static final String FAKE_TENANT_ID = "a360/falcondev/a6d726a73f534327a6a8e2e0f3cc3840";
 
     @Mock
-    DataCloudStatement dataCloudStatement;
+    Connection connection;
 
     @Mock
-    TokenProcessor tokenProcessor;
+    Statement statement;
 
     @Mock
     ResultSet resultSetMock;
-
-    @Mock
-    AuthenticationSettings authenticationSettings;
 
     DataCloudDatabaseMetadata dataCloudDatabaseMetadata;
 
@@ -757,7 +754,9 @@ public class DataCloudDatabaseMetadataTest {
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(false);
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
 
         ResultSet resultSet = dataCloudDatabaseMetadata.getTables(null, "schemaName", "tableName", types);
         assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(NUM_TABLE_METADATA_COLUMNS);
@@ -787,7 +786,6 @@ public class DataCloudDatabaseMetadataTest {
     @Test
     @SneakyThrows
     public void testGetTablesNullValues() {
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
         Mockito.when(resultSetMock.next())
                 .thenReturn(true)
                 .thenReturn(true)
@@ -800,7 +798,9 @@ public class DataCloudDatabaseMetadataTest {
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(false);
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
 
         ResultSet resultSet = dataCloudDatabaseMetadata.getTables(null, null, null, null);
         assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(10);
@@ -931,21 +931,15 @@ public class DataCloudDatabaseMetadataTest {
 
     @SneakyThrows
     @Test
-    public void testGetCatalogs() {
-        val mapper = new ObjectMapper();
-        val oAuthTokenResponse = new OAuthTokenResponse();
-        val dataCloudTokenResponse = new DataCloudTokenResponse();
-        val dataSpaceName = randomString();
-        oAuthTokenResponse.setToken(FAKE_TOKEN);
-        dataCloudTokenResponse.setToken(FAKE_TOKEN);
-        dataCloudTokenResponse.setInstanceUrl(FAKE_TENANT_ID);
-        dataCloudTokenResponse.setTokenType("token");
+    public void testGetCatalogsRespectsLakehouseSupplier() {
+        val dataSpaceName = UUID.randomUUID().toString();
 
-        Mockito.when(tokenProcessor.getDataCloudToken()).thenReturn(DataCloudToken.of(dataCloudTokenResponse));
-        Mockito.when(tokenProcessor.getSettings()).thenReturn(authenticationSettings);
-        Mockito.when(authenticationSettings.getDataspace()).thenReturn(dataSpaceName);
+        Supplier<String> lakehouse = () -> "lakehouse:" + FAKE_TENANT_ID + ";" + dataSpaceName;
 
-        val actual = dataCloudDatabaseMetadata.getCatalogs();
+        val sut = new DataCloudDatabaseMetadata(null, null, lakehouse, null, null);
+
+        val actual = sut.getCatalogs();
+
         assertThat(actual.next()).isTrue();
         assertThat(actual.getString(1)).isEqualTo("lakehouse:" + FAKE_TENANT_ID + ";" + dataSpaceName);
         assertThat(actual.getMetaData().getColumnName(1)).isEqualTo("TABLE_CAT");
@@ -971,7 +965,9 @@ public class DataCloudDatabaseMetadataTest {
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(false);
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
 
         ResultSet resultSet = dataCloudDatabaseMetadata.getColumns(null, "schemaName", "tableName", "columnName");
         assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(NUM_COLUMN_METADATA_COLUMNS);
@@ -1052,13 +1048,14 @@ public class DataCloudDatabaseMetadataTest {
     @Test
     @SneakyThrows
     public void testGetColumnsNullValues() {
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
         Mockito.when(resultSetMock.next())
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(false);
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
 
         ResultSet resultSet = dataCloudDatabaseMetadata.getColumns(null, null, null, null);
         assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(24);
@@ -1068,13 +1065,15 @@ public class DataCloudDatabaseMetadataTest {
     @Test
     @SneakyThrows
     public void testGetColumnsEmptyValues() {
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
         Mockito.when(resultSetMock.next())
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(false);
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
 
         ResultSet resultSet =
                 dataCloudDatabaseMetadata.getColumns(null, StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY);
@@ -1084,7 +1083,8 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testTestTest() throws SQLException {
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
         Mockito.when(resultSetMock.next()).thenReturn(true).thenReturn(false);
         Mockito.when(resultSetMock.getString("nspname")).thenReturn(StringUtils.EMPTY);
         Mockito.when(resultSetMock.getString("relname")).thenReturn(StringUtils.EMPTY);
@@ -1101,7 +1101,7 @@ public class DataCloudDatabaseMetadataTest {
         Mockito.when(resultSetMock.getString("attgenerated")).thenReturn(StringUtils.EMPTY);
 
         ResultSet columnResultSet = QueryMetadataUtil.createColumnResultSet(
-                StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, dataCloudStatement);
+                StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, connection);
         while (columnResultSet.next()) {
             assertThat(columnResultSet.getString("TYPE_NAME")).isEqualTo("VARCHAR");
             assertThat(columnResultSet.getString("DATA_TYPE")).isEqualTo("12");
@@ -1345,8 +1345,9 @@ public class DataCloudDatabaseMetadataTest {
     @Test
     @SneakyThrows
     public void testGetSchemas() {
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
         Mockito.when(resultSetMock.next()).thenReturn(true).thenReturn(true).thenReturn(false);
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
         Mockito.when(resultSetMock.getString("TABLE_SCHEM")).thenReturn(null);
         Mockito.when(resultSetMock.getString("TABLE_CATALOG")).thenReturn(null);
 
@@ -1370,7 +1371,8 @@ public class DataCloudDatabaseMetadataTest {
         String schemaPattern = "public";
         String tableCatalog = "catalog";
         Mockito.when(resultSetMock.next()).thenReturn(true).thenReturn(true).thenReturn(false);
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
         Mockito.when(resultSetMock.getString("TABLE_SCHEM")).thenReturn(schemaPattern);
         Mockito.when(resultSetMock.getString("TABLE_CATALOG")).thenReturn(tableCatalog);
 
@@ -1390,8 +1392,9 @@ public class DataCloudDatabaseMetadataTest {
     @Test
     @SneakyThrows
     public void testGetSchemasCatalogAndSchemaPatternNullValues() {
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
         Mockito.when(resultSetMock.next()).thenReturn(true).thenReturn(true).thenReturn(false);
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
         Mockito.when(resultSetMock.getString("TABLE_SCHEM")).thenReturn(null);
         Mockito.when(resultSetMock.getString("TABLE_CATALOG")).thenReturn(null);
 
@@ -1412,7 +1415,8 @@ public class DataCloudDatabaseMetadataTest {
     @Test
     @SneakyThrows
     public void testGetSchemasEmptyValues() {
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
         Mockito.when(resultSetMock.next()).thenReturn(true).thenReturn(true).thenReturn(false);
         Mockito.when(resultSetMock.getString("TABLE_SCHEM")).thenReturn(null);
         Mockito.when(resultSetMock.getString("TABLE_CATALOG")).thenReturn(null);

@@ -1,19 +1,12 @@
 plugins {
-    id("java")
-}
-
-group = "com.salesforce.datacloud"
-version = "unspecified"
-
-repositories {
-    mavenCentral()
+    id("java-conventions")
+    id("publishing-conventions")
+    alias(libs.plugins.lombok)
 }
 
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-}
+    implementation(libs.guava)
 
-tasks.test {
-    useJUnitPlatform()
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.bundles.testing)
 }

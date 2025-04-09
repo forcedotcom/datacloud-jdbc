@@ -7,6 +7,8 @@ plugins {
 dependencies {
     compileOnly(project(":jdbc-grpc"))
 
+    implementation(project(":jdbc-util"))
+
     implementation(libs.slf4j.api)
 
     implementation(libs.bundles.grpc)
@@ -18,8 +20,6 @@ dependencies {
     implementation(libs.guava)
 
     implementation(libs.jackson.databind)
-
-    implementation(libs.okhttp3)
 
     implementation(libs.failsafe)
 
