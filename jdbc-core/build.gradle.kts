@@ -25,12 +25,6 @@ dependencies {
 
     implementation(libs.apache.commons.lang3)
 
-    implementation(libs.jjwt.api)
-
-    runtimeOnly(libs.jjwt.impl)
-
-    runtimeOnly(libs.jjwt.jackson)
-
     testImplementation(project(":jdbc-grpc"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.bundles.testing)

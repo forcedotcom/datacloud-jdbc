@@ -21,7 +21,7 @@ tasks.named("check") {
   val repo = devPublish.devMavenRepo.file("com/salesforce/datacloud/").get().asFile
 
   doLast {
-    val expectedPublications = setOf("jdbc", "jdbc-grpc", "jdbc-proto", "jdbc-core")
+    val expectedPublications = setOf("jdbc", "jdbc-grpc", "jdbc-proto", "jdbc-core", "jdbc-util", "jdbc-http")
     val shaded = setOf("jdbc")
 
     val resolvedVersion = expectedVersion.get()
