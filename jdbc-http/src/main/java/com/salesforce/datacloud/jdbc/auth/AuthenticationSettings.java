@@ -15,6 +15,10 @@
  */
 package com.salesforce.datacloud.jdbc.auth;
 
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.copy;
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.required;
+
 import com.google.common.collect.ImmutableSet;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -48,8 +52,7 @@ public abstract class AuthenticationSettings {
     }
 
     public static boolean hasAll(Properties properties, Set<String> keys) {
-        return keys.stream()
-                .allMatch(k -> PropertiesExtensions.optional(properties, k).isPresent());
+        return keys.stream().allMatch(k -> optional(properties, k).isPresent());
     }
 
     public static boolean hasAny(Properties properties) {
@@ -81,7 +84,7 @@ public abstract class AuthenticationSettings {
         }
 
         val missing = Keys.REQUIRED_KEYS.stream()
-                .filter(k -> !PropertiesExtensions.optional(properties, k).isPresent())
+                .filter(k -> !optional(properties, k).isPresent())
                 .collect(Collectors.joining(", ", Messages.PROPERTIES_REQUIRED, ""));
 
         throw new DataCloudJDBCException(missing, "28000", new IllegalArgumentException(missing));
@@ -98,17 +101,15 @@ public abstract class AuthenticationSettings {
     protected AuthenticationSettings(@NonNull Properties properties) throws DataCloudJDBCException {
         checkNotEmpty(properties);
 
-        this.relevantProperties = PropertiesExtensions.copy(properties, Keys.ALL);
+        this.relevantProperties = copy(properties, Keys.ALL);
 
-        this.loginUrl = PropertiesExtensions.required(relevantProperties, Keys.LOGIN_URL);
-        this.clientId = PropertiesExtensions.required(relevantProperties, Keys.CLIENT_ID);
-        this.clientSecret = PropertiesExtensions.required(relevantProperties, Keys.CLIENT_SECRET);
+        this.loginUrl = required(relevantProperties, Keys.LOGIN_URL);
+        this.clientId = required(relevantProperties, Keys.CLIENT_ID);
+        this.clientSecret = required(relevantProperties, Keys.CLIENT_SECRET);
 
-        this.dataspace = PropertiesExtensions.optional(relevantProperties, Keys.DATASPACE)
-                .orElse(Defaults.DATASPACE);
-        this.userAgent = PropertiesExtensions.optional(relevantProperties, Keys.USER_AGENT)
-                .orElse(Defaults.USER_AGENT);
-        this.maxRetries = PropertiesExtensions.optional(relevantProperties, Keys.MAX_RETRIES)
+        this.dataspace = optional(relevantProperties, Keys.DATASPACE).orElse(Defaults.DATASPACE);
+        this.userAgent = optional(relevantProperties, Keys.USER_AGENT).orElse(Defaults.USER_AGENT);
+        this.maxRetries = optional(relevantProperties, Keys.MAX_RETRIES)
                 .map(PropertiesExtensions::toIntegerOrNull)
                 .orElse(Defaults.MAX_RETRIES);
     }
@@ -173,8 +174,8 @@ class PasswordAuthenticationSettings extends AuthenticationSettings {
     protected PasswordAuthenticationSettings(@NonNull Properties properties) throws DataCloudJDBCException {
         super(properties);
 
-        this.password = PropertiesExtensions.required(this.getRelevantProperties(), Keys.PASSWORD);
-        this.userName = PropertiesExtensions.required(this.getRelevantProperties(), Keys.USER_NAME);
+        this.password = required(this.getRelevantProperties(), Keys.PASSWORD);
+        this.userName = required(this.getRelevantProperties(), Keys.USER_NAME);
     }
 
     private final String password;
@@ -186,8 +187,8 @@ class PrivateKeyAuthenticationSettings extends AuthenticationSettings {
     protected PrivateKeyAuthenticationSettings(@NonNull Properties properties) throws DataCloudJDBCException {
         super(properties);
 
-        this.privateKey = PropertiesExtensions.required(this.getRelevantProperties(), Keys.PRIVATE_KEY);
-        this.userName = PropertiesExtensions.required(this.getRelevantProperties(), Keys.USER_NAME);
+        this.privateKey = required(this.getRelevantProperties(), Keys.PRIVATE_KEY);
+        this.userName = required(this.getRelevantProperties(), Keys.USER_NAME);
     }
 
     private final String privateKey;
@@ -199,7 +200,7 @@ class RefreshTokenAuthenticationSettings extends AuthenticationSettings {
     protected RefreshTokenAuthenticationSettings(@NonNull Properties properties) throws DataCloudJDBCException {
         super(properties);
 
-        this.refreshToken = PropertiesExtensions.required(this.getRelevantProperties(), Keys.REFRESH_TOKEN);
+        this.refreshToken = required(this.getRelevantProperties(), Keys.REFRESH_TOKEN);
     }
 
     private final String refreshToken;
