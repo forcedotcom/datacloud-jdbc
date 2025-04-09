@@ -17,21 +17,14 @@ package com.salesforce.datacloud.jdbc.interceptor;
 
 import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
-import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
 import io.grpc.Metadata;
+import java.sql.SQLException;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.val;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,23 +35,13 @@ class AuthorizationHeaderInterceptorTest {
     private static final Metadata.Key<String> AUTH_KEY = Metadata.Key.of(AUTH, ASCII_STRING_MARSHALLER);
     private static final Metadata.Key<String> AUD_KEY = Metadata.Key.of(AUD, ASCII_STRING_MARSHALLER);
 
-    @Mock
-    private TokenProcessor mockTokenProcessor;
-
-    @BeforeEach
-    void beforeEach() {
-        Mockito.reset(mockTokenProcessor);
-    }
-
     @SneakyThrows
     @Test
     void interceptorCallsGetDataCloudTokenTwice() {
         val token = UUID.randomUUID().toString();
         val aud = UUID.randomUUID().toString();
-        setupToken(token, aud);
-        setupToken(token, aud);
 
-        val sut = sut();
+        val sut = sut(token, aud);
         val metadata = new Metadata();
 
         sut.mutate(metadata);
@@ -70,10 +53,7 @@ class AuthorizationHeaderInterceptorTest {
     @SneakyThrows
     @Test
     void interceptorIgnoresNullAudience() {
-        setupToken("", null);
-        setupToken("", null);
-
-        val sut = sut();
+        val sut = sut("", null);
         val metadata = new Metadata();
 
         sut.mutate(metadata);
@@ -81,16 +61,19 @@ class AuthorizationHeaderInterceptorTest {
         assertThat(metadata.get(AUD_KEY)).isNull();
     }
 
-    private AuthorizationHeaderInterceptor sut() {
-        return AuthorizationHeaderInterceptor.of(mockTokenProcessor);
-    }
+    private AuthorizationHeaderInterceptor sut(String token, String aud) {
+        val supplier = new AuthorizationHeaderInterceptor.TokenSupplier() {
 
-    @SneakyThrows
-    private void setupToken(String token, String aud) {
-        val newToken = mock(DataCloudToken.class);
-        lenient().when(newToken.getAccessToken()).thenReturn(token);
-        lenient().when(newToken.getTenantId()).thenReturn(aud);
+            @Override
+            public String getToken() throws SQLException {
+                return token;
+            }
 
-        when(mockTokenProcessor.getDataCloudToken()).thenReturn(newToken);
+            @Override
+            public String getAudience() {
+                return aud;
+            }
+        };
+        return AuthorizationHeaderInterceptor.of(supplier);
     }
 }

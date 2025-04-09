@@ -40,7 +40,7 @@ public class MetadataCacheInterceptor implements Interceptor {
     private final Cache<String, String> metaDataCache;
 
     public MetadataCacheInterceptor(Properties properties) {
-        val metaDataCacheDurationInMs = getIntegerOrDefault(properties, "metadataCacheTtlMs", 60000);
+        val metaDataCacheDurationInMs = getIntegerOrDefault(properties, "metadataCacheTtlMs", 10000);
 
         this.metaDataCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(metaDataCacheDurationInMs, TimeUnit.MILLISECONDS)
@@ -67,8 +67,6 @@ public class MetadataCacheInterceptor implements Interceptor {
             val response = chain.proceed(request);
 
             if (response.isSuccessful()) {
-                log.info("Caching the response");
-
                 Optional.of(response)
                         .map(Response::body)
                         .map(t -> {
@@ -81,6 +79,7 @@ public class MetadataCacheInterceptor implements Interceptor {
                         })
                         .ifPresent(responseString -> {
                             builder.body(ResponseBody.create(responseString, mediaType));
+                            metaDataCache.put(cacheKey, responseString);
                         });
             } else {
                 return response;

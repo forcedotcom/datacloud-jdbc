@@ -15,12 +15,16 @@
  */
 package com.salesforce.datacloud.jdbc.auth;
 
+import static com.salesforce.datacloud.jdbc.auth.AuthenticationSettings.Keys.LOGIN_URL;
+import static com.salesforce.datacloud.jdbc.auth.AuthenticationSettings.Keys.PRIVATE_KEY;
+import static com.salesforce.datacloud.jdbc.auth.AuthenticationSettings.Keys.USER_NAME;
+import static com.salesforce.datacloud.jdbc.auth.AuthenticationStrategy.Keys.CLIENT_ID;
+import static com.salesforce.datacloud.jdbc.auth.AuthenticationStrategy.Keys.CLIENT_SECRET;
 import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForPrivateKey;
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -73,11 +77,11 @@ class PrivateKeyHelpersTest {
     void testJwtParts() {
         String audience = "https://login.test1.pc-rnd.salesforce.com";
         Properties properties = propertiesForPrivateKey(fakePrivateKey);
-        properties.put(Constants.CLIENT_ID, "client_id");
-        properties.put(Constants.CLIENT_SECRET, "client_secret");
-        properties.put(Constants.USER_NAME, "user_name");
-        properties.put(Constants.LOGIN_URL, audience);
-        properties.put(Constants.PRIVATE_KEY, fakePrivateKey);
+        properties.put(CLIENT_ID, "client_id");
+        properties.put(CLIENT_SECRET, "client_secret");
+        properties.put(USER_NAME, "user_name");
+        properties.put(LOGIN_URL, audience);
+        properties.put(PRIVATE_KEY, fakePrivateKey);
         String actual = JwtParts.buildJwt((PrivateKeyAuthenticationSettings) AuthenticationSettings.of(properties));
         shouldYieldJwt(actual, fakeJwt);
     }
@@ -87,17 +91,17 @@ class PrivateKeyHelpersTest {
         val actualParts = Arrays.stream(actual.split("\\.")).limit(2).collect(Collectors.toList());
         val expectedParts = Arrays.stream(expected.split("\\.")).limit(2).collect(Collectors.toList());
 
-        Assertions.assertThat(actualParts.get(0)).isEqualTo(expectedParts.get(0));
+        assertThat(actualParts.get(0)).isEqualTo(expectedParts.get(0));
 
         Part actualPart = new ObjectMapper().readValue(decodeBase64String(actualParts.get(1)), Part.class);
         Part expectedPart = new ObjectMapper().readValue(decodeBase64String(expectedParts.get(1)), Part.class);
 
-        Assertions.assertThat(actualPart.getIss()).isEqualTo(expectedPart.getIss());
-        Assertions.assertThat(actualPart.getAud()).isEqualTo(expectedPart.getAud());
-        Assertions.assertThat(actualPart.getSub()).isEqualTo(expectedPart.getSub());
+        assertThat(actualPart.getIss()).isEqualTo(expectedPart.getIss());
+        assertThat(actualPart.getAud()).isEqualTo(expectedPart.getAud());
+        assertThat(actualPart.getSub()).isEqualTo(expectedPart.getSub());
 
-        Assertions.assertThat(actualPart.getExp() - actualPart.getIat()).isGreaterThanOrEqualTo(110);
-        Assertions.assertThat(actualPart.getExp() - actualPart.getIat()).isLessThanOrEqualTo(130);
+        assertThat(actualPart.getExp() - actualPart.getIat()).isGreaterThanOrEqualTo(110);
+        assertThat(actualPart.getExp() - actualPart.getIat()).isLessThanOrEqualTo(130);
     }
 
     private static String decodeBase64String(String input) {

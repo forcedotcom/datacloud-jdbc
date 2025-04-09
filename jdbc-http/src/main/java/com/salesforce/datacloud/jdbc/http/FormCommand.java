@@ -15,9 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.http;
 
+import static com.salesforce.datacloud.jdbc.http.Constants.CONTENT_TYPE_JSON;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Constants;
+import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import java.io.IOException;
 import java.net.URI;
 import java.sql.SQLException;
@@ -35,7 +37,6 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import org.apache.commons.lang3.StringUtils;
 
 @Value
 @Builder(builderClassName = "Builder")
@@ -92,7 +93,7 @@ public class FormCommand {
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
             val body = response.body();
-            if (body == null || StringUtils.isEmpty(body.toString())) {
+            if (body == null || StringCompatibility.isNullOrEmpty(body.toString())) {
                 throw new IOException("Response Body was null " + response);
             }
             val json = body.string();
@@ -111,7 +112,7 @@ public class FormCommand {
     private static Headers asHeaders(FormCommand command) {
         val headers = new HashMap<>(command.getHeaders());
 
-        headers.putIfAbsent(ACCEPT_HEADER_NAME, Constants.CONTENT_TYPE_JSON);
+        headers.putIfAbsent(ACCEPT_HEADER_NAME, CONTENT_TYPE_JSON);
         headers.putIfAbsent(CONTENT_TYPE_HEADER_NAME, URL_ENCODED_CONTENT);
 
         return Headers.of(headers);

@@ -15,43 +15,28 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForPassword;
-import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.randomString;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.anyString;
-import static org.mockito.Mockito.mock;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.salesforce.datacloud.auth.model.OAuthTokenResponse;
-import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
-import com.salesforce.datacloud.jdbc.auth.OAuthToken;
-import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
 import com.salesforce.datacloud.jdbc.config.KeywordResources;
-import com.salesforce.datacloud.jdbc.core.model.DataspaceResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.http.ClientBuilder;
 import com.salesforce.datacloud.jdbc.util.Constants;
+import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import okhttp3.mockwebserver.MockResponse;
-import okhttp3.mockwebserver.MockWebServer;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -86,17 +71,7 @@ public class DataCloudDatabaseMetadataTest {
     @SneakyThrows
     public void beforeEach() {
         val connectionString = DataCloudConnectionString.of("jdbc:salesforce-datacloud://login.salesforce.com");
-        dataCloudStatement = mock(DataCloudStatement.class);
-        tokenProcessor = mock(TokenProcessor.class);
-        val properties = propertiesForPassword("un", "pw");
-        val client = ClientBuilder.buildOkHttpClient(properties);
-        authenticationSettings = mock(AuthenticationSettings.class);
-        dataCloudDatabaseMetadata = new DataCloudDatabaseMetadata(
-                dataCloudStatement,
-                Optional.ofNullable(tokenProcessor),
-                client,
-                Optional.of(connectionString),
-                "userName");
+        dataCloudDatabaseMetadata = new DataCloudDatabaseMetadata(connection, connectionString, null, null, "userName");
     }
 
     @Test
@@ -831,7 +806,6 @@ public class DataCloudDatabaseMetadataTest {
     @SneakyThrows
     public void testGetTablesEmptyValues() {
         String[] emptyTypes = new String[] {};
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
         Mockito.when(resultSetMock.next())
                 .thenReturn(true)
                 .thenReturn(true)
@@ -844,7 +818,8 @@ public class DataCloudDatabaseMetadataTest {
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(false);
-        Mockito.when(dataCloudStatement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
 
         ResultSet resultSet =
                 dataCloudDatabaseMetadata.getTables(null, StringUtils.EMPTY, StringUtils.EMPTY, emptyTypes);
@@ -874,59 +849,13 @@ public class DataCloudDatabaseMetadataTest {
 
     @SneakyThrows
     @Test
-    public void testGetDataspaces() {
-        val mapper = new ObjectMapper();
-        val oAuthTokenResponse = new OAuthTokenResponse();
-        val accessToken = UUID.randomUUID().toString();
-        val dataspaceAttributeName = randomString();
-        oAuthTokenResponse.setToken(accessToken);
-        val dataspaceResponse = new DataspaceResponse();
-        val dataspaceAttributes = new DataspaceResponse.DataSpaceAttributes();
-        dataspaceAttributes.setName(dataspaceAttributeName);
-        dataspaceResponse.setRecords(ImmutableList.of(dataspaceAttributes));
+    public void testGetDataspacesRespectsSupplier() {
+        val actual = UUID.randomUUID().toString();
+        val connectionString = DataCloudConnectionString.of("jdbc:salesforce-datacloud://login.salesforce.com");
+        val sut = new DataCloudDatabaseMetadata(
+                connection, connectionString, null, () -> ImmutableList.of(actual), "userName");
 
-        try (val server = new MockWebServer()) {
-            server.start();
-            oAuthTokenResponse.setInstanceUrl(server.url("").toString());
-            Mockito.when(tokenProcessor.getOAuthToken()).thenReturn(OAuthToken.of(oAuthTokenResponse));
-
-            server.enqueue(new MockResponse().setBody(mapper.writeValueAsString(dataspaceResponse)));
-            val actual = dataCloudDatabaseMetadata.getDataspaces();
-            List<String> expected = ImmutableList.of(dataspaceAttributeName);
-            assertThat(actual).isEqualTo(expected);
-
-            val actualRequest = server.takeRequest();
-            val query = "SELECT+name+from+Dataspace";
-            assertThat(actualRequest.getMethod()).isEqualTo("GET");
-            assertThat(actualRequest.getRequestUrl()).isEqualTo(server.url("services/data/v61.0/query/?q=" + query));
-            assertThat(actualRequest.getBody().readUtf8()).isBlank();
-            assertThat(actualRequest.getHeader("Authorization")).isEqualTo("Bearer " + accessToken);
-            assertThat(actualRequest.getHeader("Content-Type")).isEqualTo("application/json");
-            assertThat(actualRequest.getHeader("User-Agent")).isEqualTo("cdp/jdbc");
-            assertThat(actualRequest.getHeader("enable-stream-flow")).isEqualTo("false");
-        }
-    }
-
-    @SneakyThrows
-    @Test
-    public void testGetDataspacesThrowsExceptionWhenCallFails() {
-        val oAuthTokenResponse = new OAuthTokenResponse();
-        val accessToken = UUID.randomUUID().toString();
-        val dataspaceAttributeName = randomString();
-        oAuthTokenResponse.setToken(accessToken);
-        val dataspaceResponse = new DataspaceResponse();
-        val dataspaceAttributes = new DataspaceResponse.DataSpaceAttributes();
-        dataspaceAttributes.setName(dataspaceAttributeName);
-        dataspaceResponse.setRecords(ImmutableList.of(dataspaceAttributes));
-
-        try (val server = new MockWebServer()) {
-            server.start();
-            oAuthTokenResponse.setInstanceUrl(server.url("").toString());
-            Mockito.when(tokenProcessor.getOAuthToken()).thenReturn(OAuthToken.of(oAuthTokenResponse));
-
-            server.enqueue(new MockResponse().setResponseCode(500));
-            Assertions.assertThrows(DataCloudJDBCException.class, () -> dataCloudDatabaseMetadata.getDataspaces());
-        }
+        assertThat(sut.getDataspaces()).isEqualTo(ImmutableList.of(actual));
     }
 
     @SneakyThrows
@@ -934,7 +863,7 @@ public class DataCloudDatabaseMetadataTest {
     public void testGetCatalogsRespectsLakehouseSupplier() {
         val dataSpaceName = UUID.randomUUID().toString();
 
-        Supplier<String> lakehouse = () -> "lakehouse:" + FAKE_TENANT_ID + ";" + dataSpaceName;
+        ThrowingJdbcSupplier<String> lakehouse = () -> "lakehouse:" + FAKE_TENANT_ID + ";" + dataSpaceName;
 
         val sut = new DataCloudDatabaseMetadata(null, null, lakehouse, null, null);
 
@@ -1250,7 +1179,7 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetConnection() {
-        assertThat(dataCloudDatabaseMetadata.getConnection()).isNull();
+        assertThat(dataCloudDatabaseMetadata.getConnection()).isSameAs(connection);
     }
 
     @Test

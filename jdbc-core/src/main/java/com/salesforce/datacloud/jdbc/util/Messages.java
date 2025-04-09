@@ -20,8 +20,6 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public final class Messages {
 
-    public static final String FAILED_LOGIN = "Failed to login. Please check credentials";
-
     public static final String ILLEGAL_CONNECTION_PROTOCOL =
             "URL is specified with invalid datasource, expected jdbc:salesforce-datacloud";
 }

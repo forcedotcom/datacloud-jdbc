@@ -15,7 +15,9 @@
  */
 package com.salesforce.datacloud.jdbc.http;
 
-import com.salesforce.datacloud.jdbc.util.internal.SFDefaultSocketFactoryWrapper;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
+import com.salesforce.datacloud.jdbc.http.internal.SFDefaultSocketFactoryWrapper;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Random;
@@ -25,6 +27,7 @@ import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
 import okhttp3.OkHttpClient;
+import org.assertj.core.api.AssertionsForInterfaceTypes;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -53,12 +56,12 @@ public class ClientBuilderTest {
     void createsClientWithAppropriateTimeouts(String key, int defaultSeconds, OkHttpClientTimeout actual) {
         val properties = new Properties();
         val none = buildClient.apply(properties);
-        Assertions.assertThat(actual.getTimeout(none)).isEqualTo(defaultSeconds * 1000);
+        assertThat(actual.getTimeout(none)).isEqualTo(defaultSeconds * 1000);
 
         val notDefaultSeconds = defaultSeconds + random.nextInt(12345);
         properties.setProperty(key, Integer.toString(notDefaultSeconds));
         val some = buildClient.apply(properties);
-        Assertions.assertThat(actual.getTimeout(some)).isEqualTo(notDefaultSeconds * 1000);
+        assertThat(actual.getTimeout(some)).isEqualTo(notDefaultSeconds * 1000);
     }
 
     @SneakyThrows
@@ -70,10 +73,10 @@ public class ClientBuilderTest {
                 SFDefaultSocketFactoryWrapper.class,
                 (mock, context) -> actual.set(Optional.of(context.arguments().get(0))))) {
             val client = buildClient.apply(new Properties());
-            Assertions.assertThat(client).isNotNull();
+            assertThat(client).isNotNull();
         }
 
-        Assertions.assertThat(actual.get()).isPresent().isEqualTo(Optional.of(false));
+        assertThat(actual.get()).isPresent().isEqualTo(Optional.of(false));
     }
 
     @SneakyThrows
@@ -88,17 +91,18 @@ public class ClientBuilderTest {
                 SFDefaultSocketFactoryWrapper.class,
                 (mock, context) -> actual.set(Optional.of(context.arguments().get(0))))) {
             val client = buildClient.apply(properties);
-            Assertions.assertThat(client).isNotNull();
+            assertThat(client).isNotNull();
         }
 
-        Assertions.assertThat(actual.get()).isPresent().isEqualTo(Optional.of(true));
+        assertThat(actual.get()).isPresent().isEqualTo(Optional.of(true));
     }
 
     @SneakyThrows
     @Test
     void createClientHasSomeDefaults() {
         val client = buildClient.apply(new Properties());
-        Assertions.assertThat(client.retryOnConnectionFailure()).isTrue();
-        Assertions.assertThat(client.interceptors()).hasAtLeastOneElementOfType(MetadataCacheInterceptor.class);
+        assertThat(client.retryOnConnectionFailure()).isTrue();
+        AssertionsForInterfaceTypes.assertThat(client.interceptors())
+                .hasAtLeastOneElementOfType(MetadataCacheInterceptor.class);
     }
 }

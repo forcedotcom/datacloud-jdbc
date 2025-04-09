@@ -15,10 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.auth;
 
+import static com.salesforce.datacloud.jdbc.util.Require.requireNotNullOrBlank;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Messages;
 import java.io.IOException;
 import java.net.URI;
 import java.sql.SQLException;
@@ -33,6 +34,9 @@ import org.apache.commons.lang3.StringUtils;
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class DataCloudToken {
+
+    public static final String FAILED_LOGIN = "Failed to login. Please check credentials";
+
     private static final int JWT_PAYLOAD_INDEX = 1;
     private static final String JWT_DELIMITER = "\\.";
     private static final String AUDIENCE_TENANT_ID = "audienceTenantId";
@@ -49,9 +53,9 @@ public class DataCloudToken {
         val token = model.getToken();
         val tenantUrl = model.getInstanceUrl();
 
-        Require.requireNotNullOrBlank(type, "token_type");
-        Require.requireNotNullOrBlank(token, "access_token");
-        Require.requireNotNullOrBlank(tenantUrl, "instance_url");
+        requireNotNullOrBlank(type, "token_type");
+        requireNotNullOrBlank(token, "access_token");
+        requireNotNullOrBlank(tenantUrl, "instance_url");
 
         val expiresIn = Calendar.getInstance();
         expiresIn.add(Calendar.SECOND, model.getExpiresIn());
@@ -63,7 +67,7 @@ public class DataCloudToken {
         } catch (IllegalArgumentException ex) {
             val rootCauseException = new IllegalArgumentException(
                     "Failed to parse the provided tenantUrl: '" + tenantUrl + "'. " + ex.getMessage(), ex.getCause());
-            throw new DataCloudJDBCException(Messages.FAILED_LOGIN, "28000", rootCauseException);
+            throw new DataCloudJDBCException(FAILED_LOGIN, "28000", rootCauseException);
         }
     }
 

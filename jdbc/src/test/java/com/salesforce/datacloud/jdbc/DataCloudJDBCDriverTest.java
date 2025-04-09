@@ -15,17 +15,23 @@
  */
 package com.salesforce.datacloud.jdbc;
 
+import static com.salesforce.datacloud.jdbc.DataCloudJDBCDriver.oauthBasedConnection;
+import static com.salesforce.datacloud.jdbc.util.Messages.ILLEGAL_CONNECTION_PROTOCOL;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.assertj.core.api.AssertionsForClassTypes.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.regex.Pattern;
+import lombok.val;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class DataCloudJDBCDriverTest {
@@ -61,6 +67,17 @@ public class DataCloudJDBCDriverTest {
         final Driver driver = new DataCloudJDBCDriver();
 
         assertThat(driver.acceptsURL("jdbc:mysql://localhost:3306")).isFalse();
+    }
+
+    @Test
+    void testNullUrlThrows() {
+        Assertions.assertThrows(DataCloudJDBCException.class, () -> oauthBasedConnection(null, new Properties()));
+    }
+
+    @Test
+    void testUnsupportedPrefixUrlNotAllowed() {
+        val ex = assertThrows(DataCloudJDBCException.class, () -> oauthBasedConnection("fake-url", new Properties()));
+        assertThat(ex).hasMessage(ILLEGAL_CONNECTION_PROTOCOL);
     }
 
     @Test

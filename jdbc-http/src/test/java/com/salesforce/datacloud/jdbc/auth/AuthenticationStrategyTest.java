@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.FormCommand;
+import com.salesforce.datacloud.jdbc.util.ThrowingFunction;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
@@ -86,7 +87,7 @@ class AuthenticationStrategyTest {
     void ofSettingsProperlyThrowsOnUnknown() {
         val anonymous = new AuthenticationSettings(propertiesForPassword("un", "pw")) {};
         val e = assertThrows(DataCloudJDBCException.class, () -> AuthenticationStrategy.of(anonymous));
-        Assertions.assertThat((Throwable) e)
+        assertThat((Throwable) e)
                 .hasMessage(AuthenticationStrategy.Messages.UNKNOWN_SETTINGS_TYPE)
                 .hasCause(new IllegalArgumentException(AuthenticationStrategy.Messages.UNKNOWN_SETTINGS_TYPE));
     }
@@ -109,11 +110,9 @@ class AuthenticationStrategyTest {
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-            Assertions.assertThat(revokeCommand.getUrl()).isEqualTo(INSTANCE);
-            Assertions.assertThat(revokeCommand.getSuffix()).isEqualTo(URI.create("services/oauth2/revoke"));
-            Assertions.assertThat(revokeCommand.getBodyEntries())
-                    .containsKeys("token")
-                    .containsEntry("token", token.getToken());
+            assertThat(revokeCommand.getUrl()).isEqualTo(INSTANCE);
+            assertThat(revokeCommand.getSuffix()).isEqualTo(URI.create("services/oauth2/revoke"));
+            assertThat(revokeCommand.getBodyEntries()).containsKeys("token").containsEntry("token", token.getToken());
         });
     }
 
@@ -135,9 +134,9 @@ class AuthenticationStrategyTest {
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-            Assertions.assertThat(exchangeCommand.getUrl()).isEqualTo(INSTANCE);
-            Assertions.assertThat(exchangeCommand.getSuffix()).isEqualTo(URI.create("services/a360/token"));
-            Assertions.assertThat(exchangeCommand.getBodyEntries())
+            assertThat(exchangeCommand.getUrl()).isEqualTo(INSTANCE);
+            assertThat(exchangeCommand.getSuffix()).isEqualTo(URI.create("services/a360/token"));
+            assertThat(exchangeCommand.getBodyEntries())
                     .containsKeys("grant_type", "subject_token_type", "subject_token")
                     .containsEntry("grant_type", "urn:salesforce:grant-type:external:cdp")
                     .containsEntry("subject_token_type", "urn:ietf:params:oauth:token-type:access_token")
@@ -204,7 +203,7 @@ class AuthenticationStrategyTest {
     @MethodSource("grantTypeExpectations")
     void allIncludeGrantType(String expectedGrantType, Properties properties) {
         val actual = AuthenticationStrategy.of(properties).buildAuthenticate().getBodyEntries();
-        Assertions.assertThat(actual).containsEntry("grant_type", expectedGrantType);
+        assertThat(actual).containsEntry("grant_type", expectedGrantType);
     }
 
     static Stream<Properties> sharedAuthenticationSettings() {

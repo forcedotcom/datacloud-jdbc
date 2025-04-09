@@ -17,7 +17,6 @@ package com.salesforce.datacloud.jdbc.auth;
 
 import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Messages;
 import java.net.URI;
 import java.sql.SQLException;
 import lombok.AccessLevel;
@@ -29,6 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 @Value
 @Builder(access = AccessLevel.PRIVATE)
 public class OAuthToken {
+    public static final String FAILED_LOGIN = "Failed to login. Please check credentials";
     private static final String BEARER_PREFIX = "Bearer ";
 
     String token;
@@ -38,7 +38,7 @@ public class OAuthToken {
         val accessToken = response.getToken();
 
         if (StringUtils.isBlank(accessToken)) {
-            throw new DataCloudJDBCException(Messages.FAILED_LOGIN, "28000");
+            throw new DataCloudJDBCException(FAILED_LOGIN, "28000");
         }
 
         try {
@@ -49,7 +49,7 @@ public class OAuthToken {
                     .instanceUrl(instanceUrl)
                     .build();
         } catch (Exception ex) {
-            throw new DataCloudJDBCException(Messages.FAILED_LOGIN, "28000", ex);
+            throw new DataCloudJDBCException(FAILED_LOGIN, "28000", ex);
         }
     }
 

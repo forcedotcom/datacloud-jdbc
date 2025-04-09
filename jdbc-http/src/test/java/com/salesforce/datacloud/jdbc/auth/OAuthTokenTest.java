@@ -15,11 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.auth;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Messages;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +30,7 @@ class OAuthTokenTest {
         response.setToken("not empty");
         response.setInstanceUrl("%&#(");
         val ex = assertThrows(DataCloudJDBCException.class, () -> OAuthToken.of(response));
-        AssertionsForClassTypes.assertThat(ex).hasMessage(Messages.FAILED_LOGIN);
+        assertThat(ex).hasMessage(OAuthToken.FAILED_LOGIN);
     }
 
     @Test
@@ -38,6 +38,6 @@ class OAuthTokenTest {
         val response = new OAuthTokenResponse();
         response.setInstanceUrl("login.salesforce.com");
         val ex = assertThrows(DataCloudJDBCException.class, () -> OAuthToken.of(response));
-        AssertionsForClassTypes.assertThat(ex).hasMessage(Messages.FAILED_LOGIN).hasNoCause();
+        assertThat(ex).hasMessage(OAuthToken.FAILED_LOGIN).hasNoCause();
     }
 }

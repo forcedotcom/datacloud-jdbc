@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.auth;
 
+import static com.salesforce.datacloud.jdbc.auth.DataCloudToken.FAILED_LOGIN;
 import static com.salesforce.datacloud.jdbc.auth.PrivateKeyHelpersTest.fakeTenantId;
 import static com.salesforce.datacloud.jdbc.auth.PrivateKeyHelpersTest.fakeToken;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Messages;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -70,14 +70,14 @@ class DataCloudTokenTest {
         noTokenResponse.setInstanceUrl(validUrl);
         noTokenResponse.setExpiresIn(10000);
         noTokenResponse.setToken("");
-        Assertions.assertThat(assertThrows(IllegalArgumentException.class, () -> DataCloudToken.of(noTokenResponse)))
+        assertThat(assertThrows(IllegalArgumentException.class, () -> DataCloudToken.of(noTokenResponse)))
                 .hasMessageContaining("token");
         val noUriResponse = new DataCloudTokenResponse();
         noUriResponse.setTokenType("type");
         noUriResponse.setInstanceUrl("");
         noUriResponse.setExpiresIn(10000);
         noUriResponse.setToken(validToken);
-        Assertions.assertThat(assertThrows(IllegalArgumentException.class, () -> DataCloudToken.of(noUriResponse)))
+        assertThat(assertThrows(IllegalArgumentException.class, () -> DataCloudToken.of(noUriResponse)))
                 .hasMessageContaining("instance_url");
     }
 
@@ -90,8 +90,8 @@ class DataCloudTokenTest {
         bad.setTokenType("type");
         bad.setExpiresIn(123);
         val exception = assertThrows(DataCloudJDBCException.class, () -> DataCloudToken.of(bad));
-        Assertions.assertThat(exception.getMessage()).contains(Messages.FAILED_LOGIN);
-        Assertions.assertThat(exception.getCause().getMessage())
+        assertThat(exception.getMessage()).contains(FAILED_LOGIN);
+        assertThat(exception.getCause().getMessage())
                 .contains("Malformed escape pair at index 0: " + nonNullOrBlankIllegalUrl);
     }
 

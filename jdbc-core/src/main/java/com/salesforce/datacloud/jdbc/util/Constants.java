@@ -20,9 +20,6 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public final class Constants {
 
-    public static final String CDP_URL = "/api/v1";
-    public static final String METADATA_URL = "/metadata";
-
     public static final String LOGIN_URL = "loginURL";
 
     // Property constants
@@ -32,8 +29,6 @@ public final class Constants {
     public static final String USER_NAME = "userName";
     public static final String PRIVATE_KEY = "privateKey";
     public static final String FORCE_SYNC = "force-sync";
-
-    public static final String POST = "POST";
 
     // Column Types
     public static final String INTEGER = "INTEGER";

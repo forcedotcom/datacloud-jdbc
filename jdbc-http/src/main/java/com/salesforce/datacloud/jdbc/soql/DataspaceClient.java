@@ -15,8 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.soql;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.auth.OAuthToken;
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
@@ -29,10 +27,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
-import lombok.Data;
 import lombok.val;
 import okhttp3.OkHttpClient;
 
@@ -81,21 +77,5 @@ public class DataspaceClient implements ThrowingJdbcSupplier<List<String>> {
         builder.header("User-Agent", "cdp/jdbc");
         builder.header("enable-stream-flow", "false");
         return builder.build();
-    }
-
-    @Data
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    private static class DataspaceResponse {
-        List<DataSpaceAttributes> records;
-        Integer totalSize;
-        Boolean done;
-
-        @Data
-        public static class DataSpaceAttributes {
-            Map<String, Object> attributes;
-
-            @JsonAlias({"Name"})
-            String name;
-        }
     }
 }

@@ -9,7 +9,7 @@ plugins {
 
 dependencies {
     api(platform(libs.grpc.bom))
-    implementation(libs.bundles.grpc)
+    implementation(libs.bundles.grpc.impl)
 }
 
 // Based on: https://github.com/google/protobuf-gradle-plugin/blob/master/examples/exampleKotlinDslProject

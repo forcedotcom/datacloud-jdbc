@@ -134,6 +134,7 @@ class DataCloudTokenProcessorTest {
         val accessToken = UUID.randomUUID().toString();
         oAuthTokenResponse.setToken(accessToken);
         val properties = propertiesForPassword("un", "pw");
+        properties.put("metadataCacheTtlMs", "0");
         val expectedTriesCount = 2 * DataCloudTokenProcessor.DEFAULT_MAX_RETRIES + 1;
         try (val server = new MockWebServer()) {
             server.start();
@@ -180,6 +181,7 @@ class DataCloudTokenProcessorTest {
     void bothTokensRetrievedWithLakehouse() {
         val mapper = new ObjectMapper();
         val properties = propertiesForPassword("un", "pw");
+        properties.remove(AuthenticationSettings.Keys.DATASPACE);
         val oAuthTokenResponse = new OAuthTokenResponse();
         oAuthTokenResponse.setToken(UUID.randomUUID().toString());
 
@@ -188,6 +190,7 @@ class DataCloudTokenProcessorTest {
             oAuthTokenResponse.setInstanceUrl(server.url("").toString());
             val dataCloudTokenResponse = new DataCloudTokenResponse();
             dataCloudTokenResponse.setTokenType(UUID.randomUUID().toString());
+            dataCloudTokenResponse.setExpiresIn(60000);
             dataCloudTokenResponse.setToken(fakeToken);
             dataCloudTokenResponse.setInstanceUrl(server.url("").toString());
             val expected = DataCloudToken.of(dataCloudTokenResponse);
@@ -200,7 +203,7 @@ class DataCloudTokenProcessorTest {
             val processor = DataCloudTokenProcessor.of(properties);
             assertThat(processor.getLakehouse()).as("lakehouse").isEqualTo("lakehouse:" + fakeTenantId + ";");
 
-            val actual = DataCloudTokenProcessor.of(properties).getDataCloudToken();
+            val actual = processor.getDataCloudToken();
             assertThat(actual.getAccessToken()).as("access token").isEqualTo(expected.getAccessToken());
             assertThat(actual.getTenantUrl()).as("tenant url").isEqualTo(expected.getTenantUrl());
             assertThat(actual.getTenantId()).as("tenant id").isEqualTo(fakeTenantId);
@@ -223,6 +226,7 @@ class DataCloudTokenProcessorTest {
             val dataCloudTokenResponse = new DataCloudTokenResponse();
             dataCloudTokenResponse.setTokenType(UUID.randomUUID().toString());
             dataCloudTokenResponse.setToken(fakeToken);
+            dataCloudTokenResponse.setExpiresIn(60000);
             dataCloudTokenResponse.setInstanceUrl(server.url("").toString());
             val expected = DataCloudToken.of(dataCloudTokenResponse);
             properties.setProperty(

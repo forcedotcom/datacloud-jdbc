@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.salesforce.datacloud.jdbc;
+package com.salesforce.datacloud.jdbc.auth;
 
 public enum ResponseEnum {
     INTERNAL_SERVER_ERROR("{\n"

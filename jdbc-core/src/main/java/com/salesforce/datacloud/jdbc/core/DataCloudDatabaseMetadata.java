@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -36,11 +37,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     @Getter
     private final Connection connection;
 
-    /**
-     * DataCloudConnectionString::getDatabaseUrl
-     */
-    @Getter
-    private final String URL; //
+    private final DataCloudConnectionString connectionString;
 
     private final ThrowingJdbcSupplier<String> lakehouseSupplier;
 
@@ -57,6 +54,13 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     @Override
     public boolean allTablesAreSelectable() {
         return true;
+    }
+
+    @Override
+    public String getURL() {
+        return Optional.ofNullable(connectionString)
+                .map(DataCloudConnectionString::getDatabaseUrl)
+                .orElse(null);
     }
 
     @Override
@@ -932,9 +936,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     }
 
     public List<String> getDataspaces() throws SQLException {
-        dataspacesSupplier.get();
-
-        return QueryMetadataUtil.createDataspacesResponse(tokenProcessor, client);
+        return dataspacesSupplier.get();
     }
 
     @Override

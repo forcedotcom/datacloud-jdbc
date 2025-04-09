@@ -23,9 +23,10 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
-import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -34,7 +35,7 @@ public class JDBCLimitsTest {
     @Test
     @SneakyThrows
     public void testLargeQuery() {
-        String query = "SELECT 'a', /*" + StringUtils.repeat('x', 62 * 1024 * 1024) + "*/ 'b'";
+        String query = "SELECT 'a', /*" + repeat('x', 62 * 1024 * 1024) + "*/ 'b'";
         // Verify that the full SQL string is submitted by checking that the value before and after the large
         // comment are returned
         assertWithStatement(statement -> {
@@ -48,7 +49,7 @@ public class JDBCLimitsTest {
     @Test
     @SneakyThrows
     public void testTooLargeQuery() {
-        String query = "SELECT 'a', /*" + StringUtils.repeat('x', 65 * 1024 * 1024) + "*/ 'b'";
+        String query = "SELECT 'a', /*" + repeat('x', 65 * 1024 * 1024) + "*/ 'b'";
         assertWithStatement(statement -> {
             assertThatExceptionOfType(DataCloudJDBCException.class)
                     .isThrownBy(() -> {
@@ -64,7 +65,7 @@ public class JDBCLimitsTest {
     @SneakyThrows
     public void testLargeRowResponse() {
         // 31 MB is the expected max row size configured in Hyper
-        String value = StringUtils.repeat('x', 31 * 1024 * 1024);
+        String value = repeat('x', 31 * 1024 * 1024);
         String query = "SELECT rpad('', 31*1024*1024, 'x')";
         // Verify that large responses are supported
         assertWithStatement(statement -> {
@@ -92,7 +93,7 @@ public class JDBCLimitsTest {
     @SneakyThrows
     public void testLargeParameterRoundtrip() {
         // 31 MB is the expected max row size configured in Hyper
-        String value = StringUtils.repeat('x', 31 * 1024 * 1024);
+        String value = repeat('x', 31 * 1024 * 1024);
         // Verify that large responses are supported
         assertWithConnection(connection -> {
             val stmt = connection.prepareStatement("SELECT ?");
@@ -107,7 +108,7 @@ public class JDBCLimitsTest {
     @SneakyThrows
     public void testLargeParameter() {
         // We can send requests of up to 64MB so this parameter should still be accepted
-        String value = StringUtils.repeat('x', 63 * 1024 * 1024);
+        String value = repeat('x', 63 * 1024 * 1024);
         // Verify that large responses are supported
         assertWithConnection(connection -> {
             val stmt = connection.prepareStatement("SELECT length(?)");
@@ -122,7 +123,7 @@ public class JDBCLimitsTest {
     @SneakyThrows
     public void testTooLargeParameter() {
         // We can send requests of up to 64MB so this parameter should fail
-        String value = StringUtils.repeat('x', 64 * 1024 * 1024);
+        String value = repeat('x', 64 * 1024 * 1024);
         assertWithConnection(connection -> {
             try (val stmt = connection.prepareStatement("SELECT length(?)")) {
                 assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
@@ -138,7 +139,7 @@ public class JDBCLimitsTest {
     public void testLargeHeaders() {
         // We expect that under 1 MB total header size should be fine, we use workload as it'll get injected into the
         // header
-        val settings = Maps.immutableEntry("workload", StringUtils.repeat('x', 1000 * 1024));
+        val settings = Maps.immutableEntry("workload", repeat('x', 1000 * 1024));
         assertWithStatement(
                 statement -> {
                     val result = statement.executeQuery("SELECT 'A'");
@@ -152,7 +153,7 @@ public class JDBCLimitsTest {
     @SneakyThrows
     public void testTooLargeHeaders() {
         // We expect that due to 1 MB total header size limit, setting such a large workload should fail
-        val settings = Maps.immutableEntry("workload", StringUtils.repeat('x', 1024 * 1024));
+        val settings = Maps.immutableEntry("workload", repeat('x', 1024 * 1024));
         assertWithStatement(
                 statement -> {
                     assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
@@ -160,5 +161,10 @@ public class JDBCLimitsTest {
                     });
                 },
                 settings);
+    }
+
+    private static String repeat(char c, int length) {
+        val str = String.format("%c", c);
+        return Stream.generate(() -> str).limit(length).collect(Collectors.joining());
     }
 }

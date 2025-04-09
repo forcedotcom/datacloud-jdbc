@@ -15,12 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.mock;
-
-import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
-import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
-import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerProcess;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
@@ -49,7 +43,6 @@ import org.grpcmock.junit5.InProcessGrpcMockExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
@@ -62,14 +55,14 @@ public class HyperGrpcTestBase {
 
     protected static HyperGrpcClientExecutor hyperGrpcClient;
 
-    @Mock
-    protected TokenProcessor mockSession;
-
-    @Mock
-    protected DataCloudToken mockToken;
-
-    @Mock
-    protected AuthenticationSettings mockSettings;
+    //    @Mock
+    //    protected TokenProcessor mockSession;
+    //
+    //    @Mock
+    //    protected DataCloudToken mockToken;
+    //
+    //    @Mock
+    //    protected AuthenticationSettings mockSettings;
 
     private final List<HyperServerProcess> servers = new ArrayList<>();
 
@@ -180,18 +173,18 @@ public class HyperGrpcTestBase {
 
     @BeforeEach
     public void setUpClient() throws SQLException, IOException {
-        mockToken = mock(DataCloudToken.class);
-        lenient().when(mockToken.getAccessToken()).thenReturn("1234");
-        lenient().when(mockToken.getTenantId()).thenReturn("testTenantId");
-        lenient().when(mockToken.getTenantUrl()).thenReturn("tenant.salesforce.com");
-
-        mockSettings = mock(AuthenticationSettings.class);
-        lenient().when(mockSettings.getUserAgent()).thenReturn("userAgent");
-        lenient().when(mockSettings.getDataspace()).thenReturn("testDataspace");
-
-        mockSession = mock(TokenProcessor.class);
-        lenient().when(mockSession.getDataCloudToken()).thenReturn(mockToken);
-        lenient().when(mockSession.getSettings()).thenReturn(mockSettings);
+        //        mockToken = mock(DataCloudToken.class);
+        //        lenient().when(mockToken.getAccessToken()).thenReturn("1234");
+        //        lenient().when(mockToken.getTenantId()).thenReturn("testTenantId");
+        //        lenient().when(mockToken.getTenantUrl()).thenReturn("tenant.salesforce.com");
+        //
+        //        mockSettings = mock(AuthenticationSettings.class);
+        //        lenient().when(mockSettings.getUserAgent()).thenReturn("userAgent");
+        //        lenient().when(mockSettings.getDataspace()).thenReturn("testDataspace");
+        //
+        //        mockSession = mock(TokenProcessor.class);
+        //        lenient().when(mockSession.getDataCloudToken()).thenReturn(mockToken);
+        //        lenient().when(mockSession.getSettings()).thenReturn(mockSettings);
 
         val channel = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
                 .usePlaintext();

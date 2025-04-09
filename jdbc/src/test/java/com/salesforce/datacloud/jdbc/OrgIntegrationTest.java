@@ -16,17 +16,13 @@
 package com.salesforce.datacloud.jdbc;
 
 import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
-import static com.salesforce.datacloud.jdbc.core.StreamingResultSetTest.query;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableSet;
 import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
-import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
-import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
-import com.salesforce.datacloud.jdbc.util.ThrowingBiFunction;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -52,8 +48,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * To run this test, set the environment variables for the various AuthenticationSettings strategies. Right-click the
@@ -66,6 +60,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 @Value
 @EnabledIf("validateProperties")
 class OrgIntegrationTest {
+    public static String query(String arg) {
+        return String.format(
+                "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, %s) as s(a) order by a asc",
+                arg);
+    }
+
     static Properties getPropertiesFromEnvironment() {
         val properties = new Properties();
         System.getenv().entrySet().stream()
@@ -147,32 +147,6 @@ class OrgIntegrationTest {
                     .as("Query ResultSet was closed unexpectedly.")
                     .isFalse();
             assertThat(catalogsResultSet.isClosed())
-                    .as("Query ResultSet was closed unexpectedly.")
-                    .isFalse();
-        }
-    }
-
-    @SneakyThrows
-    @ParameterizedTest
-    @MethodSource("com.salesforce.datacloud.jdbc.core.StreamingResultSetTest#queryModesWithMax")
-    public void exerciseQueryMode(
-            ThrowingBiFunction<DataCloudStatement, String, DataCloudResultSet> queryMode, int max) {
-        val sql = query(Integer.toString(max));
-        try (val connection = getConnection();
-                val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
-            val rs = queryMode.apply(statement, sql);
-
-            assertThat(rs.isReady()).isTrue();
-            assertThat(rs).isInstanceOf(StreamingResultSet.class);
-
-            int expected = 0;
-            while (rs.next()) {
-                expected++;
-            }
-
-            log.info("final value: {}", expected);
-            assertThat(expected).isEqualTo(max);
-            assertThat(rs.isClosed())
                     .as("Query ResultSet was closed unexpectedly.")
                     .isFalse();
         }

@@ -15,6 +15,13 @@
  */
 package com.salesforce.datacloud.jdbc.http;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
+import com.salesforce.datacloud.jdbc.auth.ResponseEnum;
+import java.util.Properties;
 import lombok.SneakyThrows;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -25,10 +32,14 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 public class MetadataCacheInterceptorTest {
+    private static final String POST = "POST";
+    private static final String CDP_URL = "/api/v1";
+    private static final String METADATA_URL = "/metadata";
+    private static final String URL =
+            "https://mjrgg9bzgy2dsyzvmjrgkmzzg1.c360a.salesforce.com" + CDP_URL + METADATA_URL;
 
     private Interceptor.Chain chain;
 
@@ -37,37 +48,30 @@ public class MetadataCacheInterceptorTest {
     @BeforeEach
     public void init() {
         chain = Mockito.mock(Interceptor.Chain.class);
-        metadataCacheInterceptor = new MetadataCacheInterceptor();
-        Mockito.doReturn(buildRequest()).when(chain).request();
+        metadataCacheInterceptor = new MetadataCacheInterceptor(new Properties());
+        doReturn(buildRequest()).when(chain).request();
     }
 
     @Test
     @SneakyThrows
     public void testMetadataRequestWithNoCachePresent() {
-        Mockito.doReturn(buildResponse(200, ResponseEnum.EMPTY_RESPONSE))
+        doReturn(buildResponse(200, ResponseEnum.EMPTY_RESPONSE))
                 .doReturn(buildResponse(200, ResponseEnum.QUERY_RESPONSE))
                 .when(chain)
-                .proceed(ArgumentMatchers.any(Request.class));
+                .proceed(any(Request.class));
         metadataCacheInterceptor.intercept(chain);
-        Mockito.verify(chain, Mockito.times(1)).proceed(ArgumentMatchers.any(Request.class));
-    }
+        verify(chain, times(1)).proceed(any(Request.class));
 
-    @Test
-    @SneakyThrows
-    public void testMetadataFromCache() {
-        MetadataCacheUtil.cacheMetadata(
-                "https://mjrgg9bzgy2dsyzvmjrgkmzzg1.c360a.salesforce.com" + Constants.CDP_URL + Constants.METADATA_URL,
-                ResponseEnum.TABLE_METADATA.getResponse());
         metadataCacheInterceptor.intercept(chain);
-        Mockito.verify(chain, Mockito.times(0)).proceed(ArgumentMatchers.any(Request.class));
+        metadataCacheInterceptor.intercept(chain);
+        metadataCacheInterceptor.intercept(chain);
+        verify(chain, times(1)).proceed(any(Request.class));
     }
 
     private Request buildRequest() {
         return new Request.Builder()
-                .url("https://mjrgg9bzgy2dsyzvmjrgkmzzg1.c360a.salesforce.com"
-                        + Constants.CDP_URL
-                        + Constants.METADATA_URL)
-                .method(Constants.POST, RequestBody.create("{test: test}", MediaType.parse("application/json")))
+                .url(URL)
+                .method(POST, RequestBody.create("{test: test}", MediaType.parse("application/json")))
                 .build();
     }
 

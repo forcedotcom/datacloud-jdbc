@@ -25,7 +25,6 @@ import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.soql.DataspaceClient;
 import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 import io.grpc.ManagedChannelBuilder;
@@ -120,14 +119,14 @@ public class DataCloudJDBCDriver implements Driver {
         return DataCloudTokenProcessor.of(properties);
     }
 
-    private static DataCloudConnection oauthBasedConnection(String url, Properties properties) throws SQLException {
+    static DataCloudConnection oauthBasedConnection(String url, Properties properties) throws SQLException {
         val connectionString = DataCloudConnectionString.of(url);
         addClientUsernameIfRequired(properties);
         connectionString.withParameters(properties);
         properties.setProperty(LOGIN_URL, connectionString.getLoginUrl());
 
         val tokenProcessor = getDataCloudTokenProcessor(properties);
-        val authInterceptor = AuthorizationHeaderInterceptor.of(tokenProcessor);
+        val authInterceptor = TokenProcessorSupplier.of(tokenProcessor);
 
         val host = tokenProcessor.getDataCloudToken().getTenantUrl();
         val builder = ManagedChannelBuilder.forAddress(host, DataCloudConnection.DEFAULT_PORT);

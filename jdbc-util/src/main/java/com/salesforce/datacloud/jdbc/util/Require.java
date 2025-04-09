@@ -15,6 +15,13 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
-public interface ThrowingBiFunction<T, U, R> {
-    R apply(T t, U u) throws Exception;
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
+public class Require {
+    public static void requireNotNullOrBlank(String value, String name) {
+        if (StringCompatibility.isNullOrBlank(value)) {
+            throw new IllegalArgumentException("Expected argument '" + name + "' to not be null or blank");
+        }
+    }
 }

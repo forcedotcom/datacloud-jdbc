@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.jdbc.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.collect.ImmutableList;
@@ -79,26 +80,22 @@ class FormCommandTest {
 
     @Test
     void throwsOnNullClient() {
-        val ex = Assertions.assertThrows(
+        val ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> FormCommand.post(
                         null,
                         new FormCommand(
                                 VALID, new URI("/suffix"), ImmutableMap.of(), ImmutableMap.of(), ImmutableMap.of()),
                         Object.class));
-        Assertions.assertThat(ex)
-                .hasMessage("client is marked non-null but is null")
-                .hasNoCause();
+        assertThat(ex).hasMessage("client is marked non-null but is null").hasNoCause();
     }
 
     @Test
     void throwsOnNullCommand() {
-        val ex = Assertions.assertThrows(
+        val ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> FormCommand.post(new OkHttpClient.Builder().build(), null, Object.class));
-        Assertions.assertThat(ex)
-                .hasMessage("command is marked non-null but is null")
-                .hasNoCause();
+        assertThat(ex).hasMessage("command is marked non-null but is null").hasNoCause();
     }
 
     @Test

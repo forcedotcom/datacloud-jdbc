@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.ThrowingFunction;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
@@ -89,7 +90,7 @@ public class AuthenticationSettingsTest {
                 AuthenticationSettings.Keys.PASSWORD,
                 AuthenticationSettings.Keys.REFRESH_TOKEN);
         val e = assertThrows(DataCloudJDBCException.class, () -> sut(p));
-        AssertionsForClassTypes.assertThat((Throwable) e)
+        assertThat((Throwable) e)
                 .hasMessage(AuthenticationSettings.Messages.PROPERTIES_MISSING)
                 .hasNoCause();
     }
@@ -201,7 +202,7 @@ public class AuthenticationSettingsTest {
         AuthenticationSettings.Keys.REQUIRED_KEYS.forEach(k -> {
             val p = allPropertiesExcept(k);
             val e = assertThrows(DataCloudJDBCException.class, () -> sut(p));
-            AssertionsForClassTypes.assertThat((Throwable) e)
+            assertThat((Throwable) e)
                     .hasMessage(AuthenticationSettings.Messages.PROPERTIES_REQUIRED + k)
                     .hasCause(new IllegalArgumentException(AuthenticationSettings.Messages.PROPERTIES_REQUIRED + k));
         });

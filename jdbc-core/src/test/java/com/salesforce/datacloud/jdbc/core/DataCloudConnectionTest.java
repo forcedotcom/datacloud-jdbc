@@ -15,8 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForPassword;
-import static com.salesforce.datacloud.jdbc.util.Messages.ILLEGAL_CONNECTION_PROTOCOL;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -25,7 +23,6 @@ import java.sql.Connection;
 import java.util.Properties;
 import lombok.SneakyThrows;
 import lombok.val;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,25 +30,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class DataCloudConnectionTest extends HyperGrpcTestBase {
 
-    static final Properties properties = propertiesForPassword("un", "pw");
-
     @Test
     void testCreateStatement() {
         try (val connection = sut()) {
             val statement = connection.createStatement();
             assertThat(statement).isInstanceOf(DataCloudStatement.class);
         }
-    }
-
-    @Test
-    void testNullUrlThrows() {
-        Assertions.assertThrows(DataCloudJDBCException.class, () -> DataCloudConnection.of(null, new Properties()));
-    }
-
-    @Test
-    void testUnsupportedPrefixUrlNotAllowed() {
-        val ex = assertThrows(DataCloudJDBCException.class, () -> DataCloudConnection.of("fake-url", new Properties()));
-        assertThat(ex).hasMessage(ILLEGAL_CONNECTION_PROTOCOL);
     }
 
     @Test
@@ -97,8 +81,9 @@ class DataCloudConnectionTest extends HyperGrpcTestBase {
     @SneakyThrows
     void testConnectionUnwrap() {
         val connection = sut();
-        DataCloudConnection query_conn = connection.unwrap(DataCloudConnection.class);
+        val unwrapped = connection.unwrap(DataCloudConnection.class);
         assertThat(connection.isWrapperFor(DataCloudConnection.class)).isTrue();
+        assertThat(unwrapped).isInstanceOf(DataCloudConnection.class);
         assertThrows(DataCloudJDBCException.class, () -> connection.unwrap(String.class));
         connection.close();
     }
@@ -106,8 +91,7 @@ class DataCloudConnectionTest extends HyperGrpcTestBase {
     private DataCloudConnection sut() {
         return DataCloudConnection.builder()
                 .executor(hyperGrpcClient)
-                .tokenProcessor(mockSession)
-                .properties(properties)
+                .properties(new Properties())
                 .build();
     }
 }

@@ -39,13 +39,13 @@ class PropertiesExtensionsTest {
         p.put(key, expected);
 
         val some = PropertiesExtensions.optional(p, key);
-        Assertions.assertThat(some).isPresent().contains(expected);
+        assertThat(some).isPresent().contains(expected);
     }
 
     @Test
     void optionalNotPresentKey() {
         val none = PropertiesExtensions.optional(new Properties(), "key");
-        Assertions.assertThat(none).isNotPresent();
+        assertThat(none).isNotPresent();
     }
 
     @Test
@@ -60,7 +60,7 @@ class PropertiesExtensionsTest {
         p.put(key, input);
 
         val none = PropertiesExtensions.optional(p, UUID.randomUUID().toString());
-        Assertions.assertThat(none).isNotPresent();
+        assertThat(none).isNotPresent();
     }
 
     @Test
@@ -70,7 +70,7 @@ class PropertiesExtensionsTest {
         p.put(key, expected);
 
         val some = PropertiesExtensions.required(p, key);
-        Assertions.assertThat(some).isEqualTo(expected);
+        assertThat(some).isEqualTo(expected);
     }
 
     @ParameterizedTest
@@ -80,7 +80,7 @@ class PropertiesExtensionsTest {
         p.put(key, input);
 
         val e = assertThrows(IllegalArgumentException.class, () -> PropertiesExtensions.required(p, key));
-        Assertions.assertThat(e).hasMessage(PropertiesExtensions.Messages.REQUIRED_MISSING_PREFIX + key);
+        assertThat(e).hasMessage(PropertiesExtensions.Messages.REQUIRED_MISSING_PREFIX + key);
     }
 
     @Test
@@ -93,7 +93,7 @@ class PropertiesExtensionsTest {
 
         val actual = PropertiesExtensions.copy(p, included);
 
-        Assertions.assertThat(actual)
+        assertThat(actual)
                 .containsExactlyInAnyOrderEntriesOf(ImmutableMap.of("a", "A", "b", "B", "c", "C", "d", "D", "e", "E"));
     }
 
@@ -108,14 +108,14 @@ class PropertiesExtensionsTest {
         Properties properties = new Properties();
         properties.setProperty("myKeyTrue", "true");
         Boolean resultTrue = PropertiesExtensions.getBooleanOrDefault(properties, "myKeyTrue", false);
-        Assertions.assertThat(resultTrue).isEqualTo(true);
+        assertThat(resultTrue).isEqualTo(true);
 
         properties.setProperty("myKeyFalse", "false");
         Boolean resultFalse = PropertiesExtensions.getBooleanOrDefault(properties, "myKeyFalse", true);
-        Assertions.assertThat(resultFalse).isEqualTo(false);
+        assertThat(resultFalse).isEqualTo(false);
 
         properties.setProperty("myKeyEmpty", "");
         Boolean resultEmpty = PropertiesExtensions.getBooleanOrDefault(properties, "myKeyEmpty", false);
-        Assertions.assertThat(resultEmpty).isEqualTo(false);
+        assertThat(resultEmpty).isEqualTo(false);
     }
 }

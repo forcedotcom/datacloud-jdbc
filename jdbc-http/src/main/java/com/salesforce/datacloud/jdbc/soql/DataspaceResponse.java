@@ -13,9 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.salesforce.datacloud.jdbc.util;
+package com.salesforce.datacloud.jdbc.soql;
 
-import lombok.experimental.UtilityClass;
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.List;
+import java.util.Map;
+import lombok.Data;
 
-@UtilityClass
-public class StringExtensions {}
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
+class DataspaceResponse {
+    List<DataSpaceAttributes> records;
+    Integer totalSize;
+    Boolean done;
+
+    @Data
+    public static class DataSpaceAttributes {
+        Map<String, Object> attributes;
+
+        @JsonAlias({"Name"})
+        String name;
+    }
+}

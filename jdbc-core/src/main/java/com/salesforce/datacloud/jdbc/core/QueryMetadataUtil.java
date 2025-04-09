@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.config.QueryResources;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
+import com.salesforce.datacloud.jdbc.util.StringCompatibility;
+import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -33,7 +35,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.function.Supplier;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -310,7 +311,7 @@ class QueryMetadataUtil {
 
     private static String getSchemasQuery(String schemaPattern) {
         String schemasQuery = QueryResources.getSchemasQuery();
-        if (StringUtils.isNotEmpty(schemaPattern)) {
+        if (StringCompatibility.isNotEmpty(schemaPattern)) {
             schemasQuery += " AND nspname LIKE " + quoteStringLiteral(schemaPattern);
         }
         return schemasQuery;
@@ -349,7 +350,7 @@ class QueryMetadataUtil {
         return data;
     }
 
-    static List<Object> getLakehouse(Supplier<String> lakehouseSupplier) {
+    static List<Object> getLakehouse(ThrowingJdbcSupplier<String> lakehouseSupplier) throws SQLException {
         val lakehouse = lakehouseSupplier.get();
 
         if (Strings.isNullOrEmpty(lakehouse)) {
@@ -359,7 +360,8 @@ class QueryMetadataUtil {
         return ImmutableList.of(ImmutableList.of(lakehouse));
     }
 
-    public static ResultSet createCatalogsResultSet(Supplier<String> lakehouseSupplier) throws SQLException {
+    public static ResultSet createCatalogsResultSet(ThrowingJdbcSupplier<String> lakehouseSupplier)
+            throws SQLException {
         val data = getLakehouse(lakehouseSupplier);
         return getMetadataResultSet(QueryDBMetadata.GET_CATALOGS, NUM_CATALOG_METADATA_COLUMNS, data);
     }

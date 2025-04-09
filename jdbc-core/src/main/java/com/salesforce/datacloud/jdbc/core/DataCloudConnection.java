@@ -71,12 +71,12 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     private final DataCloudConnectionString connectionString;
 
     @Getter(AccessLevel.PACKAGE)
-    @NonNull @Builder.Default
+    @Builder.Default
     private final Properties properties = new Properties();
 
     @Unstable
     @Getter(AccessLevel.PACKAGE)
-    @NonNull private final HyperGrpcClientExecutor executor;
+    private final HyperGrpcClientExecutor executor;
 
     /**
      * This creates a Data Cloud connection with minimal adjustments to the channels.
@@ -101,6 +101,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
             ThrowingJdbcSupplier<String> lakehouseSupplier,
             ThrowingJdbcSupplier<List<String>> dataspacesSupplier)
             throws SQLException {
+
         val interceptors = getPropertyDerivedClientInterceptors(properties);
         interceptors.add(0, authInterceptor);
         val executor = HyperGrpcClientExecutor.of(builder.intercept(interceptors), properties);
@@ -178,7 +179,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * @param offset The starting row offset.
      * @param limit The quantity of rows relative to the offset to wait for
      * @param timeout The duration to wait for the engine have results produced.
-     * @param allowLessThan Whether or not to return early when the available rows is less than {@code offset + limit}
+     * @param allowLessThan Whether to return early when the available rows is less than {@code offset + limit}
      * @return The final {@link DataCloudQueryStatus} the server replied with.
      */
     public DataCloudQueryStatus waitForRowsAvailable(
@@ -252,8 +253,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     @Override
     public DatabaseMetaData getMetaData() {
         val userName = this.properties.getProperty("userName");
-        return new DataCloudDatabaseMetadata(
-                this, connectionString.getDatabaseUrl(), lakehouseSupplier, dataspacesSupplier, userName);
+        return new DataCloudDatabaseMetadata(this, connectionString, lakehouseSupplier, dataspacesSupplier, userName);
     }
 
     @Override

@@ -62,9 +62,10 @@ protoc = { group = "com.google.protobuf", name = "protoc", version.ref = "protob
 
 [bundles]
 arrow = ["apache-arrow-vector", "apache-arrow-memory-netty"]
-grpc = ["grpc-netty", "grpc-protobuf", "grpc-stub", "javax-annotation-api"]
+grpc-impl = ["grpc-netty", "grpc-protobuf", "grpc-stub", "javax-annotation-api"]
+grpc-testing = ["grpcmock"]
 testing = ["junit-jupiter-base", "junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "junit-platform-launcher", "assertj", "slf4j-simple"]
-mocking = ["mockito-inline", "mockito-junit-jupiter", "grpcmock", "okhttp3-mockwebserver"]
+mocking = ["mockito-inline", "mockito-junit-jupiter", "okhttp3-mockwebserver"]
 
 
 [plugins]
