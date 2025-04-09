@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.jdbc.auth;
 
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
+import static com.salesforce.datacloud.jdbc.util.StringCompatibility.isNotEmpty;
 
 import com.google.common.base.Strings;
 import com.salesforce.datacloud.jdbc.auth.errors.AuthorizationException;
@@ -151,9 +152,9 @@ public class DataCloudTokenProcessor implements TokenProcessor {
         val code = response.getErrorCode();
         val description = response.getErrorDescription();
 
-        if (!Strings.isNullOrEmpty(token) && !Strings.isNullOrEmpty(code) && !Strings.isNullOrEmpty(description)) {
+        if (isNotEmpty(token) && isNotEmpty(code) && isNotEmpty(description)) {
             log.warn("{} but got error code {} : {}", message, code, description);
-        } else if (!Strings.isNullOrEmpty(code) || !Strings.isNullOrEmpty(description)) {
+        } else if (isNotEmpty(code) || isNotEmpty(description)) {
             val authorizationException = AuthorizationException.builder()
                     .message(message + ". " + code + ": " + description)
                     .errorCode(code)
