@@ -16,7 +16,6 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Messages;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import java.net.URI;
 import java.sql.SQLException;
@@ -33,11 +32,14 @@ import org.apache.commons.lang3.StringUtils;
 
 @Builder(access = AccessLevel.PRIVATE)
 public class DataCloudConnectionString {
+    public static final String ILLEGAL_CONNECTION_PROTOCOL =
+            "URL is specified with invalid datasource, expected jdbc:salesforce-datacloud";
+
     public static final String CONNECTION_PROTOCOL = "jdbc:salesforce-datacloud:";
 
     public static DataCloudConnectionString of(String url) throws SQLException {
         if (!acceptsUrl(url)) {
-            throw new DataCloudJDBCException(Messages.ILLEGAL_CONNECTION_PROTOCOL);
+            throw new DataCloudJDBCException(ILLEGAL_CONNECTION_PROTOCOL);
         }
 
         val database = getDatabaseUrl(url);
@@ -77,7 +79,7 @@ public class DataCloudConnectionString {
      */
     static String getAuthenticationUrl(String url) throws SQLException {
         if (!acceptsUrl(url)) {
-            throw new DataCloudJDBCException(Messages.ILLEGAL_CONNECTION_PROTOCOL);
+            throw new DataCloudJDBCException(ILLEGAL_CONNECTION_PROTOCOL);
         }
 
         val withoutParameters = withoutParameters(url);
@@ -90,7 +92,7 @@ public class DataCloudConnectionString {
 
     static String getDatabaseUrl(String url) throws SQLException {
         if (!acceptsUrl(url)) {
-            throw new DataCloudJDBCException(Messages.ILLEGAL_CONNECTION_PROTOCOL);
+            throw new DataCloudJDBCException(ILLEGAL_CONNECTION_PROTOCOL);
         }
 
         return withoutParameters(url);
@@ -118,7 +120,7 @@ public class DataCloudConnectionString {
         try {
             return URI.create("https://" + host);
         } catch (IllegalArgumentException e) {
-            throw new DataCloudJDBCException(Messages.ILLEGAL_CONNECTION_PROTOCOL, e);
+            throw new DataCloudJDBCException(ILLEGAL_CONNECTION_PROTOCOL, e);
         }
     }
 

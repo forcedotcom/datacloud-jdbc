@@ -18,12 +18,12 @@ package com.salesforce.datacloud.jdbc.auth;
 import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForPassword;
 import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForPrivateKey;
 import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForRefreshToken;
+import static com.salesforce.datacloud.jdbc.util.ThrowingFunction.rethrowFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.FormCommand;
-import com.salesforce.datacloud.jdbc.util.ThrowingFunction;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
@@ -64,8 +64,7 @@ class AuthenticationStrategyTest {
 
     @SneakyThrows
     static Stream<Arguments> settings() {
-        Function<Properties, AuthenticationSettings> from =
-                ThrowingFunction.rethrowFunction(AuthenticationSettings::of);
+        Function<Properties, AuthenticationSettings> from = rethrowFunction(AuthenticationSettings::of);
 
         return Stream.of(
                 Arguments.of(

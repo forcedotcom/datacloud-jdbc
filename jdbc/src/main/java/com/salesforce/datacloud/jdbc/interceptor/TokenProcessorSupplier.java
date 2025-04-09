@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.salesforce.datacloud.jdbc;
+package com.salesforce.datacloud.jdbc.interceptor;
 
 import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
-import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;

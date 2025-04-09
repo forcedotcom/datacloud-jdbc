@@ -15,8 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.interceptor;
 
+import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
+
 import io.grpc.Metadata;
 import java.sql.SQLException;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.ToString;
@@ -25,7 +28,7 @@ import lombok.val;
 
 @Slf4j
 @ToString
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PACKAGE)
 public class AuthorizationHeaderInterceptor implements HeaderMutatingClientInterceptor {
 
     @FunctionalInterface
@@ -44,8 +47,8 @@ public class AuthorizationHeaderInterceptor implements HeaderMutatingClientInter
     private static final String AUTH = "Authorization";
     private static final String AUD = "audience";
 
-    private static final Metadata.Key<String> AUTH_KEY = MetadataUtilities.keyOf(AUTH);
-    private static final Metadata.Key<String> AUD_KEY = MetadataUtilities.keyOf(AUD);
+    private static final Metadata.Key<String> AUTH_KEY = keyOf(AUTH);
+    private static final Metadata.Key<String> AUD_KEY = keyOf(AUD);
 
     @ToString.Exclude
     private final TokenSupplier tokenSupplier;

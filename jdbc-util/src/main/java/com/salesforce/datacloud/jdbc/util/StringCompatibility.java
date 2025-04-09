@@ -16,8 +16,6 @@
 package com.salesforce.datacloud.jdbc.util;
 
 public class StringCompatibility {
-    public static final String EMPTY = "";
-
     public static boolean isNotEmpty(String str) {
         return !isNullOrEmpty(str);
     }

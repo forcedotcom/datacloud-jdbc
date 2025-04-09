@@ -20,12 +20,12 @@ import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForPa
 import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForPrivateKey;
 import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForRefreshToken;
 import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.randomString;
+import static com.salesforce.datacloud.jdbc.util.ThrowingFunction.rethrowFunction;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.ThrowingFunction;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
@@ -57,10 +57,10 @@ public class AuthenticationSettingsTest {
     private static Stream<Arguments> constructors() {
         List<Properties> properties = Arrays.asList(null, new Properties());
         List<Function<Properties, AuthenticationSettings>> ctors = ImmutableList.of(
-                ThrowingFunction.rethrowFunction(AuthenticationSettings::of),
-                ThrowingFunction.rethrowFunction(PasswordAuthenticationSettings::new),
-                ThrowingFunction.rethrowFunction(PrivateKeyAuthenticationSettings::new),
-                ThrowingFunction.rethrowFunction(RefreshTokenAuthenticationSettings::new));
+                rethrowFunction(AuthenticationSettings::of),
+                rethrowFunction(PasswordAuthenticationSettings::new),
+                rethrowFunction(PrivateKeyAuthenticationSettings::new),
+                rethrowFunction(RefreshTokenAuthenticationSettings::new));
 
         return ctors.stream().flatMap(c -> properties.stream().map(p -> Arguments.of(p, c)));
     }

@@ -15,7 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.util.Messages.ILLEGAL_CONNECTION_PROTOCOL;
+import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.ILLEGAL_CONNECTION_PROTOCOL;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import com.google.common.collect.ImmutableMap;

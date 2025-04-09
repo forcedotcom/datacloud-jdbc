@@ -55,15 +55,6 @@ public class HyperGrpcTestBase {
 
     protected static HyperGrpcClientExecutor hyperGrpcClient;
 
-    //    @Mock
-    //    protected TokenProcessor mockSession;
-    //
-    //    @Mock
-    //    protected DataCloudToken mockToken;
-    //
-    //    @Mock
-    //    protected AuthenticationSettings mockSettings;
-
     private final List<HyperServerProcess> servers = new ArrayList<>();
 
     private final List<ManagedChannel> channels = new ArrayList<>();
@@ -173,19 +164,6 @@ public class HyperGrpcTestBase {
 
     @BeforeEach
     public void setUpClient() throws SQLException, IOException {
-        //        mockToken = mock(DataCloudToken.class);
-        //        lenient().when(mockToken.getAccessToken()).thenReturn("1234");
-        //        lenient().when(mockToken.getTenantId()).thenReturn("testTenantId");
-        //        lenient().when(mockToken.getTenantUrl()).thenReturn("tenant.salesforce.com");
-        //
-        //        mockSettings = mock(AuthenticationSettings.class);
-        //        lenient().when(mockSettings.getUserAgent()).thenReturn("userAgent");
-        //        lenient().when(mockSettings.getDataspace()).thenReturn("testDataspace");
-        //
-        //        mockSession = mock(TokenProcessor.class);
-        //        lenient().when(mockSession.getDataCloudToken()).thenReturn(mockToken);
-        //        lenient().when(mockSession.getSettings()).thenReturn(mockSettings);
-
         val channel = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
                 .usePlaintext();
         hyperGrpcClient = HyperGrpcClientExecutor.of(channel, new Properties());

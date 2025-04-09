@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.http;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -32,7 +33,6 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 public class MetadataCacheInterceptorTest {
     private static final String POST = "POST";
@@ -47,7 +47,7 @@ public class MetadataCacheInterceptorTest {
 
     @BeforeEach
     public void init() {
-        chain = Mockito.mock(Interceptor.Chain.class);
+        chain = mock(Interceptor.Chain.class);
         metadataCacheInterceptor = new MetadataCacheInterceptor(new Properties());
         doReturn(buildRequest()).when(chain).request();
     }

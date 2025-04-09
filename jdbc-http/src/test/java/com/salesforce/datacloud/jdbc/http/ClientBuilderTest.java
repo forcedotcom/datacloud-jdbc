@@ -15,7 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.http;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salesforce.datacloud.jdbc.http.internal.SFDefaultSocketFactoryWrapper;
 import java.util.Optional;
@@ -27,7 +27,6 @@ import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
 import okhttp3.OkHttpClient;
-import org.assertj.core.api.AssertionsForInterfaceTypes;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -102,7 +101,6 @@ public class ClientBuilderTest {
     void createClientHasSomeDefaults() {
         val client = buildClient.apply(new Properties());
         assertThat(client.retryOnConnectionFailure()).isTrue();
-        AssertionsForInterfaceTypes.assertThat(client.interceptors())
-                .hasAtLeastOneElementOfType(MetadataCacheInterceptor.class);
+        assertThat(client.interceptors()).hasAtLeastOneElementOfType(MetadataCacheInterceptor.class);
     }
 }
