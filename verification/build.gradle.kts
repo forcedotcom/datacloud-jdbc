@@ -8,6 +8,8 @@ dependencies {
   devPublication(project(":jdbc"))
   devPublication(project(":jdbc-core"))
   devPublication(project(":jdbc-grpc"))
+  devPublication(project(":jdbc-http"))
+  devPublication(project(":jdbc-util"))
 }
 
 tasks.named("check") {
