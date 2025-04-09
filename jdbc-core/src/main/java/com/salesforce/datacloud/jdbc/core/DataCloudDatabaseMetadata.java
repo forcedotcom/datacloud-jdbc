@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.config.KeywordResources;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
@@ -936,7 +937,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     }
 
     public List<String> getDataspaces() throws SQLException {
-        return dataspacesSupplier.get();
+        return dataspacesSupplier == null ? ImmutableList.of() : dataspacesSupplier.get();
     }
 
     @Override

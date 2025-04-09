@@ -351,6 +351,10 @@ class QueryMetadataUtil {
     }
 
     static List<Object> getLakehouse(ThrowingJdbcSupplier<String> lakehouseSupplier) throws SQLException {
+        if (lakehouseSupplier == null) {
+            return ImmutableList.of();
+        }
+
         val lakehouse = lakehouseSupplier.get();
 
         if (Strings.isNullOrEmpty(lakehouse)) {
