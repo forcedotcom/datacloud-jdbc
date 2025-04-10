@@ -2,6 +2,8 @@ plugins {
     id("hyper-conventions")
     id("base-conventions")
     id("com.diffplug.spotless")
+    id("dev.iurysouza.modulegraph") version "0.12.0"
+
 }
 
 subprojects {
@@ -10,4 +12,10 @@ subprojects {
             dependsOn(rootProject.tasks.named("extractHyper"))
         }
     }
+}
+
+moduleGraphConfig {
+    readmePath.set("${rootDir}/DEVELOPMENT.md")
+    heading.set("## Module Graph")
+    rootModulesRegex.set(":jdbc")
 }
