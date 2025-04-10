@@ -6,12 +6,12 @@ plugins {
 
 dependencies {
     compileOnly(project(":jdbc-grpc"))
+    compileOnly(libs.grpc.stub)
+    compileOnly(libs.grpc.protobuf)
 
     implementation(project(":jdbc-util"))
 
     implementation(libs.slf4j.api)
-
-    implementation(libs.bundles.grpc.impl)
 
     implementation(libs.bundles.arrow)
 
@@ -29,6 +29,7 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.bundles.testing)
     testImplementation(libs.bundles.mocking)
+    testImplementation(libs.bundles.grpc.impl)
     testImplementation(libs.bundles.grpc.testing)
 }
 

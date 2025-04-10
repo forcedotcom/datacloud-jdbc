@@ -19,6 +19,9 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import dev.failsafe.Failsafe;
+import dev.failsafe.FailsafeException;
+import dev.failsafe.RetryPolicy;
 import io.grpc.StatusRuntimeException;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,9 +33,6 @@ import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.FailsafeException;
-import net.jodah.failsafe.RetryPolicy;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 
@@ -88,7 +88,7 @@ public class DataCloudQueryPolling {
         val deadline = Instant.now().plus(timeoutDuration);
         val attempts = new AtomicInteger(0);
 
-        val retryPolicy = new RetryPolicy<DataCloudQueryStatus>()
+        val retryPolicy = RetryPolicy.<DataCloudQueryStatus>builder()
                 .withMaxDuration(timeoutDuration)
                 .handleIf(e -> {
                     if (!(e instanceof StatusRuntimeException)) {
@@ -121,7 +121,8 @@ public class DataCloudQueryPolling {
                             attempts.get(),
                             last.get());
                     return true;
-                });
+                })
+                .build();
 
         try {
             return Failsafe.with(retryPolicy)

@@ -26,6 +26,10 @@ import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.ClientBuilder;
 import com.salesforce.datacloud.jdbc.http.FormCommand;
+import dev.failsafe.Failsafe;
+import dev.failsafe.FailsafeException;
+import dev.failsafe.RetryPolicy;
+import dev.failsafe.function.CheckedSupplier;
 import java.sql.SQLException;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -35,10 +39,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.FailsafeException;
-import net.jodah.failsafe.RetryPolicy;
-import net.jodah.failsafe.function.CheckedSupplier;
 import okhttp3.OkHttpClient;
 
 @Slf4j
@@ -188,16 +188,18 @@ public class DataCloudTokenProcessor implements TokenProcessor {
 
     static RetryPolicy<AuthenticationResponseWithError> buildRetryPolicy(Properties properties) {
         val maxRetries = getIntegerOrDefault(properties, MAX_RETRIES_KEY, DEFAULT_MAX_RETRIES);
-        return new RetryPolicy<AuthenticationResponseWithError>()
+        return RetryPolicy.<AuthenticationResponseWithError>builder()
                 .withMaxRetries(maxRetries)
-                .handleIf(e -> !(e instanceof AuthorizationException));
+                .handleIf(e -> !(e instanceof AuthorizationException))
+                .build();
     }
 
     static RetryPolicy<AuthenticationResponseWithError> buildExponentialBackoffRetryPolicy(Properties properties) {
         val maxRetries = getIntegerOrDefault(properties, MAX_RETRIES_KEY, DEFAULT_MAX_RETRIES);
-        return new RetryPolicy<AuthenticationResponseWithError>()
+        return RetryPolicy.<AuthenticationResponseWithError>builder()
                 .withMaxRetries(maxRetries)
                 .withBackoff(1, 30, ChronoUnit.SECONDS)
-                .handleIf(e -> !(e instanceof AuthorizationException));
+                .handleIf(e -> !(e instanceof AuthorizationException))
+                .build();
     }
 }

@@ -26,6 +26,9 @@ import com.salesforce.datacloud.jdbc.auth.errors.AuthorizationException;
 import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
 import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import dev.failsafe.Failsafe;
+import dev.failsafe.FailsafeException;
+import dev.failsafe.RetryPolicy;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.Random;
@@ -34,9 +37,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import lombok.SneakyThrows;
 import lombok.val;
-import net.jodah.failsafe.Failsafe;
-import net.jodah.failsafe.FailsafeException;
-import net.jodah.failsafe.RetryPolicy;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.SocketPolicy;
@@ -62,13 +62,13 @@ class DataCloudTokenProcessorTest {
         val properties = new Properties();
         val none = buildRetry.apply(properties);
 
-        softly.assertThat(none.getMaxRetries()).isEqualTo(DataCloudTokenProcessor.DEFAULT_MAX_RETRIES);
+        softly.assertThat(none.getConfig().getMaxRetries()).isEqualTo(DataCloudTokenProcessor.DEFAULT_MAX_RETRIES);
 
         val retries = random.nextInt(12345);
         properties.put(DataCloudTokenProcessor.MAX_RETRIES_KEY, Integer.toString(retries));
 
         val some = buildRetry.apply(properties);
-        softly.assertThat(some.getMaxRetries()).isEqualTo(retries);
+        softly.assertThat(some.getConfig().getMaxRetries()).isEqualTo(retries);
     }
 
     @SneakyThrows
