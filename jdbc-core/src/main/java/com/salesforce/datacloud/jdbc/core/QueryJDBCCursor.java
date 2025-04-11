@@ -31,7 +31,7 @@ import org.apache.calcite.avatica.util.AbstractCursor;
 import org.apache.calcite.avatica.util.ArrayImpl;
 
 public class QueryJDBCCursor extends AbstractCursor {
-    private VectorSchemaRoot root;
+    private final VectorSchemaRoot root;
     private final int rowCount;
     private int currentRow = -1;
 
