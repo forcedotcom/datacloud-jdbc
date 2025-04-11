@@ -46,7 +46,7 @@ public class DataCloudJDBCDriver implements Driver {
     static {
         try {
             register();
-            log.info("DataCloud JDBC driver registered");
+            log.info("DataCloud JDBC driver registered. {}", DriverVersion.formatDriverInfo());
         } catch (SQLException e) {
             log.error("Error occurred while registering DataCloud JDBC driver. {}", e.getMessage());
             throw new ExceptionInInitializerError(e);
