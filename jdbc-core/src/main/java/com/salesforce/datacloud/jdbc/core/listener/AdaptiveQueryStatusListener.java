@@ -113,8 +113,18 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
         return Optional.ofNullable(item).map(ExecuteQueryResponse::getQueryResult);
     }
 
+    private boolean allResultsInHead() {
+        return Optional.ofNullable(lastStatus.get())
+                .map(s -> s.allResultsProduced() && s.getChunkCount() < 2)
+                .orElse(false);
+    }
+
     @SneakyThrows
     private Stream<QueryResult> tail() {
+        if (allResultsInHead()) {
+            return Stream.empty();
+        }
+
         val status = client.waitForResultsProduced(queryId, timeout);
 
         if (!status.allResultsProduced()) {
