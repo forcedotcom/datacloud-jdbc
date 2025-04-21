@@ -39,6 +39,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @Slf4j
 @ExtendWith(HyperTestBase.class)
 class ChunkBasedTest {
+    @SneakyThrows
     private List<Integer> sut(String queryId, long chunkId, long limit) {
         try (val connection = getHyperQueryConnection()) {
             val rs = limit == 1

@@ -15,6 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
+
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -85,13 +87,18 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      */
     public static DataCloudConnection fromChannel(@NonNull ManagedChannelBuilder<?> builder, Properties properties)
             throws SQLException {
-        val interceptors = getPropertyDerivedClientInterceptors(properties);
-        val executor = HyperGrpcClientExecutor.of(builder.intercept(interceptors), properties);
+        return logTimedValue(
+                () -> {
+                    val interceptors = getPropertyDerivedClientInterceptors(properties);
+                    val executor = HyperGrpcClientExecutor.of(builder.intercept(interceptors), properties);
 
-        return DataCloudConnection.builder()
-                .executor(executor)
-                .properties(properties)
-                .build();
+                    return DataCloudConnection.builder()
+                            .executor(executor)
+                            .properties(properties)
+                            .build();
+                },
+                "fromChannel",
+                log);
     }
 
     public static DataCloudConnection fromOauth(
@@ -99,7 +106,8 @@ public class DataCloudConnection implements Connection, AutoCloseable {
             Properties properties,
             ClientInterceptor authInterceptor,
             ThrowingJdbcSupplier<String> lakehouseSupplier,
-            ThrowingJdbcSupplier<List<String>> dataspacesSupplier)
+            ThrowingJdbcSupplier<List<String>> dataspacesSupplier,
+            DataCloudConnectionString connectionString)
             throws SQLException {
 
         val interceptors = getPropertyDerivedClientInterceptors(properties);
@@ -111,6 +119,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                 .properties(properties)
                 .lakehouseSupplier(lakehouseSupplier)
                 .dataspacesSupplier(dataspacesSupplier)
+                .connectionString(connectionString)
                 .build();
     }
 
@@ -157,19 +166,21 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      *                {@link RowBased.Mode#FULL_RANGE} to iterate through all available rows.
      * @return A {@link DataCloudResultSet} containing the query results.
      */
-    public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit, RowBased.Mode mode) {
+    public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit, RowBased.Mode mode)
+            throws DataCloudJDBCException {
         log.info("Get row-based result set. queryId={}, offset={}, limit={}, mode={}", queryId, offset, limit, mode);
         val iterator = RowBased.of(executor, queryId, offset, limit, mode);
         return StreamingResultSet.of(queryId, executor, iterator);
     }
 
-    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit) {
+    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit)
+            throws DataCloudJDBCException {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
         val iterator = ChunkBased.of(executor, queryId, chunkId, limit);
         return StreamingResultSet.of(queryId, executor, iterator);
     }
 
-    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) {
+    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) throws DataCloudJDBCException {
         return getChunkBasedResultSet(queryId, chunkId, 1);
     }
 
@@ -201,7 +212,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     /**
      * Use this to determine when a given query is complete by filtering the responses and a subsequent findFirst()
      */
-    public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) {
+    public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {
         return executor.getQueryStatus(queryId);
     }
 
@@ -241,7 +252,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     @Unstable
-    public void cancel(String queryId) {
+    public void cancel(String queryId) throws DataCloudJDBCException {
         getExecutor().cancel(queryId);
     }
 

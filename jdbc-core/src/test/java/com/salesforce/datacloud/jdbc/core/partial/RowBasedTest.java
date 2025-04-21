@@ -25,6 +25,7 @@ import com.salesforce.datacloud.jdbc.core.DataCloudPreparedStatement;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
@@ -49,6 +50,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 @Slf4j
 @ExtendWith(HyperTestBase.class)
 public class RowBasedTest {
+    @SneakyThrows
     private List<Integer> sut(String queryId, long offset, long limit, RowBased.Mode mode) {
         try (val connection = getHyperQueryConnection()) {
             val resultSet = connection.getRowBasedResultSet(queryId, offset, limit, mode);
@@ -74,6 +76,7 @@ public class RowBasedTest {
         waitForQuery(tiny);
     }
 
+    @SneakyThrows
     @Test
     void singleRpcReturnsIteratorButNotRowBasedFullRange() {
         val client = mock(HyperGrpcClientExecutor.class);
@@ -82,6 +85,7 @@ public class RowBasedTest {
         assertThat(single).isInstanceOf(RowBasedSingleRpc.class).isNotInstanceOf(RowBasedFullRange.class);
     }
 
+    @SneakyThrows
     @Test
     void fullRangeReturnsRowBasedFullRange() {
         val client = mock(HyperGrpcClientExecutor.class);
@@ -148,8 +152,14 @@ public class RowBasedTest {
             val pages = Page.stream(rows, limit).collect(Collectors.toList());
             log.info("pages: {}", pages);
             val actual = pages.parallelStream()
-                    .map(page -> conn.getRowBasedResultSet(
-                            queryId, page.getOffset(), page.getLimit(), RowBased.Mode.FULL_RANGE))
+                    .map(page -> {
+                        try {
+                            return conn.getRowBasedResultSet(
+                                    queryId, page.getOffset(), page.getLimit(), RowBased.Mode.FULL_RANGE);
+                        } catch (DataCloudJDBCException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
                     .flatMap(RowBasedTest::toStream)
                     .collect(Collectors.toList());
             assertThat(actual).containsExactlyElementsOf(expected);
@@ -163,14 +173,21 @@ public class RowBasedTest {
             val rows = getRowCount(conn, small);
             val actual = Page.stream(rows, 5)
                     .parallel()
-                    .map(page -> conn.getRowBasedResultSet(
-                            small, page.getOffset(), page.getLimit(), RowBased.Mode.FULL_RANGE))
+                    .map(page -> {
+                        try {
+                            return conn.getRowBasedResultSet(
+                                    small, page.getOffset(), page.getLimit(), RowBased.Mode.FULL_RANGE);
+                        } catch (DataCloudJDBCException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
                     .flatMap(RowBasedTest::toStream)
                     .collect(Collectors.toList());
             assertThat(actual).containsExactlyElementsOf(rangeClosed(1, smallSize));
         }
     }
 
+    @SneakyThrows
     private long getRowCount(DataCloudConnection conn, String queryId) {
         return conn.getQueryStatus(queryId)
                 .filter(t -> t.isResultProduced() || t.isExecutionFinished())
@@ -197,10 +214,6 @@ public class RowBasedTest {
         try (val conn = getHyperQueryConnection()) {
             conn.waitForResultsProduced(queryId, Duration.ofSeconds(30));
         }
-    }
-
-    private boolean isReady(DataCloudConnection connection, String queryId) {
-        return connection.getQueryStatus(queryId).anyMatch(t -> t.isExecutionFinished() || t.isResultProduced());
     }
 
     private static List<Integer> rangeClosed(int start, int end) {

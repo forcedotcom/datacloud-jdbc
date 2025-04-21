@@ -29,7 +29,7 @@ public interface QueryStatusListener {
 
     boolean isReady() throws DataCloudJDBCException;
 
-    String getStatus();
+    String getStatus() throws DataCloudJDBCException;
 
     String getQueryId();
 

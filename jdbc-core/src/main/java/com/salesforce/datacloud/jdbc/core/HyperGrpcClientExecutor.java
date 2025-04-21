@@ -15,6 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
@@ -139,9 +141,14 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         return execute(sql, QueryParam.TransferMode.SYNC);
     }
 
-    public Iterator<QueryInfo> getQueryInfo(String queryId) {
-        val param = getQueryInfoParam(queryId);
-        return getStub(queryId).getQueryInfo(param);
+    public Iterator<QueryInfo> getQueryInfo(String queryId) throws DataCloudJDBCException {
+        return logTimedValue(
+                () -> {
+                    val param = getQueryInfoParam(queryId);
+                    return getStub(queryId).getQueryInfo(param);
+                },
+                "getQueryInfo queryId=" + queryId,
+                log);
     }
 
     public DataCloudQueryStatus waitForRowsAvailable(
@@ -156,8 +163,7 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         return DataCloudQueryPolling.waitForResultsProduced(stub, queryId, timeout);
     }
 
-    @Unstable
-    public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) {
+    public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {
         val iterator = getQueryInfo(queryId);
         return StreamUtilities.toStream(iterator)
                 .map(DataCloudQueryStatus::of)
@@ -165,24 +171,34 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
                 .map(Optional::get);
     }
 
-    public void cancel(String queryId) {
-        val request = CancelQueryParam.newBuilder().setQueryId(queryId).build();
-        val stub = getStub(queryId);
-        stub.cancelQuery(request);
+    public void cancel(String queryId) throws DataCloudJDBCException {
+        logTimedValue(
+                () -> {
+                    val request =
+                            CancelQueryParam.newBuilder().setQueryId(queryId).build();
+                    val stub = getStub(queryId);
+                    stub.cancelQuery(request);
+                    return null;
+                },
+                "cancel queryId=" + queryId,
+                log);
     }
 
-    public Iterator<QueryResult> getQueryResult(String queryId, long offset, long limit, boolean omitSchema) {
+    public Iterator<QueryResult> getQueryResult(String queryId, long offset, long limit, boolean omitSchema)
+            throws DataCloudJDBCException {
         val rowRange =
                 ResultRange.newBuilder().setRowOffset(offset).setRowLimit(limit).setByteLimit(1024);
 
-        final QueryResultParam param = QueryResultParam.newBuilder()
+        val param = QueryResultParam.newBuilder()
                 .setQueryId(queryId)
                 .setResultRange(rowRange)
                 .setOmitSchema(omitSchema)
                 .setOutputFormat(OutputFormat.ARROW_IPC)
                 .build();
 
-        return getStub(queryId).getQueryResult(param);
+        val message = String.format(
+                "getQueryResult queryId=%s, offset=%d, limit=%d, omitSchema=%s", queryId, offset, limit, omitSchema);
+        return logTimedValue(() -> getStub(queryId).getQueryResult(param), message, log);
     }
 
     public Iterator<QueryResult> getQueryResult(String queryId, long chunkId, boolean omitSchema) {
@@ -225,8 +241,14 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
     }
 
     private Iterator<ExecuteQueryResponse> execute(String sql, QueryParam.TransferMode mode) throws SQLException {
-        val request = getQueryParams(sql, mode);
-        return getStub().executeQuery(request);
+        val message = "executeQuery. mode=" + mode.name();
+        return logTimedValue(
+                () -> {
+                    val request = getQueryParams(sql, mode);
+                    return getStub().executeQuery(request);
+                },
+                message,
+                log);
     }
 
     @Getter(lazy = true, value = AccessLevel.PRIVATE)

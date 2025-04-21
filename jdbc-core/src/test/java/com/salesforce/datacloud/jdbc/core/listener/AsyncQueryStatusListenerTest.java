@@ -47,6 +47,7 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
     private final String query = "select * from stuff";
     private final QueryParam.TransferMode mode = QueryParam.TransferMode.ASYNC;
 
+    @SneakyThrows
     @ParameterizedTest
     @CsvSource({"0, RUNNING", "1, RESULTS_PRODUCED", "2, FINISHED"})
     void itCanGetStatus(int value, String expected) {

@@ -21,7 +21,7 @@ import java.sql.ResultSet;
 public interface DataCloudResultSet extends ResultSet {
     String getQueryId();
 
-    String getStatus();
+    String getStatus() throws DataCloudJDBCException;
 
     boolean isReady() throws DataCloudJDBCException;
 }

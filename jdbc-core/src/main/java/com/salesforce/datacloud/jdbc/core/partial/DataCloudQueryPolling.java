@@ -157,11 +157,18 @@ public class DataCloudQueryPolling {
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .peek(last::set)
-                    .filter(predicate::test)
+                    .filter(predicate)
                     .findFirst();
 
             if (matched.isPresent()) {
                 return matched.get();
+            }
+
+            if (Optional.ofNullable(last.get())
+                    .map(DataCloudQueryStatus::allResultsProduced)
+                    .orElse(false)) {
+                log.warn("predicate did not match but all results were produced. last={}", last.get());
+                return last.get();
             }
 
             log.info(

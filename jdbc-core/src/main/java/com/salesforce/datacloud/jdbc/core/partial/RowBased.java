@@ -16,12 +16,14 @@
 package com.salesforce.datacloud.jdbc.core.partial;
 
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.SneakyThrows;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 
@@ -39,7 +41,7 @@ class RowBasedContext {
     @Getter
     private final AtomicLong seen = new AtomicLong(0);
 
-    public Iterator<QueryResult> getQueryResult(boolean omitSchema) {
+    public Iterator<QueryResult> getQueryResult(boolean omitSchema) throws DataCloudJDBCException {
         val currentOffset = offset + seen.get();
         val currentLimit = limit - seen.get();
         return client.getQueryResult(queryId, currentOffset, currentLimit, omitSchema);
@@ -62,7 +64,8 @@ public interface RowBased extends Iterator<QueryResult> {
             @NonNull String queryId,
             long offset,
             long limit,
-            @NonNull Mode mode) {
+            @NonNull Mode mode)
+            throws DataCloudJDBCException {
         val context = RowBasedContext.builder()
                 .client(client)
                 .queryId(queryId)
@@ -102,6 +105,7 @@ class RowBasedFullRange implements RowBased {
 
     private Iterator<QueryResult> iterator;
 
+    @SneakyThrows
     @Override
     public boolean hasNext() {
         if (iterator == null) {

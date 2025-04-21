@@ -140,6 +140,7 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
      * @return this assertion object.
      * @throws AssertionError - if the actual QueryStatusListener's status is not equal to the given one.
      */
+    @SneakyThrows
     public QueryStatusListenerAssert hasStatus(String status) {
         // check that actual QueryStatusListener we want to make assertions on is not null.
         isNotNull();

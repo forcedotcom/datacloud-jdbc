@@ -111,7 +111,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     }
 
     @Override
-    public String getStatus() {
+    public String getStatus() throws DataCloudJDBCException {
         return listener.getStatus();
     }
 

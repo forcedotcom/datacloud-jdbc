@@ -80,7 +80,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     }
 
     @Override
-    public String getStatus() {
+    public String getStatus() throws DataCloudJDBCException {
         return client.getQueryStatus(queryId)
                 .map(DataCloudQueryStatus::getCompletionStatus)
                 .map(Enum::name)
