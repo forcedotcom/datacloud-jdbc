@@ -179,4 +179,50 @@ public class SubmitQueryAndConsumeResultsTest {
         }
         log.warn("Completed");
     }
+
+    /**
+     * This example demonstrates how to distinguish between a query that has completed (all results returned)
+     * versus a query that is still executing but has returned partial results.
+     *
+     * The key is to use the DataCloudQueryStatus to check if the query is still executing
+     * and if all results have been produced.
+     */
+    @Test
+    public void testDistinguishPartialVsCompleteResults() throws SQLException {
+        Properties properties = new Properties();
+        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress(
+                        "127.0.0.1", HyperTestBase.getInstancePort())
+                .usePlaintext();
+
+        try (DataCloudConnection conn = DataCloudConnection.fromChannel(channel, properties)) {
+            try (Statement stmt = conn.createStatement()) {
+                // Execute a query that might return partial results
+                ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(1,2000) s");
+                String queryId = ((DataCloudResultSet) rs).getQueryId();
+
+                // Consume the first batch of results
+                int count = 0;
+                while (rs.next()) {
+                    count++;
+                }
+                log.info("Retrieved " + count + " records in first batch");
+
+                // Check query status to determine if query is complete or still executing
+                Optional<DataCloudQueryStatus> status =
+                        conn.getQueryStatus(queryId).findFirst();
+                if (status.isPresent()) {
+                    DataCloudQueryStatus queryStatus = status.get();
+
+                    if (queryStatus.isExecutionFinished()) {
+                        log.info("Query is complete - all results have been returned");
+                    } else if (queryStatus.isResultProduced()) {
+                        log.info("Query is still executing - more results may be available");
+                        log.info("Total rows produced so far: " + queryStatus.getRowCount());
+                    } else {
+                        log.info("Query is still executing - no results produced yet");
+                    }
+                }
+            }
+        }
+    }
 }

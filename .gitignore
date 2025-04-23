@@ -30,3 +30,6 @@ pom.xml.bak
 .kotlin
 bin
 out
+gradle/caches/*
+gradle/daemon/
+gradle/wrapper/*
