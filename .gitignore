@@ -30,3 +30,4 @@ pom.xml.bak
 .kotlin
 bin
 out
+.worktree

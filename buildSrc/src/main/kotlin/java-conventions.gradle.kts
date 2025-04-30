@@ -74,7 +74,7 @@ tasks.withType<Test>().configureEach {
 }
 
 spotless {
-    ratchetFrom("origin/main")
+//    ratchetFrom("origin/main")
 
     format("misc") {
         target(".gitattributes", ".gitignore")

@@ -63,7 +63,7 @@ jobs:
             gradle clean check --no-build-cache --rerun-tasks
           else
             echo "No version specified, running normal build"
-            gradle clean check 
+            gradle clean check -Dorg.slf4j.simpleLogger.defaultLogLevel=error
           fi
         env:
           RELEASE_VERSION: ${{ inputs.version }}
@@ -79,7 +79,7 @@ jobs:
           # gpg --export-secret-key --armor <key id> | pbcopy
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.signing_key }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.signing_pass }}
-        run: gradle publishAllPublicationsToMavenCentralRepository --no-scan --no-configuration-cache
+        run: gradle publishAllPublicationsToMavenCentralRepository --no-scan --no-configuration-cache -Dorg.slf4j.simpleLogger.defaultLogLevel=error
       - name: Look at files in verification
         if: ${{ failure() || steps.build.outcome == 'failure' || steps.publish.outcome == 'failure' }}
         run: ls -lR verification

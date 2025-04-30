@@ -8,7 +8,6 @@ plugins {
 }
 
 dependencies {
-    api(platform(libs.grpc.bom))
     implementation(libs.bundles.grpc.impl)
 }
 

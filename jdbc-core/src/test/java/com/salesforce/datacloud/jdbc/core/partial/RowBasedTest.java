@@ -150,7 +150,6 @@ public class RowBasedTest {
         try (val conn = getHyperQueryConnection()) {
             val rows = getRowCount(conn, queryId);
             val pages = Page.stream(rows, limit).collect(Collectors.toList());
-            log.info("pages: {}", pages);
             val actual = pages.parallelStream()
                     .map(page -> {
                         try {

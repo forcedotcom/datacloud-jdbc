@@ -6,8 +6,6 @@ plugins {
 }
 
 dependencies {
-    api(platform(libs.grpc.bom))
-
     implementation(project(":jdbc-core"))
     implementation(project(":jdbc-util"))
     implementation(project(":jdbc-http"))
