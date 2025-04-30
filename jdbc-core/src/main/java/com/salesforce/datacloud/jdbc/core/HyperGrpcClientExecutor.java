@@ -16,6 +16,8 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getBooleanOrDefault;
+import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -23,7 +25,6 @@ import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
@@ -67,6 +68,10 @@ import salesforce.cdp.hyperdb.v1.ResultRange;
 public class HyperGrpcClientExecutor implements AutoCloseable {
     private static final int GRPC_INBOUND_MESSAGE_MAX_SIZE = 64 * 1024 * 1024;
 
+    public static final int HYPER_MAX_ROW_LIMIT_BYTE_SIZE = 20971520;
+
+    public static final int HYPER_MIN_ROW_LIMIT_BYTE_SIZE = 1024;
+
     @NonNull private final ManagedChannel channel;
 
     @Getter
@@ -74,13 +79,21 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
 
     private final QueryParam settingsQueryParams;
 
+    private final int byteLimit;
+
     @Builder.Default
     private int queryTimeout = -1;
 
     private final List<ClientInterceptor> interceptors;
 
     public static HyperGrpcClientExecutor of(@NonNull ManagedChannelBuilder<?> builder, @NonNull Properties properties)
-            throws SQLException {
+            throws DataCloudJDBCException {
+        return of(builder, properties, HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
+    }
+
+    public static HyperGrpcClientExecutor of(
+            @NonNull ManagedChannelBuilder<?> builder, @NonNull Properties properties, int byteLimit)
+            throws DataCloudJDBCException {
         val client = HyperGrpcClientExecutor.builder();
 
         val settings = ConnectionQuerySettings.of(properties).getSettings();
@@ -89,9 +102,10 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
                     QueryParam.newBuilder().putAllSettings(settings).build());
         }
 
-        if (PropertiesExtensions.getBooleanOrDefault(properties, "grpc.enableRetries", Boolean.TRUE)) {
-            int maxRetryAttempts =
-                    PropertiesExtensions.getIntegerOrDefault(properties, "grpc.retryPolicy.maxAttempts", 5);
+        client.byteLimit(byteLimit);
+
+        if (getBooleanOrDefault(properties, "grpc.enableRetries", Boolean.TRUE)) {
+            int maxRetryAttempts = getIntegerOrDefault(properties, "grpc.retryPolicy.maxAttempts", 5);
             builder.enableRetry()
                     .maxRetryAttempts(maxRetryAttempts)
                     .defaultServiceConfig(retryPolicy(maxRetryAttempts));
@@ -107,19 +121,20 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         return ImmutableMap.of(
                 "methodConfig",
                 ImmutableList.of(ImmutableMap.of(
-                        "name", ImmutableList.of(Collections.EMPTY_MAP),
+                        "name",
+                        ImmutableList.of(Collections.EMPTY_MAP),
                         "retryPolicy",
-                                ImmutableMap.of(
-                                        "maxAttempts",
-                                        String.valueOf(maxRetryAttempts),
-                                        "initialBackoff",
-                                        "0.5s",
-                                        "maxBackoff",
-                                        "30s",
-                                        "backoffMultiplier",
-                                        2.0,
-                                        "retryableStatusCodes",
-                                        ImmutableList.of("UNAVAILABLE")))));
+                        ImmutableMap.of(
+                                "maxAttempts",
+                                String.valueOf(maxRetryAttempts),
+                                "initialBackoff",
+                                "0.5s",
+                                "maxBackoff",
+                                "30s",
+                                "backoffMultiplier",
+                                2.0,
+                                "retryableStatusCodes",
+                                ImmutableList.of("UNAVAILABLE")))));
     }
 
     public static HyperGrpcClientExecutor of(
@@ -130,15 +145,27 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
     }
 
     public Iterator<ExecuteQueryResponse> executeAdaptiveQuery(String sql) throws SQLException {
-        return execute(sql, QueryParam.TransferMode.ADAPTIVE);
+        return executeAdaptiveQuery(sql, 0);
+    }
+
+    public Iterator<ExecuteQueryResponse> executeAdaptiveQuery(String sql, long maxRows) throws SQLException {
+        val builder = QueryParam.newBuilder();
+        if (maxRows > 0) {
+            log.info("setting row limit query. maxRows={}, byteLimit={}", maxRows, byteLimit);
+            val range = ResultRange.newBuilder().setRowLimit(maxRows).setByteLimit(byteLimit);
+            builder.setResultRange(range);
+        }
+
+        return execute(sql, QueryParam.TransferMode.ADAPTIVE, builder);
     }
 
     public Iterator<ExecuteQueryResponse> executeAsyncQuery(String sql) throws SQLException {
-        return execute(sql, QueryParam.TransferMode.ASYNC);
+        return execute(sql, QueryParam.TransferMode.ASYNC, QueryParam.newBuilder());
     }
 
+    @Deprecated
     public Iterator<ExecuteQueryResponse> executeQuery(String sql) throws SQLException {
-        return execute(sql, QueryParam.TransferMode.SYNC);
+        return execute(sql, QueryParam.TransferMode.SYNC, QueryParam.newBuilder());
     }
 
     public Iterator<QueryInfo> getQueryInfo(String queryId) throws DataCloudJDBCException {
@@ -156,6 +183,13 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
             throws DataCloudJDBCException {
         val stub = getStub(queryId);
         return DataCloudQueryPolling.waitForRowsAvailable(stub, queryId, offset, limit, timeout, allowLessThan);
+    }
+
+    public DataCloudQueryStatus waitForChunksAvailable(
+            String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
+            throws DataCloudJDBCException {
+        val stub = getStub(queryId);
+        return DataCloudQueryPolling.waitForChunksAvailable(stub, queryId, offset, limit, timeout, allowLessThan);
     }
 
     public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration timeout) throws DataCloudJDBCException {
@@ -184,10 +218,12 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
                 log);
     }
 
-    public Iterator<QueryResult> getQueryResult(String queryId, long offset, long limit, boolean omitSchema)
+    public Iterator<QueryResult> getQueryResult(String queryId, long offset, long rowLimit, boolean omitSchema)
             throws DataCloudJDBCException {
-        val rowRange =
-                ResultRange.newBuilder().setRowOffset(offset).setRowLimit(limit).setByteLimit(1024);
+        val rowRange = ResultRange.newBuilder()
+                .setRowOffset(offset)
+                .setRowLimit(rowLimit)
+                .setByteLimit(byteLimit);
 
         val param = QueryResultParam.newBuilder()
                 .setQueryId(queryId)
@@ -197,7 +233,8 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
                 .build();
 
         val message = String.format(
-                "getQueryResult queryId=%s, offset=%d, limit=%d, omitSchema=%s", queryId, offset, limit, omitSchema);
+                "getQueryResult queryId=%s, offset=%d, rowLimit=%d, byteLimit=%d, omitSchema=%s",
+                queryId, offset, rowLimit, byteLimit, omitSchema);
         return logTimedValue(() -> getStub(queryId).getQueryResult(param), message, log);
     }
 
@@ -206,11 +243,8 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
         return getStub(queryId).getQueryResult(param);
     }
 
-    private QueryParam getQueryParams(String sql, QueryParam.TransferMode transferMode) {
-        val builder = QueryParam.newBuilder()
-                .setQuery(sql)
-                .setTransferMode(transferMode)
-                .setOutputFormat(OutputFormat.ARROW_IPC);
+    private QueryParam getQueryParams(String sql, QueryParam.Builder builder) {
+        builder.setQuery(sql).setOutputFormat(OutputFormat.ARROW_IPC);
 
         if (additionalQueryParams != null) {
             builder.mergeFrom(additionalQueryParams);
@@ -240,11 +274,13 @@ public class HyperGrpcClientExecutor implements AutoCloseable {
                 .build();
     }
 
-    private Iterator<ExecuteQueryResponse> execute(String sql, QueryParam.TransferMode mode) throws SQLException {
+    private Iterator<ExecuteQueryResponse> execute(String sql, QueryParam.TransferMode mode, QueryParam.Builder builder)
+            throws SQLException {
         val message = "executeQuery. mode=" + mode.name();
+        builder.setTransferMode(mode);
         return logTimedValue(
                 () -> {
-                    val request = getQueryParams(sql, mode);
+                    val request = getQueryParams(sql, builder);
                     return getStub().executeQuery(request);
                 },
                 message,

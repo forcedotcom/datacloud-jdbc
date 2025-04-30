@@ -185,13 +185,15 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     /**
-     * Checks if all the query's results are ready, the row count and chunk count will be stable.
+     * Checks if a given row range is available for a query.
+     * This method will wait until the row range specified by the other params is available in the given timeout.
+     *
      * @param queryId The identifier of the query to check
      * @param offset The starting row offset.
      * @param limit The quantity of rows relative to the offset to wait for
      * @param timeout The duration to wait for the engine have results produced.
      * @param allowLessThan Whether to return early when the available rows is less than {@code offset + limit}
-     * @return The final {@link DataCloudQueryStatus} the server replied with.
+     * @return The last {@link DataCloudQueryStatus} the server replied with.
      */
     public DataCloudQueryStatus waitForRowsAvailable(
             String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
@@ -200,10 +202,27 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     /**
+     * Checks if a given chunk range is available for a query.
+     * This method will wait until the chunk range specified by the other params is available in the given timeout.
+     *
+     * @param queryId The identifier of the query to check
+     * @param offset The starting chunk offset.
+     * @param limit The quantity of chunks relative to the offset to wait for
+     * @param timeout The duration to wait for the engine have results produced.
+     * @param allowLessThan Whether to return early when the available chunks is less than {@code offset + limit}
+     * @return The last {@link DataCloudQueryStatus} the server replied with.
+     */
+    public DataCloudQueryStatus waitForChunksAvailable(
+            String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
+            throws DataCloudJDBCException {
+        return executor.waitForChunksAvailable(queryId, offset, limit, timeout, allowLessThan);
+    }
+
+    /**
      * Checks if all the query's results are ready, the row count and chunk count will be stable.
      * @param queryId The identifier of the query to check
      * @param timeout The duration to wait for the engine have results produced.
-     * @return The final {@link DataCloudQueryStatus} the server replied with.
+     * @return The last {@link DataCloudQueryStatus} the server replied with.
      */
     public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration timeout) throws DataCloudJDBCException {
         return executor.waitForResultsProduced(queryId, timeout);

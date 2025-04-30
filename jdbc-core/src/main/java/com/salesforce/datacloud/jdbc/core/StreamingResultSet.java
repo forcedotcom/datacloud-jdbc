@@ -43,9 +43,12 @@ import salesforce.cdp.hyperdb.v1.QueryResult;
 @Slf4j
 public class StreamingResultSet extends AvaticaResultSet implements DataCloudResultSet {
     private static final int ROOT_ALLOCATOR_MB_FROM_V2 = 100 * 1024 * 1024;
+
+    private final ArrowStreamReaderCursor cursor;
     private final QueryStatusListener listener;
 
     private StreamingResultSet(
+            ArrowStreamReaderCursor cursor,
             QueryStatusListener listener,
             AvaticaStatement statement,
             QueryState state,
@@ -55,6 +58,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
             Meta.Frame firstFrame)
             throws SQLException {
         super(statement, state, signature, resultSetMetaData, timeZone, firstFrame);
+        this.cursor = cursor;
         this.listener = listener;
     }
 
@@ -71,8 +75,8 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
             val signature = new Meta.Signature(
                     columns, sql, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
-            val result = new StreamingResultSet(listener, null, state, signature, metadata, timezone, null);
             val cursor = new ArrowStreamReaderCursor(reader);
+            val result = new StreamingResultSet(cursor, listener, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
 
             return result;
@@ -95,8 +99,8 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
             val listener = new AlreadyReadyNoopListener(queryId);
-            val result = new StreamingResultSet(listener, null, state, signature, metadata, timezone, null);
             val cursor = new ArrowStreamReaderCursor(reader);
+            val result = new StreamingResultSet(cursor, listener, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
 
             return result;
@@ -153,5 +157,10 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     @Override
     public int getFetchDirection() {
         return ResultSet.FETCH_FORWARD;
+    }
+
+    @Override
+    public int getRow() {
+        return cursor.getRow();
     }
 }

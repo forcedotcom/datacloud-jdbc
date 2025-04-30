@@ -74,6 +74,20 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
         }
     }
 
+    public static RowBasedAdaptiveQueryStatusListener of(
+            String query, HyperGrpcClientExecutor client, Duration timeout, long maxRows) throws SQLException {
+        try {
+            val response = client.executeAdaptiveQuery(query, maxRows);
+            val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
+
+            log.info("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);
+
+            return new RowBasedAdaptiveQueryStatusListener(queryId, query, client, response);
+        } catch (StatusRuntimeException ex) {
+            throw QueryExceptionHandler.createQueryException(query, ex);
+        }
+    }
+
     @Override
     public boolean isReady() {
         return true;
@@ -137,5 +151,57 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
         val iterator = ChunkBased.of(client, queryId, 1, status.getChunkCount() - 1, true);
         return StreamUtilities.toStream(iterator);
+    }
+
+    @Slf4j
+    @AllArgsConstructor(access = AccessLevel.PACKAGE)
+    @Deprecated
+    public static class RowBasedAdaptiveQueryStatusListener implements QueryStatusListener {
+        @Getter
+        private final String queryId;
+
+        @Getter
+        private final String query;
+
+        private final HyperGrpcClientExecutor client;
+
+        private final Iterator<ExecuteQueryResponse> response;
+
+        private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
+
+        @Override
+        public boolean isReady() throws DataCloudJDBCException {
+            return true;
+        }
+
+        @Override
+        public String getStatus() throws DataCloudJDBCException {
+            return client.getQueryStatus(queryId)
+                    .map(DataCloudQueryStatus::getCompletionStatus)
+                    .map(Enum::name)
+                    .findFirst()
+                    .orElse("UNKNOWN");
+        }
+
+        @Override
+        public DataCloudResultSet generateResultSet() {
+            return StreamingResultSet.of(query, this);
+        }
+
+        @Override
+        public Stream<QueryResult> stream() throws SQLException {
+            return StreamUtilities.toStream(response)
+                    .map(this::mapHead)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get);
+        }
+
+        private Optional<QueryResult> mapHead(ExecuteQueryResponse item) {
+            Optional.ofNullable(item)
+                    .map(ExecuteQueryResponse::getQueryInfo)
+                    .flatMap(DataCloudQueryStatus::of)
+                    .ifPresent(lastStatus::set);
+            return Optional.ofNullable(item).map(ExecuteQueryResponse::getQueryResult);
+        }
     }
 }

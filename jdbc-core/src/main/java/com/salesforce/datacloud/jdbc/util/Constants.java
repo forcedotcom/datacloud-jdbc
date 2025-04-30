@@ -29,6 +29,7 @@ public final class Constants {
     public static final String USER_NAME = "userName";
     public static final String PRIVATE_KEY = "privateKey";
     public static final String FORCE_SYNC = "force-sync";
+    public static final String BYTE_LIMIT = "resultset.bytelimit";
 
     // Column Types
     public static final String INTEGER = "INTEGER";

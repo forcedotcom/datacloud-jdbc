@@ -15,7 +15,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor.HYPER_MAX_ROW_LIMIT_BYTE_SIZE;
+import static com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor.HYPER_MIN_ROW_LIMIT_BYTE_SIZE;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -30,6 +33,7 @@ import io.grpc.StatusRuntimeException;
 import java.sql.ResultSet;
 import java.time.Duration;
 import java.util.Properties;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -54,12 +58,14 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @Mock
     private DataCloudConnection connection;
 
+    private Properties properties;
+
     static DataCloudStatement statement;
 
     @BeforeEach
     public void beforeEach() {
         connection = Mockito.mock(DataCloudConnection.class);
-        val properties = new Properties();
+        properties = new Properties();
         Mockito.when(connection.getExecutor()).thenReturn(hyperGrpcClient);
         Mockito.when(connection.getProperties()).thenReturn(properties);
         statement = new DataCloudStatement(connection);
@@ -163,6 +169,7 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
         assertThat(statement.getQueryTimeout()).isEqualTo(DataCloudStatement.DEFAULT_QUERY_TIMEOUT);
     }
 
+    @SneakyThrows
     @Test
     public void testGetQueryTimeoutSetByConfig() {
         Properties properties = new Properties();
@@ -183,5 +190,59 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @SneakyThrows
     public void testCloseIsNullSafe() {
         assertDoesNotThrow(() -> statement.close());
+    }
+
+    @Test
+    @SneakyThrows
+    public void testConstraintsInvalid() {
+        val tooBig = HYPER_MAX_ROW_LIMIT_BYTE_SIZE * 2;
+        val tooSmall = 1;
+
+        assertThatThrownBy(() -> statement.setResultSetConstraints(0, tooBig))
+                .hasMessageContaining(
+                        "The specified maxBytes (%d) must satisfy the following constraints: %d >= x >= %d",
+                        tooBig, HYPER_MIN_ROW_LIMIT_BYTE_SIZE, HYPER_MAX_ROW_LIMIT_BYTE_SIZE)
+                .hasMessageNotContaining("bytes=" + tooSmall + ",");
+
+        assertThatThrownBy(() -> statement.setResultSetConstraints(0, tooSmall))
+                .hasMessageContaining(
+                        "The specified maxBytes (%d) must satisfy the following constraints: %d >= x >= %d",
+                        tooSmall, HYPER_MIN_ROW_LIMIT_BYTE_SIZE, HYPER_MAX_ROW_LIMIT_BYTE_SIZE)
+                .hasMessageNotContaining("bytes=" + tooBig + ",");
+    }
+
+    @ParameterizedTest
+    @SneakyThrows
+    @ValueSource(ints = {HYPER_MAX_ROW_LIMIT_BYTE_SIZE, HYPER_MIN_ROW_LIMIT_BYTE_SIZE, 100000})
+    public void testConstraintLimits(int bytes) {
+        val rows = 123 + bytes;
+        statement.setResultSetConstraints(rows, bytes);
+        assertThat(statement.getTargetMaxBytes()).isEqualTo(bytes);
+        assertThat(statement.getTargetMaxRows()).isEqualTo(rows);
+    }
+
+    @SneakyThrows
+    @Test
+    public void testConstraintsDefaults() {
+        val stmt = new DataCloudStatement(connection);
+        assertThat(stmt.getTargetMaxBytes()).isEqualTo(HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
+        assertThat(stmt.getTargetMaxRows()).isEqualTo(0);
+    }
+
+    @SneakyThrows
+    @Test
+    public void testConstraintsConfiguration() {
+        val bytes = ThreadLocalRandom.current().nextInt(HYPER_MIN_ROW_LIMIT_BYTE_SIZE, HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
+
+        properties.setProperty(Constants.BYTE_LIMIT, Integer.toString(bytes));
+
+        val stmt = new DataCloudStatement(connection);
+
+        assertThat(stmt.getTargetMaxBytes()).isEqualTo(bytes);
+
+        stmt.clearResultSetConstraints();
+
+        assertThat(stmt.getTargetMaxBytes()).isEqualTo(HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
+        assertThat(stmt.getTargetMaxRows()).isEqualTo(0);
     }
 }

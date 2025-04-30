@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
@@ -40,34 +41,59 @@ import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 @Slf4j
 @UtilityClass
 public class DataCloudQueryPolling {
+    public static DataCloudQueryStatus waitForChunksAvailable(
+            HyperServiceGrpc.HyperServiceBlockingStub stub,
+            String queryId,
+            long offset,
+            long limit,
+            Duration duration,
+            boolean allowLessThan)
+            throws DataCloudJDBCException {
+        return waitForCountAvailabile(
+                stub, queryId, offset, limit, duration, allowLessThan, DataCloudQueryStatus::getChunkCount);
+    }
+
     public static DataCloudQueryStatus waitForRowsAvailable(
             HyperServiceGrpc.HyperServiceBlockingStub stub,
             String queryId,
             long offset,
             long limit,
-            Duration timeoutDuration,
+            Duration duration,
             boolean allowLessThan)
             throws DataCloudJDBCException {
+        return waitForCountAvailabile(
+                stub, queryId, offset, limit, duration, allowLessThan, DataCloudQueryStatus::getRowCount);
+    }
 
+    private static DataCloudQueryStatus waitForCountAvailabile(
+            HyperServiceGrpc.HyperServiceBlockingStub stub,
+            String queryId,
+            long offset,
+            long limit,
+            Duration timeout,
+            boolean allowLessThan,
+            Function<DataCloudQueryStatus, Long> countSelector)
+            throws DataCloudJDBCException {
         Predicate<DataCloudQueryStatus> predicate = status -> {
+            val count = countSelector.apply(status);
             if (allowLessThan) {
-                return status.getRowCount() > offset;
+                return count > offset;
             } else {
-                return status.getRowCount() >= offset + limit;
+                return count >= offset + limit;
             }
         };
 
-        val result = waitForQueryStatus(stub, queryId, timeoutDuration, predicate);
+        val result = waitForQueryStatus(stub, queryId, timeout, predicate);
 
         if (predicate.test(result)) {
             return result;
         } else {
             if (allowLessThan) {
                 throw new DataCloudJDBCException(
-                        "Timed out waiting for new rows to be available. queryId=" + queryId + ", status=" + result);
+                        "Timed out waiting for new items to be available. queryId=" + queryId + ", status=" + result);
             } else {
-                throw new DataCloudJDBCException(
-                        "Timed out waiting for enough rows to be available. queryId=" + queryId + ", status=" + result);
+                throw new DataCloudJDBCException("Timed out waiting for enough items to be available. queryId="
+                        + queryId + ", status=" + result);
             }
         }
     }

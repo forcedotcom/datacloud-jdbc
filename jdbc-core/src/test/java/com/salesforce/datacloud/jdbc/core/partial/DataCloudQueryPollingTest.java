@@ -54,7 +54,7 @@ class DataCloudQueryPollingTest {
 
             Assertions.assertThatThrownBy(() -> connection.waitForRowsAvailable(
                             statement.getQueryId(), 100, 10, Duration.ofSeconds(1), false))
-                    .hasMessageContaining("Timed out waiting for enough rows to be available")
+                    .hasMessageContaining("Timed out waiting for enough items to be available")
                     .isInstanceOf(DataCloudJDBCException.class);
         }
     }
@@ -74,7 +74,7 @@ class DataCloudQueryPollingTest {
 
             Assertions.assertThatThrownBy(() -> connection.waitForRowsAvailable(
                             statement.getQueryId(), 100, 10, Duration.ofSeconds(1), true))
-                    .hasMessageContaining("Timed out waiting for new rows to be available")
+                    .hasMessageContaining("Timed out waiting for new items to be available")
                     .isInstanceOf(DataCloudJDBCException.class);
         }
     }

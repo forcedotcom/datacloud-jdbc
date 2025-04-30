@@ -33,12 +33,12 @@ public class Float4VectorTest {
 
     @Test
     public void testFloat4VectorQuery() {
-        // Expected values from generate_series(1, 10, 0.5)
         val expectedValues =
                 IntStream.rangeClosed(0, 18).mapToObj(i -> 1.0f + (i * 0.5f)).collect(Collectors.toList());
 
         assertWithStatement(statement -> {
-            ResultSet rs = statement.executeQuery("select i::real from generate_series(1, 10, 0.5) g(i)");
+            ResultSet rs =
+                    statement.executeQuery("select i::float4 from generate_series(1, 10, 0.5) g(i) order by i asc");
 
             List<Float> actualValues = new ArrayList<>();
             while (rs.next()) {

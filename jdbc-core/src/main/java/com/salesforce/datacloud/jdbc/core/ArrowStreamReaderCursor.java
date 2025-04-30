@@ -25,7 +25,8 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -36,7 +37,7 @@ import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.util.AbstractCursor;
 import org.apache.calcite.avatica.util.ArrayImpl;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 class ArrowStreamReaderCursor extends AbstractCursor {
 
@@ -44,7 +45,13 @@ class ArrowStreamReaderCursor extends AbstractCursor {
 
     private final ArrowStreamReader reader;
 
-    private final AtomicInteger currentRow = new AtomicInteger(INIT_ROW_NUMBER);
+    /**
+     * Tracks the number of rows seen by this cursor, this provides the value for {@link StreamingResultSet#getRow()}
+     */
+    @lombok.Getter
+    private int row = 0;
+
+    private final AtomicInteger currentIndex = new AtomicInteger(INIT_ROW_NUMBER);
 
     private void wasNullConsumer(boolean wasNull) {
         this.wasNull[0] = wasNull;
@@ -65,13 +72,13 @@ class ArrowStreamReaderCursor extends AbstractCursor {
     }
 
     private Accessor createAccessor(FieldVector vector) throws SQLException {
-        return QueryJDBCAccessorFactory.createAccessor(vector, currentRow::get, this::wasNullConsumer);
+        return QueryJDBCAccessorFactory.createAccessor(vector, currentIndex::get, this::wasNullConsumer);
     }
 
     private boolean loadNextBatch() throws SQLException {
         try {
             if (reader.loadNextBatch()) {
-                currentRow.set(0);
+                currentIndex.set(0);
                 return true;
             }
         } catch (IOException e) {
@@ -83,11 +90,15 @@ class ArrowStreamReaderCursor extends AbstractCursor {
     @SneakyThrows
     @Override
     public boolean next() {
-        val current = currentRow.incrementAndGet();
+        val current = currentIndex.incrementAndGet();
         val total = getSchemaRoot().getRowCount();
 
         try {
-            return current < total || loadNextBatch();
+            val next = current < total || loadNextBatch();
+            if (next) {
+                row++;
+            }
+            return next;
         } catch (Exception e) {
             throw new DataCloudJDBCException("Failed to load next batch", e);
         }
