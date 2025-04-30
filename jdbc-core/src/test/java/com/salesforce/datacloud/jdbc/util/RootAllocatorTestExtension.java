@@ -35,6 +35,7 @@ import org.apache.arrow.vector.DateDayVector;
 import org.apache.arrow.vector.DateMilliVector;
 import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.FixedSizeBinaryVector;
+import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.LargeVarBinaryVector;
@@ -94,6 +95,21 @@ public class RootAllocatorTestExtension implements AfterAllCallback, AutoCloseab
                 vector.setNull(i);
             } else {
                 vector.setSafe(i, d);
+            }
+        }
+        vector.setValueCount(values.size());
+        return vector;
+    }
+
+    public Float4Vector createFloat4Vector(List<Float> values) {
+        val vector = new Float4Vector("test-float-vector", getRootAllocator());
+        vector.allocateNew(values.size());
+        for (int i = 0; i < values.size(); i++) {
+            Float f = values.get(i);
+            if (f == null) {
+                vector.setNull(i);
+            } else {
+                vector.setSafe(i, f);
             }
         }
         vector.setValueCount(values.size());

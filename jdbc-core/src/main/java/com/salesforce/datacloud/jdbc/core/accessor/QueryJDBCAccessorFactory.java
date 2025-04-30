@@ -21,6 +21,7 @@ import com.salesforce.datacloud.jdbc.core.accessor.impl.BooleanVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DateVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DecimalVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DoubleVectorAccessor;
+import com.salesforce.datacloud.jdbc.core.accessor.impl.FloatVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.LargeListVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.ListVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorAccessor;
@@ -34,6 +35,7 @@ import org.apache.arrow.vector.DateDayVector;
 import org.apache.arrow.vector.DateMilliVector;
 import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.FixedSizeBinaryVector;
+import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.LargeVarBinaryVector;
@@ -79,6 +81,8 @@ public class QueryJDBCAccessorFactory {
             return new DecimalVectorAccessor((DecimalVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.BIT)) {
             return new BooleanVectorAccessor((BitVector) vector, getCurrentRow, wasNullConsumer);
+        } else if (arrowType.equals(Types.MinorType.FLOAT4)) {
+            return new FloatVectorAccessor((Float4Vector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.FLOAT8)) {
             return new DoubleVectorAccessor((Float8Vector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TINYINT)) {
