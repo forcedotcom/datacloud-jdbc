@@ -37,7 +37,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
-import org.apache.arrow.flatbuf.Int;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.grpcmock.GrpcMock;
 import org.grpcmock.junit5.InProcessGrpcMockExtension;
@@ -195,7 +194,13 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
 
     @ParameterizedTest
     @SneakyThrows
-    @ValueSource(ints = {HYPER_MAX_ROW_LIMIT_BYTE_SIZE + 1, HYPER_MIN_ROW_LIMIT_BYTE_SIZE - 1, Integer.MAX_VALUE, Integer.MIN_VALUE})
+    @ValueSource(
+            ints = {
+                HYPER_MAX_ROW_LIMIT_BYTE_SIZE + 1,
+                HYPER_MIN_ROW_LIMIT_BYTE_SIZE - 1,
+                Integer.MAX_VALUE,
+                Integer.MIN_VALUE
+            })
     public void testConstraintsInvalid(int bytes) {
         assertThatThrownBy(() -> statement.setResultSetConstraints(0, bytes))
                 .hasMessageContaining(

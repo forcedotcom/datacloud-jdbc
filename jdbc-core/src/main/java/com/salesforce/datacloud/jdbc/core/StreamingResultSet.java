@@ -161,6 +161,6 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
     @Override
     public int getRow() {
-        return cursor.getRow();
+        return cursor.getRowsSeen();
     }
 }

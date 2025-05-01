@@ -25,7 +25,6 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -45,11 +44,8 @@ class ArrowStreamReaderCursor extends AbstractCursor {
 
     private final ArrowStreamReader reader;
 
-    /**
-     * Tracks the number of rows seen by this cursor, this provides the value for {@link StreamingResultSet#getRow()}
-     */
     @lombok.Getter
-    private int row = 0;
+    private int rowsSeen = 0;
 
     private final AtomicInteger currentIndex = new AtomicInteger(INIT_ROW_NUMBER);
 
@@ -96,7 +92,7 @@ class ArrowStreamReaderCursor extends AbstractCursor {
         try {
             val next = current < total || loadNextBatch();
             if (next) {
-                row++;
+                rowsSeen++;
             }
             return next;
         } catch (Exception e) {
