@@ -20,13 +20,11 @@ import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
-import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
+import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.Array;
 import java.sql.Blob;
@@ -46,16 +44,15 @@ import java.sql.Struct;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
@@ -63,6 +60,9 @@ import lombok.val;
 @Builder(access = AccessLevel.PACKAGE)
 public class DataCloudConnection implements Connection, AutoCloseable {
     public static final int DEFAULT_PORT = 443;
+
+    @Getter(AccessLevel.PACKAGE)
+    private final DataCloudJdbcManagedChannel channel;
 
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
@@ -72,69 +72,71 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     private final DataCloudConnectionString connectionString;
 
-    @Getter(AccessLevel.PACKAGE)
     @Builder.Default
-    private final Properties properties = new Properties();
+    private final boolean shouldCloseChannelWithConnection = true;
 
-    @Unstable
-    @Getter(AccessLevel.PACKAGE)
-    private final HyperGrpcClientExecutor executor;
+    @Builder.Default
+    @Getter
+    @Setter
+    private Properties clientInfo = new Properties();
+
+    HyperGrpcClientExecutor getExecutor() {
+        val stub = channel.getStub(clientInfo, Duration.ofSeconds(Constants.DEFAULT_QUERY_TIMEOUT));
+        return HyperGrpcClientExecutor.of(stub, clientInfo);
+    }
 
     /**
-     * This creates a Data Cloud connection with minimal adjustments to the channels.
-     * The only added interceptors are those for handling connection parameters that influence headers.
-     * This will not provide auth / tracing, users of this API are expected to wire their own
+     * This allows you to create a DataCloudConnection with minimal adjustments to your ManagedChannel.
+     * To configure the channel with the bare minimum use {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder)}
+     * To configure the channel with property controlled settings like retries and keep alive use {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)}
+     *
+     * No matter which {@link DataCloudJdbcManagedChannel} builder you choose,
+     * all stubs will be wired with interceptors that control at least the following headers: "x-hyperdb-external-client-context", "x-hyperdb-workload", and "dataspace";
+     * the values these headers specify can be controlled by properties with the keys: "external-client-context", "workload", and "dataspace" respectively.
+     * This method will not provide auth / tracing, users of this API are expected to wire their own interceptors before supplying a {@link ManagedChannelBuilder} to {@link DataCloudJdbcManagedChannel}.
+     * @param channel The channel to use for the connection
+     * @param properties The properties to use for the connection
+     * @param closeChannelWithConnection Whether to close the channel when the connection is closed
+     * @return A DataCloudConnection with the given channel and properties
      */
-    public static DataCloudConnection fromChannel(@NonNull ManagedChannelBuilder<?> builder, Properties properties)
-            throws SQLException {
+    public static DataCloudConnection of(
+            @NonNull DataCloudJdbcManagedChannel channel,
+            @NonNull Properties properties,
+            boolean closeChannelWithConnection)
+            throws DataCloudJDBCException {
         return logTimedValue(
-                () -> {
-                    val interceptors = getPropertyDerivedClientInterceptors(properties);
-                    val executor = HyperGrpcClientExecutor.of(builder.intercept(interceptors), properties);
-
-                    return DataCloudConnection.builder()
-                            .executor(executor)
-                            .properties(properties)
-                            .build();
-                },
-                "fromChannel",
+                () -> DataCloudConnection.builder()
+                        .channel(channel)
+                        .shouldCloseChannelWithConnection(closeChannelWithConnection)
+                        .clientInfo(properties)
+                        .build(),
+                "of with ",
                 log);
     }
 
-    public static DataCloudConnection fromOauth(
-            @NonNull ManagedChannelBuilder<?> builder,
-            Properties properties,
-            ClientInterceptor authInterceptor,
-            ThrowingJdbcSupplier<String> lakehouseSupplier,
-            ThrowingJdbcSupplier<List<String>> dataspacesSupplier,
-            DataCloudConnectionString connectionString)
-            throws SQLException {
-
-        val interceptors = getPropertyDerivedClientInterceptors(properties);
-        interceptors.add(0, authInterceptor);
-        val executor = HyperGrpcClientExecutor.of(builder.intercept(interceptors), properties);
-
-        return DataCloudConnection.builder()
-                .executor(executor)
-                .properties(properties)
-                .lakehouseSupplier(lakehouseSupplier)
-                .dataspacesSupplier(dataspacesSupplier)
-                .connectionString(connectionString)
-                .build();
+    public static DataCloudConnection of(@NonNull ManagedChannelBuilder<?> builder, @NonNull Properties properties)
+            throws DataCloudJDBCException {
+        return of(DataCloudJdbcManagedChannel.of(builder, properties), properties, true);
     }
 
-    /**
-     * Initializes a list of interceptors that handle channel level concerns that can be defined through properties
-     * @param properties - The connection properties
-     * @return a list of client interceptors
-     */
-    private static List<ClientInterceptor> getPropertyDerivedClientInterceptors(Properties properties) {
-        return Stream.of(
-                        HyperExternalClientContextHeaderInterceptor.of(properties),
-                        HyperWorkloadHeaderInterceptor.of(properties),
-                        DataspaceHeaderInterceptor.of(properties))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+    public static DataCloudConnection of(
+            @NonNull ManagedChannelBuilder<?> builder,
+            @NonNull Properties properties,
+            @NonNull ClientInterceptor authInterceptor,
+            @NonNull ThrowingJdbcSupplier<String> lakehouseSupplier,
+            @NonNull ThrowingJdbcSupplier<List<String>> dataspacesSupplier,
+            @NonNull DataCloudConnectionString connectionString)
+            throws DataCloudJDBCException {
+        return logTimedValue(
+                () -> DataCloudConnection.builder()
+                        .channel(DataCloudJdbcManagedChannel.of(builder.intercept(authInterceptor), properties))
+                        .clientInfo(properties)
+                        .lakehouseSupplier(lakehouseSupplier)
+                        .dataspacesSupplier(dataspacesSupplier)
+                        .connectionString(connectionString)
+                        .build(),
+                "DataCloudConnection::of with oauth",
+                log);
     }
 
     @Override
@@ -169,6 +171,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit, RowBased.Mode mode)
             throws DataCloudJDBCException {
         log.info("Get row-based result set. queryId={}, offset={}, limit={}, mode={}", queryId, offset, limit, mode);
+        val executor = getExecutor();
         val iterator = RowBased.of(executor, queryId, offset, limit, mode);
         return StreamingResultSet.of(queryId, executor, iterator);
     }
@@ -176,6 +179,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit)
             throws DataCloudJDBCException {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
+        val executor = getExecutor();
         val iterator = ChunkBased.of(executor, queryId, chunkId, limit);
         return StreamingResultSet.of(queryId, executor, iterator);
     }
@@ -198,6 +202,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public DataCloudQueryStatus waitForRowsAvailable(
             String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
             throws DataCloudJDBCException {
+        val executor = getExecutor();
         return executor.waitForRowsAvailable(queryId, offset, limit, timeout, allowLessThan);
     }
 
@@ -215,6 +220,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public DataCloudQueryStatus waitForChunksAvailable(
             String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
             throws DataCloudJDBCException {
+        val executor = getExecutor();
         return executor.waitForChunksAvailable(queryId, offset, limit, timeout, allowLessThan);
     }
 
@@ -225,13 +231,23 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * @return The last {@link DataCloudQueryStatus} the server replied with.
      */
     public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration timeout) throws DataCloudJDBCException {
+        val executor = getExecutor();
         return executor.waitForResultsProduced(queryId, timeout);
+    }
+
+    /**
+     * Sends a command to the server to cancel the query with the specified query id.
+     * @param queryId The query id for the query you want to cancel
+     */
+    public void cancel(String queryId) throws DataCloudJDBCException {
+        getExecutor().cancel(queryId);
     }
 
     /**
      * Use this to determine when a given query is complete by filtering the responses and a subsequent findFirst()
      */
     public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {
+        val executor = getExecutor();
         return executor.getQueryStatus(queryId);
     }
 
@@ -262,17 +278,19 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     @Override
     public void close() {
         try {
-            if (closed.compareAndSet(false, true)) {
-                executor.close();
+            if (!shouldCloseChannelWithConnection) {
+                log.warn(
+                        "Called close on a DataCloudConnection, but shouldCloseChannelWithConnection was set to false");
+                return;
             }
+
+            if (closed.compareAndSet(false, true)) {
+                channel.close();
+            }
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    @Unstable
-    public void cancel(String queryId) throws DataCloudJDBCException {
-        getExecutor().cancel(queryId);
     }
 
     @Override
@@ -282,7 +300,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     @Override
     public DatabaseMetaData getMetaData() {
-        val userName = this.properties.getProperty("userName");
+        val userName = this.clientInfo.getProperty("userName");
         return new DataCloudDatabaseMetadata(this, connectionString, lakehouseSupplier, dataspacesSupplier, userName);
     }
 
@@ -426,19 +444,13 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     @Override
-    public void setClientInfo(String name, String value) {}
-
-    @Override
-    public void setClientInfo(Properties properties) {}
-
-    @Override
-    public String getClientInfo(String name) {
-        return "";
+    public void setClientInfo(String name, String value) {
+        clientInfo.setProperty(name, value);
     }
 
     @Override
-    public Properties getClientInfo() {
-        return properties;
+    public String getClientInfo(String name) {
+        return clientInfo.getProperty(name);
     }
 
     @Override

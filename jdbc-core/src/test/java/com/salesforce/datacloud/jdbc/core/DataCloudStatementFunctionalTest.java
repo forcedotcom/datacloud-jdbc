@@ -40,9 +40,9 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelStatementQuery() {
         try (val server = configWithSleep.start();
-                val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class);
-                val client = server.getRawClient()) {
+                val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class)) {
             statement.executeAsyncQuery("select pg_sleep(5000000);");
+            val client = server.getRawClient();
 
             val queryId = statement.unwrap(DataCloudStatement.class).getQueryId();
             val a = client.getQueryStatus(queryId).findFirst().get();
@@ -61,9 +61,9 @@ public class DataCloudStatementFunctionalTest {
         try (val server = configWithSleep.start();
                 val connection = server.getConnection();
                 val statement =
-                        connection.prepareStatement("select pg_sleep(?)").unwrap(DataCloudPreparedStatement.class);
-                val client = server.getRawClient()) {
+                        connection.prepareStatement("select pg_sleep(?)").unwrap(DataCloudPreparedStatement.class)) {
 
+            val client = server.getRawClient();
             statement.setInt(1, 5000000);
             statement.executeAsyncQuery();
 
@@ -83,9 +83,9 @@ public class DataCloudStatementFunctionalTest {
     public void canCancelAnotherQueryById() {
         try (val server = configWithSleep.start();
                 val connection = server.getConnection().unwrap(DataCloudConnection.class);
-                val statement = connection.createStatement().unwrap(DataCloudStatement.class);
-                val client = server.getRawClient()) {
+                val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
 
+            val client = server.getRawClient();
             statement.executeAsyncQuery("select pg_sleep(5000000);");
             val queryId = statement.getQueryId();
 

@@ -19,6 +19,8 @@ import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerProcess;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
+import io.grpc.Channel;
+import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
@@ -26,6 +28,7 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -52,6 +55,7 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
 @Slf4j
 @ExtendWith(InProcessGrpcMockExtension.class)
 public class HyperGrpcTestBase {
+    protected DataCloudJdbcManagedChannel channel;
 
     protected static HyperGrpcClientExecutor hyperGrpcClient;
 
@@ -125,7 +129,7 @@ public class HyperGrpcTestBase {
                 HyperServiceGrpc.getGetQueryResultMethod(),
                 HyperServiceGrpc.HyperServiceBlockingStub::getQueryResult);
 
-        val conn = DataCloudConnection.fromChannel(mocked, new Properties());
+        val conn = DataCloudConnection.of(mocked, new Properties());
         connections.add(conn);
         return conn;
     }
@@ -162,18 +166,31 @@ public class HyperGrpcTestBase {
         }));
     }
 
-    @BeforeEach
-    public void setUpClient() throws SQLException, IOException {
-        val channel = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
-                .usePlaintext();
-        hyperGrpcClient = HyperGrpcClientExecutor.of(channel, new Properties());
+    public HyperGrpcClientExecutor setupClientWith(ClientInterceptor... interceptors) {
+        val builder = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
+                .usePlaintext()
+                .intercept(interceptors);
+
+        if (channel != null) {
+            channel.close();
+        }
+
+        channel = DataCloudJdbcManagedChannel.of(builder);
+
+        val stub = channel.getStub(new Properties(), Duration.ZERO);
+
+        return HyperGrpcClientExecutor.of(stub, new Properties());
     }
 
-    @SneakyThrows
+    @BeforeEach
+    public void setupClient() {
+        hyperGrpcClient = setupClientWith();
+    }
+
     @AfterEach
     public void cleanup() {
-        if (hyperGrpcClient != null) {
-            hyperGrpcClient.close();
+        if (channel != null) {
+            channel.close();
         }
     }
 

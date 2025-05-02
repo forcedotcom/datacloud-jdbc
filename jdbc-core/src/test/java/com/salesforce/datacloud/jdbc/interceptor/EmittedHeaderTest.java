@@ -122,8 +122,8 @@ public class EmittedHeaderTest {
             channel.intercept(tracer);
         }
 
-        try (val connection = DataCloudConnection.fromChannel(channel, properties);
-                val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
+        try (val connection = DataCloudConnection.of(channel, properties);
+             val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
             statement.executeAsyncQuery("select 1");
         }
 

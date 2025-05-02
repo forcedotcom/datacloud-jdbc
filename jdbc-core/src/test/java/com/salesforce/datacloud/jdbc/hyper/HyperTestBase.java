@@ -27,6 +27,9 @@ import java.sql.ResultSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import io.grpc.ClientInterceptor;
+import io.grpc.ManagedChannelBuilder;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -73,6 +76,16 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
         }
     }
 
+    @SneakyThrows
+    public static DataCloudConnection getHyperQueryConnection(ClientInterceptor... interceptors) {
+        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress(
+                        "127.0.0.1", HyperTestBase.getInstancePort())
+                .usePlaintext()
+                .intercept(interceptors);
+
+        return DataCloudConnection.of(channel, new Properties());
+    }
+
     public static DataCloudConnection getHyperQueryConnection() {
         return getHyperQueryConnection(ImmutableMap.of());
     }
@@ -113,13 +126,6 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
         val instance = getInstance();
         if (instance != null) {
             instance.close();
-        }
-    }
-
-    public static class NoopTokenSupplier implements AuthorizationHeaderInterceptor.TokenSupplier {
-        @Override
-        public String getToken() {
-            return "";
         }
     }
 }

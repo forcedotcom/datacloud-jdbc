@@ -20,12 +20,14 @@ import lombok.experimental.UtilityClass;
 import lombok.val;
 import org.mockito.Mockito;
 
+import static org.mockito.Mockito.when;
+
 @UtilityClass
 public class DataCloudConnectionMocker {
-    public static DataCloudConnection mockedConnection(Properties properties, HyperGrpcClientExecutor executor) {
+    public static DataCloudConnection mockedConnection(Properties properties, DataCloudJdbcManagedChannel channel) {
         val connection = Mockito.mock(DataCloudConnection.class);
-        Mockito.when(connection.getProperties()).thenReturn(properties);
-        Mockito.when(connection.getExecutor()).thenReturn(executor);
+        when(connection.getClientInfo()).thenReturn(properties);
+        when(connection.getChannel()).thenReturn(channel);
         return connection;
     }
 }

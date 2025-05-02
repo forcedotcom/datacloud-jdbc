@@ -15,6 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.interceptor;
 
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -23,6 +25,7 @@ import static org.mockito.Mockito.verify;
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import io.grpc.Metadata;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -38,20 +41,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 
 @ExtendWith(MockitoExtension.class)
-class HeaderMutatingClientInterceptorTest extends HyperGrpcTestBase {
-    String query = UUID.randomUUID().toString();
-    String queryId = UUID.randomUUID().toString();
-
+@ExtendWith(HyperTestBase.class)
+class HeaderMutatingClientInterceptorTest {
     @Test
     @SneakyThrows
     void interceptCallAlwaysCallsMutate() {
         Consumer<Metadata> mockConsumer = mock(Consumer.class);
         val sut = new Sut(mockConsumer);
 
-        try (val client =
-                hyperGrpcClient.toBuilder().interceptors(ImmutableList.of(sut)).build()) {
-            setupExecuteQuery(queryId, query, QueryParam.TransferMode.SYNC);
-            client.executeQuery(query);
+        try (val conn = getHyperQueryConnection(sut);
+                val stmt = conn.createStatement()) {
+            stmt.executeQuery("SELECT 1");
         }
 
         val argumentCaptor = ArgumentCaptor.forClass(Metadata.class);
@@ -71,16 +71,13 @@ class HeaderMutatingClientInterceptorTest extends HyperGrpcTestBase {
 
         val sut = new Sut(mockConsumer);
 
-        val ex = Assertions.assertThrows(DataCloudJDBCException.class, () -> {
-            try (val client = hyperGrpcClient.toBuilder()
-                    .interceptors(ImmutableList.of(sut))
-                    .build()) {
-                setupExecuteQuery(queryId, query, QueryParam.TransferMode.SYNC);
-                client.executeQuery(query);
-            }
-        });
-
-        AssertionsForClassTypes.assertThat(ex)
+        assertThatThrownBy(() -> {
+                    try (val conn = getHyperQueryConnection(sut);
+                            val stmt = conn.createStatement()) {
+                        stmt.executeQuery("SELECT 1");
+                    }
+                })
+                .isInstanceOf(DataCloudJDBCException.class)
                 .hasRootCauseMessage(message)
                 .hasMessage("Caught exception when mutating headers in client interceptor");
 

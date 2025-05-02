@@ -54,15 +54,15 @@ public class ChunkBasedPaginationTest {
 
         final String queryId;
 
-        try (final DataCloudConnection conn = DataCloudConnection.fromChannel(channel, properties);
-                final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
+        try (final DataCloudConnection conn = DataCloudConnection.of(channel, properties);
+             final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
             queryId = stmt.executeAsyncQuery(sql).getQueryId();
         }
 
         int prev = 1;
         DataCloudQueryStatus status = null;
         while (true) {
-            try (final DataCloudConnection conn = DataCloudConnection.fromChannel(channel, properties)) {
+            try (final DataCloudConnection conn = DataCloudConnection.of(channel, properties)) {
                 if (status == null || !status.allResultsProduced()) {
                     status = conn.waitForChunksAvailable(
                             queryId, offset.get(), 1, timeout, false); // false because we're waiting for the next chunk

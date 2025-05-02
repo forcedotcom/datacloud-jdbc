@@ -92,12 +92,12 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
     }
 
     @Override
-    public DataCloudResultSet generateResultSet() {
-        return StreamingResultSet.of(query, this);
+    public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
+        return StreamingResultSet.of(queryId, client, stream().iterator());
     }
 
     @Override
-    public Stream<QueryResult> stream() throws SQLException {
+    public Stream<QueryResult> stream() throws DataCloudJDBCException {
         if (!isReady()) {
             throw new DataCloudJDBCException(BEFORE_READY);
         }

@@ -104,7 +104,7 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
     @Test
     void itCatchesAndMakesSqlExceptionWhenQueryFails() {
         val client = Mockito.mock(HyperGrpcClientExecutor.class);
-        Mockito.when(client.executeAdaptiveQuery(Mockito.anyString()))
+        Mockito.when(client.executeQuery(Mockito.anyString()))
                 .thenThrow(new StatusRuntimeException(Status.ABORTED));
 
         val ex = Assertions.assertThrows(

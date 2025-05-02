@@ -63,7 +63,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     public static AdaptiveQueryStatusListener of(String query, HyperGrpcClientExecutor client, Duration timeout)
             throws SQLException {
         try {
-            val response = client.executeAdaptiveQuery(query);
+            val response = client.executeQuery(query);
             val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
             log.info("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);
@@ -77,7 +77,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     public static RowBasedAdaptiveQueryStatusListener of(
             String query, HyperGrpcClientExecutor client, Duration timeout, long maxRows) throws SQLException {
         try {
-            val response = client.executeAdaptiveQuery(query, maxRows);
+            val response = client.executeQuery(query, maxRows);
             val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
             log.info("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);
@@ -103,12 +103,12 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     }
 
     @Override
-    public DataCloudResultSet generateResultSet() {
-        return StreamingResultSet.of(query, this);
+    public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
+        return StreamingResultSet.of(queryId, client, stream().iterator());
     }
 
     @Override
-    public Stream<QueryResult> stream() throws SQLException {
+    public Stream<QueryResult> stream() throws DataCloudJDBCException {
         return Stream.<Supplier<Stream<QueryResult>>>of(this::head, this::tail).flatMap(Supplier::get);
     }
 
@@ -184,12 +184,12 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
         }
 
         @Override
-        public DataCloudResultSet generateResultSet() {
-            return StreamingResultSet.of(query, this);
+        public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
+            return StreamingResultSet.of(queryId, client, stream().iterator());
         }
 
         @Override
-        public Stream<QueryResult> stream() throws SQLException {
+        public Stream<QueryResult> stream() throws DataCloudJDBCException {
             return StreamUtilities.toStream(response)
                     .map(this::mapHead)
                     .filter(Optional::isPresent)

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
+import com.salesforce.datacloud.jdbc.core.DataCloudJdbcManagedChannel;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 import io.grpc.ManagedChannelBuilder;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -137,10 +139,9 @@ public class HyperServerProcess implements AutoCloseable {
 
     @SneakyThrows
     public HyperGrpcClientExecutor getRawClient() {
-
-        ManagedChannelBuilder<?> channel =
-                ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext();
-        return HyperGrpcClientExecutor.of(channel, new Properties());
+        val channel = DataCloudJdbcManagedChannel.of(ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext());
+        val stub = channel.getStub(new Properties(), Duration.ZERO);
+        return HyperGrpcClientExecutor.of(stub, new Properties());
     }
 
     @SneakyThrows

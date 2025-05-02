@@ -15,9 +15,13 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
+import com.google.common.collect.ImmutableList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -99,6 +103,17 @@ public class PropertiesExtensions {
             log.warn("Failed to parse enum value: {}", s, ex);
             return null;
         }
+    }
+
+    public static List<String> getListOrDefault(Properties properties, String key, String... defaults) {
+        return optional(properties, key).map(PropertiesExtensions::toList).orElse(ImmutableList.copyOf(defaults));
+    }
+
+    public static List<String> toList(String s) {
+        return Arrays.stream(s.split(","))
+                .map(String::trim)
+                .filter(StringCompatibility::isNotEmpty)
+                .collect(Collectors.toList());
     }
 
     @UtilityClass

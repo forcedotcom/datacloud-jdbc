@@ -66,8 +66,8 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     public void beforeEach() {
         connection = Mockito.mock(DataCloudConnection.class);
         properties = new Properties();
-        Mockito.when(connection.getExecutor()).thenReturn(hyperGrpcClient);
-        Mockito.when(connection.getProperties()).thenReturn(properties);
+        when(connection.getChannel()).thenReturn(channel);
+        when(connection.getClientInfo()).thenReturn(properties);
         statement = new DataCloudStatement(connection);
     }
 
@@ -86,27 +86,6 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
         assertThat(ex)
                 .hasMessage("Batch execution is not supported in Data Cloud query")
                 .hasFieldOrPropertyWithValue("SQLState", SqlErrorCodes.FEATURE_NOT_SUPPORTED);
-    }
-
-    @SneakyThrows
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    public void testForceSyncOverride(boolean forceSync) {
-        val p = new Properties();
-        p.setProperty(Constants.FORCE_SYNC, Boolean.toString(forceSync));
-        when(connection.getProperties()).thenReturn(p);
-
-        val statement = new DataCloudStatement(connection);
-
-        setupHyperGrpcClientWithMockedResultSet(
-                "query id",
-                ImmutableList.of(),
-                forceSync ? QueryParam.TransferMode.SYNC : QueryParam.TransferMode.ADAPTIVE);
-        ResultSet response = statement.executeQuery("SELECT * FROM table");
-        AssertionsForClassTypes.assertThat(statement.isReady()).isTrue();
-        assertNotNull(response);
-        AssertionsForClassTypes.assertThat(response.getMetaData().getColumnCount())
-                .isEqualTo(3);
     }
 
     @Test
@@ -161,12 +140,12 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @Test
     public void testSetQueryTimeoutNegativeValue() {
         statement.setQueryTimeout(-100);
-        assertThat(statement.getQueryTimeout()).isEqualTo(DataCloudStatement.DEFAULT_QUERY_TIMEOUT);
+        assertThat(statement.getQueryTimeout()).isEqualTo(Constants.DEFAULT_QUERY_TIMEOUT);
     }
 
     @Test
     public void testGetQueryTimeoutDefaultValue() {
-        assertThat(statement.getQueryTimeout()).isEqualTo(DataCloudStatement.DEFAULT_QUERY_TIMEOUT);
+        assertThat(statement.getQueryTimeout()).isEqualTo(Constants.DEFAULT_QUERY_TIMEOUT);
     }
 
     @SneakyThrows
@@ -175,7 +154,7 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
         Properties properties = new Properties();
         properties.setProperty("queryTimeout", Integer.toString(30));
         connection = Mockito.mock(DataCloudConnection.class);
-        Mockito.when(connection.getProperties()).thenReturn(properties);
+        Mockito.when(connection.getClientInfo()).thenReturn(properties);
         val statement = new DataCloudStatement(connection);
         assertThat(statement.getQueryTimeout()).isEqualTo(30);
     }

@@ -37,8 +37,6 @@ class QueryStatusListenerTest extends HyperGrpcTestBase {
     @SneakyThrows
     private QueryStatusListener sut(String query, QueryParam.TransferMode mode, Duration timeout) {
         switch (mode) {
-            case SYNC:
-                return SyncQueryStatusListener.of(query, hyperGrpcClient);
             case ASYNC:
                 return AsyncQueryStatusListener.of(query, hyperGrpcClient, timeout);
             case ADAPTIVE:
@@ -50,7 +48,7 @@ class QueryStatusListenerTest extends HyperGrpcTestBase {
     }
 
     private static Stream<QueryParam.TransferMode> supported() {
-        return Stream.of(QueryParam.TransferMode.SYNC, QueryParam.TransferMode.ASYNC, QueryParam.TransferMode.ADAPTIVE);
+        return Stream.of(QueryParam.TransferMode.ASYNC, QueryParam.TransferMode.ADAPTIVE);
     }
 
     @ParameterizedTest

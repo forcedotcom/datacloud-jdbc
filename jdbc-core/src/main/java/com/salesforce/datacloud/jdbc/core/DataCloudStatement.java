@@ -17,23 +17,23 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor.HYPER_MAX_ROW_LIMIT_BYTE_SIZE;
 import static com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor.HYPER_MIN_ROW_LIMIT_BYTE_SIZE;
+import static com.salesforce.datacloud.jdbc.util.Constants.DEFAULT_QUERY_TIMEOUT;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 import com.salesforce.datacloud.jdbc.core.listener.AdaptiveQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
-import com.salesforce.datacloud.jdbc.core.listener.SyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
-import com.salesforce.datacloud.jdbc.util.Unstable;
-import java.sql.Connection;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.time.Duration;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
@@ -42,6 +42,9 @@ import lombok.val;
 
 @Slf4j
 public class DataCloudStatement implements Statement, AutoCloseable {
+    @Getter
+    protected final DataCloudConnection connection;
+
     protected ResultSet resultSet;
 
     protected static final String NOT_SUPPORTED_IN_DATACLOUD_QUERY = "Write is not supported in Data Cloud query";
@@ -49,41 +52,31 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             "Batch execution is not supported in Data Cloud query";
     protected static final String CHANGE_FETCH_DIRECTION_IS_NOT_SUPPORTED = "Changing fetch direction is not supported";
     private static final String QUERY_TIMEOUT = "queryTimeout";
-    public static final int DEFAULT_QUERY_TIMEOUT = 3 * 60 * 60;
-
-    protected final DataCloudConnection dataCloudConnection;
 
     private int queryTimeout;
 
     public DataCloudStatement(@NonNull DataCloudConnection connection) {
-        this.dataCloudConnection = connection;
-        val properties = connection.getProperties();
+        this.connection = connection;
+        val properties = connection.getClientInfo();
         this.queryTimeout = getIntegerOrDefault(properties, QUERY_TIMEOUT, DEFAULT_QUERY_TIMEOUT);
         this.targetMaxBytes = getIntegerOrDefault(properties, Constants.BYTE_LIMIT, HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
     }
 
+    protected HyperGrpcClientExecutor getQueryExecutor() throws DataCloudJDBCException {
+        val properties = connection.getClientInfo();
+        val stub = connection.getChannel().getStub(properties, getQueryTimeoutDuration());
+        return HyperGrpcClientExecutor.of(stub, properties, targetMaxBytes);
+    }
+
     protected QueryStatusListener listener;
 
-    protected boolean useSync() {
-        return optional(dataCloudConnection.getProperties(), Constants.FORCE_SYNC)
-                .map(Boolean::parseBoolean)
-                .orElse(false);
-    }
-
-    private HyperGrpcClientExecutor getQueryExecutor() {
-        return dataCloudConnection.getExecutor().toBuilder()
-                .byteLimit(targetMaxBytes)
-                .queryTimeout(getQueryTimeout())
-                .build();
-    }
-
-    private void assertQueryExecuted() throws SQLException {
+    private void assertQueryExecuted() throws DataCloudJDBCException {
         if (listener == null) {
             throw new DataCloudJDBCException("a query was not executed before attempting to access results");
         }
     }
 
-    private void assertQueryReady() throws SQLException {
+    private void assertQueryReady() throws DataCloudJDBCException {
         assertQueryExecuted();
 
         if (!listener.isReady()) {
@@ -91,8 +84,11 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         }
     }
 
-    @Unstable
-    public String getQueryId() throws SQLException {
+    /**
+     * @return The Data Cloud query id of the last executed query from this statement.
+     * @throws SQLException throws an exception if a query has not been executed from this statement
+     */
+    public String getQueryId() throws DataCloudJDBCException {
         assertQueryExecuted();
 
         return listener.getQueryId();
@@ -113,30 +109,9 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         log.debug("Entering executeQuery");
-        resultSet = useSync() ? executeSyncQuery(sql) : executeAdaptiveQuery(sql);
+        val client = getQueryExecutor();
+        resultSet = executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
         return resultSet;
-    }
-
-    @Deprecated
-    public DataCloudResultSet executeSyncQuery(String sql) throws SQLException {
-        log.debug("Entering executeSyncQuery");
-        val client = getQueryExecutor();
-        return executeSyncQuery(sql, client);
-    }
-
-    @Deprecated
-    protected DataCloudResultSet executeSyncQuery(String sql, HyperGrpcClientExecutor client) throws SQLException {
-        listener = SyncQueryStatusListener.of(sql, client);
-        resultSet = listener.generateResultSet();
-        log.info("executeSyncQuery completed.  queryId={}", listener.getQueryId());
-        return (DataCloudResultSet) resultSet;
-    }
-
-    @Deprecated
-    public DataCloudResultSet executeAdaptiveQuery(String sql) throws SQLException {
-        log.debug("Entering executeAdaptiveQuery");
-        val client = getQueryExecutor();
-        return executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
     }
 
     protected DataCloudResultSet executeAdaptiveQuery(String sql, HyperGrpcClientExecutor client, Duration timeout)
@@ -279,7 +254,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         }
 
         val queryId = getQueryId();
-        val executor = dataCloudConnection.getExecutor();
+        val executor = getQueryExecutor();
         executor.cancel(queryId);
     }
 
@@ -360,11 +335,6 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     @Override
     public int[] executeBatch() throws SQLException {
         throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
-    }
-
-    @Override
-    public Connection getConnection() {
-        return dataCloudConnection;
     }
 
     @Override

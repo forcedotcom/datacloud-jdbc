@@ -33,7 +33,7 @@ public interface QueryStatusListener {
 
     String getQueryId();
 
-    DataCloudResultSet generateResultSet();
+    DataCloudResultSet generateResultSet() throws DataCloudJDBCException;
 
     Stream<QueryResult> stream() throws SQLException;
 }

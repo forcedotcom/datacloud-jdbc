@@ -325,7 +325,7 @@ class OrgIntegrationTest {
 
             log.info("Begin executeQuery");
             long startTime = System.currentTimeMillis();
-            ResultSet resultSet = statement.executeAdaptiveQuery(query);
+            ResultSet resultSet = statement.executeQuery(query);
             log.info("Query executed in {}ms", System.currentTimeMillis() - startTime);
 
             int expected = 0;

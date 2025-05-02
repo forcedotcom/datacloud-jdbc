@@ -113,15 +113,15 @@ class PropertiesExtensionsTest {
     void getBooleanOrDefaultKeyExistsValidInvalidValues() {
         Properties properties = new Properties();
         properties.setProperty("myKeyTrue", "true");
-        Boolean resultTrue = PropertiesExtensions.getBooleanOrDefault(properties, "myKeyTrue", false);
+        val resultTrue = PropertiesExtensions.getBooleanOrDefault(properties, "myKeyTrue", false);
         assertThat(resultTrue).isEqualTo(true);
 
         properties.setProperty("myKeyFalse", "false");
-        Boolean resultFalse = PropertiesExtensions.getBooleanOrDefault(properties, "myKeyFalse", true);
+        val resultFalse = PropertiesExtensions.getBooleanOrDefault(properties, "myKeyFalse", true);
         assertThat(resultFalse).isEqualTo(false);
 
         properties.setProperty("myKeyEmpty", "");
-        Boolean resultEmpty = PropertiesExtensions.getBooleanOrDefault(properties, "myKeyEmpty", false);
+        val resultEmpty = PropertiesExtensions.getBooleanOrDefault(properties, "myKeyEmpty", false);
         assertThat(resultEmpty).isEqualTo(false);
     }
 
@@ -130,7 +130,7 @@ class PropertiesExtensionsTest {
         Properties properties = new Properties();
         properties.setProperty("enumKey", "SECOND");
 
-        TestEnum result = PropertiesExtensions.getEnumOrDefault(properties, "enumKey", TestEnum.FIRST);
+        val result = PropertiesExtensions.getEnumOrDefault(properties, "enumKey", TestEnum.FIRST);
 
         assertThat(result).isEqualTo(TestEnum.SECOND);
     }
@@ -140,7 +140,7 @@ class PropertiesExtensionsTest {
         Properties properties = new Properties();
         properties.setProperty("enumKey", "INVALID_VALUE");
 
-        TestEnum result = PropertiesExtensions.getEnumOrDefault(properties, "enumKey", TestEnum.FIRST);
+        val result = PropertiesExtensions.getEnumOrDefault(properties, "enumKey", TestEnum.FIRST);
 
         assertThat(result).isEqualTo(TestEnum.FIRST);
     }
@@ -149,8 +149,37 @@ class PropertiesExtensionsTest {
     void getEnumOrDefaultReturnsDefaultWhenKeyMissing() {
         Properties properties = new Properties();
 
-        TestEnum result = PropertiesExtensions.getEnumOrDefault(properties, "missingKey", TestEnum.THIRD);
+        val result = PropertiesExtensions.getEnumOrDefault(properties, "missingKey", TestEnum.THIRD);
 
         assertThat(result).isEqualTo(TestEnum.THIRD);
+    }
+
+    @Test
+    void toListShouldSplitCommaSeparatedValues() {
+        assertThat(PropertiesExtensions.toList("a,b,c")).containsExactly("a", "b", "c");
+        assertThat(PropertiesExtensions.toList("a")).containsExactly("a");
+        assertThat(PropertiesExtensions.toList("")).isEmpty();
+    }
+
+    @Test
+    void toListShouldTrimWhitespace() {
+        assertThat(PropertiesExtensions.toList(" a , b , c ")).containsExactly("a", "b", "c");
+        assertThat(PropertiesExtensions.toList("  value  ")).containsExactly("value");
+    }
+
+    @Test
+    void getListOrDefaultShouldReturnPropertyValueAsList() {
+        Properties properties = new Properties();
+        properties.setProperty("list", "a,b,c");
+
+        assertThat(PropertiesExtensions.getListOrDefault(properties, "list")).containsExactly("a", "b", "c");
+    }
+
+    @Test
+    void getListOrDefaultShouldReturnDefaultWhenKeyMissing() {
+        Properties properties = new Properties();
+
+        assertThat(PropertiesExtensions.getListOrDefault(properties, "missingKey", "default"))
+                .containsExactly("default");
     }
 }

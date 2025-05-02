@@ -94,7 +94,8 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
                 "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::execute() instead.");
     }
 
-    private HyperGrpcClientExecutor getQueryExecutor() throws DataCloudJDBCException {
+    @Override
+    protected HyperGrpcClientExecutor getQueryExecutor() throws DataCloudJDBCException {
         final byte[] encodedRow;
         try {
             encodedRow = ArrowUtils.toArrowByteArray(parameterManager.getParameters(), calendar);
@@ -109,10 +110,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
                         .build())
                 .build();
 
-        return dataCloudConnection.getExecutor().toBuilder()
-                .additionalQueryParams(preparedQueryParams)
-                .queryTimeout(getQueryTimeout())
-                .build();
+        return super.getQueryExecutor().withQueryParams(preparedQueryParams);
     }
 
     public boolean executeAsyncQuery() throws SQLException {
@@ -131,9 +129,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     public ResultSet executeQuery() throws SQLException {
         val client = getQueryExecutor();
 
-        resultSet = useSync()
-                ? executeSyncQuery(sql, client)
-                : executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
+        resultSet = executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
         return resultSet;
     }
 

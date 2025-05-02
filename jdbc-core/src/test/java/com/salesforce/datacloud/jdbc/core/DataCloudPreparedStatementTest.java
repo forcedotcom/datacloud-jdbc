@@ -82,12 +82,12 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
     private final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+2"));
 
     @BeforeEach
-    public void beforeEach() {
+    public void beforeEach() throws DataCloudJDBCException {
 
         mockConnection = mock(DataCloudConnection.class);
         val properties = new Properties();
-        when(mockConnection.getExecutor()).thenReturn(hyperGrpcClient);
-        when(mockConnection.getProperties()).thenReturn(properties);
+        when(mockConnection.getChannel()).thenReturn(channel);
+        when(mockConnection.getClientInfo()).thenReturn(properties);
 
         mockParameterManager = mock(ParameterManager.class);
 
@@ -110,27 +110,6 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessage(
                         "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::execute() instead.");
-    }
-
-    @SneakyThrows
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    public void testForceSyncOverride(boolean forceSync) {
-        val p = new Properties();
-        p.setProperty(Constants.FORCE_SYNC, Boolean.toString(forceSync));
-        when(mockConnection.getProperties()).thenReturn(p);
-
-        val statement = new DataCloudPreparedStatement(mockConnection, "SELECT * FROM table", mockParameterManager);
-
-        setupHyperGrpcClientWithMockedResultSet(
-                "query id",
-                ImmutableList.of(),
-                forceSync ? QueryParam.TransferMode.SYNC : QueryParam.TransferMode.ADAPTIVE);
-        ResultSet response = statement.executeQuery();
-        AssertionsForClassTypes.assertThat(statement.isReady()).isTrue();
-        assertNotNull(response);
-        AssertionsForClassTypes.assertThat(response.getMetaData().getColumnCount())
-                .isEqualTo(3);
     }
 
     @Test
@@ -352,7 +331,7 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
         assertEquals(30, preparedStatement.getQueryTimeout());
 
         preparedStatement.setQueryTimeout(-1);
-        assertThat(preparedStatement.getQueryTimeout()).isEqualTo(DataCloudStatement.DEFAULT_QUERY_TIMEOUT);
+        assertThat(preparedStatement.getQueryTimeout()).isEqualTo(Constants.DEFAULT_QUERY_TIMEOUT);
     }
 
     @Test

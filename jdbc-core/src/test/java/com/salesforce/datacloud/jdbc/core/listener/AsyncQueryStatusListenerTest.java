@@ -158,7 +158,7 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
     }
 
     DataCloudStatement statement() {
-        val connection = mockedConnection(new Properties(), hyperGrpcClient);
+        val connection = mockedConnection(new Properties(), channel);
         return new DataCloudStatement(connection);
     }
 

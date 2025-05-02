@@ -19,7 +19,11 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.google.protobuf.ByteString;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.Iterator;
+import java.util.Properties;
+
+import lombok.val;
 import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
@@ -42,7 +46,9 @@ class HyperGrpcClientTest extends HyperGrpcTestBase {
                 .willReturn(chunk1));
 
         String query = "SELECT * FROM test";
-        Iterator<ExecuteQueryResponse> queryResultIterator = hyperGrpcClient.executeQuery(query);
+        val stub = channel.getStub(new Properties(), Duration.ZERO);
+        val client = HyperGrpcClientExecutor.of(stub, new Properties());
+        Iterator<ExecuteQueryResponse> queryResultIterator = client.executeQuery(query);
         assertDoesNotThrow(() -> {
             while (queryResultIterator.hasNext()) {
                 queryResultIterator.next();
@@ -52,7 +58,7 @@ class HyperGrpcClientTest extends HyperGrpcTestBase {
         QueryParam expectedQueryParam = QueryParam.newBuilder()
                 .setQuery(query)
                 .setOutputFormat(OutputFormat.ARROW_IPC)
-                .setTransferMode(QueryParam.TransferMode.SYNC)
+                .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
                 .build();
         GrpcMock.verifyThat(
                 GrpcMock.calledMethod(HyperServiceGrpc.getExecuteQueryMethod()).withRequest(expectedQueryParam));
