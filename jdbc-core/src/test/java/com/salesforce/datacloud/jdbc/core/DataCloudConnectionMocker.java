@@ -15,12 +15,12 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static org.mockito.Mockito.when;
+
 import java.util.Properties;
 import lombok.experimental.UtilityClass;
 import lombok.val;
 import org.mockito.Mockito;
-
-import static org.mockito.Mockito.when;
 
 @UtilityClass
 public class DataCloudConnectionMocker {

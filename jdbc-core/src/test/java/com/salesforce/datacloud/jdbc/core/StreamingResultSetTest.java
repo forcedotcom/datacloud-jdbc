@@ -20,7 +20,6 @@ import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryCon
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Properties;

@@ -98,9 +98,9 @@ class DataCloudConnectionTest extends HyperGrpcTestBase {
                 .channel(mockChannel)
                 .shouldCloseChannelWithConnection(true)
                 .build();
-        
+
         connection.close();
-        
+
         verify(mockChannel).close();
     }
 
@@ -111,9 +111,9 @@ class DataCloudConnectionTest extends HyperGrpcTestBase {
                 .channel(mockChannel)
                 .shouldCloseChannelWithConnection(false)
                 .build();
-        
+
         connection.close();
-        
+
         verify(mockChannel, never()).close();
     }
 

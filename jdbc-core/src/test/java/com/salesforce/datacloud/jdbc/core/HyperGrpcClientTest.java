@@ -22,7 +22,6 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Properties;
-
 import lombok.val;
 import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;

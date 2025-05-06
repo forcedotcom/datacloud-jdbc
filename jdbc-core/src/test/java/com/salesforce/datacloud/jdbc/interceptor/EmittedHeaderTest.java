@@ -123,7 +123,7 @@ public class EmittedHeaderTest {
         }
 
         try (val connection = DataCloudConnection.of(channel, properties);
-             val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
+                val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
             statement.executeAsyncQuery("select 1");
         }
 

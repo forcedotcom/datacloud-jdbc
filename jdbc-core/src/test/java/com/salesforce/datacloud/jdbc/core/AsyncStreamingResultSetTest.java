@@ -62,8 +62,7 @@ public class AsyncStreamingResultSetTest {
         assertWithStatement(statement -> {
             statement.executeAsyncQuery(sql);
 
-            val status = statement.connection.waitForResultsProduced(
-                    statement.getQueryId(), Duration.ofSeconds(30));
+            val status = statement.connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30));
 
             val rs = statement.getResultSet();
             assertThat(status.allResultsProduced()).isTrue();

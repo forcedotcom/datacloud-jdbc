@@ -64,7 +64,7 @@ public class RowBasedPaginationTest {
         long currentOffset = 0;
 
         try (final DataCloudConnection conn = DataCloudConnection.of(channel, properties);
-             final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
+                final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
             // Set the initial page size
             stmt.setResultSetConstraints(pageSize);
             final StreamingResultSet rs = stmt.executeQuery(sql).unwrap(StreamingResultSet.class);

@@ -21,7 +21,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.grpc.inprocess.InProcessChannelBuilder;
-
 import java.time.Duration;
 import java.util.Map;
 import java.util.Properties;
@@ -81,15 +80,14 @@ class HyperConnectionSettingsTest extends HyperGrpcTestBase {
 
         val client = HyperGrpcClientExecutor.of(stub, properties);
 
-            GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
-                    .withRequest(t -> {
-                        actual.set(t.getSettingsMap());
-                        return true;
-                    })
-                    .willReturn(ImmutableList.of(executeQueryResponse("", null, null))));
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
+                .withRequest(t -> {
+                    actual.set(t.getSettingsMap());
+                    return true;
+                })
+                .willReturn(ImmutableList.of(executeQueryResponse("", null, null))));
 
-            client.executeQuery("").next();
-
+        client.executeQuery("").next();
 
         assertThat(actual.get()).containsOnly(Maps.immutableEntry(key, setting));
 

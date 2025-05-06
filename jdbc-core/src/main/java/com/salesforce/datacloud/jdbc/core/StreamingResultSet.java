@@ -20,6 +20,7 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
+import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -27,9 +28,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.TimeZone;
 import java.util.stream.Stream;
-
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
-import lombok.Builder;
 import lombok.SneakyThrows;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -68,29 +66,31 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
         this.listener = listener;
     }
 
-//    @Deprecated
-//    @SneakyThrows
-//    public static StreamingResultSet of(String sql, QueryStatusListener listener) {
-//        try {
-//            val channel = ExecuteQueryResponseChannel.of(listener.stream());
-//            val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
-//            val schemaRoot = reader.getVectorSchemaRoot();
-//            val columns = ArrowUtils.toColumnMetaData(schemaRoot.getSchema().getFields());
-//            val timezone = TimeZone.getDefault();
-//            val state = new QueryState();
-//            val signature = new Meta.Signature(
-//                    columns, sql, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
-//            val metadata = new AvaticaResultSetMetaData(null, null, signature);
-//            val cursor = new ArrowStreamReaderCursor(reader);
-//            val result = new StreamingResultSet(null, cursor, listener, null, state, signature, metadata, timezone, null);
-//            result.execute2(cursor, columns);
-//
-//            return result;
-//        } catch (Exception ex) {
-//            throw QueryExceptionHandler.createQueryException(sql, ex);
-//        }
-//    }
-//
+    //    @Deprecated
+    //    @SneakyThrows
+    //    public static StreamingResultSet of(String sql, QueryStatusListener listener) {
+    //        try {
+    //            val channel = ExecuteQueryResponseChannel.of(listener.stream());
+    //            val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
+    //            val schemaRoot = reader.getVectorSchemaRoot();
+    //            val columns = ArrowUtils.toColumnMetaData(schemaRoot.getSchema().getFields());
+    //            val timezone = TimeZone.getDefault();
+    //            val state = new QueryState();
+    //            val signature = new Meta.Signature(
+    //                    columns, sql, Collections.emptyList(), Collections.emptyMap(), null,
+    // Meta.StatementType.SELECT);
+    //            val metadata = new AvaticaResultSetMetaData(null, null, signature);
+    //            val cursor = new ArrowStreamReaderCursor(reader);
+    //            val result = new StreamingResultSet(null, cursor, listener, null, state, signature, metadata,
+    // timezone, null);
+    //            result.execute2(cursor, columns);
+    //
+    //            return result;
+    //        } catch (Exception ex) {
+    //            throw QueryExceptionHandler.createQueryException(sql, ex);
+    //        }
+    //    }
+    //
     @SneakyThrows
     public static StreamingResultSet of(
             String queryId, HyperGrpcClientExecutor client, Iterator<QueryResult> iterator) {
@@ -106,7 +106,8 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
             val listener = new AlreadyReadyNoopListener(queryId);
             val cursor = new ArrowStreamReaderCursor(reader);
-            val result = new StreamingResultSet(client, cursor, listener, null, state, signature, metadata, timezone, null);
+            val result =
+                    new StreamingResultSet(client, cursor, listener, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
 
             return result;

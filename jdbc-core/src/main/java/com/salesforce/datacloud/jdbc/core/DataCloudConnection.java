@@ -24,7 +24,6 @@ import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
-import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.Array;
 import java.sql.Blob;

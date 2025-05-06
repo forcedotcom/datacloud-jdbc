@@ -37,7 +37,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
-import org.assertj.core.api.AssertionsForClassTypes;
 import org.grpcmock.GrpcMock;
 import org.grpcmock.junit5.InProcessGrpcMockExtension;
 import org.junit.jupiter.api.Assertions;
@@ -51,7 +50,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
-import salesforce.cdp.hyperdb.v1.QueryParam;
 
 @ExtendWith(InProcessGrpcMockExtension.class)
 public class DataCloudStatementTest extends HyperGrpcTestBase {

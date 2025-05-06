@@ -30,8 +30,6 @@ import com.salesforce.datacloud.jdbc.util.Constants;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-
-import java.io.Closeable;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -41,11 +39,8 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;

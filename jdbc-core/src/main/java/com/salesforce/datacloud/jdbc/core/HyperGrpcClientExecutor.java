@@ -23,7 +23,6 @@ import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
-
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Iterator;
@@ -59,8 +58,7 @@ public class HyperGrpcClientExecutor {
 
     public static final int HYPER_MIN_ROW_LIMIT_BYTE_SIZE = 1024;
 
-    @NonNull
-    private final HyperServiceGrpc.HyperServiceBlockingStub stub;
+    @NonNull private final HyperServiceGrpc.HyperServiceBlockingStub stub;
 
     private final int byteLimit;
 
@@ -68,18 +66,19 @@ public class HyperGrpcClientExecutor {
 
     private QueryParam additionalQueryParams;
 
-    public static HyperGrpcClientExecutor of(@NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, @NonNull Properties properties) {
-        return of (stub, properties, HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
+    public static HyperGrpcClientExecutor of(
+            @NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, @NonNull Properties properties) {
+        return of(stub, properties, HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
     }
 
-    public static HyperGrpcClientExecutor of(@NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, @NonNull Properties properties, int byteLimit) {
-        val builder = HyperGrpcClientExecutor.builder()
-                .stub(stub)
-                .byteLimit(byteLimit);
+    public static HyperGrpcClientExecutor of(
+            @NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, @NonNull Properties properties, int byteLimit) {
+        val builder = HyperGrpcClientExecutor.builder().stub(stub).byteLimit(byteLimit);
 
         val settings = ConnectionQuerySettings.of(properties).getSettings();
         if (!settings.isEmpty()) {
-            builder.settingsQueryParams(QueryParam.newBuilder().putAllSettings(settings).build());
+            builder.settingsQueryParams(
+                    QueryParam.newBuilder().putAllSettings(settings).build());
         }
 
         return builder.build();

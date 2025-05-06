@@ -34,10 +34,8 @@ import io.grpc.Status;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import java.util.Properties;
 import java.util.Random;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
-
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.AfterEach;
@@ -107,13 +105,10 @@ class ManagedChannelBuilderConfigurationTest {
 
         properties.setProperty(DataCloudJdbcManagedChannel.GRPC_KEEP_ALIVE_ENABLED, "true");
         properties.setProperty(DataCloudJdbcManagedChannel.GRPC_KEEP_ALIVE_TIME, String.valueOf(keepAliveTime));
+        properties.setProperty(DataCloudJdbcManagedChannel.GRPC_KEEP_ALIVE_TIMEOUT, String.valueOf(keepAliveTimeout));
         properties.setProperty(
-                DataCloudJdbcManagedChannel.GRPC_KEEP_ALIVE_TIMEOUT, String.valueOf(keepAliveTimeout));
-        properties.setProperty(
-                DataCloudJdbcManagedChannel.GRPC_KEEP_ALIVE_WITHOUT_CALLS,
-                String.valueOf(keepAliveWithoutCalls));
-        properties.setProperty(
-                DataCloudJdbcManagedChannel.GRPC_IDLE_TIMEOUT_SECONDS, String.valueOf(idleTimeout));
+                DataCloudJdbcManagedChannel.GRPC_KEEP_ALIVE_WITHOUT_CALLS, String.valueOf(keepAliveWithoutCalls));
+        properties.setProperty(DataCloudJdbcManagedChannel.GRPC_IDLE_TIMEOUT_SECONDS, String.valueOf(idleTimeout));
 
         DataCloudJdbcManagedChannel.of(channelBuilder, properties);
 
@@ -145,12 +140,10 @@ class ManagedChannelBuilderConfigurationTest {
         properties.setProperty(DataCloudJdbcManagedChannel.GRPC_RETRY_ENABLED, "true");
         properties.setProperty(
                 DataCloudJdbcManagedChannel.GRPC_RETRY_POLICY_MAX_ATTEMPTS, String.valueOf(maxRetryAttempts));
-        properties.setProperty(
-                DataCloudJdbcManagedChannel.GRPC_RETRY_POLICY_INITIAL_BACKOFF, initialBackoff + "s");
+        properties.setProperty(DataCloudJdbcManagedChannel.GRPC_RETRY_POLICY_INITIAL_BACKOFF, initialBackoff + "s");
         properties.setProperty(DataCloudJdbcManagedChannel.GRPC_RETRY_POLICY_MAX_BACKOFF, maxBackoff + "s");
         properties.setProperty(
-                DataCloudJdbcManagedChannel.GRPC_RETRY_POLICY_BACKOFF_MULTIPLIER,
-                String.valueOf(backoffMultiplier));
+                DataCloudJdbcManagedChannel.GRPC_RETRY_POLICY_BACKOFF_MULTIPLIER, String.valueOf(backoffMultiplier));
         properties.setProperty(
                 DataCloudJdbcManagedChannel.GRPC_RETRY_POLICY_RETRYABLE_STATUS_CODES, retryableStatusCodes);
 
@@ -214,5 +207,4 @@ class ManagedChannelBuilderConfigurationTest {
         verify(mocked).awaitTermination(5, TimeUnit.SECONDS);
         verify(mocked).shutdownNow();
     }
-
 }

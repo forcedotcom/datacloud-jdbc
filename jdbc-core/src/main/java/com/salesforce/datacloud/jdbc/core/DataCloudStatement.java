@@ -19,7 +19,6 @@ import static com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor.HYPER_M
 import static com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor.HYPER_MIN_ROW_LIMIT_BYTE_SIZE;
 import static com.salesforce.datacloud.jdbc.util.Constants.DEFAULT_QUERY_TIMEOUT;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 import com.salesforce.datacloud.jdbc.core.listener.AdaptiveQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
@@ -27,13 +26,11 @@ import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.time.Duration;
-
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;

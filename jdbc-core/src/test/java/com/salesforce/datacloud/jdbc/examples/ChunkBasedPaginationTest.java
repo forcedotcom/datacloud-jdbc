@@ -55,7 +55,7 @@ public class ChunkBasedPaginationTest {
         final String queryId;
 
         try (final DataCloudConnection conn = DataCloudConnection.of(channel, properties);
-             final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
+                final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
             queryId = stmt.executeAsyncQuery(sql).getQueryId();
         }
 
