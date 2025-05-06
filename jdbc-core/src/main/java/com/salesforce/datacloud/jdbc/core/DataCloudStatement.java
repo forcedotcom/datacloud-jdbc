@@ -222,7 +222,15 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     public void setEscapeProcessing(boolean enable) {}
 
     protected Duration resolveQueryTimeout(Duration timeout) {
-        return timeout == null ? getQueryTimeoutDuration() : timeout;
+        if (timeout == null) {
+            return getQueryTimeoutDuration();
+        }
+
+        if (timeout.isZero() || timeout.isNegative()) {
+            return Duration.ofSeconds(DEFAULT_QUERY_TIMEOUT);
+        }
+
+        return timeout;
     }
 
     protected Duration getQueryTimeoutDuration() {
@@ -236,15 +244,18 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     @Override
     public void setQueryTimeout(int seconds) {
-        if (seconds < 0) {
+        if (seconds <= 0) {
             this.queryTimeout = DEFAULT_QUERY_TIMEOUT;
         } else {
             this.queryTimeout = seconds;
         }
     }
 
+    /**
+     * Cancels the most recently executed query from this statement.
+     */
     @Override
-    public void cancel() throws SQLException {
+    public void cancel() throws DataCloudJDBCException {
         if (listener == null) {
             log.warn("There was no in-progress query registered with this statement to cancel");
             return;

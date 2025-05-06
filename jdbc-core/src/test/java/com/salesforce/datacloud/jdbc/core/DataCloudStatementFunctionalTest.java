@@ -92,7 +92,7 @@ public class DataCloudStatementFunctionalTest {
             val a = client.getQueryStatus(queryId).findFirst().get();
             assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
 
-            connection.cancel(queryId);
+            connection.cancelQuery(queryId);
 
             assertThatThrownBy(() -> client.getQueryStatus(queryId).collect(Collectors.toList()))
                     .hasMessage("FAILED_PRECONDITION: canceled");
@@ -102,7 +102,7 @@ public class DataCloudStatementFunctionalTest {
     @Test
     @SneakyThrows
     public void noErrorOnCancelUnknownQuery() {
-        assertWithConnection(connection -> connection.cancel("nonsense query id"));
+        assertWithConnection(connection -> connection.cancelQuery("nonsense query id"));
     }
 
     @Test

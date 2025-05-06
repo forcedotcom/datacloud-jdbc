@@ -41,8 +41,9 @@ import lombok.val;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
-class ManagedChannelBuilderConfigurationTest {
+class DataCloudJdbcManagedChannelTest {
 
     private DataCloudJdbcManagedChannel channel;
     private ManagedChannelBuilder<?> channelBuilder;
@@ -51,6 +52,7 @@ class ManagedChannelBuilderConfigurationTest {
 
     @BeforeEach
     void setUp() {
+        Mockito.reset();
         channelBuilder = spy(InProcessChannelBuilder.forName("test-channel"));
         properties = new Properties();
     }
@@ -79,8 +81,8 @@ class ManagedChannelBuilderConfigurationTest {
 
         verify(channelBuilder, never()).keepAliveTime(anyLong(), any(TimeUnit.class));
         verify(channelBuilder, never()).keepAliveTimeout(anyLong(), any(TimeUnit.class));
-        verify(channelBuilder, never()).keepAliveWithoutCalls(anyBoolean());
         verify(channelBuilder, never()).idleTimeout(anyLong(), any(TimeUnit.class));
+        verify(channelBuilder, never()).keepAliveWithoutCalls(anyBoolean());
     }
 
     @Test
@@ -91,8 +93,8 @@ class ManagedChannelBuilderConfigurationTest {
 
         verify(channelBuilder).keepAliveTime(60, TimeUnit.SECONDS);
         verify(channelBuilder).keepAliveTimeout(10, TimeUnit.SECONDS);
+        verify(channelBuilder).idleTimeout(300, TimeUnit.SECONDS);
         verify(channelBuilder).keepAliveWithoutCalls(false);
-        verify(channelBuilder).idleTimeout(1800, TimeUnit.SECONDS);
     }
 
     @Test
@@ -114,8 +116,8 @@ class ManagedChannelBuilderConfigurationTest {
 
         verify(channelBuilder).keepAliveTime(keepAliveTime, TimeUnit.SECONDS);
         verify(channelBuilder).keepAliveTimeout(keepAliveTimeout, TimeUnit.SECONDS);
-        verify(channelBuilder).keepAliveWithoutCalls(keepAliveWithoutCalls);
         verify(channelBuilder).idleTimeout(idleTimeout, TimeUnit.SECONDS);
+        verify(channelBuilder).keepAliveWithoutCalls(keepAliveWithoutCalls);
     }
 
     @Test

@@ -26,7 +26,6 @@ import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -52,11 +51,11 @@ public class DataCloudJdbcManagedChannel implements AutoCloseable {
 
     private static final int GRPC_INBOUND_MESSAGE_MAX_SIZE = 64 * 1024 * 1024;
 
-    public static final String GRPC_KEEP_ALIVE_ENABLED = "grpc.KeepAlive";
-    public static final String GRPC_KEEP_ALIVE_TIME = "grpc.KeepAlive.Time";
-    public static final String GRPC_KEEP_ALIVE_TIMEOUT = "grpc.KeepAlive.Timeout";
-    public static final String GRPC_IDLE_TIMEOUT_SECONDS = "grpc.IdleTimeoutSeconds";
-    public static final String GRPC_KEEP_ALIVE_WITHOUT_CALLS = "grpc.KeepAlive.WithoutCalls";
+    public static final String GRPC_KEEP_ALIVE_ENABLED = "grpc.keepAlive";
+    public static final String GRPC_KEEP_ALIVE_TIME = "grpc.keepAlive.time";
+    public static final String GRPC_KEEP_ALIVE_TIMEOUT = "grpc.keepAlive.timeout";
+    public static final String GRPC_IDLE_TIMEOUT_SECONDS = "grpc.idleTimeoutSeconds";
+    public static final String GRPC_KEEP_ALIVE_WITHOUT_CALLS = "grpc.keepAlive.withoutCalls";
 
     public static final String GRPC_RETRY_ENABLED = "grpc.enableRetries";
     public static final String GRPC_RETRY_POLICY_MAX_ATTEMPTS = "grpc.retryPolicy.maxAttempts";
@@ -69,15 +68,17 @@ public class DataCloudJdbcManagedChannel implements AutoCloseable {
         val interceptors =
                 configurePropertyDerivedClientInterceptors(properties).toArray(new ClientInterceptor[0]);
 
-        val timeout = queryTimeout.isZero() || queryTimeout.isNegative()
-                ? Duration.ofSeconds(Constants.DEFAULT_QUERY_TIMEOUT)
-                : queryTimeout;
+        HyperServiceGrpc.HyperServiceBlockingStub stub =
+                HyperServiceGrpc.newBlockingStub(channel).withInterceptors(interceptors);
 
-        log.info("Built stub with queryTimeoutSeconds={}, interceptors={}", timeout, interceptors.length);
+        if (!queryTimeout.isZero() && !queryTimeout.isNegative()) {
+            log.info("Built stub with queryTimeout={}, interceptors={}", queryTimeout, interceptors.length);
+            stub = stub.withDeadlineAfter(queryTimeout);
+        } else {
+            log.info("Built stub with queryTimeout=none, interceptors={}", interceptors.length);
+        }
 
-        return HyperServiceGrpc.newBlockingStub(channel)
-                .withDeadlineAfter(timeout)
-                .withInterceptors(interceptors);
+        return stub;
     }
 
     /**
@@ -100,7 +101,7 @@ public class DataCloudJdbcManagedChannel implements AutoCloseable {
      * - grpc.KeepAlive: enable keep alive, default is false
      * - grpc.KeepAlive.Time: setting for {@link ManagedChannelBuilder#keepAliveTime} default is 60 seconds
      * - grpc.KeepAlive.Timeout: setting for {@link ManagedChannelBuilder#keepAliveTimeout} default is 10 seconds
-     * - grpc.KeepAlive.WithoutCalls: setting for {@link ManagedChannelBuilder#keepAliveWithoutCalls} default is false
+     * - grpc.KeepAlive.WithoutCalls: setting for {@link ManagedChannelBuilder#keepAliveWithoutCalls} default is false; not recommended by gRPC, prefer {@link ManagedChannelBuilder#idleTimeout}
      * - grpc.IdleTimeoutSeconds: setting for {@link ManagedChannelBuilder#idleTimeout} default is 1800 seconds
      * <br/>
      * - grpc.enableRetries: enable retries, default is true
@@ -124,7 +125,7 @@ public class DataCloudJdbcManagedChannel implements AutoCloseable {
         if (getBooleanOrDefault(properties, GRPC_KEEP_ALIVE_ENABLED, Boolean.FALSE)) {
             val keepAliveTime = getIntegerOrDefault(properties, GRPC_KEEP_ALIVE_TIME, 60);
             val keepAliveTimeout = getIntegerOrDefault(properties, GRPC_KEEP_ALIVE_TIMEOUT, 10);
-            val idleTimeoutSeconds = getIntegerOrDefault(properties, GRPC_IDLE_TIMEOUT_SECONDS, 1800);
+            val idleTimeoutSeconds = getIntegerOrDefault(properties, GRPC_IDLE_TIMEOUT_SECONDS, 300);
             val keepAliveWithoutCalls = getBooleanOrDefault(properties, GRPC_KEEP_ALIVE_WITHOUT_CALLS, false);
 
             log.info(

@@ -95,7 +95,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * This method will not provide auth / tracing, users of this API are expected to wire their own interceptors before supplying a {@link ManagedChannelBuilder} to {@link DataCloudJdbcManagedChannel}.
      * @param channel The channel to use for the connection
      * @param properties The properties to use for the connection
-     * @param closeChannelWithConnection Whether to close the channel when the connection is closed
+     * @param closeChannelWithConnection Whether to close the channel when the connection is closed, if false you are responsible for cleaning up your managed channel.
      * @return A DataCloudConnection with the given channel and properties
      */
     public static DataCloudConnection of(
@@ -113,18 +113,41 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                 log);
     }
 
-    public static DataCloudConnection of(@NonNull ManagedChannelBuilder<?> builder, @NonNull Properties properties)
+    /**
+     * This is a convenience overload for {@link DataCloudConnection#of(DataCloudJdbcManagedChannel, Properties, boolean)}
+     * @param builder The builder to be passed to {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)}
+     * @param properties The properties to be passed to {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)}
+     * @param closeChannelWithConnection Whether to close the channel when the connection is closed, if false you are responsible for cleaning up your managed channel.
+     * @return A DataCloudConnection with the given channel and properties
+     */
+    public static DataCloudConnection of(
+            @NonNull ManagedChannelBuilder<?> builder,
+            @NonNull Properties properties,
+            boolean closeChannelWithConnection)
             throws DataCloudJDBCException {
-        return of(DataCloudJdbcManagedChannel.of(builder, properties), properties, true);
+        return of(DataCloudJdbcManagedChannel.of(builder, properties), properties, closeChannelWithConnection);
     }
 
+    /**
+     * This overload is intended to be used from the {@code DataCloudJDBCDriver} and assumes an OAuth connection with Salesforce
+     * @param builder
+     * @param properties
+     * @param authInterceptor a {@link ClientInterceptor} wired to provide an auth token for network requests
+     * @param lakehouseSupplier
+     * @param dataspacesSupplier a
+     * @param connectionString
+     * @param closeChannelWithConnection
+     * @return
+     * @throws DataCloudJDBCException
+     */
     public static DataCloudConnection of(
             @NonNull ManagedChannelBuilder<?> builder,
             @NonNull Properties properties,
             @NonNull ClientInterceptor authInterceptor,
             @NonNull ThrowingJdbcSupplier<String> lakehouseSupplier,
             @NonNull ThrowingJdbcSupplier<List<String>> dataspacesSupplier,
-            @NonNull DataCloudConnectionString connectionString)
+            @NonNull DataCloudConnectionString connectionString,
+            boolean closeChannelWithConnection)
             throws DataCloudJDBCException {
         return logTimedValue(
                 () -> DataCloudConnection.builder()
@@ -133,6 +156,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                         .lakehouseSupplier(lakehouseSupplier)
                         .dataspacesSupplier(dataspacesSupplier)
                         .connectionString(connectionString)
+                        .shouldCloseChannelWithConnection(closeChannelWithConnection)
                         .build(),
                 "DataCloudConnection::of with oauth",
                 log);
@@ -238,7 +262,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * Sends a command to the server to cancel the query with the specified query id.
      * @param queryId The query id for the query you want to cancel
      */
-    public void cancel(String queryId) throws DataCloudJDBCException {
+    public void cancelQuery(String queryId) throws DataCloudJDBCException {
         getExecutor().cancel(queryId);
     }
 

@@ -19,7 +19,10 @@ import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public final class Constants {
-    public static final int DEFAULT_QUERY_TIMEOUT = 3 * 60 * 60;
+    /**
+     * Because Java doesn't have the concept of an infinite duration we'll use 3 days as the default timeout
+     */
+    public static final int DEFAULT_QUERY_TIMEOUT = 259200;
 
     public static final String LOGIN_URL = "loginURL";
 
