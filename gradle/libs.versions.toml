@@ -37,6 +37,8 @@ grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
 grpc-protoc = { group = "io.grpc", name = "protoc-gen-grpc-java", version.ref = "grpc" }
 grpc-inprocess = { module = "io.grpc:grpc-inprocess", version.ref = "grpc" }
 
+protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
 jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
@@ -63,7 +65,7 @@ protoc = { group = "com.google.protobuf", name = "protoc", version.ref = "protob
 
 [bundles]
 arrow = ["apache-arrow-vector", "apache-arrow-memory-netty"]
-grpc-impl = ["grpc-netty", "grpc-protobuf", "grpc-stub", "javax-annotation-api"]
+grpc-impl = ["protobuf-java", "grpc-netty", "grpc-protobuf", "grpc-stub", "javax-annotation-api"]
 grpc-testing = ["grpcmock", "grpc-inprocess"]
 testing = ["junit-jupiter-base", "junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "junit-platform-launcher", "assertj", "slf4j-simple"]
 mocking = ["mockito-inline", "mockito-junit-jupiter", "okhttp3-mockwebserver"]

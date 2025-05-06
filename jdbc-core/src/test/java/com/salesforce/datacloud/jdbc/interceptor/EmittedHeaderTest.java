@@ -23,7 +23,7 @@ import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
-import com.salesforce.datacloud.jdbc.internal.Tracer;
+import com.salesforce.datacloud.jdbc.tracing.Tracer;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
 import io.grpc.ServerCallHandler;

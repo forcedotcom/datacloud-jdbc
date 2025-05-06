@@ -17,7 +17,7 @@ package com.salesforce.datacloud.jdbc.interceptor;
 
 import static com.salesforce.datacloud.jdbc.interceptor.MetadataUtilities.keyOf;
 
-import com.salesforce.datacloud.jdbc.internal.Tracer;
+import com.salesforce.datacloud.jdbc.tracing.Tracer;
 import io.grpc.Metadata;
 import java.util.function.Supplier;
 import lombok.AccessLevel;

@@ -132,7 +132,10 @@ public class DataCloudTokenProcessor implements TokenProcessor {
     public String getLakehouse() throws SQLException {
         val tenantId = getDataCloudToken().getTenantId();
         val dataspace = getSettings().getDataspace();
-        return "lakehouse:" + tenantId + ";" + Optional.ofNullable(dataspace).orElse("");
+        val response =
+                "lakehouse:" + tenantId + ";" + Optional.ofNullable(dataspace).orElse("");
+        log.info("Lakehouse: {}", response);
+        return response;
     }
 
     private DataCloudToken retrieveAndCacheDataCloudToken() throws SQLException {

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.salesforce.datacloud.jdbc.internal;
+package com.salesforce.datacloud.jdbc.tracing;
 
 public class Tracer {
     private static final int TRACE_ID_BYTES_LENGTH = 16;
