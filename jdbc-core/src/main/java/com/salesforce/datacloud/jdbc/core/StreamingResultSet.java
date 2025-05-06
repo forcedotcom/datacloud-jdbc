@@ -66,31 +66,6 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
         this.listener = listener;
     }
 
-    //    @Deprecated
-    //    @SneakyThrows
-    //    public static StreamingResultSet of(String sql, QueryStatusListener listener) {
-    //        try {
-    //            val channel = ExecuteQueryResponseChannel.of(listener.stream());
-    //            val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
-    //            val schemaRoot = reader.getVectorSchemaRoot();
-    //            val columns = ArrowUtils.toColumnMetaData(schemaRoot.getSchema().getFields());
-    //            val timezone = TimeZone.getDefault();
-    //            val state = new QueryState();
-    //            val signature = new Meta.Signature(
-    //                    columns, sql, Collections.emptyList(), Collections.emptyMap(), null,
-    // Meta.StatementType.SELECT);
-    //            val metadata = new AvaticaResultSetMetaData(null, null, signature);
-    //            val cursor = new ArrowStreamReaderCursor(reader);
-    //            val result = new StreamingResultSet(null, cursor, listener, null, state, signature, metadata,
-    // timezone, null);
-    //            result.execute2(cursor, columns);
-    //
-    //            return result;
-    //        } catch (Exception ex) {
-    //            throw QueryExceptionHandler.createQueryException(sql, ex);
-    //        }
-    //    }
-    //
     @SneakyThrows
     public static StreamingResultSet of(
             String queryId, HyperGrpcClientExecutor client, Iterator<QueryResult> iterator) {
