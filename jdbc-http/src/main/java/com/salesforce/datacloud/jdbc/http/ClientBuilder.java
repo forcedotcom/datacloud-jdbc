@@ -19,16 +19,20 @@ import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getInteger
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 import com.salesforce.datacloud.jdbc.http.internal.SFDefaultSocketFactoryWrapper;
+import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import okhttp3.OkHttpClient;
+import okhttp3.logging.HttpLoggingInterceptor;
 
 @Slf4j
 @UtilityClass
 public class ClientBuilder {
+    static final String LOG_LEVEL = "okhttp.logging.level";
+    static final HttpLoggingInterceptor.Level DEFAULT_LOG_LEVEL = HttpLoggingInterceptor.Level.BASIC;
 
     static final String READ_TIME_OUT_SECONDS_KEY = "readTimeOutSeconds";
     static final int DEFAULT_READ_TIME_OUT_SECONDS = 600;
@@ -52,12 +56,18 @@ public class ClientBuilder {
                 getIntegerOrDefault(properties, CONNECT_TIME_OUT_SECONDS_KEY, DEFAULT_CONNECT_TIME_OUT_SECONDS);
         val callTimeout = getIntegerOrDefault(properties, CALL_TIME_OUT_SECONDS_KEY, DEFAULT_CALL_TIME_OUT_SECONDS);
 
+        val level = PropertiesExtensions.getEnumOrDefault(properties, LOG_LEVEL, DEFAULT_LOG_LEVEL);
+
+        val loggingInterceptor = new HttpLoggingInterceptor(new HttpClientLogger());
+        loggingInterceptor.setLevel(level);
+
         return new OkHttpClient.Builder()
                 .socketFactory(new SFDefaultSocketFactoryWrapper(disableSocksProxy))
                 .callTimeout(callTimeout, TimeUnit.SECONDS)
                 .connectTimeout(connectTimeout, TimeUnit.SECONDS)
                 .readTimeout(readTimeout, TimeUnit.SECONDS)
                 .addInterceptor(new MetadataCacheInterceptor(properties))
+                .addInterceptor(loggingInterceptor)
                 .build();
     }
 }

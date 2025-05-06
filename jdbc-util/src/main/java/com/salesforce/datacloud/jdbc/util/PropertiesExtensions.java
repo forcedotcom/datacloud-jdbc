@@ -19,8 +19,10 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+@Slf4j
 @UtilityClass
 public class PropertiesExtensions {
     public static Optional<String> optional(Properties properties, String key) {
@@ -77,6 +79,26 @@ public class PropertiesExtensions {
 
     public static Boolean toBooleanOrDefault(String s) {
         return Boolean.valueOf(s);
+    }
+
+    public static <T extends Enum<T>> T getEnumOrDefault(Properties properties, String key, T defaultValue) {
+        Class<T> enumClass = defaultValue.getDeclaringClass();
+        return optional(properties, key)
+                .map(str -> toEnumOrDefault(str, enumClass))
+                .orElse(defaultValue);
+    }
+
+    public static <T extends Enum<T>> T toEnumOrDefault(String s, Class<T> enumClass) {
+        if (s == null) {
+            return null;
+        }
+
+        try {
+            return Enum.valueOf(enumClass, s);
+        } catch (Exception ex) {
+            log.warn("Failed to parse enum value: {}", s, ex);
+            return null;
+        }
     }
 
     @UtilityClass

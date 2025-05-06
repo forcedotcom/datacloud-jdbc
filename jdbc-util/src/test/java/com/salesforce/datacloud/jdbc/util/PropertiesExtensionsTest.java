@@ -32,6 +32,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 class PropertiesExtensionsTest {
     private final String key = UUID.randomUUID().toString();
 
+    enum TestEnum {
+        FIRST,
+        SECOND,
+        THIRD
+    }
+
     @Test
     void optionalValidKeyAndValue() {
         val expected = UUID.randomUUID().toString();
@@ -117,5 +123,34 @@ class PropertiesExtensionsTest {
         properties.setProperty("myKeyEmpty", "");
         Boolean resultEmpty = PropertiesExtensions.getBooleanOrDefault(properties, "myKeyEmpty", false);
         assertThat(resultEmpty).isEqualTo(false);
+    }
+
+    @Test
+    void getEnumOrDefaultReturnsEnumValueWhenValid() {
+        Properties properties = new Properties();
+        properties.setProperty("enumKey", "SECOND");
+
+        TestEnum result = PropertiesExtensions.getEnumOrDefault(properties, "enumKey", TestEnum.FIRST);
+
+        assertThat(result).isEqualTo(TestEnum.SECOND);
+    }
+
+    @Test
+    void getEnumOrDefaultReturnsDefaultWhenInvalid() {
+        Properties properties = new Properties();
+        properties.setProperty("enumKey", "INVALID_VALUE");
+
+        TestEnum result = PropertiesExtensions.getEnumOrDefault(properties, "enumKey", TestEnum.FIRST);
+
+        assertThat(result).isEqualTo(TestEnum.FIRST);
+    }
+
+    @Test
+    void getEnumOrDefaultReturnsDefaultWhenKeyMissing() {
+        Properties properties = new Properties();
+
+        TestEnum result = PropertiesExtensions.getEnumOrDefault(properties, "missingKey", TestEnum.THIRD);
+
+        assertThat(result).isEqualTo(TestEnum.THIRD);
     }
 }

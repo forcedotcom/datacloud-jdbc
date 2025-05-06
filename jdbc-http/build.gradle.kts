@@ -6,7 +6,8 @@ plugins {
 
 dependencies {
     implementation(project(":jdbc-util"))
-    implementation(libs.okhttp3)
+    implementation(libs.okhttp3.client)
+    implementation(libs.okhttp3.logging.interceptor)
     implementation(libs.slf4j.api)
 
     implementation(libs.guava)

@@ -26,6 +26,7 @@ import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.interceptor.TokenProcessorSupplier;
+import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
 import com.salesforce.datacloud.jdbc.soql.DataspaceClient;
 import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 import io.grpc.ManagedChannelBuilder;
@@ -131,7 +132,9 @@ public class DataCloudJDBCDriver implements Driver {
         val authInterceptor = TokenProcessorSupplier.of(tokenProcessor);
 
         val host = tokenProcessor.getDataCloudToken().getTenantUrl();
-        val builder = ManagedChannelBuilder.forAddress(host, DataCloudConnection.DEFAULT_PORT);
+        final ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(
+                        host, DataCloudConnection.DEFAULT_PORT)
+                .intercept(TracingHeadersInterceptor.of());
 
         val dataspaceClient = new DataspaceClient(properties, tokenProcessor);
 
