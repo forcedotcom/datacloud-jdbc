@@ -25,7 +25,9 @@ import java.util.Properties;
 import java.util.logging.Logger;
 import javax.sql.DataSource;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class DataCloudDatasource implements DataSource {
     private static final String USERNAME_PROPERTY = "userName";
     private static final String PASSWORD_PROPERTY = "password";

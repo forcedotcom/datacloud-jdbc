@@ -82,8 +82,12 @@ tasks.named("check") {
         failures.add("Publication '$artifactId' is missing javadoc JAR")
       }
 
+      if (shaded.contains(artifactId) && !hasJar(artifactId, resolvedVersion, "original")) {
+        failures.add("Publication '$artifactId' is missing original JAR which is required since it's shaded")
+      }
+
       if (shaded.contains(artifactId) && !hasJar(artifactId, resolvedVersion, "shaded")) {
-        failures.add("Publication '$artifactId' is missing shaded JAR")
+        failures.add("Publication '$artifactId' is missing shaded JAR which is required since it's shaded")
       }
 
       verified.add(artifactId)

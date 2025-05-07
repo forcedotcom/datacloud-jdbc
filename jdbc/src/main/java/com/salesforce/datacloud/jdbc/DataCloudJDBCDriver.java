@@ -46,15 +46,20 @@ public class DataCloudJDBCDriver implements Driver {
 
     static {
         try {
+            log.info(
+                    "Registering DataCloud JDBC driver. info={}, classLoader={}",
+                    DriverVersion.formatDriverInfo(),
+                    DataCloudJDBCDriver.class.getClassLoader());
             register();
-            log.info("DataCloud JDBC driver registered. {}", DriverVersion.formatDriverInfo());
+            log.info("DataCloud JDBC driver registered");
+
         } catch (SQLException e) {
             log.error("Error occurred while registering DataCloud JDBC driver. {}", e.getMessage());
             throw new ExceptionInInitializerError(e);
         }
     }
 
-    private static void register() throws SQLException {
+    private static synchronized void register() throws SQLException {
         if (isRegistered()) {
             throw new IllegalStateException("Driver is already registered. It can only be registered once.");
         }
@@ -68,19 +73,28 @@ public class DataCloudJDBCDriver implements Driver {
 
     @Override
     public Connection connect(String url, Properties info) throws SQLException {
+        log.info("connect url={}", url);
+
         if (url == null) {
             throw new SQLException("Error occurred while registering JDBC driver. URL is null.");
         }
 
-        if (!this.acceptsURL(url)) {
+        if (!acceptsURL(url)) {
             return null;
         }
 
-        if (DirectDataCloudConnection.isDirect(info)) {
-            return DirectDataCloudConnection.of(url, info);
-        }
+        try {
+            if (DirectDataCloudConnection.isDirect(info)) {
+                log.info("Using direct connection");
+                return DirectDataCloudConnection.of(url, info);
+            }
 
-        return oauthBasedConnection(url, info);
+            log.info("Using OAuth-based connection");
+            return oauthBasedConnection(url, info);
+        } catch (Exception e) {
+            log.error("Failed to connect with URL {}: {}", url, e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Override

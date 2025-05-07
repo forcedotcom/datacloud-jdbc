@@ -27,9 +27,11 @@ import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 
+@Slf4j
 @Builder(access = AccessLevel.PRIVATE)
 public class DataCloudConnectionString {
     public static final String ILLEGAL_CONNECTION_PROTOCOL =
@@ -62,7 +64,9 @@ public class DataCloudConnectionString {
     private final Map<String, String> parameters;
 
     public static boolean acceptsUrl(String url) {
-        return url != null && url.startsWith(CONNECTION_PROTOCOL) && urlDoesNotContainScheme(url);
+        val accepts = url != null && url.startsWith(CONNECTION_PROTOCOL) && urlDoesNotContainScheme(url);
+        log.info("acceptsUrl: accepts={}, url={}", accepts, url);
+        return accepts;
     }
 
     private static boolean urlDoesNotContainScheme(String url) {
