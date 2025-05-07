@@ -29,6 +29,8 @@ pom.xml.bak
 .hyper
 .hyperd
 .kotlin
+.metals
+.bloop
 bin
 out
 .worktree

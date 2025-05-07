@@ -31,5 +31,5 @@ subprojects {
 moduleGraphConfig {
     readmePath.set("${rootDir}/DEVELOPMENT.md")
     heading.set("## Module Graph")
-    rootModulesRegex.set(":jdbc")
+    rootModulesRegex.set("^:jdbc|:spark-datasource$")
 }
