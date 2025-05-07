@@ -8,6 +8,7 @@ plugins {
 }
 
 dependencies {
+    api(platform(libs.protobuf.bom))
     implementation(libs.bundles.grpc.impl)
 }
 
