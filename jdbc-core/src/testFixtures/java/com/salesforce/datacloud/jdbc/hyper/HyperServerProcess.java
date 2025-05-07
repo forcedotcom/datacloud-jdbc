@@ -42,7 +42,6 @@ import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.junit.jupiter.api.Assertions;
 
 @Slf4j
 public class HyperServerProcess implements AutoCloseable {
@@ -61,12 +60,13 @@ public class HyperServerProcess implements AutoCloseable {
         log.info("starting hyperd, this might take a few seconds");
 
         val executable = new File("../build/hyperd/hyperd");
-        val yaml = Paths.get(requireNonNull(HyperTestBase.class.getResource("/hyper.yaml"))
+        val yaml = Paths.get(requireNonNull(HyperServerProcess.class.getResource("/hyper.yaml"))
                         .toURI())
                 .toFile();
 
         if (!executable.exists()) {
-            Assertions.fail("hyperd executable couldn't be found, have you run mvn process-test-resources? expected="
+            throw new IllegalStateException(
+                "hyperd executable couldn't be found, have you run mvn process-test-resources? expected="
                     + executable.getAbsolutePath());
         }
 
@@ -96,7 +96,8 @@ public class HyperServerProcess implements AutoCloseable {
         }));
 
         if (!latch.await(30, TimeUnit.SECONDS)) {
-            Assertions.fail("failed to start instance of hyper within 30 seconds");
+            throw new IllegalStateException(
+                "failed to start instance of hyper within 30 seconds");
         }
     }
 
@@ -104,7 +105,7 @@ public class HyperServerProcess implements AutoCloseable {
         return port;
     }
 
-    boolean isHealthy() {
+    public boolean isHealthy() {
         return hyperProcess != null && hyperProcess.isAlive();
     }
 
