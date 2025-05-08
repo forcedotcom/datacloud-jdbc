@@ -56,7 +56,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 @Slf4j
-@Builder(access = AccessLevel.PACKAGE)
+@Builder(access = AccessLevel.PRIVATE)
 public class DataCloudConnection implements Connection, AutoCloseable {
     public static final int DEFAULT_PORT = 443;
 

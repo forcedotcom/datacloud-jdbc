@@ -91,36 +91,30 @@ class DataCloudConnectionTest extends HyperGrpcTestBase {
         connection.close();
     }
 
+    @SneakyThrows
     @Test
     void testChannelClosesWhenShouldCloseChannelWithConnectionIsTrue() {
         val mockChannel = mock(DataCloudJdbcManagedChannel.class);
-        val connection = DataCloudConnection.builder()
-                .channel(mockChannel)
-                .shouldCloseChannelWithConnection(true)
-                .build();
+        val connection = DataCloudConnection.of(mockChannel, new Properties(), true);
 
         connection.close();
 
         verify(mockChannel).close();
     }
 
+    @SneakyThrows
     @Test
     void testChannelNotClosedWhenShouldCloseChannelWithConnectionIsFalse() {
         val mockChannel = mock(DataCloudJdbcManagedChannel.class);
-        val connection = DataCloudConnection.builder()
-                .channel(mockChannel)
-                .shouldCloseChannelWithConnection(false)
-                .build();
+        val connection = DataCloudConnection.of(mockChannel, new Properties(), false);
 
         connection.close();
 
         verify(mockChannel, never()).close();
     }
 
+    @SneakyThrows
     private DataCloudConnection sut() {
-        return DataCloudConnection.builder()
-                .channel(channel)
-                .clientInfo(new Properties())
-                .build();
+        return DataCloudConnection.of(channel, new Properties(), true);
     }
 }
