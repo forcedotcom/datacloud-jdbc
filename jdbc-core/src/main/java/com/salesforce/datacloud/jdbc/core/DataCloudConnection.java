@@ -109,7 +109,8 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                         .shouldCloseChannelWithConnection(closeChannelWithConnection)
                         .clientInfo(properties)
                         .build(),
-                "of with ",
+                "DataCloudConnection::of with provided channel. closeChannelWithConnection="
+                        + closeChannelWithConnection,
                 log);
     }
 
@@ -158,7 +159,8 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                         .connectionString(connectionString)
                         .shouldCloseChannelWithConnection(closeChannelWithConnection)
                         .build(),
-                "DataCloudConnection::of with oauth",
+                "DataCloudConnection::of with oauth enabled suppliers. closeChannelWithConnection="
+                        + closeChannelWithConnection,
                 log);
     }
 
