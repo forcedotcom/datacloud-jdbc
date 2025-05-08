@@ -300,7 +300,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     @Override
     public void close() {
         if (!shouldCloseChannelWithConnection) {
-            log.warn("Called DataCloudConnection::close when shouldCloseChannelWithConnection=false");
+            log.debug("Called DataCloudConnection::close when shouldCloseChannelWithConnection=false");
             return;
         }
 
