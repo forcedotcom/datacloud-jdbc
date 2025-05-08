@@ -50,6 +50,6 @@ public class DirectDataCloudConnection {
         ManagedChannelBuilder<?> builder =
                 ManagedChannelBuilder.forAddress(uri.getHost(), uri.getPort()).usePlaintext();
 
-        return DataCloudConnection.of(builder, properties, true);
+        return DataCloudConnection.of(builder, properties);
     }
 }

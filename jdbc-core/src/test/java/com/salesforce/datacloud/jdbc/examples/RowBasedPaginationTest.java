@@ -63,7 +63,7 @@ public class RowBasedPaginationTest {
         final String queryId;
         long currentOffset = 0;
 
-        try (final DataCloudConnection conn = DataCloudConnection.of(channel, properties, true);
+        try (final DataCloudConnection conn = DataCloudConnection.of(channel, properties);
                 final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
             // Set the initial page size
             stmt.setResultSetConstraints(pageSize);
@@ -85,7 +85,7 @@ public class RowBasedPaginationTest {
         assertThat(allResults).containsExactly(1L, 2L);
 
         // Step 2: Retrieve remaining pages
-        try (final DataCloudConnection conn = DataCloudConnection.of(channel, properties, true)) {
+        try (final DataCloudConnection conn = DataCloudConnection.of(channel, properties)) {
             DataCloudQueryStatus status = conn.waitForRowsAvailable(queryId, currentOffset, pageSize, timeout, true);
 
             while (true) {

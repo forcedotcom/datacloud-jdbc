@@ -81,7 +81,7 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
                 .usePlaintext()
                 .intercept(interceptors);
 
-        return DataCloudConnection.of(channel, new Properties(), true);
+        return DataCloudConnection.of(channel, new Properties());
     }
 
     public static DataCloudConnection getHyperQueryConnection() {

@@ -126,7 +126,7 @@ public class HyperGrpcTestBase {
                 HyperServiceGrpc.getGetQueryResultMethod(),
                 HyperServiceGrpc.HyperServiceBlockingStub::getQueryResult);
 
-        val conn = DataCloudConnection.of(mocked, new Properties(), true);
+        val conn = DataCloudConnection.of(mocked, new Properties());
         connections.add(conn);
         return conn;
     }

@@ -50,7 +50,7 @@ public class SubmitQueryAndConsumeResultsTest {
                 .usePlaintext();
 
         // Use the JDBC Driver interface
-        try (DataCloudConnection conn = DataCloudConnection.of(channel, properties, true)) {
+        try (DataCloudConnection conn = DataCloudConnection.of(channel, properties)) {
             try (Statement stmt = conn.createStatement()) {
                 ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(1,10) s");
                 while (rs.next()) {

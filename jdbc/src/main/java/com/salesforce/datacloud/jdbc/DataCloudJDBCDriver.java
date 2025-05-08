@@ -153,13 +153,7 @@ public class DataCloudJDBCDriver implements Driver {
         val dataspaceClient = new DataspaceClient(properties, tokenProcessor);
 
         return DataCloudConnection.of(
-                builder,
-                properties,
-                authInterceptor,
-                tokenProcessor::getLakehouse,
-                dataspaceClient,
-                connectionString,
-                true);
+                builder, properties, authInterceptor, tokenProcessor::getLakehouse, dataspaceClient, connectionString);
     }
 
     static void addClientUsernameIfRequired(Properties properties) {

@@ -116,26 +116,25 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     /**
      * This is a convenience overload for {@link DataCloudConnection#of(DataCloudJdbcManagedChannel, Properties, boolean)}
+     * We pass true for closeChannelWithConnection to ensure the channel that is built internally is cleaned up.
+     *
      * @param builder The builder to be passed to {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)}
      * @param properties The properties to be passed to {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)}
-     * @param closeChannelWithConnection Whether to close the channel when the connection is closed, if false you are responsible for cleaning up your managed channel.
      * @return A DataCloudConnection with the given channel and properties
      */
-    public static DataCloudConnection of(
-            @NonNull ManagedChannelBuilder<?> builder,
-            @NonNull Properties properties,
-            boolean closeChannelWithConnection)
+    public static DataCloudConnection of(@NonNull ManagedChannelBuilder<?> builder, @NonNull Properties properties)
             throws DataCloudJDBCException {
-        return of(DataCloudJdbcManagedChannel.of(builder, properties), properties, closeChannelWithConnection);
+        return of(DataCloudJdbcManagedChannel.of(builder, properties), properties, true);
     }
 
     /**
      * This overload is intended to be used from the {@code DataCloudJDBCDriver} and assumes a Data Cloud token is wired to the suppliers
+     * We pass true for closeChannelWithConnection to ensure the channel that is built internally is cleaned up.
+     *
      * @param properties The properties to be passed to {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)}
      * @param authInterceptor a {@link ClientInterceptor} wired to provide an auth token for network requests
      * @param lakehouseSupplier a supplier that acquires the lakehouse from a Data Cloud token
      * @param dataspacesSupplier a supplier that acquires available dataspaces using a Data Cloud token
-     * @param closeChannelWithConnection Whether to close the channel when the connection is closed, if false you are responsible for cleaning up your managed channel.
      * @return A DataCloudConnection with the given channel and properties
      */
     public static DataCloudConnection of(
@@ -144,8 +143,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
             @NonNull ClientInterceptor authInterceptor,
             @NonNull ThrowingJdbcSupplier<String> lakehouseSupplier,
             @NonNull ThrowingJdbcSupplier<List<String>> dataspacesSupplier,
-            @NonNull DataCloudConnectionString connectionString,
-            boolean closeChannelWithConnection)
+            @NonNull DataCloudConnectionString connectionString)
             throws DataCloudJDBCException {
         return logTimedValue(
                 () -> DataCloudConnection.builder()
@@ -154,10 +152,8 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                         .lakehouseSupplier(lakehouseSupplier)
                         .dataspacesSupplier(dataspacesSupplier)
                         .connectionString(connectionString)
-                        .shouldCloseChannelWithConnection(closeChannelWithConnection)
                         .build(),
-                "DataCloudConnection::of with oauth enabled suppliers. closeChannelWithConnection="
-                        + closeChannelWithConnection,
+                "DataCloudConnection::of with oauth enabled suppliers",
                 log);
     }
 
