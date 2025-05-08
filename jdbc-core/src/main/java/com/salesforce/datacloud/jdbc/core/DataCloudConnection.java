@@ -130,16 +130,13 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     /**
-     * This overload is intended to be used from the {@code DataCloudJDBCDriver} and assumes an OAuth connection with Salesforce
-     * @param builder
-     * @param properties
+     * This overload is intended to be used from the {@code DataCloudJDBCDriver} and assumes a Data Cloud token is wired to the suppliers
+     * @param properties The properties to be passed to {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)}
      * @param authInterceptor a {@link ClientInterceptor} wired to provide an auth token for network requests
-     * @param lakehouseSupplier
-     * @param dataspacesSupplier a
-     * @param connectionString
-     * @param closeChannelWithConnection
-     * @return
-     * @throws DataCloudJDBCException
+     * @param lakehouseSupplier a supplier that acquires the lakehouse from a Data Cloud token
+     * @param dataspacesSupplier a supplier that acquires available dataspaces using a Data Cloud token
+     * @param closeChannelWithConnection Whether to close the channel when the connection is closed, if false you are responsible for cleaning up your managed channel.
+     * @return A DataCloudConnection with the given channel and properties
      */
     public static DataCloudConnection of(
             @NonNull ManagedChannelBuilder<?> builder,
