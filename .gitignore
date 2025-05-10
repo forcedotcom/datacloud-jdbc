@@ -28,6 +28,8 @@ pom.xml.bak
 .gradle
 .hyper
 .kotlin
+.metals
+.bloop
 bin
 out
 .worktree
