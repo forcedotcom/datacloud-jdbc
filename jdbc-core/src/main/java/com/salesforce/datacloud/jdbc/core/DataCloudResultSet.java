@@ -24,6 +24,4 @@ public interface DataCloudResultSet extends ResultSet {
     String getQueryId();
 
     Stream<DataCloudQueryStatus> getQueryStatus() throws DataCloudJDBCException;
-
-    boolean isReady() throws DataCloudJDBCException;
 }

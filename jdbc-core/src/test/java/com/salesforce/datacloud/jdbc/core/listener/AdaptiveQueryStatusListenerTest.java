@@ -77,7 +77,6 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
 
         assertThat(resultSet).isNotNull();
         assertThat(resultSet.getQueryId()).isEqualTo(queryId);
-        assertThat(resultSet.isReady()).isTrue();
 
         resultSet.next();
         assertThat(resultSet.getInt("id")).isEqualTo(alice.getId());

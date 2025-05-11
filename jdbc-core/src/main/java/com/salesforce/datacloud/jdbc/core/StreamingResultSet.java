@@ -15,7 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
@@ -29,7 +28,6 @@ import java.util.Iterator;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.arrow.memory.RootAllocator;
@@ -47,12 +45,12 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
     private final HyperGrpcClientExecutor client;
     private final ArrowStreamReaderCursor cursor;
-    private final QueryStatusListener listener;
+    private final String queryId;
 
     private StreamingResultSet(
             HyperGrpcClientExecutor client,
             ArrowStreamReaderCursor cursor,
-            QueryStatusListener listener,
+            String queryId,
             AvaticaStatement statement,
             QueryState state,
             Meta.Signature signature,
@@ -63,7 +61,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
         super(statement, state, signature, resultSetMetaData, timeZone, firstFrame);
         this.client = client;
         this.cursor = cursor;
-        this.listener = listener;
+        this.queryId = queryId;
     }
 
     @SneakyThrows
@@ -79,10 +77,9 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
             val signature = new Meta.Signature(
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
-            val listener = new AlreadyReadyNoopListener(queryId);
             val cursor = new ArrowStreamReaderCursor(reader);
             val result =
-                    new StreamingResultSet(client, cursor, listener, null, state, signature, metadata, timezone, null);
+                    new StreamingResultSet(client, cursor, queryId, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
 
             return result;
@@ -93,7 +90,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
     @Override
     public String getQueryId() {
-        return listener.getQueryId();
+        return queryId;
     }
 
     @Override
@@ -102,34 +99,10 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
             return Stream.empty();
         }
 
-        return client.getQueryStatus(getQueryId());
-    }
-
-    @Override
-    public boolean isReady() throws DataCloudJDBCException {
-        return listener.isReady();
+        return client.getQueryStatus(queryId);
     }
 
     private static final String QUERY_FAILURE = "Failed to execute query: ";
-
-    @Deprecated
-    @Value
-    private static class AlreadyReadyNoopListener implements QueryStatusListener {
-        String queryId;
-        String status = "Status should be determined via DataCloudConnection::getStatus";
-        String query = null;
-        boolean ready = true;
-
-        @Override
-        public DataCloudResultSet generateResultSet() {
-            return null;
-        }
-
-        @Override
-        public Stream<QueryResult> stream() {
-            return Stream.empty();
-        }
-    }
 
     @Override
     public int getType() {

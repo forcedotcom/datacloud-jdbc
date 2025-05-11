@@ -120,8 +120,6 @@ public class StreamingResultSetTest {
             assertThat(s.getRowCount()).isEqualTo(large);
         });
 
-        assertThat(rs.isReady()).as("result set is ready").isTrue();
-
         while (rs.next()) {
             assertEachRowIsTheSame(rs, witnessed);
             assertThat(rs.getRow()).isEqualTo(witnessed.get());
