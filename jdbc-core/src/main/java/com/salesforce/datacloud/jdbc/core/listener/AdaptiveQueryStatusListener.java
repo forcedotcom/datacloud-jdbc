@@ -89,11 +89,6 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     }
 
     @Override
-    public boolean isReady() {
-        return true;
-    }
-
-    @Override
     public String getStatus() throws DataCloudJDBCException {
         return client.getQueryStatus(queryId)
                 .map(DataCloudQueryStatus::getCompletionStatus)
@@ -168,11 +163,6 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
         private final Iterator<ExecuteQueryResponse> response;
 
         private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
-
-        @Override
-        public boolean isReady() throws DataCloudJDBCException {
-            return true;
-        }
 
         @Override
         public String getStatus() throws DataCloudJDBCException {

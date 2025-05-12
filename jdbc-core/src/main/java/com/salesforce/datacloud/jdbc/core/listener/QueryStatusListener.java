@@ -23,11 +23,7 @@ import salesforce.cdp.hyperdb.v1.QueryResult;
 
 @Deprecated
 public interface QueryStatusListener {
-    String BEFORE_READY = "Results were requested before ready";
-
     String getQuery();
-
-    boolean isReady() throws DataCloudJDBCException;
 
     String getStatus() throws DataCloudJDBCException;
 

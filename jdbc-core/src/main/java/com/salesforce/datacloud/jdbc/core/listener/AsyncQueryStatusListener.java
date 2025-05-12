@@ -67,21 +67,6 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
         }
     }
 
-    /**
-     * Aggressively checks if ready so this method doesn't block as long as the server allows the streaming request
-     */
-    @Override
-    public boolean isReady() throws DataCloudJDBCException {
-        try {
-            return client.getQueryStatus(queryId)
-                    .findFirst()
-                    .map(DataCloudQueryStatus::allResultsProduced)
-                    .orElse(false);
-        } catch (StatusRuntimeException ex) {
-            throw QueryExceptionHandler.createQueryException(query, ex);
-        }
-    }
-
     @Override
     public String getStatus() throws DataCloudJDBCException {
         return client.getQueryStatus(queryId)
@@ -98,10 +83,6 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
     @Override
     public Stream<QueryResult> stream() throws DataCloudJDBCException {
-        if (!isReady()) {
-            throw new DataCloudJDBCException(BEFORE_READY);
-        }
-
         val status = client.waitForResultsProduced(queryId, timeout);
         val iterator = ChunkBased.of(client, queryId, 0, status.getChunkCount(), false);
 
