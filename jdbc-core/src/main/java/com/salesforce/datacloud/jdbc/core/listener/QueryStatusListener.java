@@ -23,10 +23,6 @@ import salesforce.cdp.hyperdb.v1.QueryResult;
 
 @Deprecated
 public interface QueryStatusListener {
-    String getQuery();
-
-    String getStatus() throws DataCloudJDBCException;
-
     String getQueryId();
 
     DataCloudResultSet generateResultSet() throws DataCloudJDBCException;

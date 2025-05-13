@@ -36,8 +36,6 @@ import org.grpcmock.junit5.InProcessGrpcMockExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
@@ -45,18 +43,6 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
 class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
     private final String query = "select * from stuff";
     private final QueryParam.TransferMode mode = QueryParam.TransferMode.ASYNC;
-
-    @SneakyThrows
-    @ParameterizedTest
-    @CsvSource({"0, RUNNING", "1, RESULTS_PRODUCED", "2, FINISHED"})
-    void itCanGetStatus(int value, String expected) {
-        val queryId = UUID.randomUUID().toString();
-        setupExecuteQuery(queryId, query, mode);
-        val listener = sut(query);
-
-        setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.forNumber(value));
-        assertThat(listener.getStatus()).isEqualTo(expected);
-    }
 
     @SneakyThrows
     @Test

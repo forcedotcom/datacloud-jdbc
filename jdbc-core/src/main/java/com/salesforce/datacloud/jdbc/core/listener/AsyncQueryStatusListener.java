@@ -41,9 +41,6 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
     @Getter
     private final String queryId;
 
-    @Getter
-    private final String query;
-
     private final HyperGrpcClientExecutor client;
 
     private final Duration timeout;
@@ -58,22 +55,12 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
             return AsyncQueryStatusListener.builder()
                     .queryId(queryId)
-                    .query(query)
                     .client(client)
                     .timeout(timeout)
                     .build();
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createQueryException(query, ex);
         }
-    }
-
-    @Override
-    public String getStatus() throws DataCloudJDBCException {
-        return client.getQueryStatus(queryId)
-                .map(DataCloudQueryStatus::getCompletionStatus)
-                .map(Enum::name)
-                .findFirst()
-                .orElse("UNKNOWN");
     }
 
     @Override

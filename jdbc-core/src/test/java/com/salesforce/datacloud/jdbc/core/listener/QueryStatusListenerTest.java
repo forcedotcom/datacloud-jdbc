@@ -53,13 +53,13 @@ class QueryStatusListenerTest extends HyperGrpcTestBase {
 
     @ParameterizedTest
     @MethodSource("supported")
-    void itKeepsTrackOfQueryAndQueryId(QueryParam.TransferMode mode) {
+    void itKeepsTrackOfQueryId(QueryParam.TransferMode mode) {
         val query = this.query + UUID.randomUUID();
         val queryId = UUID.randomUUID().toString();
 
         setupExecuteQuery(queryId, query, mode);
         val listener = sut(query, mode);
 
-        QueryStatusListenerAssert.assertThat(listener).hasQueryId(queryId).hasQuery(query);
+        QueryStatusListenerAssert.assertThat(listener).hasQueryId(queryId);
     }
 }
