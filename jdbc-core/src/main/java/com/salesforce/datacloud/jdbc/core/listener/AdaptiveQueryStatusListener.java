@@ -49,9 +49,6 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     @Getter
     private final String queryId;
 
-    @Getter
-    private final String query;
-
     private final HyperGrpcClientExecutor client;
 
     private final Duration timeout;
@@ -68,7 +65,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
             log.info("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);
 
-            return new AdaptiveQueryStatusListener(queryId, query, client, timeout, response);
+            return new AdaptiveQueryStatusListener(queryId, client, timeout, response);
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createQueryException(query, ex);
         }
@@ -82,19 +79,10 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
             log.info("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);
 
-            return new RowBasedAdaptiveQueryStatusListener(queryId, query, client, response);
+            return new RowBasedAdaptiveQueryStatusListener(queryId, client, response);
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createQueryException(query, ex);
         }
-    }
-
-    @Override
-    public String getStatus() throws DataCloudJDBCException {
-        return client.getQueryStatus(queryId)
-                .map(DataCloudQueryStatus::getCompletionStatus)
-                .map(Enum::name)
-                .findFirst()
-                .orElse("UNKNOWN");
     }
 
     @Override
@@ -155,23 +143,11 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
         @Getter
         private final String queryId;
 
-        @Getter
-        private final String query;
-
         private final HyperGrpcClientExecutor client;
 
         private final Iterator<ExecuteQueryResponse> response;
 
         private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
-
-        @Override
-        public String getStatus() throws DataCloudJDBCException {
-            return client.getQueryStatus(queryId)
-                    .map(DataCloudQueryStatus::getCompletionStatus)
-                    .map(Enum::name)
-                    .findFirst()
-                    .orElse("UNKNOWN");
-        }
 
         @Override
         public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {

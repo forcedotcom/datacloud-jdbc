@@ -47,18 +47,6 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
     private final QueryParam.TransferMode mode = QueryParam.TransferMode.ASYNC;
 
     @SneakyThrows
-    @ParameterizedTest
-    @CsvSource({"0, RUNNING", "1, RESULTS_PRODUCED", "2, FINISHED"})
-    void itCanGetStatus(int value, String expected) {
-        val queryId = UUID.randomUUID().toString();
-        setupExecuteQuery(queryId, query, mode);
-        val listener = sut(query);
-
-        setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.forNumber(value));
-        assertThat(listener.getStatus()).isEqualTo(expected);
-    }
-
-    @SneakyThrows
     @Test
     void itCorrectlyReturnsStreamOfParts() {
         val queryId = UUID.randomUUID().toString();
