@@ -94,46 +94,6 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
     }
 
     /**
-     * Verifies that the actual QueryStatusListener is ready.
-     *
-     * @return this assertion object.
-     * @throws AssertionError - if the actual QueryStatusListener is not ready.
-     */
-    @SneakyThrows
-    public QueryStatusListenerAssert isReady() {
-        // check that actual QueryStatusListener we want to make assertions on is not null.
-        isNotNull();
-
-        // check that property call/field access is true
-        if (!actual.isReady()) {
-            failWithMessage("\nExpecting that actual QueryStatusListener is ready but is not.");
-        }
-
-        // return the current assertion for method chaining
-        return this;
-    }
-
-    /**
-     * Verifies that the actual QueryStatusListener is not ready.
-     *
-     * @return this assertion object.
-     * @throws AssertionError - if the actual QueryStatusListener is ready.
-     */
-    @SneakyThrows
-    public QueryStatusListenerAssert isNotReady() {
-        // check that actual QueryStatusListener we want to make assertions on is not null.
-        isNotNull();
-
-        // check that property call/field access is false
-        if (actual.isReady()) {
-            failWithMessage("\nExpecting that actual QueryStatusListener is not ready but is.");
-        }
-
-        // return the current assertion for method chaining
-        return this;
-    }
-
-    /**
      * Verifies that the actual QueryStatusListener's status is equal to the given one.
      *
      * @param status the given status to compare the actual QueryStatusListener's status to.
