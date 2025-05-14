@@ -91,7 +91,6 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     public void testExecuteQuery() {
         setupHyperGrpcClientWithMockedResultSet("query id", ImmutableList.of());
         ResultSet response = statement.executeQuery("SELECT * FROM table");
-        assertThat(statement.isReady()).isTrue();
         assertNotNull(response);
         assertThat(response.getMetaData().getColumnCount()).isEqualTo(3);
         assertThat(response.getMetaData().getColumnName(1)).isEqualTo("id");

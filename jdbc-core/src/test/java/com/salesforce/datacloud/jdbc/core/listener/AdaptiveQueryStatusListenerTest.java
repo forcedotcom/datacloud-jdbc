@@ -54,16 +54,6 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
 
     @SneakyThrows
     @Test
-    void itWillWaitUntilResultsProducedOrFinishedToProduceStatus() {
-        val queryId = UUID.randomUUID().toString();
-        setupExecuteQuery(queryId, query, mode, executeQueryResponse(queryId, null, 1));
-        setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.RESULTS_PRODUCED, 3);
-        val listener = sut(query);
-        QueryStatusListenerAssert.assertThat(listener).hasStatus(QueryStatus.CompletionStatus.RESULTS_PRODUCED.name());
-    }
-
-    @SneakyThrows
-    @Test
     void itReturnsNoChunkResults() {
         val queryId = UUID.randomUUID().toString();
         setupExecuteQuery(
@@ -87,16 +77,6 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
         assertThat(resultSet.getInt("id")).isEqualTo(bob.getId());
         assertThat(resultSet.getString("name")).isEqualTo(bob.getName());
         assertThat(resultSet.getDouble("grade")).isEqualTo(bob.getGrade());
-    }
-
-    @SneakyThrows
-    @Test
-    void itIsAlwaysReadyBecauseWeImmediatelyGetResultsThenBlockForAsyncIfNecessary() {
-        val queryId = UUID.randomUUID().toString();
-        setupExecuteQuery(queryId, query, mode, executeQueryResponse(queryId, null, 1));
-        val listener = sut(query);
-
-        assertThat(listener.isReady()).isTrue();
     }
 
     @SneakyThrows

@@ -73,14 +73,6 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         }
     }
 
-    private void assertQueryReady() throws DataCloudJDBCException {
-        assertQueryExecuted();
-
-        if (!listener.isReady()) {
-            throw new DataCloudJDBCException("query results were not ready");
-        }
-    }
-
     /**
      * @return The Data Cloud query id of the last executed query from this statement.
      * @throws SQLException throws an exception if a query has not been executed from this statement
@@ -89,10 +81,6 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         assertQueryExecuted();
 
         return listener.getQueryId();
-    }
-
-    public boolean isReady() throws DataCloudJDBCException {
-        return listener.isReady();
     }
 
     @Override
@@ -280,7 +268,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     @Override
     public ResultSet getResultSet() throws SQLException {
         log.debug("Entering getResultSet");
-        assertQueryReady();
+        assertQueryExecuted();
 
         if (resultSet == null) {
             resultSet = listener.generateResultSet();

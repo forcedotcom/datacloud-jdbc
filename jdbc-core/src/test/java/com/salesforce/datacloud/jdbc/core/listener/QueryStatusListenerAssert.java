@@ -46,30 +46,6 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
     }
 
     /**
-     * Verifies that the actual QueryStatusListener's query is equal to the given one.
-     *
-     * @param query the given query to compare the actual QueryStatusListener's query to.
-     * @return this assertion object.
-     * @throws AssertionError - if the actual QueryStatusListener's query is not equal to the given one.
-     */
-    public QueryStatusListenerAssert hasQuery(String query) {
-        // check that actual QueryStatusListener we want to make assertions on is not null.
-        isNotNull();
-
-        // overrides the default error message with a more explicit one
-        String assertjErrorMessage = "\nExpecting query of:\n  <%s>\nto be:\n  <%s>\nbut was:\n  <%s>";
-
-        // null safe check
-        String actualQuery = actual.getQuery();
-        if (!Objects.areEqual(actualQuery, query)) {
-            failWithMessage(assertjErrorMessage, actual, query, actualQuery);
-        }
-
-        // return the current assertion for method chaining
-        return this;
-    }
-
-    /**
      * Verifies that the actual QueryStatusListener's queryId is equal to the given one.
      *
      * @param queryId the given queryId to compare the actual QueryStatusListener's queryId to.
@@ -87,71 +63,6 @@ public class QueryStatusListenerAssert extends AbstractObjectAssert<QueryStatusL
         String actualQueryId = actual.getQueryId();
         if (!Objects.areEqual(actualQueryId, queryId)) {
             failWithMessage(assertjErrorMessage, actual, queryId, actualQueryId);
-        }
-
-        // return the current assertion for method chaining
-        return this;
-    }
-
-    /**
-     * Verifies that the actual QueryStatusListener is ready.
-     *
-     * @return this assertion object.
-     * @throws AssertionError - if the actual QueryStatusListener is not ready.
-     */
-    @SneakyThrows
-    public QueryStatusListenerAssert isReady() {
-        // check that actual QueryStatusListener we want to make assertions on is not null.
-        isNotNull();
-
-        // check that property call/field access is true
-        if (!actual.isReady()) {
-            failWithMessage("\nExpecting that actual QueryStatusListener is ready but is not.");
-        }
-
-        // return the current assertion for method chaining
-        return this;
-    }
-
-    /**
-     * Verifies that the actual QueryStatusListener is not ready.
-     *
-     * @return this assertion object.
-     * @throws AssertionError - if the actual QueryStatusListener is ready.
-     */
-    @SneakyThrows
-    public QueryStatusListenerAssert isNotReady() {
-        // check that actual QueryStatusListener we want to make assertions on is not null.
-        isNotNull();
-
-        // check that property call/field access is false
-        if (actual.isReady()) {
-            failWithMessage("\nExpecting that actual QueryStatusListener is not ready but is.");
-        }
-
-        // return the current assertion for method chaining
-        return this;
-    }
-
-    /**
-     * Verifies that the actual QueryStatusListener's status is equal to the given one.
-     *
-     * @param status the given status to compare the actual QueryStatusListener's status to.
-     * @return this assertion object.
-     * @throws AssertionError - if the actual QueryStatusListener's status is not equal to the given one.
-     */
-    @SneakyThrows
-    public QueryStatusListenerAssert hasStatus(String status) {
-        // check that actual QueryStatusListener we want to make assertions on is not null.
-        isNotNull();
-
-        // overrides the default error message with a more explicit one
-        String assertjErrorMessage = "\nExpecting status of:\n  <%s>\nto be:\n  <%s>\nbut was:\n  <%s>";
-
-        // null safe check
-        String actualStatus = actual.getStatus();
-        if (!Objects.areEqual(actualStatus, status)) {
-            failWithMessage(assertjErrorMessage, actual, status, actualStatus);
         }
 
         // return the current assertion for method chaining

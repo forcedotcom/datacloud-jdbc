@@ -41,9 +41,6 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
     @Getter
     private final String queryId;
 
-    @Getter
-    private final String query;
-
     private final HyperGrpcClientExecutor client;
 
     private final Duration timeout;
@@ -58,37 +55,12 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
             return AsyncQueryStatusListener.builder()
                     .queryId(queryId)
-                    .query(query)
                     .client(client)
                     .timeout(timeout)
                     .build();
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createQueryException(query, ex);
         }
-    }
-
-    /**
-     * Aggressively checks if ready so this method doesn't block as long as the server allows the streaming request
-     */
-    @Override
-    public boolean isReady() throws DataCloudJDBCException {
-        try {
-            return client.getQueryStatus(queryId)
-                    .findFirst()
-                    .map(DataCloudQueryStatus::allResultsProduced)
-                    .orElse(false);
-        } catch (StatusRuntimeException ex) {
-            throw QueryExceptionHandler.createQueryException(query, ex);
-        }
-    }
-
-    @Override
-    public String getStatus() throws DataCloudJDBCException {
-        return client.getQueryStatus(queryId)
-                .map(DataCloudQueryStatus::getCompletionStatus)
-                .map(Enum::name)
-                .findFirst()
-                .orElse("UNKNOWN");
     }
 
     @Override
@@ -98,10 +70,6 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
     @Override
     public Stream<QueryResult> stream() throws DataCloudJDBCException {
-        if (!isReady()) {
-            throw new DataCloudJDBCException(BEFORE_READY);
-        }
-
         val status = client.waitForResultsProduced(queryId, timeout);
         val iterator = ChunkBased.of(client, queryId, 0, status.getChunkCount(), false);
 
