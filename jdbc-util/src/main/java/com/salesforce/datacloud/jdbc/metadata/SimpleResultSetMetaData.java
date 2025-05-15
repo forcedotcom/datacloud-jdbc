@@ -3,24 +3,37 @@ package com.salesforce.datacloud.jdbc.metadata;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
-class SimpleResultSetMetaData implements ResultSetMetaData {
+public class SimpleResultSetMetaData implements ResultSetMetaData {
+    /// The columns
     private final ColumnMetadata[] columns;
 
     public SimpleResultSetMetaData(ColumnMetadata[] columns) {
         this.columns = columns;
     }
 
-    protected ColumnMetadata getColumn(int column) throws SQLException {
-        if (column <= 0 || column >= columns.length) {
-            throw new SQLException("Column index " + column + " out of bounds (" + columns.length + " columns available)");
+    /// Find a column by label
+    /// Proprietary extension to the JDBC API
+    public int findColumn(String columnLabel) throws SQLException {
+        for (int i = 0; i < columns.length; i++) {
+            if (columns[i].getName().equals(columnLabel)) {
+                return i + 1;
+            }
         }
-        // Column indices are 1-based in JDBC
-        return columns[column - 1];
+        throw new SQLException("Column label " + columnLabel + " not found");
     }
 
     @Override
     public int getColumnCount() throws SQLException {
         return columns.length;
+    }
+
+    /// Get a column by index
+    public ColumnMetadata getColumn(int column) throws SQLException {
+        if (column <= 0 || column >= columns.length) {
+            throw new SQLException("Column index " + column + " out of bounds (" + columns.length + " columns available)");
+        }
+        // Column indices are 1-based in JDBC
+        return columns[column - 1];
     }
 
     @Override
