@@ -98,12 +98,6 @@ public class DataCloudQueryPolling {
         }
     }
 
-    public static DataCloudQueryStatus waitForResultsProduced(
-            HyperServiceGrpc.HyperServiceBlockingStub stub, String queryId, Duration timeout)
-            throws DataCloudJDBCException {
-        return waitForQueryStatus(stub, queryId, timeout, DataCloudQueryStatus::allResultsProduced);
-    }
-
     public static DataCloudQueryStatus waitForQueryStatus(
             HyperServiceGrpc.HyperServiceBlockingStub stub,
             String queryId,
