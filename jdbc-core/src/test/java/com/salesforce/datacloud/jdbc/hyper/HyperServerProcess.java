@@ -60,14 +60,15 @@ public class HyperServerProcess implements AutoCloseable {
     public HyperServerProcess(HyperServerConfig.HyperServerConfigBuilder config) {
         log.info("starting hyperd, this might take a few seconds");
 
-        val executable = new File("../build/hyperd/hyperd");
+        val isWindows = System.getProperty("os.name").toLowerCase().contains("win");
+        val executable = new File("../.hyperd/hyperd" + (isWindows ? ".exe" : ""));
         val yaml = Paths.get(requireNonNull(HyperTestBase.class.getResource("/hyper.yaml"))
                         .toURI())
                 .toFile();
 
         if (!executable.exists()) {
             Assertions.fail("hyperd executable couldn't be found, have you run `gradle extractHyper`? expected="
-                    + executable.getAbsolutePath());
+                    + executable.getAbsolutePath() + ", os=" + System.getProperty("os.name"));
         }
 
         val builder = new ProcessBuilder()

@@ -76,14 +76,18 @@ jobs:
       - name: Gradle build (with version)
         id: build-and-test
         run: |
-          echo "Version specified, running clean build with no cache for ${{ inputs.version }}"
+          echo "build and test with version='${{ inputs.version }}'"
           ./gradlew clean build --no-build-cache --rerun-tasks
         env:
           RELEASE_VERSION: ${{ inputs.version }}
       - name: Look at files in verification
         if: ${{ failure() }}
         run: |
-          ls -la verification || true
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            gci -Recurse verification || true
+          else
+            ls -la verification || true
+          fi
       - name: Upload hyper logs on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
