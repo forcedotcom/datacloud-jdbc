@@ -48,13 +48,15 @@ tasks.register<Copy>("extractHyper") {
 
     into(project.layout.projectDirectory.dir(hyperDir))
 
-    filePermissions {
-        unix("rwx------")
+    // Only apply Unix permissions when not on Windows
+    if (osdetector.os != "windows") {
+        filePermissions {
+            unix("rwx------")
+        }
     }
     
     inputs.file(project.layout.projectDirectory.file(hyperZipPath))
     outputs.dir(project.layout.projectDirectory.dir(hyperDir))
-
 }
 
 tasks.register<Exec>("hyperd") {
