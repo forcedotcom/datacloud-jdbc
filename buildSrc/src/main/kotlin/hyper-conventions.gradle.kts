@@ -5,6 +5,7 @@ plugins {
 
 val hyperApiVersion: String by project
 val hyperZipPath = ".hyper/hyper-$hyperApiVersion.zip"
+val hyperDir = ".hyperd"
 
 tasks.register<de.undercouch.gradle.tasks.download.Download>("downloadHyper") {
     group = "hyper"
@@ -20,6 +21,10 @@ tasks.register<de.undercouch.gradle.tasks.download.Download>("downloadHyper") {
     src(url)
     dest(project.layout.projectDirectory.file(hyperZipPath))
     overwrite(false)
+    
+    inputs.property("hyperApiVersion", hyperApiVersion)
+    inputs.property("osdetector.os", osdetector.os)
+    outputs.file(project.layout.projectDirectory.file(hyperZipPath))
 }
 
 tasks.register<Copy>("extractHyper") {
@@ -41,11 +46,15 @@ tasks.register<Copy>("extractHyper") {
         relativePath = RelativePath(true, name)
     }
 
-    into(project.layout.buildDirectory.dir("hyperd"))
+    into(project.layout.projectDirectory.dir(hyperDir))
 
     filePermissions {
         unix("rwx------")
     }
+    
+    inputs.file(project.layout.projectDirectory.file(hyperZipPath))
+    outputs.dir(project.layout.projectDirectory.dir(hyperDir))
+
 }
 
 tasks.register<Exec>("hyperd") {
@@ -57,9 +66,12 @@ tasks.register<Exec>("hyperd") {
         else -> "hyperd"
     }
 
-    val executable = project.layout.buildDirectory.dir("hyperd").map { it.asFile.resolve(name).absolutePath }.get()
+    val executable = project.layout.projectDirectory.dir(hyperDir).file(name).asFile.absolutePath
     val config = project.project(":jdbc-core").file("src/test/resources/hyper.yaml")
 
     commandLine(executable)
     args("--config", config.absolutePath, "run")
+
+    inputs.files(executable, config)
+    inputs.property("os", osdetector.os)
 }
