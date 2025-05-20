@@ -15,9 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.auth;
 
+import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import java.net.URI;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -26,52 +28,65 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
-import lombok.Getter;
+import java.util.List;
+import java.util.regex.Pattern;
 import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
-@Getter
-enum Audience {
-    DEV("login.test1.pc-rnd.salesforce.com"),
-    TEST("test.salesforce.com"),
-    PROD("login.salesforce.com");
+/**
+ * Validates authentication urls against patterns described in
+ * <a href="https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_endpoints.htm&type=5">OAuth documentation</a>
+ */
+@Slf4j
+@UtilityClass
+class Audience {
+    private static final Pattern PROD = Pattern.compile("^login\\.salesforce\\.com$");
+    private static final Pattern MY_DOMAIN = Pattern.compile("^.+\\.my\\.salesforce\\.com$");
+    private static final Pattern EXPERIENCE = Pattern.compile("^.+\\.my\\.site\\.com$");
+    private static final Pattern SANDBOX = Pattern.compile("^test\\.salesforce\\.com$");
+    private static final Pattern TEST = Pattern.compile("^login\\.test\\d+\\.pc-rnd\\.salesforce\\.com$");
+    private static final Pattern MY_SANDBOX = Pattern.compile("^.+--.+\\.sandbox\\.my\\.salesforce\\.com$");
 
-    public final String url;
+    private static final List<Pattern> PATTERNS =
+            ImmutableList.of(PROD, MY_DOMAIN, EXPERIENCE, SANDBOX, TEST, MY_SANDBOX);
 
-    Audience(String audience) {
-        this.url = audience;
-    }
-
-    public static Audience of(String url) throws SQLException {
-        if (url.contains(DEV_SUFFIX)) {
-            return Audience.DEV;
-        } else if (url.contains(TEST_SUFFIX)) {
-            return Audience.TEST;
-        } else if (url.endsWith(PROD_SUFFIX)) {
-            return Audience.PROD;
-        } else {
-            val errorMessage = "The specified url: '" + url + "' didn't match any known environments";
-            val rootCauseException = new IllegalArgumentException(errorMessage);
-            throw new DataCloudJDBCException(errorMessage, "28000", rootCauseException);
+    public static String getAudience(String url) throws SQLException {
+        if (url == null) {
+            throw new DataCloudJDBCException("Cannot determine audience for login url because it was null.");
         }
-    }
 
-    private static final String PROD_SUFFIX = ".salesforce.com";
-    private static final String TEST_SUFFIX = "test.salesforce.com";
-    private static final String DEV_SUFFIX = ".test1.pc-rnd.salesforce.com";
+        final URI uri;
+        try {
+            uri = url.startsWith("https://") ? URI.create(url) : URI.create("https://" + url);
+        } catch (NullPointerException | IllegalArgumentException ex) {
+            throw new DataCloudJDBCException("The specified url was not a valid uri. url=" + url, "28000", ex);
+        }
+
+        val host = uri.getHost();
+
+        if (PATTERNS.stream().map(Pattern::asPredicate).noneMatch(p -> p.test(host))) {
+            log.warn(
+                    "The specified url does not match any known hosts, but salesforce allows custom urls. host={}, url={}",
+                    host,
+                    url);
+        }
+
+        return host;
+    }
 }
 
 @UtilityClass
 class JwtParts {
     public static String buildJwt(PrivateKeyAuthenticationSettings settings) throws DataCloudJDBCException {
         try {
-            Instant now = Instant.now();
-            Audience audience = Audience.of(settings.getLoginUrl());
-            RSAPrivateKey privateKey = asPrivateKey(settings.getPrivateKey());
+            val now = Instant.now();
+            val audience = Audience.getAudience(settings.getLoginUrl());
+            val privateKey = asPrivateKey(settings.getPrivateKey());
             return Jwts.builder()
                     .setIssuer(settings.getClientId())
                     .setSubject(settings.getUserName())
-                    .setAudience(audience.url)
+                    .setAudience(audience)
                     .setIssuedAt(Date.from(now))
                     .setExpiration(Date.from(now.plus(2L, ChronoUnit.MINUTES)))
                     .signWith(privateKey, SignatureAlgorithm.RS256)

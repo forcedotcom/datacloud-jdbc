@@ -21,15 +21,17 @@ import static com.salesforce.datacloud.jdbc.auth.AuthenticationSettings.Keys.USE
 import static com.salesforce.datacloud.jdbc.auth.AuthenticationStrategy.Keys.CLIENT_ID;
 import static com.salesforce.datacloud.jdbc.auth.AuthenticationStrategy.Keys.CLIENT_SECRET;
 import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.propertiesForPrivateKey;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Properties;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.SneakyThrows;
@@ -51,25 +53,34 @@ class Part {
 
 class PrivateKeyHelpersTest {
 
+    @SneakyThrows
+    @Test
+    void testValidAudienceValidation() {
+        Predicate<String> sut = u -> {
+            try {
+                Audience.getAudience(u);
+                return true;
+            } catch (SQLException e) {
+                return false;
+            }
+        };
+
+        assertThat(sut)
+                .accepts(
+                        "https://login.salesforce.com",
+                        "https://MyCompany.my.salesforce.com",
+                        "https://MyDomainName.my.site.com",
+                        "https://test.salesforce.com",
+                        "https://MyDomainName--SandboxName.sandbox.my.salesforce.com",
+                        "https://login.test1.pc-rnd.salesforce.com");
+    }
+
     @Test
     @SneakyThrows
-    void testAudience() {
-        Audience audience = Audience.of("https://something.salesforce.com");
-        assertThat(audience).isEqualTo(Audience.PROD);
-        assertThat(audience.getUrl()).isEqualTo("login.salesforce.com");
-
-        audience = Audience.of("https://test.salesforce.com");
-        assertThat(audience).isEqualTo(Audience.TEST);
-        assertThat(audience.getUrl()).isEqualTo("test.salesforce.com");
-
-        audience = Audience.of("https://login.test1.pc-rnd.salesforce.com");
-        assertThat(audience).isEqualTo(Audience.DEV);
-        assertThat(audience.getUrl()).isEqualTo("login.test1.pc-rnd.salesforce.com");
-
-        assertThrows(
-                SQLException.class,
-                () -> Audience.of("not a url"),
-                "The specified url: 'not a url' didn't match any known environments");
+    void testInvalidAudienceValidation() {
+        assertThatThrownBy(() -> Audience.getAudience("not a url"))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessage("The specified url was not a valid uri. url=not a url");
     }
 
     @SneakyThrows
