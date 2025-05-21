@@ -83,7 +83,7 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
     @Override
     public Stream<QueryResult> stream() throws DataCloudJDBCException {
-        val status = client.waitForResultsProduced(queryId, timeout);
+        val status = client.waitForQueryStatus(queryId, timeout, DataCloudQueryStatus::allResultsProduced);
         val iterator = ChunkBased.of(client, queryId, 0, status.getChunkCount(), false);
 
         return StreamUtilities.toStream(iterator);

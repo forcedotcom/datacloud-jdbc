@@ -134,7 +134,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
             return Stream.empty();
         }
 
-        val status = client.waitForResultsProduced(queryId, timeout);
+        val status = client.waitForQueryStatus(queryId, timeout, DataCloudQueryStatus::allResultsProduced);
 
         if (!status.allResultsProduced()) {
             throw new DataCloudJDBCException(BEFORE_READY + ". queryId=" + queryId + ", timeout=" + timeout);
