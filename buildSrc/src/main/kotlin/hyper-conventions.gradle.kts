@@ -30,6 +30,8 @@ tasks.register<de.undercouch.gradle.tasks.download.Download>("downloadHyper") {
 tasks.register<Copy>("extractHyper") {
     dependsOn("downloadHyper")
 
+    val os = "os=${osdetector.os}, arch=${osdetector.arch}, release=${osdetector.release}, classifier=${osdetector.classifier}"
+
     group = "hyper"
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     includeEmptyDirs = false
@@ -39,7 +41,7 @@ tasks.register<Copy>("extractHyper") {
             "windows" -> include("**/bin/**/*.dll", "**/bin/hyper/hyperd.exe")
             "osx" -> include("**/lib/**/*.dylib", "**/lib/hyper/hyperd")
             "linux" -> include("**/lib/**/*.so", "**/lib/hyper/hyperd")
-            else -> throw GradleException("Unsupported os settings. os=${osdetector.os}, arch=${osdetector.arch}, release=${osdetector.release}, classifier=${osdetector.classifier}}")
+            else -> throw GradleException("Unsupported os settings. $os")
         }
     }
 
@@ -58,19 +60,16 @@ tasks.register<Copy>("extractHyper") {
     val hyperdDir = project.layout.projectDirectory.dir(hyperDir).asFileTree
 
     val exe = hyperdDir.firstOrNull { it.name.contains("hyperd") }
-        ?: throw GradleException("zip missing hyperd executable")
+        ?: throw GradleException("zip missing hyperd executable. $os, files=[${hyperdDir.map { it.absolutePath }}]")
 
     val lib = hyperdDir.firstOrNull { it.name.contains("tableauhyperapi") }
-        ?: throw GradleException("zip missing hyperd library")
+        ?: throw GradleException("zip missing hyperd library, $os, files=[${hyperdDir.map { it.absolutePath }}]")
 
     outputs.files(exe, lib)
 
     doLast {
-        val hasExe = exe.exists()
-        val hasLib = lib.exists()
-
-        if (!hasExe || !hasLib) {
-            throw GradleException("extractHyper failed validation. hyperdMissing=$hasExe, tableauhyperapiMissing=$hasLib")
+        if (!exe.exists() || !lib.exists()) {
+            throw GradleException("extractHyper failed validation. hyperd=${exe.exists()}, lib=${lib.exists()}, $os")
         }
     }
 }
