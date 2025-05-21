@@ -9,65 +9,76 @@ val hyperDir = ".hyperd"
 
 tasks.register<de.undercouch.gradle.tasks.download.Download>("downloadHyper") {
     group = "hyper"
-    val urlBase = when (osdetector.os) {
-        "windows" -> "https://downloads.tableau.com/tssoftware/tableauhyperapi-cxx-windows-x86_64-release-main"
-        "osx" -> "https://downloads.tableau.com/tssoftware/tableauhyperapi-cxx-macos-arm64-release-main"
-        "linux" -> "https://downloads.tableau.com/tssoftware/tableauhyperapi-cxx-linux-x86_64-release-main"
-        else -> throw GradleException("Unsupported os settings. os=${osdetector.os}, arch=${osdetector.arch}, release=${osdetector.release}, classifier=${osdetector.classifier}}")
+
+    val os = "os=${osdetector.os}, arch=${osdetector.arch}, classifier=${osdetector.classifier}"
+
+    val osPart = when (osdetector.os) {
+        "windows" -> "windows-x86_64-release-main"
+        "linux" -> "linux-x86_64-release-main"
+        "osx" -> when (osdetector.arch) {
+            "aarch_64" -> "macos-arm64-release-main"
+            else -> "macos-x86_64-release-main"
+        }
+
+        else -> throw GradleException("Unsupported os settings. $os")
     }
 
-    val url = "$urlBase.$hyperApiVersion.zip"
+    val url = "https://downloads.tableau.com/tssoftware/tableauhyperapi-cxx-$osPart.$hyperApiVersion.zip"
+    val zip = project.layout.projectDirectory.file(hyperZipPath)
 
     src(url)
-    dest(project.layout.projectDirectory.file(hyperZipPath))
+    dest(zip)
     overwrite(false)
 
     inputs.property("hyperApiVersion", hyperApiVersion)
     inputs.property("osdetector.os", osdetector.os)
-    outputs.file(project.layout.projectDirectory.file(hyperZipPath))
+    inputs.property("osdetector.arch", osdetector.arch)
+
+    outputs.file(zip)
+
+    doLast {
+        if (!zip.asFile.exists()) {
+            throw GradleException("downloadHyper failed validation. zip=false, $os")
+        }
+    }
 }
 
 tasks.register<Copy>("extractHyper") {
     dependsOn("downloadHyper")
 
-    val os = "os=${osdetector.os}, arch=${osdetector.arch}, release=${osdetector.release}, classifier=${osdetector.classifier}"
+    val os = "os=${osdetector.os}, arch=${osdetector.arch}, classifier=${osdetector.classifier}"
 
     group = "hyper"
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     includeEmptyDirs = false
 
     from(zipTree(project.layout.projectDirectory.file(hyperZipPath))) {
-        when(osdetector.os) {
-            "windows" -> include("**/bin/**/*.dll", "**/bin/hyper/hyperd.exe")
-            "osx" -> include("**/lib/**/*.dylib", "**/lib/hyper/hyperd")
-            "linux" -> include("**/lib/**/*.so", "**/lib/hyper/hyperd")
-            else -> throw GradleException("Unsupported os settings. $os")
-        }
+        include("**/hyperd.exe", "**/hyperd", "**/*.dll", "**/*.dylib", "**/*.so")
     }
+
+    into(project.layout.projectDirectory.dir(hyperDir))
 
     eachFile {
         relativePath = RelativePath(true, name)
     }
 
-    into(project.layout.projectDirectory.dir(hyperDir))
-
     filePermissions {
         unix("rwx------")
     }
 
-    inputs.file(project.layout.projectDirectory.file(hyperZipPath))
-
     val hyperdDir = project.layout.projectDirectory.dir(hyperDir).asFileTree
 
-    val exe = hyperdDir.firstOrNull { it.name.contains("hyperd") }
-        ?: throw GradleException("zip missing hyperd executable. $os, files=[${hyperdDir.map { it.absolutePath }}]")
-
-    val lib = hyperdDir.firstOrNull { it.name.contains("tableauhyperapi") }
-        ?: throw GradleException("zip missing hyperd library, $os, files=[${hyperdDir.map { it.absolutePath }}]")
-
-    outputs.files(exe, lib)
+    inputs.file(project.layout.projectDirectory.file(hyperZipPath))
+    outputs.files(hyperdDir.files)
 
     doLast {
+
+        val exe = hyperdDir.firstOrNull { it.name.contains("hyperd") }
+            ?: throw GradleException("zip missing hyperd executable. $os, files=${hyperdDir.map { it.absolutePath }}")
+
+        val lib = hyperdDir.firstOrNull { it.name.contains("tableauhyperapi") }
+            ?: throw GradleException("zip missing hyperd library, $os, files=${hyperdDir.map { it.absolutePath }}")
+
         if (!exe.exists() || !lib.exists()) {
             throw GradleException("extractHyper failed validation. hyperd=${exe.exists()}, lib=${lib.exists()}, $os")
         }
