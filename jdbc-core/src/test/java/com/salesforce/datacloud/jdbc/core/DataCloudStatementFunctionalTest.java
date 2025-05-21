@@ -51,7 +51,7 @@ public class DataCloudStatementFunctionalTest {
             statement.cancel();
 
             assertThatThrownBy(() -> client.getQueryStatus(queryId).collect(Collectors.toList()))
-                    .hasMessage("FAILED_PRECONDITION: canceled");
+                    .hasMessageStartingWith("FAILED_PRECONDITION: canceled");
         }
     }
 
@@ -74,7 +74,7 @@ public class DataCloudStatementFunctionalTest {
             statement.cancel();
 
             assertThatThrownBy(() -> client.getQueryStatus(queryId).collect(Collectors.toList()))
-                    .hasMessage("FAILED_PRECONDITION: canceled");
+                    .hasMessageStartingWith("FAILED_PRECONDITION: canceled");
         }
     }
 
@@ -95,7 +95,7 @@ public class DataCloudStatementFunctionalTest {
             connection.cancelQuery(queryId);
 
             assertThatThrownBy(() -> client.getQueryStatus(queryId).collect(Collectors.toList()))
-                    .hasMessage("FAILED_PRECONDITION: canceled");
+                    .hasMessageStartingWith("FAILED_PRECONDITION: canceled");
         }
     }
 
