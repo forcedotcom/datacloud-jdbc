@@ -62,7 +62,7 @@ jobs:
       - name: Cache hyperd zip
         uses: actions/cache@v3
         with:
-          path: build/hyper-${{ needs.prepare.outputs.hyper_version }}.zip
+          path: .hyper/hyper-${{ needs.prepare.outputs.hyper_version }}.zip
           key: ${{ runner.os }}-hyper-${{ needs.prepare.outputs.hyper_version }}
           restore-keys: ${{ runner.os }}-hyper-${{ needs.prepare.outputs.hyper_version }}
       - name: Setup Gradle
