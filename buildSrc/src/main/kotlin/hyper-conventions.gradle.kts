@@ -21,7 +21,7 @@ tasks.register<de.undercouch.gradle.tasks.download.Download>("downloadHyper") {
     src(url)
     dest(project.layout.projectDirectory.file(hyperZipPath))
     overwrite(false)
-    
+
     inputs.property("hyperApiVersion", hyperApiVersion)
     inputs.property("osdetector.os", osdetector.os)
     outputs.file(project.layout.projectDirectory.file(hyperZipPath))
@@ -35,11 +35,12 @@ tasks.register<Copy>("extractHyper") {
     includeEmptyDirs = false
 
     from(zipTree(project.layout.projectDirectory.file(hyperZipPath))) {
-        include("**/lib/hyper/hyperd")
-        include("**/lib/hyper/hyperd.exe")
-        include("**/lib/**/*.dylib")
-        include("**/lib/**/*.dll")
-        include("**/lib/**/*.so")
+        when(osdetector.os) {
+            "windows" -> include("**/bin/**/*.dll", "**/bin/hyper/hyperd.exe")
+            "osx" -> include("**/lib/**/*.dylib", "**/lib/hyper/hyperd")
+            "linux" -> include("**/lib/**/*.so", "**/lib/hyper/hyperd")
+            else -> throw GradleException("Unsupported os settings. os=${osdetector.os}, arch=${osdetector.arch}, release=${osdetector.release}, classifier=${osdetector.classifier}}")
+        }
     }
 
     eachFile {
@@ -48,15 +49,30 @@ tasks.register<Copy>("extractHyper") {
 
     into(project.layout.projectDirectory.dir(hyperDir))
 
-    // Only apply Unix permissions when not on Windows
-    if (osdetector.os != "windows") {
-        filePermissions {
-            unix("rwx------")
+    filePermissions {
+        unix("rwx------")
+    }
+
+    inputs.file(project.layout.projectDirectory.file(hyperZipPath))
+
+    val hyperdDir = project.layout.projectDirectory.dir(hyperDir).asFileTree
+
+    val exe = hyperdDir.firstOrNull { it.name.contains("hyperd") }
+        ?: throw GradleException("zip missing hyperd executable")
+
+    val lib = hyperdDir.firstOrNull { it.name.contains("tableauhyperapi") }
+        ?: throw GradleException("zip missing hyperd library")
+
+    outputs.files(exe, lib)
+
+    doLast {
+        val hasExe = exe.exists()
+        val hasLib = lib.exists()
+
+        if (!hasExe || !hasLib) {
+            throw GradleException("extractHyper failed validation. hyperdMissing=$hasExe, tableauhyperapiMissing=$hasLib")
         }
     }
-    
-    inputs.file(project.layout.projectDirectory.file(hyperZipPath))
-    outputs.dir(project.layout.projectDirectory.dir(hyperDir))
 }
 
 tasks.register<Exec>("hyperd") {
