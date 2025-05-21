@@ -90,4 +90,8 @@ spotless {
         removeUnusedImports()
         licenseHeaderFile(rootProject.file("license-header.txt"))
     }
+
+    scala {
+        scalafmt()
+    }
 }
