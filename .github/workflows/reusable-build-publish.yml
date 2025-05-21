@@ -44,7 +44,7 @@ jobs:
     needs: prepare
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ ubuntu-latest, windows-latest ]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -76,59 +76,54 @@ jobs:
       - name: Extract Hyper
         id: extract_hyper
         run: ./gradlew extractHyper
-      - name: Look at files in root
+      - name: Gradle build (with version)
+        id: build-and-test
+        run: |
+          echo "build and test with version='${{ inputs.version }}'"
+          ./gradlew clean build --no-build-cache --rerun-tasks
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+      - name: Look at files in verification
+        if: ${{ failure() }}
         uses: jaywcjlove/github-action-folder-tree@main
         with:
           path: .
-          depth: 2
-      - name: Intentionally fail
-        run: exit 1
-      # - name: Gradle build (with version)
-      #   id: build-and-test
-      #   run: |
-      #     echo "build and test with version='${{ inputs.version }}'"
-      #     ./gradlew clean build --no-build-cache --rerun-tasks
-      #   env:
-      #     RELEASE_VERSION: ${{ inputs.version }}
-      # - name: Look at files in verification
-      #   if: ${{ failure() }}
-      #   uses: jaywcjlove/github-action-folder-tree@main
-      #   with:
-      #     path: verification
-      # - name: Upload hyper logs on failure
-      #   if: ${{ failure() }}
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: test-results-${{ matrix.os }}
-      #     path: |
-      #       build/hyperd/*.log
-      #     retention-days: 5
+          exclude: ".gradle|build|bin"
+          depth: 3
+      - name: Upload hyper logs on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            build/hyperd/*.log
+          retention-days: 5
 
-  # publish:
-  #   needs: [prepare, build]
-  #   if: ${{ inputs.publish }}
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 1
-  #     - run: git fetch --no-tags --depth=1 origin main
-  #     - name: Setup Java with 8 and 17 toolchains
-  #       uses: actions/setup-java@v4
-  #       with:
-  #         distribution: 'temurin'
-  #         java-version: |
-  #           8
-  #           17
-  #     - name: Setup Gradle
-  #       uses: gradle/actions/setup-gradle@v4
-  #       with:
-  #         gradle-version: ${{ env.GRADLE_VERSION }}
-  #     - name: Publish to Maven Central
-  #       env:
-  #         RELEASE_VERSION: ${{ inputs.version }}
-  #         OSSRH_USERNAME: ${{ secrets.publish_user }}
-  #         OSSRH_PASSWORD: ${{ secrets.publish_pass }}
-  #         ORG_GRADLE_PROJECT_signingKey: ${{ secrets.signing_key }}
-  #         ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.signing_pass }}
-  #       run: ./gradlew publishAllPublicationsToMavenCentralRepository -x test --no-scan --no-configuration-cache -Dorg.slf4j.simpleLogger.defaultLogLevel=error
+  publish:
+    needs: [ prepare, build ]
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - run: git fetch --no-tags --depth=1 origin main
+      - name: Setup Java with 8 and 17 toolchains
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: |
+            8
+            17
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+      - name: Publish to Maven Central
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          OSSRH_USERNAME: ${{ secrets.publish_user }}
+          OSSRH_PASSWORD: ${{ secrets.publish_pass }}
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.signing_key }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.signing_pass }}
+        run: ./gradlew publishAllPublicationsToMavenCentralRepository -x test --no-scan --no-configuration-cache -Dorg.slf4j.simpleLogger.defaultLogLevel=error
