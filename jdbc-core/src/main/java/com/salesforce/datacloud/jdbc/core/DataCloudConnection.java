@@ -46,6 +46,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -215,7 +216,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * @param limit The quantity of rows relative to the offset to wait for
      * @param timeout The duration to wait for the engine have results produced.
      * @param allowLessThan Whether to return early when the available rows is less than {@code offset + limit}
-     * @return The last {@link DataCloudQueryStatus} the server replied with.
+     * @return The first status where the rows available meet the constraints defined by the parameters or the last status the server replied with.
      */
     public DataCloudQueryStatus waitForRowsAvailable(
             String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
@@ -233,7 +234,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * @param limit The quantity of chunks relative to the offset to wait for
      * @param timeout The duration to wait for the engine have results produced.
      * @param allowLessThan Whether to return early when the available chunks is less than {@code offset + limit}
-     * @return The last {@link DataCloudQueryStatus} the server replied with.
+     * @return The first status where the chunks available meet the constraints defined by the parameters or the last status the server replied with.
      */
     public DataCloudQueryStatus waitForChunksAvailable(
             String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
@@ -246,11 +247,23 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * Checks if all the query's results are ready, the row count and chunk count will be stable.
      * @param queryId The identifier of the query to check
      * @param timeout The duration to wait for the engine have results produced.
-     * @return The last {@link DataCloudQueryStatus} the server replied with.
+     * @return The first status where {@link DataCloudQueryStatus#allResultsProduced()} or the last status the server replied with.
      */
     public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration timeout) throws DataCloudJDBCException {
+        return waitForQueryStatus(queryId, timeout, DataCloudQueryStatus::allResultsProduced);
+    }
+
+    /**
+     * Checks if a given predicate is satisfied by the status of the query.
+     * This method will wait until the server responds with a satisfactory status or the timeout is reached.
+     * @param queryId The identifier of the query to check
+     * @param timeout The duration to wait for the engine have results produced.
+     * @return The first satisfactory status or the last {@link DataCloudQueryStatus} the server replied with.
+     */
+    public DataCloudQueryStatus waitForQueryStatus(
+            String queryId, Duration timeout, Predicate<DataCloudQueryStatus> predicate) throws DataCloudJDBCException {
         val executor = getExecutor();
-        return executor.waitForResultsProduced(queryId, timeout);
+        return executor.waitForQueryStatus(queryId, timeout, predicate);
     }
 
     /**

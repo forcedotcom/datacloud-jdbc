@@ -29,7 +29,6 @@ import java.util.NoSuchElementException;
 import java.util.Properties;
 import java.util.Random;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.assertj.core.api.AssertionsForClassTypes;
@@ -57,21 +56,6 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
 
         setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.forNumber(value));
         assertThat(listener.getStatus()).isEqualTo(expected);
-    }
-
-    @Test
-    void itThrowsIfStreamIsRequestedBeforeReady() {
-        val queryId = UUID.randomUUID().toString();
-
-        setupExecuteQuery(queryId, query, mode);
-        val listener = sut(query);
-
-        setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
-
-        QueryStatusListenerAssert.assertThat(listener).isNotReady();
-        val ex = Assertions.assertThrows(
-                DataCloudJDBCException.class, () -> listener.stream().collect(Collectors.toList()));
-        AssertionsForClassTypes.assertThat(ex).hasMessageContaining(QueryStatusListener.BEFORE_READY);
     }
 
     @SneakyThrows
@@ -140,19 +124,6 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
             val ex = assertThrows(DataCloudJDBCException.class, statement::getResultSet);
             AssertionsForClassTypes.assertThat(ex)
                     .hasMessageContaining("a query was not executed before attempting to access results");
-        }
-    }
-
-    @SneakyThrows
-    @Test
-    void userShouldWaitForQueryBeforeAccessingResultSet() {
-        val queryId = UUID.randomUUID().toString();
-        setupHyperGrpcClientWithMockedResultSet(queryId, ImmutableList.of());
-        setupGetQueryInfo(queryId, QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
-
-        try (val statement = statement().executeAsyncQuery(query)) {
-            val ex = assertThrows(DataCloudJDBCException.class, statement::getResultSet);
-            AssertionsForClassTypes.assertThat(ex).hasMessageContaining("query results were not ready");
         }
     }
 

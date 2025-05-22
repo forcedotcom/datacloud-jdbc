@@ -21,7 +21,7 @@ mockito = "4.11.0"
 slf4j = "[2.0.7, 3.0)"
 plugin-com-google-protobuf = "0.9.4"
 plugin-com-gradleup-shadow = "8.3.6"
-plugin-freefair-lombok = "8.13"
+plugin-freefair-lombok = "8.13.1"
 plugin-build-buf = "0.10.2"
 
 

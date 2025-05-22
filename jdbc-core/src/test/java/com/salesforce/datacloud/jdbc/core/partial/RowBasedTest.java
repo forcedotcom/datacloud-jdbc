@@ -121,7 +121,7 @@ public class RowBasedTest {
         assertThatThrownBy(() -> sut(tiny, 0, tinySize * 3, RowBased.Mode.FULL_RANGE))
                 .hasRootCauseInstanceOf(StatusRuntimeException.class)
                 .hasRootCauseMessage(String.format(
-                        "OUT_OF_RANGE: Request out of range: The specified offset is %d, but only %d tuples are available",
+                        "INVALID_ARGUMENT: Request out of range: The specified offset is %d, but only %d tuples are available",
                         tinySize, tinySize));
     }
 

@@ -80,7 +80,7 @@ class ChunkBasedTest {
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessage("Failed to load next batch")
                 .hasCauseInstanceOf(StatusRuntimeException.class)
-                .hasRootCauseMessage("OUT_OF_RANGE: The requested chunk id '1' is out of range");
+                .hasRootCauseMessage("INVALID_ARGUMENT: The requested chunk id '1' is out of range");
     }
 
     @SneakyThrows

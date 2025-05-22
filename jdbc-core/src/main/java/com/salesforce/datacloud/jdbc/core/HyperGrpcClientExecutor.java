@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -132,9 +133,10 @@ public class HyperGrpcClientExecutor {
         return DataCloudQueryPolling.waitForChunksAvailable(stub, queryId, offset, limit, timeout, allowLessThan);
     }
 
-    public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration timeout) throws DataCloudJDBCException {
+    public DataCloudQueryStatus waitForQueryStatus(
+            String queryId, Duration timeout, Predicate<DataCloudQueryStatus> predicate) throws DataCloudJDBCException {
         val stub = getStub(queryId);
-        return DataCloudQueryPolling.waitForResultsProduced(stub, queryId, timeout);
+        return DataCloudQueryPolling.waitForQueryStatus(stub, queryId, timeout, predicate);
     }
 
     public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {

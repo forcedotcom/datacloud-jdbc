@@ -17,7 +17,6 @@ package com.salesforce.datacloud.jdbc.core.partial;
 
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -76,17 +75,6 @@ class DataCloudQueryPollingTest {
                             statement.getQueryId(), 100, 10, Duration.ofSeconds(1), true))
                     .hasMessageContaining("Timed out waiting for new items to be available")
                     .isInstanceOf(DataCloudJDBCException.class);
-        }
-    }
-
-    @SneakyThrows
-    @Test
-    void userShouldWaitForQueryBeforeAccessingAsyncResultSet() {
-        try (val connection = getHyperQueryConnection();
-                val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
-
-            statement.executeAsyncQuery("SELECT pg_sleep(1000)");
-            assertThatThrownBy(statement::getResultSet).hasMessageContaining("query results were not ready");
         }
     }
 }

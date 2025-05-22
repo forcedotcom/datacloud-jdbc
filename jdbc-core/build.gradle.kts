@@ -19,8 +19,6 @@ dependencies {
 
     implementation(libs.guava)
 
-    implementation(libs.jackson.databind)
-
     implementation(libs.failsafe)
 
     implementation(libs.apache.commons.lang3)

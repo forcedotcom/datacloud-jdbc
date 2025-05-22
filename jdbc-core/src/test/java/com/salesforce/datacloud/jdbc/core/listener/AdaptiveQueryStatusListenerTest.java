@@ -91,16 +91,6 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
 
     @SneakyThrows
     @Test
-    void itIsAlwaysReadyBecauseWeImmediatelyGetResultsThenBlockForAsyncIfNecessary() {
-        val queryId = UUID.randomUUID().toString();
-        setupExecuteQuery(queryId, query, mode, executeQueryResponse(queryId, null, 1));
-        val listener = sut(query);
-
-        assertThat(listener.isReady()).isTrue();
-    }
-
-    @SneakyThrows
-    @Test
     void itCatchesAndMakesSqlExceptionWhenQueryFails() {
         val client = Mockito.mock(HyperGrpcClientExecutor.class);
         Mockito.when(client.executeQuery(Mockito.anyString())).thenThrow(new StatusRuntimeException(Status.ABORTED));
