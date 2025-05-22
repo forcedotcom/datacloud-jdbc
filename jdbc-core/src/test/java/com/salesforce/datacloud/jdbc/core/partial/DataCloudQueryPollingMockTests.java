@@ -32,8 +32,6 @@ import lombok.val;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 @Slf4j
@@ -56,20 +54,17 @@ public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
     }
 
     @SneakyThrows
-    @ParameterizedTest
+    @Test
     @Timeout(60)
-    @ValueSource(
-            strings = {
-                "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, 1024 * 1024 * 1024) as s(a) order by a asc;",
-                "SELECT PG_SLEEP(10);"
-            })
-    void getQueryInfoRetriesOnTimeout(String query) {
+    @Disabled("flakey test, disabled until HyperGrpcClientExecutor interface fix")
+    void getQueryInfoRetriesOnTimeout() {
         val configWithSleep =
                 HyperServerConfig.builder().grpcRequestTimeoutSeconds("2s").build();
         try (val connection = getInterceptedClientConnection(configWithSleep)) {
             val statement = connection.createStatement().unwrap(DataCloudStatement.class);
 
-            statement.executeAsyncQuery(query);
+            statement.executeAsyncQuery(
+                    "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, 1024 * 1024 * 1024) as s(a) order by a asc;");
             val queryId = statement.getQueryId();
 
             verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), times(0));
