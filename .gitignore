@@ -27,6 +27,7 @@ pom.xml.bak
 .vscode
 .gradle
 .hyper
+.hyperd
 .kotlin
 bin
 out

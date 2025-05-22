@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
+import lombok.val;
 import org.junit.jupiter.api.Test;
 
 class QueryExceptionHandlerTest {
@@ -32,7 +33,9 @@ class QueryExceptionHandlerTest {
 
         assertInstanceOf(SQLException.class, actualException);
         assertEquals("42P01", actualException.getSQLState());
-        assertEquals("42P01: Table not found\n" + "DETAIL:\n" + "\nHINT:\n", actualException.getMessage());
+        val sep = System.lineSeparator();
+        assertEquals(
+                "42P01: Table not found" + sep + "DETAIL:" + sep + sep + "HINT:" + sep, actualException.getMessage());
         assertEquals(StatusRuntimeException.class, actualException.getCause().getClass());
     }
 

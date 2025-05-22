@@ -22,8 +22,86 @@ on:
       publish_pass:
         required: false
 
+env:
+  GRADLE_VERSION: "8.12"
+
 jobs:
-  build-and-publish:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      hyper_version: ${{ steps.get_version.outputs.hyper_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Get hyperd version
+        id: get_version
+        run: |
+          HYPER_VERSION=$(sed -n 's/^hyperApiVersion=\(.*\)/\1/p' gradle.properties)
+          echo "hyper_version=$HYPER_VERSION" >> $GITHUB_OUTPUT
+
+  build:
+    needs: prepare
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - run: git fetch --no-tags --depth=1 origin main
+      - name: Setup Java with 8 and 17 toolchains
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: |
+            8
+            17
+      - name: Cache hyperd zip
+        uses: actions/cache@v3
+        with:
+          path: .hyper/hyper-${{ needs.prepare.outputs.hyper_version }}.zip
+          key: ${{ runner.os }}-hyper-${{ needs.prepare.outputs.hyper_version }}
+          restore-keys: ${{ runner.os }}-hyper-${{ needs.prepare.outputs.hyper_version }}
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          dependency-graph: generate-and-submit
+          build-scan-publish: true
+          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          build-scan-terms-of-use-agree: "yes"
+          gradle-version: ${{ env.GRADLE_VERSION }}
+      - name: Extract Hyper
+        id: extract_hyper
+        run: ./gradlew extractHyper
+      - name: Gradle build (with version)
+        id: build-and-test
+        run: |
+          echo "build and test with version='${{ inputs.version }}'"
+          ./gradlew clean build --no-build-cache --rerun-tasks
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+      - name: Look at files in verification
+        if: ${{ failure() }}
+        uses: jaywcjlove/github-action-folder-tree@main
+        with:
+          path: .
+          exclude: ".gradle|build|bin|.git"
+          depth: 3
+      - name: Upload hyper logs on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            build/hyperd/*.log
+          retention-days: 5
+
+  publish:
+    needs: [ prepare, build ]
+    if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,57 +115,15 @@ jobs:
           java-version: |
             8
             17
-      - name: Get hyperd version
-        run: |
-          HYPER_VERSION=$(sed -n 's/^hyperApiVersion=\(.*\)/\1/p' gradle.properties)
-          echo "HYPER_VERSION=$HYPER_VERSION" >> $GITHUB_ENV
-      - name: Cache hyperd zip
-        uses: actions/cache@v3
-        with:
-          path: build/hyper-${{ env.HYPER_VERSION }}.zip
-          key: ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
-          restore-keys: ${{ runner.os }}-hyper-${{ env.HYPER_VERSION }}
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          dependency-graph: generate-and-submit
-          build-scan-publish: true
-          build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
-          build-scan-terms-of-use-agree: "yes"
-          gradle-version: "8.12"
-      - name: Gradle build
-        id: build
-        run: |
-          if [[ "${{ inputs.version }}" != "" ]]; then
-            echo "Version specified, running clean build with no cache for ${{ inputs.version }}"
-            gradle clean check --no-build-cache --rerun-tasks
-          else
-            echo "No version specified, running normal build"
-            gradle clean check -Dorg.slf4j.simpleLogger.defaultLogLevel=error
-          fi
-        env:
-          RELEASE_VERSION: ${{ inputs.version }}
-      - name: Publish on release
-        id: publish
-        if: ${{ inputs.publish && (success() || steps.build.outcome == 'success') }}
+          gradle-version: ${{ env.GRADLE_VERSION }}
+      - name: Publish to Maven Central
         env:
           RELEASE_VERSION: ${{ inputs.version }}
           OSSRH_USERNAME: ${{ secrets.publish_user }}
           OSSRH_PASSWORD: ${{ secrets.publish_pass }}
-          # https://docs.gradle.org/current/userguide/signing_plugin.html#sec:in-memory-keys
-          # https://central.sonatype.org/publish/requirements/gpg/#generating-a-key-pair
-          # gpg --export-secret-key --armor <key id> | pbcopy
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.signing_key }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.signing_pass }}
-        run: gradle publishAllPublicationsToMavenCentralRepository --no-scan --no-configuration-cache -Dorg.slf4j.simpleLogger.defaultLogLevel=error
-      - name: Look at files in verification
-        if: ${{ failure() || steps.build.outcome == 'failure' || steps.publish.outcome == 'failure' }}
-        run: ls -lR verification
-      - name: Upload hyper logs on failure
-        if: ${{ failure() || steps.build.outcome == 'failure' || steps.publish.outcome == 'failure' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            build/hyperd/*.log
-          retention-days: 5
+        run: ./gradlew publishAllPublicationsToMavenCentralRepository -x test --no-scan --no-configuration-cache -Dorg.slf4j.simpleLogger.defaultLogLevel=error
