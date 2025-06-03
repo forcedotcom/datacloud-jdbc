@@ -135,11 +135,11 @@ public class PostgresReferenceValidationTest {
     }
 
     /**
-     * Loads baseline entries from the baseline.json resource file.
+     * Loads baseline entries from the reference.json resource file.
      */
     private static List<ReferenceEntry> loadReferenceEntries() throws IOException {
         try (InputStream inputStream =
-                PostgresReferenceGenerator.class.getClassLoader().getResourceAsStream("baseline.json")) {
+                PostgresReferenceGenerator.class.getClassLoader().getResourceAsStream("reference.json")) {
             if (inputStream == null) {
                 throw new IOException("Could not find baseline.json in resources");
             }

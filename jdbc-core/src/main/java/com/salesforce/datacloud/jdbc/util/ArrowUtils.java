@@ -105,8 +105,8 @@ public class ArrowUtils {
 
             @Override
             public ColumnType visit(ArrowType.List list) {
-                val elementType = field.getChildren().get(0).getType();
-                return new ColumnType(JDBCType.ARRAY, toColumnType(Field.nullable("", elementType)));
+                val elementField = field.getChildren().get(0);
+                return new ColumnType(JDBCType.ARRAY, toColumnType(elementField));
             }
 
             @Override
