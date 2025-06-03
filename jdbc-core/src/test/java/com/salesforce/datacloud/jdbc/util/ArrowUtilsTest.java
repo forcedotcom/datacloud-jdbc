@@ -38,7 +38,6 @@ import java.util.stream.Stream;
 import lombok.val;
 import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
-import org.apache.arrow.vector.types.IntervalUnit;
 import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
@@ -143,10 +142,8 @@ class ArrowUtilsTest {
                 Arguments.of(new ArrowType.Utf8(), Types.VARCHAR),
                 Arguments.of(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE), Types.FLOAT),
                 Arguments.of(new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE), Types.DOUBLE),
-                Arguments.of(new ArrowType.LargeUtf8(), Types.LONGVARCHAR),
                 Arguments.of(new ArrowType.Binary(), Types.VARBINARY),
                 Arguments.of(new ArrowType.FixedSizeBinary(8), Types.BINARY),
-                Arguments.of(new ArrowType.LargeBinary(), Types.LONGVARBINARY),
                 Arguments.of(new ArrowType.Decimal(1, 1, 128), Types.DECIMAL),
                 Arguments.of(new ArrowType.Date(DateUnit.DAY), Types.DATE),
                 Arguments.of(new ArrowType.Time(TimeUnit.MICROSECOND, 64), Types.TIME),
@@ -154,17 +151,14 @@ class ArrowUtilsTest {
                 Arguments.of(new ArrowType.List(), Types.ARRAY),
                 Arguments.of(new ArrowType.LargeList(), Types.ARRAY),
                 Arguments.of(new ArrowType.FixedSizeList(1), Types.ARRAY),
-                Arguments.of(new ArrowType.Map(true), Types.JAVA_OBJECT),
-                Arguments.of(new ArrowType.Duration(TimeUnit.MICROSECOND), Types.JAVA_OBJECT),
-                Arguments.of(new ArrowType.Interval(IntervalUnit.DAY_TIME), Types.JAVA_OBJECT),
-                Arguments.of(new ArrowType.Struct(), Types.STRUCT),
                 Arguments.of(new ArrowType.Null(), Types.NULL));
     }
 
     @ParameterizedTest
     @MethodSource("arrowTypes")
     void testGetSQLTypeFromArrowTypes(ArrowType arrowType, int expectedSqlType) {
-        softly.assertThat(ArrowUtils.getSQLTypeFromArrowType(arrowType)).isEqualTo(expectedSqlType);
+        softly.assertThat(ArrowUtils.toColumnType(Field.nullable("", arrowType)).getType().getVendorTypeNumber())
+                .isEqualTo(expectedSqlType);
     }
 
     @Test

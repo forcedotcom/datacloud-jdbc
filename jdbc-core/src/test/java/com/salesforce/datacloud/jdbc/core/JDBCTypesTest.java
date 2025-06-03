@@ -1,0 +1,274 @@
+/*
+ * Copyright (c) 2024, Salesforce, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.salesforce.datacloud.jdbc.core;
+
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static java.util.Objects.requireNonNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.reference.ReferenceEntry;
+import com.salesforce.datacloud.reference.ColumnMetadata;
+import java.nio.file.Paths;
+import java.sql.JDBCType;
+import java.util.List;
+import java.util.stream.Stream;
+import lombok.SneakyThrows;
+import lombok.val;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+@ExtendWith(HyperTestBase.class)
+public class JDBCTypesTest {
+
+    /**
+     * Loads baseline entries from the baseline.json file.
+     *
+     * @return Stream of ReferenceEntry objects
+     */
+    @SneakyThrows
+    public static Stream<ReferenceEntry> getBaselineEntries() {
+        val baselineFile = Paths.get(requireNonNull(ReferenceEntry.class.getResource("/reference.json"))
+                        .toURI())
+                .toFile();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        val baselineEntries = objectMapper.readValue(baselineFile, new TypeReference<List<ReferenceEntry>>() {});
+
+        for (ReferenceEntry e : baselineEntries) {
+            for (ColumnMetadata c : e.getColumnMetadata()) {
+                // The JDBC default is to have uppercase type names
+                c.setColumnTypeName(c.getColumnTypeName().toUpperCase());
+                // Change from Postgres specific type names to JDBC type names
+                if ("INT8".equals(c.getColumnTypeName())) {
+                    c.setColumnTypeName(JDBCType.BIGINT.getName());
+                } else if ("INT2".equals(c.getColumnTypeName())) {
+                    c.setColumnTypeName(JDBCType.SMALLINT.getName());
+                } else if ("INT4".equals(c.getColumnTypeName())) {
+                    c.setColumnTypeName(JDBCType.INTEGER.getName());
+                } else if ("FLOAT8".equals(c.getColumnTypeName())) {
+                    c.setColumnTypeName(JDBCType.DOUBLE.getName());
+                } else if ("FLOAT4".equals(c.getColumnTypeName())) {
+                    c.setColumnTypeName(JDBCType.FLOAT.getName());
+                } else if ("TEXT".equals(c.getColumnTypeName())) {
+                    c.setColumnTypeName(JDBCType.VARCHAR.getName());
+                } else if ("BPCHAR".equals(c.getColumnTypeName())) {
+                    c.setColumnTypeName(JDBCType.CHAR.getName());
+                }
+                // TimestampTz was only added in Java 1.8, the Postgres JDBC driver doesn't use that type number yet even though the typename is TIMESTAMPTZ
+                if (JDBCType.TIMESTAMP.getVendorTypeNumber().equals(c.getColumnType()) && "TIMESTAMPTZ".equals(c.getColumnTypeName())) {
+                    c.setColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE.getVendorTypeNumber());
+                    c.setColumnTypeName(JDBCType.TIMESTAMP_WITH_TIMEZONE.getName());
+                }
+                // Both `Numeric` and `Decimal` can be used, keep using `Decimal` to avoid soft breaking consumers of older versions
+                if (JDBCType.NUMERIC.getVendorTypeNumber().equals(c.getColumnType())) {
+                    c.setColumnType(JDBCType.DECIMAL.getVendorTypeNumber());
+                    c.setColumnTypeName(JDBCType.DECIMAL.getName());
+                }
+                // Same reason for REAL vs FLOAT
+                if (JDBCType.REAL.getVendorTypeNumber().equals(c.getColumnType())) {
+                    c.setColumnType(JDBCType.FLOAT.getVendorTypeNumber());
+                    c.setColumnTypeName(JDBCType.FLOAT.getName());
+                }
+                // Same reason for BINARY vs VARBINARY
+                if (JDBCType.BINARY.getVendorTypeNumber().equals(c.getColumnType())) {
+                    c.setColumnType(JDBCType.VARBINARY.getVendorTypeNumber());
+                    c.setColumnTypeName(JDBCType.VARBINARY.getName());
+                }
+                // We use boolean instead of bit
+                if (JDBCType.BIT.getVendorTypeNumber().equals(c.getColumnType())) {
+                    c.setColumnType(JDBCType.BOOLEAN.getVendorTypeNumber());
+                    c.setColumnTypeName(JDBCType.BOOLEAN.getName());
+                }
+                // We don't have an custom representation for the SQL JSON type
+                if (JDBCType.OTHER.getVendorTypeNumber().equals(c.getColumnType()) && "JSON".equals(c.getColumnTypeName())) {
+                    c.setColumnType(JDBCType.VARCHAR.getVendorTypeNumber());
+                    c.setColumnTypeName(JDBCType.VARCHAR.getName());
+                }
+                // We don't use custom names for array types
+                if (JDBCType.ARRAY.getVendorTypeNumber().equals(c.getColumnType())) {
+                    c.setColumnTypeName(JDBCType.ARRAY.getName());
+                }
+            }
+        }
+
+        return baselineEntries.stream();
+    }
+
+    /**
+     * Tests DataCloudResultSet metadata against PostgreSQL baseline expectations.
+     * This validates that our JDBC driver produces the same metadata as PostgreSQL.
+     */
+    @ParameterizedTest
+    @MethodSource("getBaselineEntries")
+    @SneakyThrows
+    public void testMetadataAgainstBaseline(ReferenceEntry ReferenceEntry) {
+        try (DataCloudConnection conn = getHyperQueryConnection()) {
+            val stmt = (DataCloudStatement) conn.createStatement();
+
+            try (DataCloudResultSet rs = (DataCloudResultSet) stmt.executeQuery(ReferenceEntry.getQuery())) {
+                val metadata = rs.getMetaData();
+                val expectedColumns = ReferenceEntry.getColumnMetadata();
+
+                // Validate column count matches
+                assertEquals(expectedColumns.size(), metadata.getColumnCount(),
+                    "Column count mismatch for query: " + ReferenceEntry.getQuery());
+
+                // Validate each column's metadata
+                for (int i = 0; i < expectedColumns.size(); i++) {
+                    int columnIndex = i + 1; // JDBC is 1-based
+                    ColumnMetadata expected = expectedColumns.get(i);
+
+                    // Extract actual metadata from DataCloudResultSet
+                    ColumnMetadata actual = ColumnMetadata.fromResultSetMetaData(metadata, columnIndex);
+
+                    // Compare key metadata fields
+                    validateColumnMetadata(expected, actual, ReferenceEntry.getQuery(), columnIndex);
+                }
+
+            } catch (Exception e) {
+                System.out.println("Failed to execute query: " + ReferenceEntry.getQuery());
+                System.out.println("Error: " + e.getMessage());
+                // Skip queries that fail to execute - these might be PostgreSQL-specific
+                // In production, we'd want to catalog which queries work vs don't work
+                throw(e);
+            }
+        }
+    }
+
+    /**
+     * Validates that actual column metadata matches expected baseline metadata.
+     *
+     * @param expected Expected metadata from PostgreSQL baseline
+     * @param actual Actual metadata from DataCloudResultSet
+     * @param query The SQL query being tested
+     * @param columnIndex The column index (1-based)
+     */
+    private void validateColumnMetadata(ColumnMetadata expected, ColumnMetadata actual, String query, int columnIndex) {
+        String context = String.format("Query: %s, Column: %d", query, columnIndex);
+        // Core type information - these should match exactly for compatibility
+        assertEquals(expected.getColumnType(), actual.getColumnType(),
+            context + " - Column type mismatch");
+
+        assertEquals(expected.getColumnTypeName(), actual.getColumnTypeName(),
+            context + " - Column type name mismatch");
+
+        // Precision and scale
+        assertEquals(expected.getPrecision(), actual.getPrecision(),
+            context + " - Precision mismatch");
+        assertEquals(expected.getScale(), actual.getScale(),
+            context + " - Scale mismatch");
+
+        // Nullability
+        assertEquals(expected.getIsNullable(), actual.getIsNullable(),
+            context + " - Nullability mismatch");
+
+        // Boolean flags - these are important for JDBC behavior
+        assertEquals(expected.isAutoIncrement(), actual.isAutoIncrement(),
+            context + " - Auto increment mismatch");
+        assertEquals(expected.isCaseSensitive(), actual.isCaseSensitive(),
+            context + " - Case sensitivity mismatch");
+        assertEquals(expected.isCurrency(), actual.isCurrency(),
+            context + " - Currency flag mismatch");
+        assertEquals(expected.isSigned(), actual.isSigned(),
+            context + " - Signed flag mismatch");
+
+        // Write/search capabilities
+        assertEquals(expected.isReadOnly(), actual.isReadOnly(),
+            context + " - Read-only flag mismatch");
+        assertEquals(expected.isSearchable(), actual.isSearchable(),
+            context + " - Searchable flag mismatch");
+
+        // Object level check to cover fields that are not individually validated, we reset those values that we explicitly don't want to test
+        expected.setColumnName("");
+        actual.setColumnName("");
+        expected.setColumnLabel("");
+        actual.setColumnLabel("");
+        expected.setCatalogName("");
+        actual.setCatalogName("");
+        expected.setSchemaName("");
+        actual.setSchemaName("");
+        expected.setTableName("");
+        actual.setTableName("");
+        assertEquals(expected, actual);
+    }
+
+
+    /*
+    @SneakyThrows
+    public static Stream<TypeIdentityExpectation> getTypeIdentityExpectations() {
+        val expectationsFile = Paths.get(requireNonNull(HyperTestBase.class.getResource("/typevalues.json"))
+                        .toURI())
+                .toFile();
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        val expectations =
+                objectMapper.readValue(expectationsFile, new TypeReference<List<TypeIdentityExpectation>>() {});
+        return expectations.stream()
+                .filter(e -> !((e.type.contains("regconfig")
+                        || e.type.contains("regproc")
+                        || e.type.contains("regprocedure")
+                        || e.type.contains("regclass")
+                        || e.type.contains("regoper")
+                        || e.type.contains("regtype")
+                        || e.type.contains("regdictionary")
+                        || e.type.contains("interval"))))
+                // Handle array only later
+                .filter(e -> !e.type.contains("array"))
+                .map(e -> {
+                    switch (e.type) {
+                        case "timestamptz":
+                            // JDBC only supports timestamp as type
+                            e.jdbcResultType = "timestamp";
+                            break;
+                        case "text":
+                            e.jdbcResultType = "VARCHAR";
+                            break;
+                        case "tabgeography":
+                            e.jdbcResultType = "VARBINARY";
+                            break;
+                        case "json":
+                            e.jdbcResultType = "VARCHAR";
+                            break;
+                        case "bytea":
+                            e.jdbcResultType = "VARBINARY";
+                            break;
+                        case "double precision":
+                            e.jdbcResultType = "DOUBLE";
+                            break;
+                        case "real":
+                            e.jdbcResultType = "FLOAT";
+                            break;
+                        default:
+                            if (e.type.startsWith("numeric")) {
+                                e.jdbcResultType = "DECIMAL";
+                            } else if (e.type.startsWith("character")) {
+                                // All the different character variants map to "VARCHAR" in the JDBC standard.
+                                e.jdbcResultType = "VARCHAR";
+                            } else {
+                                e.jdbcResultType = e.type;
+                            }
+                            break;
+                    }
+                    e.jdbcResultType = e.jdbcResultType.toUpperCase();
+                    return e;
+                });
+    }
+                */
+}

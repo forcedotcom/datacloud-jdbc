@@ -60,7 +60,23 @@ public class ArrowUtils {
         return fields.stream()
                 .map(field -> {
                     try {
-                        return fieldToColumnMetaData(field, index.getAndIncrement());
+                        ColumnType type = toColumnType(field);
+                        val avaticaType = getAvaticaType(type).toProto();
+
+                        final Common.ColumnMetaData.Builder builder = Common.ColumnMetaData.newBuilder()
+                                .setOrdinal(index.getAndIncrement())
+                                .setColumnName(field.getName())
+                                .setLabel(field.getName())
+                                .setType(avaticaType)
+                                .setPrecision(type.getPrecision())
+                                .setScale(type.getScale())
+                                .setCaseSensitive(type.isCaseSensitive())
+                                .setDisplaySize(type.getDisplaySize())
+                                .setSigned(type.isSigned())
+                                .setNullable(ResultSetMetaData.columnNullableUnknown)
+                                .setSearchable(true)
+                                .setWritable(true);
+                        return ColumnMetaData.fromProto(builder.build());
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
                     }
@@ -68,13 +84,173 @@ public class ArrowUtils {
                 .collect(Collectors.toList());
     }
 
-    private static ColumnMetaData fieldToColumnMetaData(Field field, int index) throws SQLException {
-        final Common.ColumnMetaData.Builder builder = Common.ColumnMetaData.newBuilder()
-                .setOrdinal(index)
-                .setColumnName(field.getName())
-                .setLabel(field.getName())
-                .setType(getAvaticaType(field.getType()).toProto());
-        return ColumnMetaData.fromProto(builder.build());
+    /** Infer the JDBC ColumnType from the Arrow result metadata. */
+    public static ColumnType toColumnType(Field field) {
+        val arrowType = field.getType();
+        // Use TypeVisitor to directly get the type specific objects for introspection
+        return arrowType.accept(new ArrowType.ArrowTypeVisitor<ColumnType>() {
+            private IllegalArgumentException unsupportedTypeException() {
+                return new IllegalArgumentException("Unsupported Arrow type: " + arrowType);
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Null aNull) {
+                return new ColumnType(JDBCType.NULL);
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Struct struct) {
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.List list) {
+                val elementType = field.getChildren().get(0).getType();
+                return new ColumnType(JDBCType.ARRAY, toColumnType(Field.nullable("", elementType)));
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.LargeList largeList) {
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.FixedSizeList fixedSizeList) {
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Union union) {
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Map map) {
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Int anInt) {
+                switch (anInt.getBitWidth()) {
+                    case 8:
+                        return new ColumnType(JDBCType.TINYINT);
+                    case 16:
+                        return new ColumnType(JDBCType.SMALLINT);
+                    case 32:
+                        return new ColumnType(JDBCType.INTEGER);
+                    case 64:
+                        return new ColumnType(JDBCType.BIGINT);
+                    default:
+                        throw unsupportedTypeException();
+                }
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.FloatingPoint floatingPoint) {
+                switch (floatingPoint.getPrecision()) {
+                    case SINGLE:
+                        return new ColumnType(JDBCType.FLOAT);
+                    case DOUBLE:
+                        return new ColumnType(JDBCType.DOUBLE);
+                    case HALF:
+                        break;
+                }
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Utf8 utf8) {
+                val metadata = field.getMetadata();
+                if (metadata != null) {
+                    if ("Char".equals(metadata.get("hyper:type"))) {
+                        int precision = Integer.parseInt(metadata.get("hyper:max_string_length"));
+                        return new ColumnType(JDBCType.CHAR, precision, 0);
+                    } else if ("Char1".equals(metadata.get("hyper:type"))) {
+                        return new ColumnType(JDBCType.CHAR, 1, 0);
+                    } else if (metadata.containsKey("hyper:max_string_length")) {
+                        int precision = Integer.parseInt(metadata.get("hyper:max_string_length"));
+                        return new ColumnType(JDBCType.VARCHAR, precision, 0);
+                    }
+                }
+                return new ColumnType(JDBCType.VARCHAR, ColumnType.MAX_VARLEN_PRECISION, 0);
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Utf8View utf8View) {
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.LargeUtf8 largeUtf8) {
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Binary binary) {
+                return new ColumnType(JDBCType.VARBINARY);
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.BinaryView binaryView) {
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.LargeBinary largeBinary) {
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.FixedSizeBinary fixedSizeBinary) {
+                return new ColumnType(JDBCType.BINARY);
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Bool bool) {
+                return new ColumnType(JDBCType.BOOLEAN);
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Decimal decimal) {
+                return new ColumnType(JDBCType.DECIMAL, decimal.getPrecision(), decimal.getScale());
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Date date) {
+                return new ColumnType(JDBCType.DATE);
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Time time) {
+                return new ColumnType(JDBCType.TIME);
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Timestamp timestamp) {
+                if (timestamp.getTimezone() != null) {
+                    return new ColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE);
+                } else {
+                    return new ColumnType(JDBCType.TIMESTAMP);
+                }
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Interval interval) {
+                // TODO: Interval support will need to come in a separate PR
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.Duration duration) {
+                // TODO: Duration support will need to come in a separate PR
+                throw unsupportedTypeException();
+            }
+
+            @Override
+            public ColumnType visit(ArrowType.ListView listView) {
+                throw unsupportedTypeException();
+            }
+        });
     }
 
     /** Converts from JDBC metadata to Avatica columns. */
@@ -87,7 +263,8 @@ public class ArrowUtils {
                 .limit(maxSize)
                 .map(i -> {
                     try {
-                        val avaticaType = getAvaticaType(metaData.getColumnType(i), metaData.getColumnTypeName(i));
+                        val columnType = new ColumnType(JDBCType.valueOf(metaData.getColumnType(i)));
+                        val avaticaType = getAvaticaType(columnType);
                         return new ColumnMetaData(
                                 i - 1,
                                 metaData.isAutoIncrement(i),
@@ -224,98 +401,17 @@ public class ArrowUtils {
         }
     }
 
-    public static int getSQLTypeFromArrowType(ArrowType arrowType) {
-        val typeId = arrowType.getTypeID();
-        switch (typeId) {
-            case Int:
-                return getSQLTypeForInt((ArrowType.Int) arrowType);
-            case Bool:
-                return Types.BOOLEAN;
-            case Utf8:
-                return Types.VARCHAR;
-            case LargeUtf8:
-                return Types.LONGVARCHAR;
-            case Binary:
-                return Types.VARBINARY;
-            case FixedSizeBinary:
-                return Types.BINARY;
-            case LargeBinary:
-                return Types.LONGVARBINARY;
-            case FloatingPoint:
-                return getSQLTypeForFloatingPoint((ArrowType.FloatingPoint) arrowType);
-            case Decimal:
-                return Types.DECIMAL;
-            case Date:
-                return Types.DATE;
-            case Time:
-                return Types.TIME;
-            case Timestamp:
-                return Types.TIMESTAMP;
-            case List:
-            case LargeList:
-            case FixedSizeList:
-                return Types.ARRAY;
-            case Map:
-            case Duration:
-            case Union:
-            case Interval:
-                return Types.JAVA_OBJECT;
-            case Struct:
-                return Types.STRUCT;
-            case NONE:
-            case Null:
-                return Types.NULL;
-            default:
-                break;
-        }
-        throw new IllegalArgumentException("Unsupported Arrow type: " + arrowType);
-    }
-
-    private int getSQLTypeForInt(ArrowType.Int arrowType) {
-        val bitWidth = arrowType.getBitWidth();
-        switch (bitWidth) {
-            case 8:
-                return Types.TINYINT;
-            case 16:
-                return Types.SMALLINT;
-            case 32:
-                return Types.INTEGER;
-            case 64:
-                return Types.BIGINT;
-            default:
-                break;
-        }
-        throw new IllegalArgumentException("Unsupported Arrow Integer Bit Width: " + bitWidth);
-    }
-
-    private int getSQLTypeForFloatingPoint(ArrowType.FloatingPoint arrowType) {
-        val precision = arrowType.getPrecision();
-        switch (precision) {
-            case SINGLE:
-                return Types.FLOAT;
-            case DOUBLE:
-                return Types.DOUBLE;
-            default:
-                break;
-        }
-        throw new IllegalArgumentException("Unsupported Arrow Floating Point: " + precision);
-    }
-
-    private static ColumnMetaData.AvaticaType getAvaticaType(ArrowType arrowType) throws SQLException {
-        val sqlType = getSQLTypeFromArrowType(arrowType);
-        return getAvaticaType(sqlType, JDBCType.valueOf(sqlType).getName());
-    }
-
-    private static ColumnMetaData.AvaticaType getAvaticaType(int type, String typeName) throws SQLException {
+    private static ColumnMetaData.AvaticaType getAvaticaType(ColumnType columnType) throws SQLException {
         final ColumnMetaData.AvaticaType avaticaType;
-        final SqlType sqlType = SqlType.valueOf(type);
+        int typeId = columnType.getType().getVendorTypeNumber();
+        String typeName = columnType.getType().getName();
+        final SqlType sqlType = SqlType.valueOf(typeId);
         final ColumnMetaData.Rep rep = ColumnMetaData.Rep.of(sqlType.internal);
-        if (sqlType == SqlType.ARRAY || sqlType == SqlType.STRUCT || sqlType == SqlType.MULTISET) {
-            ColumnMetaData.AvaticaType arrayValueType =
-                    ColumnMetaData.scalar(java.sql.Types.JAVA_OBJECT, typeName, ColumnMetaData.Rep.OBJECT);
+        if (sqlType == SqlType.ARRAY) {
+            ColumnMetaData.AvaticaType arrayValueType = getAvaticaType(columnType.getArrayElementType());
             avaticaType = ColumnMetaData.array(arrayValueType, typeName, rep);
         } else {
-            avaticaType = ColumnMetaData.scalar(type, typeName, rep);
+            avaticaType = ColumnMetaData.scalar(typeId, typeName, rep);
         }
         return avaticaType;
     }
