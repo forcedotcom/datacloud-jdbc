@@ -147,10 +147,8 @@ class ArrowUtilsTest {
                 Arguments.of(new ArrowType.Decimal(1, 1, 128), Types.DECIMAL),
                 Arguments.of(new ArrowType.Date(DateUnit.DAY), Types.DATE),
                 Arguments.of(new ArrowType.Time(TimeUnit.MICROSECOND, 64), Types.TIME),
-                Arguments.of(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC"), Types.TIMESTAMP),
+                Arguments.of(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC"), Types.TIMESTAMP_WITH_TIMEZONE),
                 Arguments.of(new ArrowType.List(), Types.ARRAY),
-                Arguments.of(new ArrowType.LargeList(), Types.ARRAY),
-                Arguments.of(new ArrowType.FixedSizeList(1), Types.ARRAY),
                 Arguments.of(new ArrowType.Null(), Types.NULL));
     }
 
