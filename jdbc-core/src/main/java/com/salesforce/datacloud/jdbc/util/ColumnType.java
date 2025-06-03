@@ -185,10 +185,12 @@ public class ColumnType {
         switch (type) {
             case CHAR:
             case VARBINARY:
-            case VARCHAR: return true;
+            case VARCHAR:
+                return true;
             case ARRAY:
                 return arrayElementType.isCaseSensitive();
-            default: return false;
+            default:
+                return false;
         }
     }
 
@@ -222,13 +224,13 @@ public class ColumnType {
             case SMALLINT:
             case INTEGER:
             case BIGINT:
-                return getPrecision()+1;
+                return getPrecision() + 1;
             case DECIMAL:
             case NUMERIC:
                 if (scale > 0) {
-                    return getPrecision()+2;
+                    return getPrecision() + 2;
                 } else {
-                    return getPrecision()+1;
+                    return getPrecision() + 1;
                 }
             case FLOAT:
             case REAL:

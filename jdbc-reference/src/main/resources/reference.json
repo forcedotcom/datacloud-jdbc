@@ -574,14 +574,14 @@
     "writable" : true
   } ]
 }, {
-  "query" : "select NULL::varchar[]",
+  "query" : "select NULL::varchar(10)[]",
   "columnMetadata" : [ {
     "columnName" : "varchar",
     "columnLabel" : "varchar",
     "columnType" : 2003,
     "columnTypeName" : "_varchar",
-    "columnDisplaySize" : 2147483647,
-    "precision" : 2147483647,
+    "columnDisplaySize" : 10,
+    "precision" : 10,
     "scale" : 0,
     "isNullable" : 2,
     "catalogName" : "",
@@ -689,14 +689,14 @@
     "writable" : true
   } ]
 }, {
-  "query" : "select NULL::char[]",
+  "query" : "select NULL::char(10)[]",
   "columnMetadata" : [ {
     "columnName" : "bpchar",
     "columnLabel" : "bpchar",
     "columnType" : 2003,
     "columnTypeName" : "_bpchar",
-    "columnDisplaySize" : 1,
-    "precision" : 1,
+    "columnDisplaySize" : 10,
+    "precision" : 10,
     "scale" : 0,
     "isNullable" : 2,
     "catalogName" : "",
@@ -712,14 +712,14 @@
     "writable" : true
   } ]
 }, {
-  "query" : "select NULL::char[]",
+  "query" : "select NULL::char(1000)[]",
   "columnMetadata" : [ {
     "columnName" : "bpchar",
     "columnLabel" : "bpchar",
     "columnType" : 2003,
     "columnTypeName" : "_bpchar",
-    "columnDisplaySize" : 1,
-    "precision" : 1,
+    "columnDisplaySize" : 1000,
+    "precision" : 1000,
     "scale" : 0,
     "isNullable" : 2,
     "catalogName" : "",
@@ -873,14 +873,14 @@
     "writable" : true
   } ]
 }, {
-  "query" : "select NULL::numeric[]",
+  "query" : "select NULL::numeric(18)[]",
   "columnMetadata" : [ {
     "columnName" : "numeric",
     "columnLabel" : "numeric",
     "columnType" : 2003,
     "columnTypeName" : "_numeric",
-    "columnDisplaySize" : 131089,
-    "precision" : 0,
+    "columnDisplaySize" : 19,
+    "precision" : 18,
     "scale" : 0,
     "isNullable" : 2,
     "catalogName" : "",
@@ -896,15 +896,15 @@
     "writable" : true
   } ]
 }, {
-  "query" : "select NULL::numeric[]",
+  "query" : "select NULL::numeric(6, 1)[]",
   "columnMetadata" : [ {
     "columnName" : "numeric",
     "columnLabel" : "numeric",
     "columnType" : 2003,
     "columnTypeName" : "_numeric",
-    "columnDisplaySize" : 131089,
-    "precision" : 0,
-    "scale" : 0,
+    "columnDisplaySize" : 8,
+    "precision" : 6,
+    "scale" : 1,
     "isNullable" : 2,
     "catalogName" : "",
     "schemaName" : "",

@@ -15,19 +15,16 @@
  */
 package com.salesforce.datacloud.reference;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import java.io.InputStream;
+import java.util.List;
 import lombok.SneakyThrows;
-
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.InputStream;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for loading and validating the baseline.json file.
@@ -60,7 +57,8 @@ public class ReferenceJsonLoadingTest {
             assertNotNull(inputStream, "reference.json should exist");
 
             // Test that we can parse the JSON successfully
-            List<ReferenceEntry> entries = objectMapper.readValue(inputStream, new TypeReference<List<ReferenceEntry>>() {});
+            List<ReferenceEntry> entries =
+                    objectMapper.readValue(inputStream, new TypeReference<List<ReferenceEntry>>() {});
 
             assertNotNull(entries, "Parsed reference entries should not be null");
             assertFalse(entries.isEmpty(), "Reference entries should not be empty");

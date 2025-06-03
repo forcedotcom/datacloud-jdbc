@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import com.salesforce.datacloud.reference.ReferenceEntry;
 import com.salesforce.datacloud.reference.ColumnMetadata;
+import com.salesforce.datacloud.reference.ReferenceEntry;
 import java.nio.file.Paths;
 import java.sql.JDBCType;
 import java.util.List;
@@ -71,12 +71,15 @@ public class JDBCTypesTest {
                 } else if ("BPCHAR".equals(c.getColumnTypeName())) {
                     c.setColumnTypeName(JDBCType.CHAR.getName());
                 }
-                // TimestampTz was only added in Java 1.8, the Postgres JDBC driver doesn't use that type number yet even though the typename is TIMESTAMPTZ
-                if (JDBCType.TIMESTAMP.getVendorTypeNumber().equals(c.getColumnType()) && "TIMESTAMPTZ".equals(c.getColumnTypeName())) {
+                // TimestampTz was only added in Java 1.8, the Postgres JDBC driver doesn't use that type number yet
+                // even though the typename is TIMESTAMPTZ
+                if (JDBCType.TIMESTAMP.getVendorTypeNumber().equals(c.getColumnType())
+                        && "TIMESTAMPTZ".equals(c.getColumnTypeName())) {
                     c.setColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE.getVendorTypeNumber());
                     c.setColumnTypeName(JDBCType.TIMESTAMP_WITH_TIMEZONE.getName());
                 }
-                // Both `Numeric` and `Decimal` can be used, keep using `Decimal` to avoid soft breaking consumers of older versions
+                // Both `Numeric` and `Decimal` can be used, keep using `Decimal` to avoid soft breaking consumers of
+                // older versions
                 if (JDBCType.NUMERIC.getVendorTypeNumber().equals(c.getColumnType())) {
                     c.setColumnType(JDBCType.DECIMAL.getVendorTypeNumber());
                     c.setColumnTypeName(JDBCType.DECIMAL.getName());
@@ -97,7 +100,8 @@ public class JDBCTypesTest {
                     c.setColumnTypeName(JDBCType.BOOLEAN.getName());
                 }
                 // We don't have an custom representation for the SQL JSON type
-                if (JDBCType.OTHER.getVendorTypeNumber().equals(c.getColumnType()) && "JSON".equals(c.getColumnTypeName())) {
+                if (JDBCType.OTHER.getVendorTypeNumber().equals(c.getColumnType())
+                        && "JSON".equals(c.getColumnTypeName())) {
                     c.setColumnType(JDBCType.VARCHAR.getVendorTypeNumber());
                     c.setColumnTypeName(JDBCType.VARCHAR.getName());
                 }
@@ -127,8 +131,10 @@ public class JDBCTypesTest {
                 val expectedColumns = ReferenceEntry.getColumnMetadata();
 
                 // Validate column count matches
-                assertEquals(expectedColumns.size(), metadata.getColumnCount(),
-                    "Column count mismatch for query: " + ReferenceEntry.getQuery());
+                assertEquals(
+                        expectedColumns.size(),
+                        metadata.getColumnCount(),
+                        "Column count mismatch for query: " + ReferenceEntry.getQuery());
 
                 // Validate each column's metadata
                 for (int i = 0; i < expectedColumns.size(); i++) {
@@ -147,7 +153,7 @@ public class JDBCTypesTest {
                 System.out.println("Error: " + e.getMessage());
                 // Skip queries that fail to execute - these might be PostgreSQL-specific
                 // In production, we'd want to catalog which queries work vs don't work
-                throw(e);
+                throw (e);
             }
         }
     }
@@ -163,39 +169,30 @@ public class JDBCTypesTest {
     private void validateColumnMetadata(ColumnMetadata expected, ColumnMetadata actual, String query, int columnIndex) {
         String context = String.format("Query: %s, Column: %d", query, columnIndex);
         // Core type information - these should match exactly for compatibility
-        assertEquals(expected.getColumnType(), actual.getColumnType(),
-            context + " - Column type mismatch");
+        assertEquals(expected.getColumnType(), actual.getColumnType(), context + " - Column type mismatch");
 
-        assertEquals(expected.getColumnTypeName(), actual.getColumnTypeName(),
-            context + " - Column type name mismatch");
+        assertEquals(
+                expected.getColumnTypeName(), actual.getColumnTypeName(), context + " - Column type name mismatch");
 
         // Precision and scale
-        assertEquals(expected.getPrecision(), actual.getPrecision(),
-            context + " - Precision mismatch");
-        assertEquals(expected.getScale(), actual.getScale(),
-            context + " - Scale mismatch");
+        assertEquals(expected.getPrecision(), actual.getPrecision(), context + " - Precision mismatch");
+        assertEquals(expected.getScale(), actual.getScale(), context + " - Scale mismatch");
 
         // Nullability
-        assertEquals(expected.getIsNullable(), actual.getIsNullable(),
-            context + " - Nullability mismatch");
+        assertEquals(expected.getIsNullable(), actual.getIsNullable(), context + " - Nullability mismatch");
 
         // Boolean flags - these are important for JDBC behavior
-        assertEquals(expected.isAutoIncrement(), actual.isAutoIncrement(),
-            context + " - Auto increment mismatch");
-        assertEquals(expected.isCaseSensitive(), actual.isCaseSensitive(),
-            context + " - Case sensitivity mismatch");
-        assertEquals(expected.isCurrency(), actual.isCurrency(),
-            context + " - Currency flag mismatch");
-        assertEquals(expected.isSigned(), actual.isSigned(),
-            context + " - Signed flag mismatch");
+        assertEquals(expected.isAutoIncrement(), actual.isAutoIncrement(), context + " - Auto increment mismatch");
+        assertEquals(expected.isCaseSensitive(), actual.isCaseSensitive(), context + " - Case sensitivity mismatch");
+        assertEquals(expected.isCurrency(), actual.isCurrency(), context + " - Currency flag mismatch");
+        assertEquals(expected.isSigned(), actual.isSigned(), context + " - Signed flag mismatch");
 
         // Write/search capabilities
-        assertEquals(expected.isReadOnly(), actual.isReadOnly(),
-            context + " - Read-only flag mismatch");
-        assertEquals(expected.isSearchable(), actual.isSearchable(),
-            context + " - Searchable flag mismatch");
+        assertEquals(expected.isReadOnly(), actual.isReadOnly(), context + " - Read-only flag mismatch");
+        assertEquals(expected.isSearchable(), actual.isSearchable(), context + " - Searchable flag mismatch");
 
-        // Object level check to cover fields that are not individually validated, we reset those values that we explicitly don't want to test
+        // Object level check to cover fields that are not individually validated, we reset those values that we
+        // explicitly don't want to test
         expected.setColumnName("");
         actual.setColumnName("");
         expected.setColumnLabel("");
@@ -208,7 +205,6 @@ public class JDBCTypesTest {
         actual.setTableName("");
         assertEquals(expected, actual);
     }
-
 
     /*
     @SneakyThrows

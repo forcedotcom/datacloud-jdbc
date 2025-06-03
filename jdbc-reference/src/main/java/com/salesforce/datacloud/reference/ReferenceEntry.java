@@ -15,11 +15,10 @@
  */
 package com.salesforce.datacloud.reference;
 
+import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
-
-import java.util.List;
 
 /**
  * Represents a baseline entry containing a SQL query and its associated column metadata.

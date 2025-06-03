@@ -15,11 +15,16 @@
  */
 package com.salesforce.datacloud.reference;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.*;
+import java.util.List;
+import java.util.stream.Stream;
 import lombok.SneakyThrows;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -27,14 +32,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.sql.*;
-import java.util.List;
-import java.util.stream.Stream;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Manual unit test that validates the baseline.json expectations against a live
@@ -111,7 +108,9 @@ public class PostgresReferenceValidationTest {
                 ResultSetMetaData actualMetaData = resultSet.getMetaData();
 
                 // Validate column count
-                assertEquals(expectedMetadata.size(), actualMetaData.getColumnCount(),
+                assertEquals(
+                        expectedMetadata.size(),
+                        actualMetaData.getColumnCount(),
                         "Column count mismatch for query: " + sql);
 
                 // Validate each column's metadata
@@ -139,14 +138,13 @@ public class PostgresReferenceValidationTest {
      * Loads baseline entries from the baseline.json resource file.
      */
     private static List<ReferenceEntry> loadReferenceEntries() throws IOException {
-        try (InputStream inputStream = PostgresReferenceGenerator.class
-                .getClassLoader().getResourceAsStream("baseline.json")) {
+        try (InputStream inputStream =
+                PostgresReferenceGenerator.class.getClassLoader().getResourceAsStream("baseline.json")) {
             if (inputStream == null) {
                 throw new IOException("Could not find baseline.json in resources");
             }
 
-            return objectMapper.readValue(inputStream, new TypeReference<List<ReferenceEntry>>() {
-            });
+            return objectMapper.readValue(inputStream, new TypeReference<List<ReferenceEntry>>() {});
         }
     }
 }

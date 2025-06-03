@@ -15,14 +15,12 @@
  */
 package com.salesforce.datacloud.reference;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
-
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Represents metadata for a single column in a `ResultSetMetaData`.
@@ -41,23 +39,32 @@ public class ColumnMetadata {
     private int precision;
     private int scale;
     private int isNullable;
-    // We have to explicitly give names for boolean properties because Jackson auto name generation doesn't work for them
+    // We have to explicitly give names for boolean properties because Jackson auto name generation doesn't work for
+    // them
     @JsonProperty("autoIncrement")
     private boolean isAutoIncrement;
+
     @JsonProperty("caseSensitive")
     private boolean isCaseSensitive;
+
     @JsonProperty("currency")
     private boolean isCurrency;
+
     @JsonProperty("definitelyWritable")
     private boolean isDefinitelyWritable;
+
     @JsonProperty("readOnly")
     private boolean isReadOnly;
+
     @JsonProperty("searchable")
     private boolean isSearchable;
+
     @JsonProperty("signed")
     private boolean isSigned;
+
     @JsonProperty("writable")
     private boolean isWritable;
+
     private String catalogName;
     private String schemaName;
     private String tableName;

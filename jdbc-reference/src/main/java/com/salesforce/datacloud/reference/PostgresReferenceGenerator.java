@@ -24,7 +24,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,16 +63,16 @@ public class PostgresReferenceGenerator {
             // Load SQL commands from queries.txt file
             List<ProtocolValue> testValues = ProtocolValue.loadProtocolValues();
             List<String> sqlCommands = testValues.stream()
-                .filter(v -> v.getInterestingness() == ProtocolValue.Interestingness.Null)
-                .map(v -> {
-                    if (v.isSimpleType()) {
-                        return v.getSql();
-                    } else {
-                        String typeName = v.getArrayType().getInner().getTypeArray().get(0).toString().toLowerCase();
-                        return "select NULL::" + typeName + "[]";
-                    }
-                })
-                .collect(Collectors.toList());
+                    .filter(v -> v.getInterestingness() == ProtocolValue.Interestingness.Null)
+                    .map(v -> {
+                        if (v.isSimpleType()) {
+                            return v.getSql();
+                        } else {
+                            String typeName = v.getArrayType().getInner().getSqlTypeName();
+                            return "select NULL::" + typeName + "[]";
+                        }
+                    })
+                    .collect(Collectors.toList());
 
             // Establish connection and generate Reference
             try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
@@ -131,7 +130,8 @@ public class PostgresReferenceGenerator {
                                 "Added Reference entry for query {} with {} columns", i + 1, columnMetadataList.size());
                     }
                 } else {
-                    throw new RuntimeException("Query " + i + 1 + " did not return a result set. Only SELECT queries are expected. SQL: " + sql);
+                    throw new RuntimeException("Query " + i + 1
+                            + " did not return a result set. Only SELECT queries are expected. SQL: " + sql);
                 }
             } catch (SQLException e) {
                 logger.error(
@@ -139,9 +139,7 @@ public class PostgresReferenceGenerator {
             }
         }
 
-        logger.info(
-                "Reference collection completed. Total: {}",
-                sqlCommands.size());
+        logger.info("Reference collection completed. Total: {}", sqlCommands.size());
         return ReferenceEntries;
     }
 
@@ -174,7 +172,7 @@ public class PostgresReferenceGenerator {
      */
     private void writeReferenceToFile(List<ReferenceEntry> referenceEntries) throws IOException {
         // Get the resources directory path
-        Path resourcesPath = Paths.get( "src", "main", "resources", REFERENCE_FILE);
+        Path resourcesPath = Paths.get("src", "main", "resources", REFERENCE_FILE);
         System.out.println("Writing Reference to file: " + resourcesPath.toAbsolutePath());
 
         try {
