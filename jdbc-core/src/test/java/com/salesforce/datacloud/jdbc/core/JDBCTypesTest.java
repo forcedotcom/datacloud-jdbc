@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.reference.ColumnMetadata;
 import com.salesforce.datacloud.reference.ReferenceEntry;
-import java.nio.file.Paths;
 import java.sql.JDBCType;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,104 +44,106 @@ public class JDBCTypesTest {
      */
     @SneakyThrows
     public static Stream<ReferenceEntry> getBaselineEntries() {
-        val baselineFile = Paths.get(requireNonNull(ReferenceEntry.class.getResource("/reference.json"))
-                        .toURI())
-                .toFile();
-
         ObjectMapper objectMapper = new ObjectMapper();
-        val referenceEntries = objectMapper.readValue(baselineFile, new TypeReference<List<ReferenceEntry>>() {});
-        val testableEntries = new ArrayList<ReferenceEntry>();
 
-        for (ReferenceEntry e : referenceEntries) {
-            boolean isTestable = true;
-            for (ColumnMetadata c : e.getColumnMetadata()) {
-                // These types don't work in V3
-                if (c.getColumnTypeName().endsWith("regconfig")
-                        || c.getColumnTypeName().endsWith("regproc")
-                        || c.getColumnTypeName().endsWith("regprocedure")
-                        || c.getColumnTypeName().endsWith("regclass")
-                        || c.getColumnTypeName().endsWith("regoper")
-                        || c.getColumnTypeName().endsWith("regoperator")
-                        || c.getColumnTypeName().endsWith("regtype")
-                        || c.getColumnTypeName().endsWith("regdictionary")) {
-                    isTestable = false;
+        try (val inputStream = requireNonNull(
+                ReferenceEntry.class.getResourceAsStream("/reference.json"),
+                "Could not find /reference.json resource")) {
+            val referenceEntries = objectMapper.readValue(inputStream, new TypeReference<List<ReferenceEntry>>() {});
+            val testableEntries = new ArrayList<ReferenceEntry>();
+
+            for (ReferenceEntry e : referenceEntries) {
+                boolean isTestable = true;
+                for (ColumnMetadata c : e.getColumnMetadata()) {
+                    // These types don't work in V3
+                    if (c.getColumnTypeName().endsWith("regconfig")
+                            || c.getColumnTypeName().endsWith("regproc")
+                            || c.getColumnTypeName().endsWith("regprocedure")
+                            || c.getColumnTypeName().endsWith("regclass")
+                            || c.getColumnTypeName().endsWith("regoper")
+                            || c.getColumnTypeName().endsWith("regoperator")
+                            || c.getColumnTypeName().endsWith("regtype")
+                            || c.getColumnTypeName().endsWith("regdictionary")) {
+                        isTestable = false;
+                    }
+                    // This type isn't supported by the driver yet
+                    if (c.getColumnTypeName().endsWith("interval")) {
+                        isTestable = false;
+                    }
+                    // These types have a bug in Hyper
+                    else if (c.getColumnTypeName().equals("_timestamptz")
+                            || c.getColumnTypeName().equals("_timestamp")) {
+                        isTestable = false;
+                    }
+                    // This type behaves differently between Hyper and Postgres and is not worth it to test
+                    else if (c.getColumnTypeName().endsWith("oid")) {
+                        isTestable = false;
+                    }
+                    // The JDBC default is to have uppercase type names
+                    c.setColumnTypeName(c.getColumnTypeName().toUpperCase());
+                    // Change from Postgres specific type names to JDBC type names
+                    if ("INT8".equals(c.getColumnTypeName())) {
+                        c.setColumnTypeName(JDBCType.BIGINT.getName());
+                    } else if ("INT2".equals(c.getColumnTypeName())) {
+                        c.setColumnTypeName(JDBCType.SMALLINT.getName());
+                    } else if ("INT4".equals(c.getColumnTypeName())) {
+                        c.setColumnTypeName(JDBCType.INTEGER.getName());
+                    } else if ("FLOAT8".equals(c.getColumnTypeName())) {
+                        c.setColumnTypeName(JDBCType.DOUBLE.getName());
+                    } else if ("FLOAT4".equals(c.getColumnTypeName())) {
+                        c.setColumnTypeName(JDBCType.FLOAT.getName());
+                    } else if ("TEXT".equals(c.getColumnTypeName())) {
+                        c.setColumnTypeName(JDBCType.VARCHAR.getName());
+                    } else if ("BPCHAR".equals(c.getColumnTypeName())) {
+                        c.setColumnTypeName(JDBCType.CHAR.getName());
+                    }
+                    // TimestampTz was only added in Java 1.8, the Postgres JDBC driver doesn't use that type number yet
+                    // even though the typename is TIMESTAMPTZ
+                    if (JDBCType.TIMESTAMP.getVendorTypeNumber().equals(c.getColumnType())
+                            && "TIMESTAMPTZ".equals(c.getColumnTypeName())) {
+                        c.setColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE.getVendorTypeNumber());
+                        c.setColumnTypeName(JDBCType.TIMESTAMP_WITH_TIMEZONE.getName());
+                    }
+                    // Both `Numeric` and `Decimal` can be used, keep using `Decimal` to avoid soft breaking consumers
+                    // of
+                    // older versions
+                    if (JDBCType.NUMERIC.getVendorTypeNumber().equals(c.getColumnType())) {
+                        c.setColumnType(JDBCType.DECIMAL.getVendorTypeNumber());
+                        c.setColumnTypeName(JDBCType.DECIMAL.getName());
+                    }
+                    // Same reason for REAL vs FLOAT
+                    if (JDBCType.REAL.getVendorTypeNumber().equals(c.getColumnType())) {
+                        c.setColumnType(JDBCType.FLOAT.getVendorTypeNumber());
+                        c.setColumnTypeName(JDBCType.FLOAT.getName());
+                    }
+                    // Same reason for BINARY vs VARBINARY
+                    if (JDBCType.BINARY.getVendorTypeNumber().equals(c.getColumnType())) {
+                        c.setColumnType(JDBCType.VARBINARY.getVendorTypeNumber());
+                        c.setColumnTypeName(JDBCType.VARBINARY.getName());
+                    }
+                    // We use boolean instead of bit
+                    if (JDBCType.BIT.getVendorTypeNumber().equals(c.getColumnType())) {
+                        c.setColumnType(JDBCType.BOOLEAN.getVendorTypeNumber());
+                        c.setColumnTypeName(JDBCType.BOOLEAN.getName());
+                    }
+                    // We don't have an custom representation for the SQL JSON type
+                    if (JDBCType.OTHER.getVendorTypeNumber().equals(c.getColumnType())
+                            && "JSON".equals(c.getColumnTypeName())) {
+                        c.setColumnType(JDBCType.VARCHAR.getVendorTypeNumber());
+                        c.setColumnTypeName(JDBCType.VARCHAR.getName());
+                    }
+                    // We don't use custom names for array types
+                    if (JDBCType.ARRAY.getVendorTypeNumber().equals(c.getColumnType())) {
+                        c.setColumnTypeName(JDBCType.ARRAY.getName());
+                    }
                 }
-                // This type isn't supported by the driver yet
-                if (c.getColumnTypeName().endsWith("interval")) {
-                    isTestable = false;
-                }
-                // These types have a bug in Hyper
-                else if (c.getColumnTypeName().equals("_timestamptz")
-                        || c.getColumnTypeName().equals("_timestamp")) {
-                    isTestable = false;
-                }
-                // This type behaves differently between Hyper and Postgres and is not worth it to test
-                else if (c.getColumnTypeName().endsWith("oid")) {
-                    isTestable = false;
-                }
-                // The JDBC default is to have uppercase type names
-                c.setColumnTypeName(c.getColumnTypeName().toUpperCase());
-                // Change from Postgres specific type names to JDBC type names
-                if ("INT8".equals(c.getColumnTypeName())) {
-                    c.setColumnTypeName(JDBCType.BIGINT.getName());
-                } else if ("INT2".equals(c.getColumnTypeName())) {
-                    c.setColumnTypeName(JDBCType.SMALLINT.getName());
-                } else if ("INT4".equals(c.getColumnTypeName())) {
-                    c.setColumnTypeName(JDBCType.INTEGER.getName());
-                } else if ("FLOAT8".equals(c.getColumnTypeName())) {
-                    c.setColumnTypeName(JDBCType.DOUBLE.getName());
-                } else if ("FLOAT4".equals(c.getColumnTypeName())) {
-                    c.setColumnTypeName(JDBCType.FLOAT.getName());
-                } else if ("TEXT".equals(c.getColumnTypeName())) {
-                    c.setColumnTypeName(JDBCType.VARCHAR.getName());
-                } else if ("BPCHAR".equals(c.getColumnTypeName())) {
-                    c.setColumnTypeName(JDBCType.CHAR.getName());
-                }
-                // TimestampTz was only added in Java 1.8, the Postgres JDBC driver doesn't use that type number yet
-                // even though the typename is TIMESTAMPTZ
-                if (JDBCType.TIMESTAMP.getVendorTypeNumber().equals(c.getColumnType())
-                        && "TIMESTAMPTZ".equals(c.getColumnTypeName())) {
-                    c.setColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE.getVendorTypeNumber());
-                    c.setColumnTypeName(JDBCType.TIMESTAMP_WITH_TIMEZONE.getName());
-                }
-                // Both `Numeric` and `Decimal` can be used, keep using `Decimal` to avoid soft breaking consumers of
-                // older versions
-                if (JDBCType.NUMERIC.getVendorTypeNumber().equals(c.getColumnType())) {
-                    c.setColumnType(JDBCType.DECIMAL.getVendorTypeNumber());
-                    c.setColumnTypeName(JDBCType.DECIMAL.getName());
-                }
-                // Same reason for REAL vs FLOAT
-                if (JDBCType.REAL.getVendorTypeNumber().equals(c.getColumnType())) {
-                    c.setColumnType(JDBCType.FLOAT.getVendorTypeNumber());
-                    c.setColumnTypeName(JDBCType.FLOAT.getName());
-                }
-                // Same reason for BINARY vs VARBINARY
-                if (JDBCType.BINARY.getVendorTypeNumber().equals(c.getColumnType())) {
-                    c.setColumnType(JDBCType.VARBINARY.getVendorTypeNumber());
-                    c.setColumnTypeName(JDBCType.VARBINARY.getName());
-                }
-                // We use boolean instead of bit
-                if (JDBCType.BIT.getVendorTypeNumber().equals(c.getColumnType())) {
-                    c.setColumnType(JDBCType.BOOLEAN.getVendorTypeNumber());
-                    c.setColumnTypeName(JDBCType.BOOLEAN.getName());
-                }
-                // We don't have an custom representation for the SQL JSON type
-                if (JDBCType.OTHER.getVendorTypeNumber().equals(c.getColumnType())
-                        && "JSON".equals(c.getColumnTypeName())) {
-                    c.setColumnType(JDBCType.VARCHAR.getVendorTypeNumber());
-                    c.setColumnTypeName(JDBCType.VARCHAR.getName());
-                }
-                // We don't use custom names for array types
-                if (JDBCType.ARRAY.getVendorTypeNumber().equals(c.getColumnType())) {
-                    c.setColumnTypeName(JDBCType.ARRAY.getName());
+
+                if (isTestable) {
+                    testableEntries.add(e);
                 }
             }
-
-            if (isTestable) {
-                testableEntries.add(e);
-            }
+            return testableEntries.stream();
         }
-        return testableEntries.stream();
     }
 
     /**
