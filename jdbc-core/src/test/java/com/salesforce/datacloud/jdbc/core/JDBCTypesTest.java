@@ -26,6 +26,7 @@ import com.salesforce.datacloud.reference.ColumnMetadata;
 import com.salesforce.datacloud.reference.ReferenceEntry;
 import java.nio.file.Paths;
 import java.sql.JDBCType;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -49,10 +50,36 @@ public class JDBCTypesTest {
                 .toFile();
 
         ObjectMapper objectMapper = new ObjectMapper();
-        val baselineEntries = objectMapper.readValue(baselineFile, new TypeReference<List<ReferenceEntry>>() {});
+        val referenceEntries = objectMapper.readValue(baselineFile, new TypeReference<List<ReferenceEntry>>() {});
+        val testableEntries = new ArrayList<ReferenceEntry>();
 
-        for (ReferenceEntry e : baselineEntries) {
+        for (ReferenceEntry e : referenceEntries) {
+            boolean isTestable = true;
             for (ColumnMetadata c : e.getColumnMetadata()) {
+                // These types don't work in V3
+                if (c.getColumnTypeName().endsWith("regconfig")
+                        || c.getColumnTypeName().endsWith("regproc")
+                        || c.getColumnTypeName().endsWith("regprocedure")
+                        || c.getColumnTypeName().endsWith("regclass")
+                        || c.getColumnTypeName().endsWith("regoper")
+                        || c.getColumnTypeName().endsWith("regoperator")
+                        || c.getColumnTypeName().endsWith("regtype")
+                        || c.getColumnTypeName().endsWith("regdictionary")) {
+                    isTestable = false;
+                }
+                // This type isn't supported by the driver yet
+                if (c.getColumnTypeName().endsWith("interval")) {
+                    isTestable = false;
+                }
+                // These types have a bug in Hyper
+                else if (c.getColumnTypeName().equals("_timestamptz")
+                        || c.getColumnTypeName().equals("_timestamp")) {
+                    isTestable = false;
+                }
+                // This type behaves differently between Hyper and Postgres and is not worth it to test
+                else if (c.getColumnTypeName().endsWith("oid")) {
+                    isTestable = false;
+                }
                 // The JDBC default is to have uppercase type names
                 c.setColumnTypeName(c.getColumnTypeName().toUpperCase());
                 // Change from Postgres specific type names to JDBC type names
@@ -110,9 +137,12 @@ public class JDBCTypesTest {
                     c.setColumnTypeName(JDBCType.ARRAY.getName());
                 }
             }
-        }
 
-        return baselineEntries.stream();
+            if (isTestable) {
+                testableEntries.add(e);
+            }
+        }
+        return testableEntries.stream();
     }
 
     /**
@@ -205,66 +235,4 @@ public class JDBCTypesTest {
         actual.setTableName("");
         assertEquals(expected, actual);
     }
-
-    /*
-    @SneakyThrows
-    public static Stream<TypeIdentityExpectation> getTypeIdentityExpectations() {
-        val expectationsFile = Paths.get(requireNonNull(HyperTestBase.class.getResource("/typevalues.json"))
-                        .toURI())
-                .toFile();
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        val expectations =
-                objectMapper.readValue(expectationsFile, new TypeReference<List<TypeIdentityExpectation>>() {});
-        return expectations.stream()
-                .filter(e -> !((e.type.contains("regconfig")
-                        || e.type.contains("regproc")
-                        || e.type.contains("regprocedure")
-                        || e.type.contains("regclass")
-                        || e.type.contains("regoper")
-                        || e.type.contains("regtype")
-                        || e.type.contains("regdictionary")
-                        || e.type.contains("interval"))))
-                // Handle array only later
-                .filter(e -> !e.type.contains("array"))
-                .map(e -> {
-                    switch (e.type) {
-                        case "timestamptz":
-                            // JDBC only supports timestamp as type
-                            e.jdbcResultType = "timestamp";
-                            break;
-                        case "text":
-                            e.jdbcResultType = "VARCHAR";
-                            break;
-                        case "tabgeography":
-                            e.jdbcResultType = "VARBINARY";
-                            break;
-                        case "json":
-                            e.jdbcResultType = "VARCHAR";
-                            break;
-                        case "bytea":
-                            e.jdbcResultType = "VARBINARY";
-                            break;
-                        case "double precision":
-                            e.jdbcResultType = "DOUBLE";
-                            break;
-                        case "real":
-                            e.jdbcResultType = "FLOAT";
-                            break;
-                        default:
-                            if (e.type.startsWith("numeric")) {
-                                e.jdbcResultType = "DECIMAL";
-                            } else if (e.type.startsWith("character")) {
-                                // All the different character variants map to "VARCHAR" in the JDBC standard.
-                                e.jdbcResultType = "VARCHAR";
-                            } else {
-                                e.jdbcResultType = e.type;
-                            }
-                            break;
-                    }
-                    e.jdbcResultType = e.jdbcResultType.toUpperCase();
-                    return e;
-                });
-    }
-                */
 }

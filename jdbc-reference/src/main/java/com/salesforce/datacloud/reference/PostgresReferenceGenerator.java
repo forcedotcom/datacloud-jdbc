@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.reference;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -24,6 +25,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +65,9 @@ public class PostgresReferenceGenerator {
             // Load SQL commands from queries.txt file
             List<ProtocolValue> testValues = ProtocolValue.loadProtocolValues();
             List<String> sqlCommands = testValues.stream()
+                    .filter(v -> v.isSimpleType()
+                            ? !"geography".equals(v.getSimpleType().getSqlTypeName())
+                            : !"geography".equals(v.getArrayType().getInner().getSqlTypeName()))
                     .filter(v -> v.getInterestingness() == ProtocolValue.Interestingness.Null)
                     .map(v -> {
                         if (v.isSimpleType()) {
@@ -83,6 +88,9 @@ public class PostgresReferenceGenerator {
 
                 // Write Reference to JSON file
                 writeReferenceToFile(ReferenceEntries);
+
+                // Validate the written reference file against PostgreSQL
+                validateReferenceFile(connection);
             } catch (SQLException e) {
                 throw new RuntimeException("Database operation failed", e);
             }
@@ -101,6 +109,7 @@ public class PostgresReferenceGenerator {
      * @param sqlCommands list of SQL commands to execute
      * @return list of Reference entries for successful queries
      */
+    @SneakyThrows
     private List<ReferenceEntry> executeSqlAndCollectReference(Connection connection, List<String> sqlCommands) {
         logger.info("Executing {} SQL commands and collecting Reference metadata", sqlCommands.size());
 
@@ -133,9 +142,6 @@ public class PostgresReferenceGenerator {
                     throw new RuntimeException("Query " + i + 1
                             + " did not return a result set. Only SELECT queries are expected. SQL: " + sql);
                 }
-            } catch (SQLException e) {
-                logger.error(
-                        "ERROR: Failed to execute SQL command {}. SQL: {} - Error: {}", i + 1, sql, e.getMessage());
             }
         }
 
@@ -183,6 +189,73 @@ public class PostgresReferenceGenerator {
             logger.info("Reference file size: {} entries", referenceEntries.size());
         } catch (JsonProcessingException e) {
             throw new IOException("Failed to serialize reference entries", e);
+        }
+    }
+
+    /**
+     * Validates the written reference file against PostgreSQL by reading it back
+     * and executing each query to verify the metadata matches.
+     *
+     * @param connection the database connection to use for validation
+     * @throws IOException if file reading fails
+     * @throws SQLException if database operations fail
+     */
+    @SneakyThrows
+    private void validateReferenceFile(Connection connection) throws IOException, SQLException {
+        logger.info("Starting validation of reference file against PostgreSQL");
+
+        // Load reference entries from the file we just wrote
+        Path resourcesPath = Paths.get("src", "main", "resources", REFERENCE_FILE);
+        List<ReferenceEntry> referenceEntries =
+                objectMapper.readValue(resourcesPath.toFile(), new TypeReference<List<ReferenceEntry>>() {});
+
+        for (ReferenceEntry referenceEntry : referenceEntries) {
+            validateReferenceEntryAgainstPostgres(connection, referenceEntry);
+        }
+    }
+
+    /**
+     * Validates a single reference entry against PostgreSQL results.
+     *
+     * @param connection the database connection
+     * @param referenceEntry the reference entry to validate
+     * @throws SQLException if database operations fail
+     */
+    private void validateReferenceEntryAgainstPostgres(Connection connection, ReferenceEntry referenceEntry)
+            throws SQLException {
+        String sql = referenceEntry.getQuery();
+        List<ColumnMetadata> expectedMetadata = referenceEntry.getColumnMetadata();
+        logger.debug("Validating query: {}", sql);
+
+        try (Statement statement = connection.createStatement()) {
+            boolean hasResultSet = statement.execute(sql);
+            if (!hasResultSet) {
+                throw new RuntimeException("Query should return a result set: " + sql);
+            }
+
+            try (ResultSet resultSet = statement.getResultSet()) {
+                ResultSetMetaData actualMetaData = resultSet.getMetaData();
+
+                // Validate column count
+                if (expectedMetadata.size() != actualMetaData.getColumnCount()) {
+                    throw new RuntimeException(String.format(
+                            "Column count mismatch for query '%s': expected %d, got %d",
+                            sql, expectedMetadata.size(), actualMetaData.getColumnCount()));
+                }
+
+                // Validate each column's metadata
+                for (int i = 0; i < expectedMetadata.size(); i++) {
+                    int columnIndex = i + 1; // JDBC is 1-based
+                    ColumnMetadata expected = expectedMetadata.get(i);
+                    ColumnMetadata actual = ColumnMetadata.fromResultSetMetaData(actualMetaData, columnIndex);
+
+                    if (!expected.equals(actual)) {
+                        throw new RuntimeException(String.format(
+                                "Column metadata mismatch for query '%s', column %d: expected %s, got %s",
+                                sql, columnIndex, expected, actual));
+                    }
+                }
+            }
         }
     }
 }

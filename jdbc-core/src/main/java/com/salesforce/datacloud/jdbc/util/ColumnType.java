@@ -18,12 +18,25 @@ package com.salesforce.datacloud.jdbc.util;
 import java.sql.JDBCType;
 import lombok.Getter;
 
+/**
+ * Represents the type of a SQL column.
+ *
+ * Provides accessors for the various JDBC properties of the types.
+ */
 @Getter
 public class ColumnType {
 
+    /// The SQL type
     private JDBCType type;
+    /// For Array: the element type
+    /// Unused for other types
     private ColumnType arrayElementType;
+    /// For Numerics: the NUMERIC(precision, scale)
+    /// For Char / Varchar: the length, or 0 for unlimited length
+    /// Unused for other types
     private int precision;
+    /// For Numerics: the NUMERIC(precision, scale)
+    /// Unused for other types
     private int scale;
 
     // Used for variable length types, use 1GB as reasonably large number for now
@@ -54,7 +67,6 @@ public class ColumnType {
      * Implements the semantics of java.sql.ResultSetMetaData.getPrecision().
      */
     public int getPrecision() {
-        // TODO: Add proper handling for Array
         switch (type) {
             case BIT:
             case BOOLEAN:
@@ -123,7 +135,6 @@ public class ColumnType {
      * Implements the semantics of java.sql.ResultSetMetaData.getScale().
      */
     public int getScale() {
-        // TODO: Add proper handling for Array
         switch (type) {
             case BIT:
             case BOOLEAN:
@@ -224,12 +235,15 @@ public class ColumnType {
             case SMALLINT:
             case INTEGER:
             case BIGINT:
+                // The number of digits of precision + 1 for the sign
                 return getPrecision() + 1;
             case DECIMAL:
             case NUMERIC:
                 if (scale > 0) {
+                    // The number of digits of precision + 1 for the decimal point and +1 for thesign
                     return getPrecision() + 2;
                 } else {
+                    // The number of digits of precision + 1 for the sign
                     return getPrecision() + 1;
                 }
             case FLOAT:

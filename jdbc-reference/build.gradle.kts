@@ -1,6 +1,5 @@
 plugins {
     id("java-conventions")
-    id("publishing-conventions")
     alias(libs.plugins.lombok)
     application
 }

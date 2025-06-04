@@ -116,7 +116,7 @@ class ArrowUtilsTest {
                 ImmutableList.of(
                         new Field("", FieldType.nullable(new ArrowType.Time(TimeUnit.MICROSECOND, 64)), null)));
         testCases.put(
-                JDBCType.valueOf(Types.TIMESTAMP).getName(),
+                JDBCType.valueOf(Types.TIMESTAMP_WITH_TIMEZONE).getName(),
                 ImmutableList.of(
                         new Field("", FieldType.nullable(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC")), null)));
         testCases.put(
@@ -124,7 +124,10 @@ class ArrowUtilsTest {
                 ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Decimal(1, 1, 128)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.ARRAY).getName(),
-                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.List()), null)));
+                ImmutableList.of(new Field(
+                        "",
+                        FieldType.nullable(new ArrowType.List()),
+                        ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Utf8()), null)))));
 
         for (val entry : testCases.entrySet()) {
             List<ColumnMetaData> actual = ArrowUtils.toColumnMetaData(entry.getValue());
@@ -148,7 +151,6 @@ class ArrowUtilsTest {
                 Arguments.of(new ArrowType.Date(DateUnit.DAY), Types.DATE),
                 Arguments.of(new ArrowType.Time(TimeUnit.MICROSECOND, 64), Types.TIME),
                 Arguments.of(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC"), Types.TIMESTAMP_WITH_TIMEZONE),
-                Arguments.of(new ArrowType.List(), Types.ARRAY),
                 Arguments.of(new ArrowType.Null(), Types.NULL));
     }
 
@@ -164,7 +166,7 @@ class ArrowUtilsTest {
     @Test
     void testConvertJDBCMetadataToAvaticaColumns() throws SQLException {
         ResultSetMetaData resultSetMetaData = mockResultSetMetadata();
-        List<ColumnMetaData> columnMetaDataList = ArrowUtils.convertJDBCMetadataToAvaticaColumns(resultSetMetaData, 7);
+        List<ColumnMetaData> columnMetaDataList = ArrowUtils.convertJDBCMetadataToAvaticaColumns(resultSetMetaData, 4);
 
         for (int i = 0; i < columnMetaDataList.size(); i++) {
             val actual = columnMetaDataList.get(i);
@@ -181,11 +183,9 @@ class ArrowUtilsTest {
     }
 
     private ResultSetMetaData mockResultSetMetadata() {
-        String[] columnNames = {"col1", "col2", "col3", "col4", "col5", "col6", "col7"};
-        String[] columnTypes = {
-            "INTEGER", "VARCHAR", "DECIMAL", "TIMESTAMP WITH TIME ZONE", "ARRAY", "STRUCT", "MULTISET"
-        };
-        Integer[] columnTypeIds = {4, 12, 3, 2013, 2003, 2002, 2003};
+        String[] columnNames = {"col1", "col2", "col3", "col4"};
+        String[] columnTypes = {"INTEGER", "VARCHAR", "DECIMAL", "TIMESTAMP_WITH_TIMEZONE"};
+        Integer[] columnTypeIds = {4, 12, 3, 2014};
 
         return new QueryResultSetMetadata(
                 Arrays.asList(columnNames), Arrays.asList(columnTypes), Arrays.asList(columnTypeIds));

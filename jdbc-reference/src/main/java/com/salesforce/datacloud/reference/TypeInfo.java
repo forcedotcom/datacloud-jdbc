@@ -51,8 +51,15 @@ class SimpleTypeInfo implements TypeInfo {
         if (typeArray.size() == 3) {
             return typeName + "(" + typeArray.get(1).toString() + ")";
         } else if (typeArray.size() == 4) {
+            if ("bignumeric".equals(typeName)) {
+                typeName = "numeric";
+            }
             return typeName + "(" + typeArray.get(1).toString() + ", "
                     + typeArray.get(2).toString() + ")";
+        } else if ("char1".equals(typeName)) {
+            return "char(1)";
+        } else if ("double".equals(typeName)) {
+            return "double precision";
         } else {
             return typeName;
         }

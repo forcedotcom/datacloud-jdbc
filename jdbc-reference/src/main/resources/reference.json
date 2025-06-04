@@ -45,6 +45,29 @@
     "writable" : true
   } ]
 }, {
+  "query" : "select NULL::char(1)[]",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 2003,
+    "columnTypeName" : "_bpchar",
+    "columnDisplaySize" : 1,
+    "precision" : 1,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ]
+}, {
   "query" : "select NULL::character(1)",
   "columnMetadata" : [ {
     "columnName" : "bpchar",
@@ -810,6 +833,52 @@
     "columnLabel" : "float8",
     "columnType" : 8,
     "columnTypeName" : "float8",
+    "columnDisplaySize" : 25,
+    "precision" : 17,
+    "scale" : 17,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ]
+}, {
+  "query" : "select NULL::numeric(38, 18)[]",
+  "columnMetadata" : [ {
+    "columnName" : "numeric",
+    "columnLabel" : "numeric",
+    "columnType" : 2003,
+    "columnTypeName" : "_numeric",
+    "columnDisplaySize" : 40,
+    "precision" : 38,
+    "scale" : 18,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ]
+}, {
+  "query" : "select NULL::double precision[]",
+  "columnMetadata" : [ {
+    "columnName" : "float8",
+    "columnLabel" : "float8",
+    "columnType" : 2003,
+    "columnTypeName" : "_float8",
     "columnDisplaySize" : 25,
     "precision" : 17,
     "scale" : 17,
