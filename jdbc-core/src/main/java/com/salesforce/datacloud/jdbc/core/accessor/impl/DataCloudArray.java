@@ -15,7 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
-import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnType;
+import static com.salesforce.datacloud.jdbc.util.ArrowToColumnTypeMapper.toColumnType;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;

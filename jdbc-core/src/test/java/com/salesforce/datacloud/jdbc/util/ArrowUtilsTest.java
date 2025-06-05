@@ -157,7 +157,7 @@ class ArrowUtilsTest {
     @ParameterizedTest
     @MethodSource("arrowTypes")
     void testGetSQLTypeFromArrowTypes(ArrowType arrowType, int expectedSqlType) {
-        softly.assertThat(ArrowUtils.toColumnType(Field.nullable("", arrowType))
+        softly.assertThat(ArrowToColumnTypeMapper.toColumnType(Field.nullable("", arrowType))
                         .getType()
                         .getVendorTypeNumber())
                 .isEqualTo(expectedSqlType);
