@@ -19,6 +19,7 @@ org-junit-bom = "5.11.3"
 org-junit-platform-junit-platform-launcher = "1.11.4"
 mockito = "4.11.0"
 slf4j = "[2.0.7, 3.0)"
+org-postgresql-pgjdbc = "42.7.6"
 plugin-com-google-protobuf = "0.9.4"
 plugin-com-gradleup-shadow = "8.3.6"
 plugin-freefair-lombok = "8.13.1"
@@ -62,6 +63,7 @@ mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockito
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+pgjdbc = { module = "org.postgresql:postgresql", version.ref = "org-postgresql-pgjdbc" }
 protoc = { group = "com.google.protobuf", name = "protoc", version.ref = "protobuf" }
 
 [bundles]
