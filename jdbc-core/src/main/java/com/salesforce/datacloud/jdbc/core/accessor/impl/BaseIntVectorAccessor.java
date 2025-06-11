@@ -164,10 +164,12 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
         final Number number;
         switch (type) {
             case TINYINT:
-                number = getByte();
+                // JDBC table B-3 states that TINYINT must return an integer for compatibility reasons
+                number = getInt();
                 break;
             case SMALLINT:
-                number = getShort();
+                // JDBC table B-3 states that SMALLINT must return an integer for compatibility reasons
+                number = getInt();
                 break;
             case INT:
             case UINT4:

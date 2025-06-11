@@ -15,12 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
-import static com.salesforce.datacloud.jdbc.util.ArrowUtils.getSQLTypeFromArrowType;
+import static com.salesforce.datacloud.jdbc.util.ArrowToColumnTypeMapper.toColumnType;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.sql.Array;
-import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
@@ -45,15 +44,12 @@ public class DataCloudArray implements Array {
 
     @Override
     public String getBaseTypeName() {
-        val arrowType = this.dataVector.getField().getType();
-        val baseType = getSQLTypeFromArrowType(arrowType);
-        return JDBCType.valueOf(baseType).getName();
+        return toColumnType(this.dataVector.getField()).getType().getName();
     }
 
     @Override
     public int getBaseType() {
-        val arrowType = this.dataVector.getField().getType();
-        return getSQLTypeFromArrowType(arrowType);
+        return toColumnType(this.dataVector.getField()).getType().getVendorTypeNumber();
     }
 
     @Override

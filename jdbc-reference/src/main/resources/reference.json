@@ -1,0 +1,2080 @@
+[ {
+  "query" : "select NULL::timestamptz",
+  "columnMetadata" : [ {
+    "columnName" : "timestamptz",
+    "columnLabel" : "timestamptz",
+    "columnType" : 93,
+    "columnTypeName" : "timestamptz",
+    "columnDisplaySize" : 35,
+    "precision" : 35,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select timestamptz '1000-01-01 01:00:00+0100'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamptz",
+    "columnLabel" : "timestamptz",
+    "columnType" : 93,
+    "columnTypeName" : "timestamptz",
+    "columnDisplaySize" : 35,
+    "precision" : 35,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1000-01-01 01:00:00.0",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
+  "query" : "select NULL::timestamptz[]",
+  "columnMetadata" : [ {
+    "columnName" : "timestamptz",
+    "columnLabel" : "timestamptz",
+    "columnType" : 2003,
+    "columnTypeName" : "_timestamptz",
+    "columnDisplaySize" : 35,
+    "precision" : 35,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::char(1)[]",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 2003,
+    "columnTypeName" : "_bpchar",
+    "columnDisplaySize" : 1,
+    "precision" : 1,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::character(1)",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 1,
+    "columnTypeName" : "bpchar",
+    "columnDisplaySize" : 1,
+    "precision" : 1,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select character(1) 'A'",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 1,
+    "columnTypeName" : "bpchar",
+    "columnDisplaySize" : 1,
+    "precision" : 1,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "A",
+    "javaClassName" : "java.lang.String"
+  } ] ]
+}, {
+  "query" : "select NULL::regconfig[]",
+  "columnMetadata" : [ {
+    "columnName" : "regconfig",
+    "columnLabel" : "regconfig",
+    "columnType" : 2003,
+    "columnTypeName" : "_regconfig",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::regtype[]",
+  "columnMetadata" : [ {
+    "columnName" : "regtype",
+    "columnLabel" : "regtype",
+    "columnType" : 2003,
+    "columnTypeName" : "_regtype",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::regdictionary[]",
+  "columnMetadata" : [ {
+    "columnName" : "regdictionary",
+    "columnLabel" : "regdictionary",
+    "columnType" : 2003,
+    "columnTypeName" : "_regdictionary",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::regoper[]",
+  "columnMetadata" : [ {
+    "columnName" : "regoper",
+    "columnLabel" : "regoper",
+    "columnType" : 2003,
+    "columnTypeName" : "_regoper",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::regclass[]",
+  "columnMetadata" : [ {
+    "columnName" : "regclass",
+    "columnLabel" : "regclass",
+    "columnType" : 2003,
+    "columnTypeName" : "_regclass",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::regprocedure[]",
+  "columnMetadata" : [ {
+    "columnName" : "regprocedure",
+    "columnLabel" : "regprocedure",
+    "columnType" : 2003,
+    "columnTypeName" : "_regprocedure",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::regoperator[]",
+  "columnMetadata" : [ {
+    "columnName" : "regoperator",
+    "columnLabel" : "regoperator",
+    "columnType" : 2003,
+    "columnTypeName" : "_regoperator",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::regproc[]",
+  "columnMetadata" : [ {
+    "columnName" : "regproc",
+    "columnLabel" : "regproc",
+    "columnType" : 2003,
+    "columnTypeName" : "_regproc",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::oid",
+  "columnMetadata" : [ {
+    "columnName" : "oid",
+    "columnLabel" : "oid",
+    "columnType" : -5,
+    "columnTypeName" : "oid",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::json[]",
+  "columnMetadata" : [ {
+    "columnName" : "json",
+    "columnLabel" : "json",
+    "columnType" : 2003,
+    "columnTypeName" : "_json",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::oid[]",
+  "columnMetadata" : [ {
+    "columnName" : "oid",
+    "columnLabel" : "oid",
+    "columnType" : 2003,
+    "columnTypeName" : "_oid",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::json",
+  "columnMetadata" : [ {
+    "columnName" : "json",
+    "columnLabel" : "json",
+    "columnType" : 1111,
+    "columnTypeName" : "json",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select json '{\"A\":\"B\",\"AA\":1}'",
+  "columnMetadata" : [ {
+    "columnName" : "json",
+    "columnLabel" : "json",
+    "columnType" : 1111,
+    "columnTypeName" : "json",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "{\"A\":\"B\",\"AA\":1}",
+    "javaClassName" : "org.postgresql.util.PGobject"
+  } ] ]
+}, {
+  "query" : "select NULL::boolean",
+  "columnMetadata" : [ {
+    "columnName" : "bool",
+    "columnLabel" : "bool",
+    "columnType" : -7,
+    "columnTypeName" : "bool",
+    "columnDisplaySize" : 1,
+    "precision" : 1,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select boolean 't'",
+  "columnMetadata" : [ {
+    "columnName" : "bool",
+    "columnLabel" : "bool",
+    "columnType" : -7,
+    "columnTypeName" : "bool",
+    "columnDisplaySize" : 1,
+    "precision" : 1,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "true",
+    "javaClassName" : "java.lang.Boolean"
+  } ] ]
+}, {
+  "query" : "select NULL::timestamp[]",
+  "columnMetadata" : [ {
+    "columnName" : "timestamp",
+    "columnLabel" : "timestamp",
+    "columnType" : 2003,
+    "columnTypeName" : "_timestamp",
+    "columnDisplaySize" : 29,
+    "precision" : 29,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::bool[]",
+  "columnMetadata" : [ {
+    "columnName" : "bool",
+    "columnLabel" : "bool",
+    "columnType" : 2003,
+    "columnTypeName" : "_bool",
+    "columnDisplaySize" : 1,
+    "precision" : 1,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::timestamp",
+  "columnMetadata" : [ {
+    "columnName" : "timestamp",
+    "columnLabel" : "timestamp",
+    "columnType" : 93,
+    "columnTypeName" : "timestamp",
+    "columnDisplaySize" : 29,
+    "precision" : 29,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select timestamp '1999-01-08 23:59:59.999'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamp",
+    "columnLabel" : "timestamp",
+    "columnType" : 93,
+    "columnTypeName" : "timestamp",
+    "columnDisplaySize" : 29,
+    "precision" : 29,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1999-01-08 23:59:59.999",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
+  "query" : "select NULL::interval",
+  "columnMetadata" : [ {
+    "columnName" : "interval",
+    "columnLabel" : "interval",
+    "columnType" : 1111,
+    "columnTypeName" : "interval",
+    "columnDisplaySize" : 49,
+    "precision" : 49,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select interval 'P1M'",
+  "columnMetadata" : [ {
+    "columnName" : "interval",
+    "columnLabel" : "interval",
+    "columnType" : 1111,
+    "columnTypeName" : "interval",
+    "columnDisplaySize" : 49,
+    "precision" : 49,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "0 years 1 mons 0 days 0 hours 0 mins 0.0 secs",
+    "javaClassName" : "org.postgresql.util.PGInterval"
+  } ] ]
+}, {
+  "query" : "select NULL::time[]",
+  "columnMetadata" : [ {
+    "columnName" : "time",
+    "columnLabel" : "time",
+    "columnType" : 2003,
+    "columnTypeName" : "_time",
+    "columnDisplaySize" : 15,
+    "precision" : 15,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::interval[]",
+  "columnMetadata" : [ {
+    "columnName" : "interval",
+    "columnLabel" : "interval",
+    "columnType" : 2003,
+    "columnTypeName" : "_interval",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::time",
+  "columnMetadata" : [ {
+    "columnName" : "time",
+    "columnLabel" : "time",
+    "columnType" : 92,
+    "columnTypeName" : "time",
+    "columnDisplaySize" : 15,
+    "precision" : 15,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select time '11:59:59.58'",
+  "columnMetadata" : [ {
+    "columnName" : "time",
+    "columnLabel" : "time",
+    "columnType" : 92,
+    "columnTypeName" : "time",
+    "columnDisplaySize" : 15,
+    "precision" : 15,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "11:59:59",
+    "javaClassName" : "java.sql.Time"
+  } ] ]
+}, {
+  "query" : "select NULL::date",
+  "columnMetadata" : [ {
+    "columnName" : "date",
+    "columnLabel" : "date",
+    "columnType" : 91,
+    "columnTypeName" : "date",
+    "columnDisplaySize" : 13,
+    "precision" : 13,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select date '1999-01-08'",
+  "columnMetadata" : [ {
+    "columnName" : "date",
+    "columnLabel" : "date",
+    "columnType" : 91,
+    "columnTypeName" : "date",
+    "columnDisplaySize" : 13,
+    "precision" : 13,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1999-01-08",
+    "javaClassName" : "java.sql.Date"
+  } ] ]
+}, {
+  "query" : "select NULL::varchar[]",
+  "columnMetadata" : [ {
+    "columnName" : "varchar",
+    "columnLabel" : "varchar",
+    "columnType" : 2003,
+    "columnTypeName" : "_varchar",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::varchar(10)[]",
+  "columnMetadata" : [ {
+    "columnName" : "varchar",
+    "columnLabel" : "varchar",
+    "columnType" : 2003,
+    "columnTypeName" : "_varchar",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::date[]",
+  "columnMetadata" : [ {
+    "columnName" : "date",
+    "columnLabel" : "date",
+    "columnType" : 2003,
+    "columnTypeName" : "_date",
+    "columnDisplaySize" : 13,
+    "precision" : 13,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::text",
+  "columnMetadata" : [ {
+    "columnName" : "text",
+    "columnLabel" : "text",
+    "columnType" : 12,
+    "columnTypeName" : "text",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select text 'A'",
+  "columnMetadata" : [ {
+    "columnName" : "text",
+    "columnLabel" : "text",
+    "columnType" : 12,
+    "columnTypeName" : "text",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "A",
+    "javaClassName" : "java.lang.String"
+  } ] ]
+}, {
+  "query" : "select text '12\uD83C\uDF473'",
+  "columnMetadata" : [ {
+    "columnName" : "text",
+    "columnLabel" : "text",
+    "columnType" : 12,
+    "columnTypeName" : "text",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "12\uD83C\uDF473",
+    "javaClassName" : "java.lang.String"
+  } ] ]
+}, {
+  "query" : "select NULL::character varying(10)",
+  "columnMetadata" : [ {
+    "columnName" : "varchar",
+    "columnLabel" : "varchar",
+    "columnType" : 12,
+    "columnTypeName" : "varchar",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select character varying(10) 'A'",
+  "columnMetadata" : [ {
+    "columnName" : "varchar",
+    "columnLabel" : "varchar",
+    "columnType" : 12,
+    "columnTypeName" : "varchar",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "A",
+    "javaClassName" : "java.lang.String"
+  } ] ]
+}, {
+  "query" : "select character varying(10) '12\uD83C\uDF473'",
+  "columnMetadata" : [ {
+    "columnName" : "varchar",
+    "columnLabel" : "varchar",
+    "columnType" : 12,
+    "columnTypeName" : "varchar",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "12\uD83C\uDF473",
+    "javaClassName" : "java.lang.String"
+  } ] ]
+}, {
+  "query" : "select NULL::bytea",
+  "columnMetadata" : [ {
+    "columnName" : "bytea",
+    "columnLabel" : "bytea",
+    "columnType" : -2,
+    "columnTypeName" : "bytea",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select bytea '\\x0203'",
+  "columnMetadata" : [ {
+    "columnName" : "bytea",
+    "columnLabel" : "bytea",
+    "columnType" : -2,
+    "columnTypeName" : "bytea",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "\\x0203",
+    "javaClassName" : "[B"
+  } ] ]
+}, {
+  "query" : "select NULL::char(10)[]",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 2003,
+    "columnTypeName" : "_bpchar",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::char(1000)[]",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 2003,
+    "columnTypeName" : "_bpchar",
+    "columnDisplaySize" : 1000,
+    "precision" : 1000,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::bytea[]",
+  "columnMetadata" : [ {
+    "columnName" : "bytea",
+    "columnLabel" : "bytea",
+    "columnType" : 2003,
+    "columnTypeName" : "_bytea",
+    "columnDisplaySize" : 2147483647,
+    "precision" : 2147483647,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::character(10)",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 1,
+    "columnTypeName" : "bpchar",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select character(10) 'A'",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 1,
+    "columnTypeName" : "bpchar",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "A         ",
+    "javaClassName" : "java.lang.String"
+  } ] ]
+}, {
+  "query" : "select character(10) '12\uD83C\uDF473'",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 1,
+    "columnTypeName" : "bpchar",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "12\uD83C\uDF473      ",
+    "javaClassName" : "java.lang.String"
+  } ] ]
+}, {
+  "query" : "select NULL::character(1000)",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 1,
+    "columnTypeName" : "bpchar",
+    "columnDisplaySize" : 1000,
+    "precision" : 1000,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select character(1000) 'A'",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 1,
+    "columnTypeName" : "bpchar",
+    "columnDisplaySize" : 1000,
+    "precision" : 1000,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "A                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ",
+    "javaClassName" : "java.lang.String"
+  } ] ]
+}, {
+  "query" : "select character(1000) '12\uD83C\uDF473'",
+  "columnMetadata" : [ {
+    "columnName" : "bpchar",
+    "columnLabel" : "bpchar",
+    "columnType" : 1,
+    "columnTypeName" : "bpchar",
+    "columnDisplaySize" : 1000,
+    "precision" : 1000,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : true,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "12\uD83C\uDF473                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    ",
+    "javaClassName" : "java.lang.String"
+  } ] ]
+}, {
+  "query" : "select NULL::double precision",
+  "columnMetadata" : [ {
+    "columnName" : "float8",
+    "columnLabel" : "float8",
+    "columnType" : 8,
+    "columnTypeName" : "float8",
+    "columnDisplaySize" : 25,
+    "precision" : 17,
+    "scale" : 17,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select double precision '0.5'",
+  "columnMetadata" : [ {
+    "columnName" : "float8",
+    "columnLabel" : "float8",
+    "columnType" : 8,
+    "columnTypeName" : "float8",
+    "columnDisplaySize" : 25,
+    "precision" : 17,
+    "scale" : 17,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "0.5",
+    "javaClassName" : "java.lang.Double"
+  } ] ]
+}, {
+  "query" : "select NULL::numeric(38, 18)[]",
+  "columnMetadata" : [ {
+    "columnName" : "numeric",
+    "columnLabel" : "numeric",
+    "columnType" : 2003,
+    "columnTypeName" : "_numeric",
+    "columnDisplaySize" : 40,
+    "precision" : 38,
+    "scale" : 18,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::double precision[]",
+  "columnMetadata" : [ {
+    "columnName" : "float8",
+    "columnLabel" : "float8",
+    "columnType" : 2003,
+    "columnTypeName" : "_float8",
+    "columnDisplaySize" : 25,
+    "precision" : 17,
+    "scale" : 17,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::numeric(38,18)",
+  "columnMetadata" : [ {
+    "columnName" : "numeric",
+    "columnLabel" : "numeric",
+    "columnType" : 2,
+    "columnTypeName" : "numeric",
+    "columnDisplaySize" : 40,
+    "precision" : 38,
+    "scale" : 18,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select numeric(38,18) '1.0'",
+  "columnMetadata" : [ {
+    "columnName" : "numeric",
+    "columnLabel" : "numeric",
+    "columnType" : 2,
+    "columnTypeName" : "numeric",
+    "columnDisplaySize" : 40,
+    "precision" : 38,
+    "scale" : 18,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1.000000000000000000",
+    "javaClassName" : "java.math.BigDecimal"
+  } ] ]
+}, {
+  "query" : "select NULL::real",
+  "columnMetadata" : [ {
+    "columnName" : "float4",
+    "columnLabel" : "float4",
+    "columnType" : 7,
+    "columnTypeName" : "float4",
+    "columnDisplaySize" : 15,
+    "precision" : 8,
+    "scale" : 8,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select real '0.5'",
+  "columnMetadata" : [ {
+    "columnName" : "float4",
+    "columnLabel" : "float4",
+    "columnType" : 7,
+    "columnTypeName" : "float4",
+    "columnDisplaySize" : 15,
+    "precision" : 8,
+    "scale" : 8,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "0.5",
+    "javaClassName" : "java.lang.Float"
+  } ] ]
+}, {
+  "query" : "select NULL::numeric(18)[]",
+  "columnMetadata" : [ {
+    "columnName" : "numeric",
+    "columnLabel" : "numeric",
+    "columnType" : 2003,
+    "columnTypeName" : "_numeric",
+    "columnDisplaySize" : 19,
+    "precision" : 18,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::numeric(6, 1)[]",
+  "columnMetadata" : [ {
+    "columnName" : "numeric",
+    "columnLabel" : "numeric",
+    "columnType" : 2003,
+    "columnTypeName" : "_numeric",
+    "columnDisplaySize" : 8,
+    "precision" : 6,
+    "scale" : 1,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::float[]",
+  "columnMetadata" : [ {
+    "columnName" : "float8",
+    "columnLabel" : "float8",
+    "columnType" : 2003,
+    "columnTypeName" : "_float8",
+    "columnDisplaySize" : 25,
+    "precision" : 17,
+    "scale" : 17,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::numeric(18,0)",
+  "columnMetadata" : [ {
+    "columnName" : "numeric",
+    "columnLabel" : "numeric",
+    "columnType" : 2,
+    "columnTypeName" : "numeric",
+    "columnDisplaySize" : 19,
+    "precision" : 18,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select numeric(18,0) '1.0'",
+  "columnMetadata" : [ {
+    "columnName" : "numeric",
+    "columnLabel" : "numeric",
+    "columnType" : 2,
+    "columnTypeName" : "numeric",
+    "columnDisplaySize" : 19,
+    "precision" : 18,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1",
+    "javaClassName" : "java.math.BigDecimal"
+  } ] ]
+}, {
+  "query" : "select NULL::numeric(6,1)",
+  "columnMetadata" : [ {
+    "columnName" : "numeric",
+    "columnLabel" : "numeric",
+    "columnType" : 2,
+    "columnTypeName" : "numeric",
+    "columnDisplaySize" : 8,
+    "precision" : 6,
+    "scale" : 1,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select numeric(6,1) '1.0'",
+  "columnMetadata" : [ {
+    "columnName" : "numeric",
+    "columnLabel" : "numeric",
+    "columnType" : 2,
+    "columnTypeName" : "numeric",
+    "columnDisplaySize" : 8,
+    "precision" : 6,
+    "scale" : 1,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1.0",
+    "javaClassName" : "java.math.BigDecimal"
+  } ] ]
+}, {
+  "query" : "select NULL::integer[]",
+  "columnMetadata" : [ {
+    "columnName" : "int4",
+    "columnLabel" : "int4",
+    "columnType" : 2003,
+    "columnTypeName" : "_int4",
+    "columnDisplaySize" : 11,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::integer",
+  "columnMetadata" : [ {
+    "columnName" : "int4",
+    "columnLabel" : "int4",
+    "columnType" : 4,
+    "columnTypeName" : "int4",
+    "columnDisplaySize" : 11,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select integer '1'",
+  "columnMetadata" : [ {
+    "columnName" : "int4",
+    "columnLabel" : "int4",
+    "columnType" : 4,
+    "columnTypeName" : "int4",
+    "columnDisplaySize" : 11,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1",
+    "javaClassName" : "java.lang.Integer"
+  } ] ]
+}, {
+  "query" : "select NULL::bigint",
+  "columnMetadata" : [ {
+    "columnName" : "int8",
+    "columnLabel" : "int8",
+    "columnType" : -5,
+    "columnTypeName" : "int8",
+    "columnDisplaySize" : 20,
+    "precision" : 19,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select bigint '1'",
+  "columnMetadata" : [ {
+    "columnName" : "int8",
+    "columnLabel" : "int8",
+    "columnType" : -5,
+    "columnTypeName" : "int8",
+    "columnDisplaySize" : 20,
+    "precision" : 19,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1",
+    "javaClassName" : "java.lang.Long"
+  } ] ]
+}, {
+  "query" : "select NULL::smallint[]",
+  "columnMetadata" : [ {
+    "columnName" : "int2",
+    "columnLabel" : "int2",
+    "columnType" : 2003,
+    "columnTypeName" : "_int2",
+    "columnDisplaySize" : 6,
+    "precision" : 5,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::bigint[]",
+  "columnMetadata" : [ {
+    "columnName" : "int8",
+    "columnLabel" : "int8",
+    "columnType" : 2003,
+    "columnTypeName" : "_int8",
+    "columnDisplaySize" : 20,
+    "precision" : 19,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select NULL::smallint",
+  "columnMetadata" : [ {
+    "columnName" : "int2",
+    "columnLabel" : "int2",
+    "columnType" : 5,
+    "columnTypeName" : "int2",
+    "columnDisplaySize" : 6,
+    "precision" : 5,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : null,
+    "javaClassName" : null
+  } ] ]
+}, {
+  "query" : "select smallint '1'",
+  "columnMetadata" : [ {
+    "columnName" : "int2",
+    "columnLabel" : "int2",
+    "columnType" : 5,
+    "columnTypeName" : "int2",
+    "columnDisplaySize" : 6,
+    "precision" : 5,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1",
+    "javaClassName" : "java.lang.Integer"
+  } ] ]
+} ]

@@ -60,21 +60,28 @@ public class ArrowUtils {
         return fields.stream()
                 .map(field -> {
                     try {
-                        return fieldToColumnMetaData(field, index.getAndIncrement());
+                        ColumnType type = ArrowToColumnTypeMapper.toColumnType(field);
+                        val avaticaType = getAvaticaType(type).toProto();
+
+                        final Common.ColumnMetaData.Builder builder = Common.ColumnMetaData.newBuilder()
+                                .setOrdinal(index.getAndIncrement())
+                                .setColumnName(field.getName())
+                                .setLabel(field.getName())
+                                .setType(avaticaType)
+                                .setPrecision(type.getPrecision())
+                                .setScale(type.getScale())
+                                .setCaseSensitive(type.isCaseSensitive())
+                                .setDisplaySize(type.getDisplaySize())
+                                .setSigned(type.isSigned())
+                                .setNullable(ResultSetMetaData.columnNullableUnknown)
+                                .setSearchable(true)
+                                .setWritable(true);
+                        return ColumnMetaData.fromProto(builder.build());
                     } catch (SQLException e) {
                         throw new RuntimeException(e);
                     }
                 })
                 .collect(Collectors.toList());
-    }
-
-    private static ColumnMetaData fieldToColumnMetaData(Field field, int index) throws SQLException {
-        final Common.ColumnMetaData.Builder builder = Common.ColumnMetaData.newBuilder()
-                .setOrdinal(index)
-                .setColumnName(field.getName())
-                .setLabel(field.getName())
-                .setType(getAvaticaType(field.getType()).toProto());
-        return ColumnMetaData.fromProto(builder.build());
     }
 
     /** Converts from JDBC metadata to Avatica columns. */
@@ -87,7 +94,8 @@ public class ArrowUtils {
                 .limit(maxSize)
                 .map(i -> {
                     try {
-                        val avaticaType = getAvaticaType(metaData.getColumnType(i), metaData.getColumnTypeName(i));
+                        val columnType = new ColumnType(JDBCType.valueOf(metaData.getColumnType(i)));
+                        val avaticaType = getAvaticaType(columnType);
                         return new ColumnMetaData(
                                 i - 1,
                                 metaData.isAutoIncrement(i),
@@ -224,98 +232,21 @@ public class ArrowUtils {
         }
     }
 
-    public static int getSQLTypeFromArrowType(ArrowType arrowType) {
-        val typeId = arrowType.getTypeID();
-        switch (typeId) {
-            case Int:
-                return getSQLTypeForInt((ArrowType.Int) arrowType);
-            case Bool:
-                return Types.BOOLEAN;
-            case Utf8:
-                return Types.VARCHAR;
-            case LargeUtf8:
-                return Types.LONGVARCHAR;
-            case Binary:
-                return Types.VARBINARY;
-            case FixedSizeBinary:
-                return Types.BINARY;
-            case LargeBinary:
-                return Types.LONGVARBINARY;
-            case FloatingPoint:
-                return getSQLTypeForFloatingPoint((ArrowType.FloatingPoint) arrowType);
-            case Decimal:
-                return Types.DECIMAL;
-            case Date:
-                return Types.DATE;
-            case Time:
-                return Types.TIME;
-            case Timestamp:
-                return Types.TIMESTAMP;
-            case List:
-            case LargeList:
-            case FixedSizeList:
-                return Types.ARRAY;
-            case Map:
-            case Duration:
-            case Union:
-            case Interval:
-                return Types.JAVA_OBJECT;
-            case Struct:
-                return Types.STRUCT;
-            case NONE:
-            case Null:
-                return Types.NULL;
-            default:
-                break;
-        }
-        throw new IllegalArgumentException("Unsupported Arrow type: " + arrowType);
-    }
-
-    private int getSQLTypeForInt(ArrowType.Int arrowType) {
-        val bitWidth = arrowType.getBitWidth();
-        switch (bitWidth) {
-            case 8:
-                return Types.TINYINT;
-            case 16:
-                return Types.SMALLINT;
-            case 32:
-                return Types.INTEGER;
-            case 64:
-                return Types.BIGINT;
-            default:
-                break;
-        }
-        throw new IllegalArgumentException("Unsupported Arrow Integer Bit Width: " + bitWidth);
-    }
-
-    private int getSQLTypeForFloatingPoint(ArrowType.FloatingPoint arrowType) {
-        val precision = arrowType.getPrecision();
-        switch (precision) {
-            case SINGLE:
-                return Types.FLOAT;
-            case DOUBLE:
-                return Types.DOUBLE;
-            default:
-                break;
-        }
-        throw new IllegalArgumentException("Unsupported Arrow Floating Point: " + precision);
-    }
-
-    private static ColumnMetaData.AvaticaType getAvaticaType(ArrowType arrowType) throws SQLException {
-        val sqlType = getSQLTypeFromArrowType(arrowType);
-        return getAvaticaType(sqlType, JDBCType.valueOf(sqlType).getName());
-    }
-
-    private static ColumnMetaData.AvaticaType getAvaticaType(int type, String typeName) throws SQLException {
+    private static ColumnMetaData.AvaticaType getAvaticaType(ColumnType columnType) throws SQLException {
         final ColumnMetaData.AvaticaType avaticaType;
-        final SqlType sqlType = SqlType.valueOf(type);
+        int typeId = columnType.getType().getVendorTypeNumber();
+        if (typeId == JDBCType.TIMESTAMP_WITH_TIMEZONE.getVendorTypeNumber()) {
+            // We have to expose as `TIMESTAMP` here as Avatica doesn't support TIMESTAMPT_WITH_TIMEZONE accessors
+            typeId = JDBCType.TIMESTAMP.getVendorTypeNumber();
+        }
+        String typeName = columnType.getType().getName();
+        final SqlType sqlType = SqlType.valueOf(typeId);
         final ColumnMetaData.Rep rep = ColumnMetaData.Rep.of(sqlType.internal);
-        if (sqlType == SqlType.ARRAY || sqlType == SqlType.STRUCT || sqlType == SqlType.MULTISET) {
-            ColumnMetaData.AvaticaType arrayValueType =
-                    ColumnMetaData.scalar(java.sql.Types.JAVA_OBJECT, typeName, ColumnMetaData.Rep.OBJECT);
+        if (sqlType == SqlType.ARRAY) {
+            ColumnMetaData.AvaticaType arrayValueType = getAvaticaType(columnType.getArrayElementType());
             avaticaType = ColumnMetaData.array(arrayValueType, typeName, rep);
         } else {
-            avaticaType = ColumnMetaData.scalar(type, typeName, rep);
+            avaticaType = ColumnMetaData.scalar(typeId, typeName, rep);
         }
         return avaticaType;
     }

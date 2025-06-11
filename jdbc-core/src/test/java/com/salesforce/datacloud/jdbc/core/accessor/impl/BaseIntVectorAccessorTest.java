@@ -61,7 +61,7 @@ public class BaseIntVectorAccessorTest {
                         .hasFloat(expected)
                         .hasDouble(expected)
                         .hasBigDecimal(new BigDecimal(expected))
-                        .hasObject(expected)
+                        .hasObject(Integer.valueOf(expected))
                         .hasObjectClass(Long.class);
             }
         }
@@ -87,7 +87,7 @@ public class BaseIntVectorAccessorTest {
                         .hasFloat(expected)
                         .hasDouble(expected)
                         .hasBigDecimal(new BigDecimal(expected))
-                        .hasObject(expected)
+                        .hasObject(Integer.valueOf(expected))
                         .hasObjectClass(Long.class);
             }
         }

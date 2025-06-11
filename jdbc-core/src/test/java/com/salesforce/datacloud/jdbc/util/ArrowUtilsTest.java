@@ -38,7 +38,6 @@ import java.util.stream.Stream;
 import lombok.val;
 import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
-import org.apache.arrow.vector.types.IntervalUnit;
 import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
@@ -102,7 +101,7 @@ class ArrowUtilsTest {
                 JDBCType.valueOf(Types.VARCHAR).getName(),
                 ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Utf8()), null)));
         testCases.put(
-                JDBCType.valueOf(Types.FLOAT).getName(),
+                JDBCType.valueOf(Types.REAL).getName(),
                 ImmutableList.of(new Field(
                         "", FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE)), null)));
         testCases.put(
@@ -117,7 +116,7 @@ class ArrowUtilsTest {
                 ImmutableList.of(
                         new Field("", FieldType.nullable(new ArrowType.Time(TimeUnit.MICROSECOND, 64)), null)));
         testCases.put(
-                JDBCType.valueOf(Types.TIMESTAMP).getName(),
+                JDBCType.valueOf(Types.TIMESTAMP_WITH_TIMEZONE).getName(),
                 ImmutableList.of(
                         new Field("", FieldType.nullable(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC")), null)));
         testCases.put(
@@ -125,7 +124,10 @@ class ArrowUtilsTest {
                 ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Decimal(1, 1, 128)), null)));
         testCases.put(
                 JDBCType.valueOf(Types.ARRAY).getName(),
-                ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.List()), null)));
+                ImmutableList.of(new Field(
+                        "",
+                        FieldType.nullable(new ArrowType.List()),
+                        ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Utf8()), null)))));
 
         for (val entry : testCases.entrySet()) {
             List<ColumnMetaData> actual = ArrowUtils.toColumnMetaData(entry.getValue());
@@ -141,36 +143,30 @@ class ArrowUtilsTest {
                 Arguments.of(new ArrowType.Int(64, true), Types.BIGINT),
                 Arguments.of(new ArrowType.Bool(), Types.BOOLEAN),
                 Arguments.of(new ArrowType.Utf8(), Types.VARCHAR),
-                Arguments.of(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE), Types.FLOAT),
+                Arguments.of(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE), Types.REAL),
                 Arguments.of(new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE), Types.DOUBLE),
-                Arguments.of(new ArrowType.LargeUtf8(), Types.LONGVARCHAR),
                 Arguments.of(new ArrowType.Binary(), Types.VARBINARY),
                 Arguments.of(new ArrowType.FixedSizeBinary(8), Types.BINARY),
-                Arguments.of(new ArrowType.LargeBinary(), Types.LONGVARBINARY),
                 Arguments.of(new ArrowType.Decimal(1, 1, 128), Types.DECIMAL),
                 Arguments.of(new ArrowType.Date(DateUnit.DAY), Types.DATE),
                 Arguments.of(new ArrowType.Time(TimeUnit.MICROSECOND, 64), Types.TIME),
-                Arguments.of(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC"), Types.TIMESTAMP),
-                Arguments.of(new ArrowType.List(), Types.ARRAY),
-                Arguments.of(new ArrowType.LargeList(), Types.ARRAY),
-                Arguments.of(new ArrowType.FixedSizeList(1), Types.ARRAY),
-                Arguments.of(new ArrowType.Map(true), Types.JAVA_OBJECT),
-                Arguments.of(new ArrowType.Duration(TimeUnit.MICROSECOND), Types.JAVA_OBJECT),
-                Arguments.of(new ArrowType.Interval(IntervalUnit.DAY_TIME), Types.JAVA_OBJECT),
-                Arguments.of(new ArrowType.Struct(), Types.STRUCT),
+                Arguments.of(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC"), Types.TIMESTAMP_WITH_TIMEZONE),
                 Arguments.of(new ArrowType.Null(), Types.NULL));
     }
 
     @ParameterizedTest
     @MethodSource("arrowTypes")
     void testGetSQLTypeFromArrowTypes(ArrowType arrowType, int expectedSqlType) {
-        softly.assertThat(ArrowUtils.getSQLTypeFromArrowType(arrowType)).isEqualTo(expectedSqlType);
+        softly.assertThat(ArrowToColumnTypeMapper.toColumnType(Field.nullable("", arrowType))
+                        .getType()
+                        .getVendorTypeNumber())
+                .isEqualTo(expectedSqlType);
     }
 
     @Test
     void testConvertJDBCMetadataToAvaticaColumns() throws SQLException {
         ResultSetMetaData resultSetMetaData = mockResultSetMetadata();
-        List<ColumnMetaData> columnMetaDataList = ArrowUtils.convertJDBCMetadataToAvaticaColumns(resultSetMetaData, 7);
+        List<ColumnMetaData> columnMetaDataList = ArrowUtils.convertJDBCMetadataToAvaticaColumns(resultSetMetaData, 4);
 
         for (int i = 0; i < columnMetaDataList.size(); i++) {
             val actual = columnMetaDataList.get(i);
@@ -187,11 +183,9 @@ class ArrowUtilsTest {
     }
 
     private ResultSetMetaData mockResultSetMetadata() {
-        String[] columnNames = {"col1", "col2", "col3", "col4", "col5", "col6", "col7"};
-        String[] columnTypes = {
-            "INTEGER", "VARCHAR", "DECIMAL", "TIMESTAMP WITH TIME ZONE", "ARRAY", "STRUCT", "MULTISET"
-        };
-        Integer[] columnTypeIds = {4, 12, 3, 2013, 2003, 2002, 2003};
+        String[] columnNames = {"col1", "col2", "col3", "col4"};
+        String[] columnTypes = {"INTEGER", "VARCHAR", "DECIMAL", "TIMESTAMP"};
+        Integer[] columnTypeIds = {4, 12, 3, 93};
 
         return new QueryResultSetMetadata(
                 Arrays.asList(columnNames), Arrays.asList(columnTypes), Arrays.asList(columnTypeIds));
