@@ -26,9 +26,10 @@ import com.salesforce.datacloud.reference.ColumnMetadata;
 import com.salesforce.datacloud.reference.ReferenceEntry;
 import com.salesforce.datacloud.reference.ValueWithClass;
 import java.sql.JDBCType;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -59,6 +60,13 @@ public class JDBCTypesTest {
                 boolean isTestable = true;
                 // Patch result metadata expectations
                 for (ColumnMetadata c : e.getColumnMetadata()) {
+                    // We conciously decided to mark fields as non writeable (like Snowflake) as it aligns more with the
+                    // semantics of a result set.
+                    c.setWritable(false);
+                    // We conciously decided to mark fields as nullable to represent what the arrow metadata returns
+                    if (e.getQuery().contains("NULL")) {
+                        c.setIsNullable(ResultSetMetaData.columnNullable);
+                    }
                     // These types don't work in V3
                     if (c.getColumnTypeName().endsWith("regconfig")
                             || c.getColumnTypeName().endsWith("regproc")
@@ -165,150 +173,23 @@ public class JDBCTypesTest {
     @ParameterizedTest
     @MethodSource("getBaselineEntries")
     @SneakyThrows
-    public void testMetadataAgainstBaseline(ReferenceEntry ReferenceEntry) {
+    public void testMetadataAgainstBaseline(ReferenceEntry referenceEntry) {
         Properties properties = new Properties();
         properties.setProperty("timezone", "America/Los_Angeles");
         try (DataCloudConnection conn = getHyperQueryConnection(properties)) {
 
-            val stmt = (DataCloudStatement) conn.createStatement();
+            val stmt = conn.createStatement();
 
-            try (DataCloudResultSet rs = (DataCloudResultSet) stmt.executeQuery(ReferenceEntry.getQuery())) {
-                val metadata = rs.getMetaData();
-                val expectedColumns = ReferenceEntry.getColumnMetadata();
-
-                // Validate column count matches
-                assertEquals(
-                        expectedColumns.size(),
-                        metadata.getColumnCount(),
-                        "Column count mismatch for query: " + ReferenceEntry.getQuery());
-
-                // Validate each column's metadata
-                for (int i = 0; i < expectedColumns.size(); i++) {
-                    int columnIndex = i + 1; // JDBC is 1-based
-                    ColumnMetadata expected = expectedColumns.get(i);
-
-                    // Extract actual metadata from DataCloudResultSet
-                    ColumnMetadata actual = ColumnMetadata.fromResultSetMetaData(metadata, columnIndex);
-
-                    // Compare key metadata fields
-                    validateColumnMetadata(expected, actual, ReferenceEntry.getQuery(), columnIndex);
-                }
-
-                // Validate returned values and null signaling
-                validateReturnedValues(rs, ReferenceEntry);
+            try (ResultSet rs = stmt.executeQuery(referenceEntry.getQuery())) {
+                // Validate metadata and returned values against the reference entry
+                referenceEntry.validateAgainstResultSet(rs, referenceEntry.getQuery());
             } catch (Exception e) {
-                System.out.println("Failed to execute query: " + ReferenceEntry.getQuery());
+                System.out.println("Failed to execute query: " + referenceEntry.getQuery());
                 System.out.println("Error: " + e.getMessage());
                 // Skip queries that fail to execute - these might be PostgreSQL-specific
                 // In production, we'd want to catalog which queries work vs don't work
                 throw (e);
             }
         }
-    }
-
-    /**
-     * Validates that actual column metadata matches expected baseline metadata.
-     *
-     * @param expected Expected metadata from PostgreSQL baseline
-     * @param actual Actual metadata from DataCloudResultSet
-     * @param query The SQL query being tested
-     * @param columnIndex The column index (1-based)
-     */
-    private void validateColumnMetadata(ColumnMetadata expected, ColumnMetadata actual, String query, int columnIndex) {
-        String context = String.format("Query: %s, Column: %d", query, columnIndex);
-        // Core type information - these should match exactly for compatibility
-        assertEquals(expected.getColumnType(), actual.getColumnType(), context + " - Column type mismatch");
-
-        assertEquals(
-                expected.getColumnTypeName(), actual.getColumnTypeName(), context + " - Column type name mismatch");
-
-        // Precision and scale
-        assertEquals(expected.getPrecision(), actual.getPrecision(), context + " - Precision mismatch");
-        assertEquals(expected.getScale(), actual.getScale(), context + " - Scale mismatch");
-
-        // Nullability
-        assertEquals(expected.getIsNullable(), actual.getIsNullable(), context + " - Nullability mismatch");
-
-        // Boolean flags - these are important for JDBC behavior
-        assertEquals(expected.isAutoIncrement(), actual.isAutoIncrement(), context + " - Auto increment mismatch");
-        assertEquals(expected.isCaseSensitive(), actual.isCaseSensitive(), context + " - Case sensitivity mismatch");
-        assertEquals(expected.isCurrency(), actual.isCurrency(), context + " - Currency flag mismatch");
-        assertEquals(expected.isSigned(), actual.isSigned(), context + " - Signed flag mismatch");
-
-        // Write/search capabilities
-        assertEquals(expected.isReadOnly(), actual.isReadOnly(), context + " - Read-only flag mismatch");
-        assertEquals(expected.isSearchable(), actual.isSearchable(), context + " - Searchable flag mismatch");
-
-        // Object level check to cover fields that are not individually validated, we reset those values that we
-        // explicitly don't want to test
-        expected.setColumnName("");
-        actual.setColumnName("");
-        expected.setColumnLabel("");
-        actual.setColumnLabel("");
-        expected.setCatalogName("");
-        actual.setCatalogName("");
-        expected.setSchemaName("");
-        actual.setSchemaName("");
-        expected.setTableName("");
-        actual.setTableName("");
-        assertEquals(expected, actual);
-    }
-
-    /**
-     * Validates that actual returned values match expected baseline values and that null signaling works correctly.
-     *
-     * @param rs the DataCloudResultSet containing actual values
-     * @param referenceEntry the reference entry containing expected values
-     * @throws Exception if validation fails
-     */
-    private void validateReturnedValues(DataCloudResultSet rs, ReferenceEntry referenceEntry) throws Exception {
-        val expectedValues = referenceEntry.getReturnedValues();
-        Objects.requireNonNull(expectedValues, "Expected values are null");
-        val metadata = rs.getMetaData();
-        int columnCount = metadata.getColumnCount();
-        String query = referenceEntry.getQuery();
-
-        // Extract all returned values from the ResultSet
-        int rowIndex = 0;
-        while (rs.next()) {
-            List<ValueWithClass> expectedRow = expectedValues.get(rowIndex);
-
-            for (int col = 1; col <= columnCount; col++) {
-                // Get the value using getObject() like the reference generator
-                Object value = rs.getObject(col);
-
-                // Test that wasNull() correctly signals null values
-                boolean wasNull = rs.wasNull();
-                if (value == null && !wasNull) {
-                    throw new AssertionError(String.format(
-                            "Query '%s', column %d: value is null but wasNull() returned false", query, col));
-                }
-                if (value != null && wasNull) {
-                    throw new AssertionError(String.format(
-                            "Query '%s', column %d: value is not null but wasNull() returned true", query, col));
-                }
-
-                // Validate each row's values
-                ValueWithClass actualValue = ValueWithClass.from(value);
-                ValueWithClass expectedValue = expectedRow.get(col - 1);
-
-                // Handle null comparison properly - compare the ValueWithClass objects directly
-                if (!Objects.equals(expectedValue, actualValue)) {
-                    throw new AssertionError(String.format(
-                            "Value mismatch for query '%s', row %d, column %d: expected '%s', got '%s'",
-                            query, rowIndex + 1, col, expectedValue, actualValue));
-                }
-            }
-
-            ++rowIndex;
-        }
-
-        // Validate row count matches
-        assertEquals(
-                expectedValues.size(),
-                rowIndex,
-                String.format(
-                        "Row count mismatch for query '%s': expected %d rows, got %d rows",
-                        query, expectedValues.size(), rowIndex));
     }
 }

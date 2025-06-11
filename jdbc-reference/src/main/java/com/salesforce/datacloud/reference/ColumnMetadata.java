@@ -100,4 +100,142 @@ public class ColumnMetadata {
                 metaData.getSchemaName(columnIndex),
                 metaData.getTableName(columnIndex));
     }
+
+    /**
+     * Validates this ColumnMetadata instance against another instance field by field.
+     * Throws an IllegalArgumentException if any fields don't match.
+     *
+     * @param other the ColumnMetadata instance to compare against
+     * @throws IllegalArgumentException if any fields don't match
+     */
+    public void validateAgainst(ColumnMetadata other) {
+        if (other == null) {
+            throw new IllegalArgumentException("Cannot validate against null ColumnMetadata");
+        }
+
+        StringBuilder errors = new StringBuilder();
+        if (this.columnType != other.columnType) {
+            errors.append("columnType mismatch: expected=")
+                    .append(other.columnType)
+                    .append(", actual=")
+                    .append(this.columnType)
+                    .append("\n");
+        }
+
+        if (!java.util.Objects.equals(this.columnTypeName, other.columnTypeName)) {
+            errors.append("columnTypeName mismatch: expected='")
+                    .append(other.columnTypeName)
+                    .append("', actual='")
+                    .append(this.columnTypeName)
+                    .append("'\n");
+        }
+
+        if (this.columnDisplaySize != other.columnDisplaySize) {
+            errors.append("columnDisplaySize mismatch: expected=")
+                    .append(other.columnDisplaySize)
+                    .append(", actual=")
+                    .append(this.columnDisplaySize)
+                    .append("\n");
+        }
+
+        if (this.precision != other.precision) {
+            errors.append("precision mismatch: expected=")
+                    .append(other.precision)
+                    .append(", actual=")
+                    .append(this.precision)
+                    .append("\n");
+        }
+
+        if (this.scale != other.scale) {
+            errors.append("scale mismatch: expected=")
+                    .append(other.scale)
+                    .append(", actual=")
+                    .append(this.scale)
+                    .append("\n");
+        }
+
+        if (this.isNullable != other.isNullable && (other.isNullable != ResultSetMetaData.columnNullableUnknown)) {
+            errors.append("isNullable mismatch: expected=")
+                    .append(other.isNullable)
+                    .append(", actual=")
+                    .append(this.isNullable)
+                    .append("\n");
+        }
+
+        if (this.isAutoIncrement != other.isAutoIncrement) {
+            errors.append("isAutoIncrement mismatch: expected=")
+                    .append(other.isAutoIncrement)
+                    .append(", actual=")
+                    .append(this.isAutoIncrement)
+                    .append("\n");
+        }
+
+        if (this.isCaseSensitive != other.isCaseSensitive) {
+            errors.append("isCaseSensitive mismatch: expected=")
+                    .append(other.isCaseSensitive)
+                    .append(", actual=")
+                    .append(this.isCaseSensitive)
+                    .append("\n");
+        }
+
+        if (this.isCurrency != other.isCurrency) {
+            errors.append("isCurrency mismatch: expected=")
+                    .append(other.isCurrency)
+                    .append(", actual=")
+                    .append(this.isCurrency)
+                    .append("\n");
+        }
+
+        if (this.isDefinitelyWritable != other.isDefinitelyWritable) {
+            errors.append("isDefinitelyWritable mismatch: expected=")
+                    .append(other.isDefinitelyWritable)
+                    .append(", actual=")
+                    .append(this.isDefinitelyWritable)
+                    .append("\n");
+        }
+
+        if (this.isReadOnly != other.isReadOnly) {
+            errors.append("isReadOnly mismatch: expected=")
+                    .append(other.isReadOnly)
+                    .append(", actual=")
+                    .append(this.isReadOnly)
+                    .append("\n");
+        }
+
+        if (this.isSearchable != other.isSearchable) {
+            errors.append("isSearchable mismatch: expected=")
+                    .append(other.isSearchable)
+                    .append(", actual=")
+                    .append(this.isSearchable)
+                    .append("\n");
+        }
+
+        if (this.isSigned != other.isSigned) {
+            errors.append("isSigned mismatch: expected=")
+                    .append(other.isSigned)
+                    .append(", actual=")
+                    .append(this.isSigned)
+                    .append("\n");
+        }
+
+        if (this.isWritable != other.isWritable) {
+            errors.append("isWritable mismatch: expected=")
+                    .append(other.isWritable)
+                    .append(", actual=")
+                    .append(this.isWritable)
+                    .append("\n");
+        }
+
+        // Conciously ignore labels and names as they can differ between databases
+        // - catalogName
+        // - schemaName
+        // - tableName
+        // - columnLabel
+        // - columnName
+
+        // If there are any errors, throw exception with all details
+        if (errors.length() > 0) {
+            throw new IllegalArgumentException("ColumnMetadata validation failed:\n" + errors.toString());
+        }
+    }
 }

@@ -68,14 +68,17 @@ public class ArrowUtils {
                                 .setColumnName(field.getName())
                                 .setLabel(field.getName())
                                 .setType(avaticaType)
-                                .setPrecision(type.getPrecision())
+                                .setPrecision(type.getPrecisionOrStringLength())
                                 .setScale(type.getScale())
                                 .setCaseSensitive(type.isCaseSensitive())
                                 .setDisplaySize(type.getDisplaySize())
                                 .setSigned(type.isSigned())
-                                .setNullable(ResultSetMetaData.columnNullableUnknown)
+                                .setNullable(
+                                        field.isNullable()
+                                                ? ResultSetMetaData.columnNullable
+                                                : ResultSetMetaData.columnNoNulls)
                                 .setSearchable(true)
-                                .setWritable(true);
+                                .setWritable(false);
                         return ColumnMetaData.fromProto(builder.build());
                     } catch (SQLException e) {
                         throw new RuntimeException(e);

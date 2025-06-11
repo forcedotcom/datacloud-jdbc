@@ -16,14 +16,14 @@
 package com.salesforce.datacloud.jdbc.util;
 
 import java.sql.JDBCType;
-import lombok.Getter;
+import lombok.Value;
 
 /**
  * Represents the type of a SQL column.
  *
  * Provides accessors for the various JDBC properties of the types.
  */
-@Getter
+@Value
 public class ColumnType {
 
     /// The SQL type
@@ -34,7 +34,7 @@ public class ColumnType {
     /// For Numerics: the NUMERIC(precision, scale)
     /// For Char / Varchar: the length, or 0 for unlimited length
     /// Unused for other types
-    private int precision;
+    private int precisionOrStringLength;
     /// For Numerics: the NUMERIC(precision, scale)
     /// Unused for other types
     private int scale;
@@ -50,23 +50,29 @@ public class ColumnType {
 
     public ColumnType(JDBCType type) {
         this.type = type;
+        this.arrayElementType = null;
+        this.precisionOrStringLength = -1;
+        this.scale = 1;
     }
 
     public ColumnType(JDBCType type, ColumnType arrayElementType) {
         this.type = type;
         this.arrayElementType = arrayElementType;
+        this.precisionOrStringLength = -1;
+        this.scale = 1;
     }
 
     public ColumnType(JDBCType type, int precision, int scale) {
         this.type = type;
-        this.precision = precision;
+        this.arrayElementType = null;
+        this.precisionOrStringLength = precision;
         this.scale = scale;
     }
 
     /**
      * Implements the semantics of java.sql.ResultSetMetaData.getPrecision().
      */
-    public int getPrecision() {
+    public int getPrecisionOrStringLength() {
         switch (type) {
             case BIT:
             case BOOLEAN:
@@ -90,7 +96,7 @@ public class ColumnType {
             case DECIMAL:
             case NUMERIC:
             case VARCHAR:
-                return precision;
+                return precisionOrStringLength;
             case BINARY:
             case VARBINARY:
                 return MAX_VARLEN_PRECISION;
@@ -111,7 +117,7 @@ public class ColumnType {
             case CLOB:
                 return UNKNOWN_PRECISION;
             case ARRAY:
-                return arrayElementType.getPrecision();
+                return arrayElementType.getPrecisionOrStringLength();
             case LONGVARCHAR:
             case LONGVARBINARY:
             case OTHER:
@@ -150,7 +156,7 @@ public class ColumnType {
             case DOUBLE:
             case FLOAT:
             case REAL:
-                return getPrecision();
+                return getPrecisionOrStringLength();
             case DECIMAL:
             case NUMERIC:
                 return scale;
@@ -237,15 +243,15 @@ public class ColumnType {
             case INTEGER:
             case BIGINT:
                 // The number of digits of precision + 1 for the sign
-                return getPrecision() + 1;
+                return getPrecisionOrStringLength() + 1;
             case DECIMAL:
             case NUMERIC:
                 if (scale > 0) {
                     // The number of digits of precision + 1 for the decimal point and +1 for thesign
-                    return getPrecision() + 2;
+                    return getPrecisionOrStringLength() + 2;
                 } else {
                     // The number of digits of precision + 1 for the sign
-                    return getPrecision() + 1;
+                    return getPrecisionOrStringLength() + 1;
                 }
             case REAL:
                 return 15;
@@ -255,7 +261,7 @@ public class ColumnType {
             case ARRAY:
                 return arrayElementType.getDisplaySize();
             default:
-                return getPrecision();
+                return getPrecisionOrStringLength();
         }
     }
 }

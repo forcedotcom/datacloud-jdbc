@@ -40,7 +40,8 @@ public final class ArrowToColumnTypeMapper {
         }
 
         private IllegalArgumentException unsupportedTypeException() {
-            return new IllegalArgumentException("Unsupported Arrow type: " + field.getType());
+            return new IllegalArgumentException(
+                    "Unsupported Arrow type: " + field.getType() + " for field " + field.getName());
         }
 
         @Override

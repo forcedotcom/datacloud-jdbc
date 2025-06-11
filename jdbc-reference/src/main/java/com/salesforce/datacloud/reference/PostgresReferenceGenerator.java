@@ -138,7 +138,7 @@ public class PostgresReferenceGenerator {
                         List<ColumnMetadata> columnMetadataList = extractColumnMetadata(resultSet.getMetaData());
 
                         // Extract returned values for all rows
-                        List<List<ValueWithClass>> returnedValues = extractReturnedValues(resultSet);
+                        List<List<ValueWithClass>> returnedValues = ReferenceEntry.extractReturnedValues(resultSet);
 
                         // Create Reference entry
                         ReferenceEntry referenceEntry = new ReferenceEntry(sql, columnMetadataList, returnedValues);
@@ -183,33 +183,6 @@ public class PostgresReferenceGenerator {
     }
 
     /**
-     * Extracts returned values from ResultSet using getObject() and preserves both string representation and Java class.
-     * Handles null values correctly by preserving them as null in the result.
-     *
-     * @param resultSet the ResultSet to extract values from
-     * @return list of rows, where each row is a list of ValueWithClass objects
-     * @throws SQLException if value extraction fails
-     */
-    private List<List<ValueWithClass>> extractReturnedValues(ResultSet resultSet) throws SQLException {
-        List<List<ValueWithClass>> allRows = new ArrayList<>();
-        ResultSetMetaData metaData = resultSet.getMetaData();
-        int columnCount = metaData.getColumnCount();
-
-        while (resultSet.next()) {
-            List<ValueWithClass> rowValues = new ArrayList<>();
-
-            for (int col = 1; col <= columnCount; col++) {
-                Object value = resultSet.getObject(col);
-                ValueWithClass valueWithClass = ValueWithClass.from(value);
-                rowValues.add(valueWithClass);
-            }
-
-            allRows.add(rowValues);
-        }
-        return allRows;
-    }
-
-    /**
      * Writes the reference entries to the reference.json file in the resources directory.
      *
      * @param ReferenceEntries list of reference entries to write
@@ -249,84 +222,17 @@ public class PostgresReferenceGenerator {
                 objectMapper.readValue(resourcesPath.toFile(), new TypeReference<List<ReferenceEntry>>() {});
 
         for (ReferenceEntry referenceEntry : referenceEntries) {
-            validateReferenceEntryAgainstPostgres(connection, referenceEntry);
-        }
-    }
+            String sql = referenceEntry.getQuery();
+            logger.debug("Validating query: {}", sql);
 
-    /**
-     * Validates a single reference entry against PostgreSQL results.
-     *
-     * @param connection the database connection
-     * @param referenceEntry the reference entry to validate
-     * @throws SQLException if database operations fail
-     */
-    private void validateReferenceEntryAgainstPostgres(Connection connection, ReferenceEntry referenceEntry)
-            throws SQLException {
-        String sql = referenceEntry.getQuery();
-        List<ColumnMetadata> expectedMetadata = referenceEntry.getColumnMetadata();
-        logger.debug("Validating query: {}", sql);
-
-        try (Statement statement = connection.createStatement()) {
-            boolean hasResultSet = statement.execute(sql);
-            if (!hasResultSet) {
-                throw new RuntimeException("Query should return a result set: " + sql);
-            }
-
-            try (ResultSet resultSet = statement.getResultSet()) {
-                ResultSetMetaData actualMetaData = resultSet.getMetaData();
-
-                // Validate column count
-                if (expectedMetadata.size() != actualMetaData.getColumnCount()) {
-                    throw new RuntimeException(String.format(
-                            "Column count mismatch for query '%s': expected %d, got %d",
-                            sql, expectedMetadata.size(), actualMetaData.getColumnCount()));
+            try (Statement statement = connection.createStatement()) {
+                boolean hasResultSet = statement.execute(sql);
+                if (!hasResultSet) {
+                    throw new RuntimeException("Query should return a result set: " + sql);
                 }
 
-                // Validate each column's metadata
-                for (int i = 0; i < expectedMetadata.size(); i++) {
-                    int columnIndex = i + 1; // JDBC is 1-based
-                    ColumnMetadata expected = expectedMetadata.get(i);
-                    ColumnMetadata actual = ColumnMetadata.fromResultSetMetaData(actualMetaData, columnIndex);
-
-                    if (!expected.equals(actual)) {
-                        throw new RuntimeException(String.format(
-                                "Column metadata mismatch for query '%s', column %d: expected %s, got %s",
-                                sql, columnIndex, expected, actual));
-                    }
-                }
-
-                // Validate returned values
-                List<List<ValueWithClass>> expectedValues = referenceEntry.getReturnedValues();
-                List<List<ValueWithClass>> actualValues = extractReturnedValues(resultSet);
-
-                if (expectedValues.size() != actualValues.size()) {
-                    throw new RuntimeException(String.format(
-                            "Row count mismatch for query '%s': expected %d rows, got %d rows",
-                            sql, expectedValues.size(), actualValues.size()));
-                }
-
-                // Validate each row's values
-                for (int rowIndex = 0; rowIndex < expectedValues.size(); rowIndex++) {
-                    List<ValueWithClass> expectedRow = expectedValues.get(rowIndex);
-                    List<ValueWithClass> actualRow = actualValues.get(rowIndex);
-
-                    if (expectedRow.size() != actualRow.size()) {
-                        throw new RuntimeException(String.format(
-                                "Column count mismatch in row %d for query '%s': expected %d columns, got %d columns",
-                                rowIndex + 1, sql, expectedRow.size(), actualRow.size()));
-                    }
-
-                    for (int colIndex = 0; colIndex < expectedRow.size(); colIndex++) {
-                        ValueWithClass expectedValue = expectedRow.get(colIndex);
-                        ValueWithClass actualValue = actualRow.get(colIndex);
-
-                        // Handle null comparison properly
-                        if (!expectedValue.equals(actualValue)) {
-                            throw new RuntimeException(String.format(
-                                    "Value mismatch for query '%s', row %d, column %d: expected '%s', got '%s'",
-                                    sql, rowIndex + 1, colIndex + 1, expectedValue, actualValue));
-                        }
-                    }
+                try (ResultSet resultSet = statement.getResultSet()) {
+                    referenceEntry.validateAgainstResultSet(resultSet, sql);
                 }
             }
         }
