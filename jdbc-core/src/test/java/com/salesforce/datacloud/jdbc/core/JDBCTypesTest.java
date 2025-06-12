@@ -60,10 +60,10 @@ public class JDBCTypesTest {
                 boolean isTestable = true;
                 // Patch result metadata expectations
                 for (ColumnMetadata c : e.getColumnMetadata()) {
-                    // We conciously decided to mark fields as non writeable (like Snowflake) as it aligns more with the
+                    // We consciously decided to mark fields as non writeable (like Snowflake) as it aligns more with the
                     // semantics of a result set.
                     c.setWritable(false);
-                    // We conciously decided to mark fields as nullable to represent what the arrow metadata returns
+                    // We consciously decided to mark fields as nullable to represent what the arrow metadata returns
                     if (e.getQuery().contains("NULL")) {
                         c.setIsNullable(ResultSetMetaData.columnNullable);
                     }

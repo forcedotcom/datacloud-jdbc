@@ -226,7 +226,7 @@ public class ColumnMetadata {
                     .append("\n");
         }
 
-        // Conciously ignore labels and names as they can differ between databases
+        // Consciously ignore labels and names as they can differ between databases
         // - catalogName
         // - schemaName
         // - tableName

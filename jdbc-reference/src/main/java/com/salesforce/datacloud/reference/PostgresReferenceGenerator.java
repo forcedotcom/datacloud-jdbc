@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,10 +37,8 @@ import org.slf4j.LoggerFactory;
  * executes SQL commands loaded from queries.txt file, and generates a reference.json
  * file containing the expected column metadata for each successful query.
  */
+@Slf4j
 public class PostgresReferenceGenerator {
-
-    private static final Logger logger = LoggerFactory.getLogger(PostgresReferenceGenerator.class);
-
     // Database connection parameters - adjust these for your local setup
     public static final String DB_URL = "jdbc:postgresql://localhost:5432/testdb";
     public static final String DB_USER = "testuser";
