@@ -149,6 +149,10 @@ public class ColumnMetadata {
             differences.add(errors.toString());
         }
 
+        /* PostgreSQL always returns `columnNullableUnknown` even if the query has a const null result. In Hyper we are more fine grained.
+         * Thus we allow `unknown` to match both `columnNullable` and `columnNoNulls`. In the expectation checks we manually force the reference expectation
+         * to `columnNullable` if the query has a const null result, as Hyper always returns a nullable type in that case.
+         */
         if (this.isNullable != other.isNullable && (other.isNullable != ResultSetMetaData.columnNullableUnknown)) {
             StringBuilder errors = new StringBuilder();
             errors.append("isNullable mismatch: expected=")
