@@ -22,7 +22,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test class demonstrating how to load protocol values.
+ * Test class to ensure that the protocol values file can be deserialized.
  */
 class ProtocolValuesLoaderTest {
 

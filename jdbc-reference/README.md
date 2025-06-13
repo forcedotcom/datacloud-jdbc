@@ -1,10 +1,10 @@
 # JDBC Reference Generator
 
-This tool generates PostgreSQL JDBC metadata reference files by executing data type queries and capturing column metadata. It's designed to create baseline reference data for testing JDBC driver consistency across different PostgreSQL data types.
+This tool generates PostgreSQL JDBC metadata reference files by executing data type queries and capturing column metadata and result values. It's designed to create baseline reference data for testing JDBC driver consistency when comparing to the Postgres JDBC driver.
 
 ## Quick Start: Updating the Reference JSON
 
-To regenerate the `reference.json` file with the latest PostgreSQL JDBC metadata:
+To regenerate the `reference.json` file with the latest PostgreSQL JDBC metadata & values:
 
 1. **Ensure PostgreSQL is running** with the test database:
    ```bash
@@ -19,16 +19,15 @@ To regenerate the `reference.json` file with the latest PostgreSQL JDBC metadata
 
 3. **The updated `reference.json`** will be written to `jdbc-reference/src/main/resources/reference.json`
 
-That's it! The tool automatically loads test cases from `protocolvalues.json` and generates fresh metadata for all NULL value queries.
+That's it! The tool automatically loads test cases from `protocolvalues.json` and generates fresh reference values.
 
 ## What This Tool Does
 
 The JDBC Reference Generator:
 
 1. **Loads test data** from `src/main/resources/protocolvalues.json` - a comprehensive set of PostgreSQL data type test cases
-2. **Filters for NULL queries** - specifically processes queries that test NULL values for each data type
 3. **Executes SQL queries** against a local PostgreSQL database using JDBC
-4. **Captures column metadata** - extracts detailed JDBC metadata for each result column
+4. **Captures column metadata & values** - extracts detailed JDBC metadata for each result column and also captures the default result object types and values
 5. **Writes reference file** - saves the metadata as JSON to `src/main/resources/reference.json`
 
 The generated reference data can be used for:
@@ -42,30 +41,32 @@ The `reference.json` file contains an array of reference entries. Each entry inc
 
 ```json
 {
-  "query": "select NULL::timestamptz",
-  "columnMetadata": [
-    {
-      "columnName": "timestamptz",
-      "columnLabel": "timestamptz",
-      "columnType": 93,
-      "columnTypeName": "timestamptz",
-      "columnDisplaySize": 35,
-      "precision": 35,
-      "scale": 6,
-      "isNullable": 2,
-      "autoIncrement": false,
-      "caseSensitive": false,
-      "currency": false,
-      "definitelyWritable": false,
-      "readOnly": false,
-      "searchable": true,
-      "signed": false,
-      "writable": true,
-      "catalogName": "",
-      "schemaName": "",
-      "tableName": ""
-    }
-  ]
+  "query" : "select smallint '1'",
+  "columnMetadata" : [ {
+    "columnName" : "int2",
+    "columnLabel" : "int2",
+    "columnType" : 5,
+    "columnTypeName" : "int2",
+    "columnDisplaySize" : 6,
+    "precision" : 5,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : true,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1",
+    "javaClassName" : "java.lang.Integer"
+  } ] ]
 }
 ```
 
@@ -112,7 +113,7 @@ Modify these constants to match your PostgreSQL setup.
 jdbc-reference/
 ├── src/main/java/com/salesforce/datacloud/reference/
 │   ├── PostgresReferenceGenerator.java  # Main application
-│   ├── ReferenceEntry.java              # Data structure for query + metadata
+│   ├── ReferenceEntry.java              # Data structure for query + metadata + values
 │   ├── ColumnMetadata.java              # JDBC column metadata extraction
 │   ├── ProtocolValue.java               # Test case data structure
 │   └── TypeInfo.java                    # Type information classes
@@ -126,7 +127,7 @@ jdbc-reference/
 
 - **`PostgresReferenceGenerator`** - Main class that orchestrates the reference generation
 - **`ProtocolValue`** - Represents test cases loaded from `protocolvalues.json`
-- **`ReferenceEntry`** - Contains a SQL query and its associated column metadata
+- **`ReferenceEntry`** - Contains a SQL query and its associated column metadata & result values
 - **`ColumnMetadata`** - Extracts and serializes JDBC ResultSetMetaData
 
 ## Running the Tool

@@ -27,7 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Unit tests for loading and validating the baseline.json file.
+ * Unit tests for loading and validating the reference.json file.
  * These tests verify that the baseline file can be loaded and parsed correctly
  * without requiring any external dependencies like PostgreSQL.
  */

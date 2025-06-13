@@ -29,9 +29,6 @@ import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * PostgreSQL reference generator that connects to a local PostgreSQL server,
  * executes SQL commands loaded from queries.txt file, and generates a reference.json
@@ -50,7 +47,7 @@ public class PostgresReferenceGenerator {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public static void main(String[] args) {
-        logger.info("Starting PostgreSQL Reference Generator");
+        log.info("Starting PostgreSQL Reference Generator");
 
         PostgresReferenceGenerator generator = new PostgresReferenceGenerator();
         generator.generateReference();
@@ -75,6 +72,7 @@ public class PostgresReferenceGenerator {
                         if (v.isSimpleType()) {
                             return v.getSql();
                         } else {
+                            // Rewrite `SELECT '...'::array(int)` to `SELECT '...'::int[]`
                             String originalSql = v.getSql();
                             String typeName = v.getArrayType().getInner().getSqlTypeName() + "[]";
                             int lastColonIndex = originalSql.lastIndexOf("::");
@@ -90,7 +88,7 @@ public class PostgresReferenceGenerator {
             properties.setProperty("user", DB_USER);
             properties.setProperty("password", DB_PASSWORD);
             try (Connection connection = DriverManager.getConnection(DB_URL, properties)) {
-                logger.info("Connected to PostgreSQL database: {}", DB_URL);
+                log.info("Connected to PostgreSQL database: {}", DB_URL);
 
                 // Execute SQL commands and collect Reference data
                 List<ReferenceEntry> ReferenceEntries = executeSqlAndCollectReference(connection, sqlCommands);
@@ -103,7 +101,6 @@ public class PostgresReferenceGenerator {
             } catch (SQLException e) {
                 throw new RuntimeException("Database operation failed", e);
             }
-
         } catch (ClassNotFoundException e) {
             throw new RuntimeException("Failed to load PostgreSQL JDBC driver", e);
         } catch (IOException e) {
@@ -120,19 +117,19 @@ public class PostgresReferenceGenerator {
      */
     @SneakyThrows
     private List<ReferenceEntry> executeSqlAndCollectReference(Connection connection, List<String> sqlCommands) {
-        logger.info("Executing {} SQL commands and collecting Reference metadata", sqlCommands.size());
+        log.info("Executing {} SQL commands and collecting Reference metadata", sqlCommands.size());
 
         List<ReferenceEntry> referenceEntries = new ArrayList<>();
         for (int i = 0; i < sqlCommands.size(); i++) {
             String sql = sqlCommands.get(i);
-            logger.debug("Executing SQL command {}: {}", i + 1, sql.substring(0, Math.min(50, sql.length())) + "...");
+            log.debug("Executing SQL command {}: {}", i + 1, sql.substring(0, Math.min(50, sql.length())) + "...");
 
             try (Statement statement = connection.createStatement()) {
                 boolean hasResultSet = statement.execute(sql);
 
                 if (hasResultSet) {
                     try (ResultSet resultSet = statement.getResultSet()) {
-                        logger.info("Command {} returned result set", i + 1);
+                        log.info("Command {} returned result set", i + 1);
 
                         // Extract metadata for all columns
                         List<ColumnMetadata> columnMetadataList = extractColumnMetadata(resultSet.getMetaData());
@@ -144,7 +141,7 @@ public class PostgresReferenceGenerator {
                         ReferenceEntry referenceEntry = new ReferenceEntry(sql, columnMetadataList, returnedValues);
                         referenceEntries.add(referenceEntry);
 
-                        logger.info(
+                        log.info(
                                 "Added Reference entry for query {} with {} columns and {} rows",
                                 i + 1,
                                 columnMetadataList.size(),
@@ -157,7 +154,7 @@ public class PostgresReferenceGenerator {
             }
         }
 
-        logger.info("Reference collection completed. Total: {}", sqlCommands.size());
+        log.info("Reference collection completed. Total: {}", sqlCommands.size());
         return referenceEntries;
     }
 
@@ -176,7 +173,7 @@ public class PostgresReferenceGenerator {
             ColumnMetadata columnMetadata = ColumnMetadata.fromResultSetMetaData(metaData, col);
             columnMetadataList.add(columnMetadata);
 
-            logger.debug("Extracted metadata for column {}: {}", col, columnMetadata);
+            log.debug("Extracted metadata for column {}: {}", col, columnMetadata);
         }
 
         return columnMetadataList;
@@ -197,8 +194,8 @@ public class PostgresReferenceGenerator {
             // Serialize to JSON with pretty printing
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(resourcesPath.toFile(), referenceEntries);
 
-            logger.info("Successfully wrote {} reference entries to {}", referenceEntries.size(), resourcesPath);
-            logger.info("Reference file size: {} entries", referenceEntries.size());
+            log.info("Successfully wrote {} reference entries to {}", referenceEntries.size(), resourcesPath);
+            log.info("Reference file size: {} entries", referenceEntries.size());
         } catch (JsonProcessingException e) {
             throw new IOException("Failed to serialize reference entries", e);
         }
@@ -214,7 +211,7 @@ public class PostgresReferenceGenerator {
      */
     @SneakyThrows
     private void validateReferenceFile(Connection connection) throws IOException, SQLException {
-        logger.info("Starting validation of reference file against PostgreSQL");
+        log.info("Starting validation of reference file against PostgreSQL");
 
         // Load reference entries from the file we just wrote
         Path resourcesPath = Paths.get("src", "main", "resources", REFERENCE_FILE);
@@ -223,7 +220,7 @@ public class PostgresReferenceGenerator {
 
         for (ReferenceEntry referenceEntry : referenceEntries) {
             String sql = referenceEntry.getQuery();
-            logger.debug("Validating query: {}", sql);
+            log.debug("Validating query: {}", sql);
 
             try (Statement statement = connection.createStatement()) {
                 boolean hasResultSet = statement.execute(sql);

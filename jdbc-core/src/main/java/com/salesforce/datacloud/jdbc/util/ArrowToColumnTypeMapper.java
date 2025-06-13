@@ -123,7 +123,8 @@ public final class ArrowToColumnTypeMapper {
                     return new ColumnType(JDBCType.VARCHAR, precision, 0);
                 }
             }
-            return new ColumnType(JDBCType.VARCHAR, ColumnType.MAX_VARLEN_PRECISION, 0);
+            // When the varchar has no explicit bounds it is "unlimited", thus MAX_VLAUE
+            return new ColumnType(JDBCType.VARCHAR, Integer.MAX_VALUE, 0);
         }
 
         @Override

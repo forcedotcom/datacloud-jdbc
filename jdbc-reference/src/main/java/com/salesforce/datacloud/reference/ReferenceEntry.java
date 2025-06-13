@@ -52,12 +52,21 @@ public class ReferenceEntry {
                     sql, columnMetadata.size(), actualMetaData.getColumnCount()));
         }
 
+        // Collect list of differences
+        ArrayList<String> differences = new ArrayList<>();
         // Validate each column's metadata
         for (int i = 0; i < columnMetadata.size(); i++) {
             int columnIndex = i + 1; // JDBC is 1-based
             ColumnMetadata expected = columnMetadata.get(i);
             ColumnMetadata actual = ColumnMetadata.fromResultSetMetaData(actualMetaData, columnIndex);
-            actual.validateAgainst(expected);
+            differences.addAll(actual.collectDifferences(expected));
+        }
+
+        // If there are any errors, throw exception with all details, we don't collect row value differences as when the
+        // metadata is different
+        // the row values likely will be different as well.
+        if (differences.size() > 0) {
+            throw new IllegalArgumentException("ColumnMetadata validation failed:\n" + String.join("\n", differences));
         }
 
         // Validate returned values

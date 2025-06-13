@@ -39,8 +39,6 @@ public class ColumnType {
     /// Unused for other types
     private int scale;
 
-    // Used for variable length types, use 1GB as reasonably large number for now
-    public static final int MAX_VARLEN_PRECISION = Integer.MAX_VALUE;
     // For date/time types use this as placeholder for maximum display size
     private static final int MAX_DATETIME_DISPLAYSIZE = 128;
     // Used for types where we are not expected to return a precision
@@ -99,7 +97,7 @@ public class ColumnType {
                 return precisionOrStringLength;
             case BINARY:
             case VARBINARY:
-                return MAX_VARLEN_PRECISION;
+                return Integer.MAX_VALUE;
             // For dates / times use numbers that are sufficiently large for display
             case DATE:
                 return 13;

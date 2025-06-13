@@ -142,9 +142,9 @@ openssl pkcs8 -topk8 -nocrypt -in keypair.key -out private.key
 ```
 
 ### JDBC Details
-This section describes details around potential pitfulls / ambiguities related to JDBC
+This section describes details around potential pitfalls / ambiguities related to JDBC
 - The standard offers two types for fixed point decimals (`NUMERIC` and `DECIMAL`), this driver uses `DECIMAL` to represent such values
-- The JDBC standard describes that `getObject` for a `SHORT` should return an `Integer`. Due to a current limitation we for now return a `Short` object.
+- The JDBC standard describes that `getObject` for a `SHORT` should return an `Integer`. Due to a current limitation we for now return a `Short` object. This will likely be fixed in a future version of the JDBC driver.
 
 ### Optional configuration
 

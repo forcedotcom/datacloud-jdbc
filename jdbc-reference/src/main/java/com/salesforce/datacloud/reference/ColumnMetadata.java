@@ -15,9 +15,10 @@
  */
 package com.salesforce.datacloud.reference;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
@@ -39,31 +40,14 @@ public class ColumnMetadata {
     private int precision;
     private int scale;
     private int isNullable;
-    // We have to explicitly give names for boolean properties because Jackson auto name generation doesn't work for
-    // them
-    @JsonProperty("autoIncrement")
-    private boolean isAutoIncrement;
-
-    @JsonProperty("caseSensitive")
-    private boolean isCaseSensitive;
-
-    @JsonProperty("currency")
-    private boolean isCurrency;
-
-    @JsonProperty("definitelyWritable")
-    private boolean isDefinitelyWritable;
-
-    @JsonProperty("readOnly")
-    private boolean isReadOnly;
-
-    @JsonProperty("searchable")
-    private boolean isSearchable;
-
-    @JsonProperty("signed")
-    private boolean isSigned;
-
-    @JsonProperty("writable")
-    private boolean isWritable;
+    private boolean autoIncrement;
+    private boolean caseSensitive;
+    private boolean currency;
+    private boolean definitelyWritable;
+    private boolean readOnly;
+    private boolean searchable;
+    private boolean signed;
+    private boolean writable;
 
     private String catalogName;
     private String schemaName;
@@ -102,128 +86,157 @@ public class ColumnMetadata {
     }
 
     /**
-     * Validates this ColumnMetadata instance against another instance field by field.
-     * Throws an IllegalArgumentException if any fields don't match.
+     * Collects differences between this ColumnMetadata instance and another instance field by field.
+     * Returns a list of strings describing the mismatches.
      *
      * @param other the ColumnMetadata instance to compare against
-     * @throws IllegalArgumentException if any fields don't match
+     * @return list of strings describing the mismatches
      */
-    public void validateAgainst(ColumnMetadata other) {
+    public List<String> collectDifferences(ColumnMetadata other) {
         if (other == null) {
             throw new IllegalArgumentException("Cannot validate against null ColumnMetadata");
         }
 
-        StringBuilder errors = new StringBuilder();
+        ArrayList<String> differences = new ArrayList<>();
+
         if (this.columnType != other.columnType) {
+            StringBuilder errors = new StringBuilder();
             errors.append("columnType mismatch: expected=")
                     .append(other.columnType)
                     .append(", actual=")
                     .append(this.columnType)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
         if (!java.util.Objects.equals(this.columnTypeName, other.columnTypeName)) {
+            StringBuilder errors = new StringBuilder();
             errors.append("columnTypeName mismatch: expected='")
                     .append(other.columnTypeName)
                     .append("', actual='")
                     .append(this.columnTypeName)
                     .append("'\n");
+            differences.add(errors.toString());
         }
 
         if (this.columnDisplaySize != other.columnDisplaySize) {
+            StringBuilder errors = new StringBuilder();
             errors.append("columnDisplaySize mismatch: expected=")
                     .append(other.columnDisplaySize)
                     .append(", actual=")
                     .append(this.columnDisplaySize)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
         if (this.precision != other.precision) {
+            StringBuilder errors = new StringBuilder();
             errors.append("precision mismatch: expected=")
                     .append(other.precision)
                     .append(", actual=")
                     .append(this.precision)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
         if (this.scale != other.scale) {
+            StringBuilder errors = new StringBuilder();
             errors.append("scale mismatch: expected=")
                     .append(other.scale)
                     .append(", actual=")
                     .append(this.scale)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
         if (this.isNullable != other.isNullable && (other.isNullable != ResultSetMetaData.columnNullableUnknown)) {
+            StringBuilder errors = new StringBuilder();
             errors.append("isNullable mismatch: expected=")
                     .append(other.isNullable)
                     .append(", actual=")
                     .append(this.isNullable)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
-        if (this.isAutoIncrement != other.isAutoIncrement) {
-            errors.append("isAutoIncrement mismatch: expected=")
-                    .append(other.isAutoIncrement)
+        if (this.autoIncrement != other.autoIncrement) {
+            StringBuilder errors = new StringBuilder();
+            errors.append("autoIncrement mismatch: expected=")
+                    .append(other.autoIncrement)
                     .append(", actual=")
-                    .append(this.isAutoIncrement)
+                    .append(this.autoIncrement)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
-        if (this.isCaseSensitive != other.isCaseSensitive) {
-            errors.append("isCaseSensitive mismatch: expected=")
-                    .append(other.isCaseSensitive)
+        if (this.caseSensitive != other.caseSensitive) {
+            StringBuilder errors = new StringBuilder();
+            errors.append("caseSensitive mismatch: expected=")
+                    .append(other.caseSensitive)
                     .append(", actual=")
-                    .append(this.isCaseSensitive)
+                    .append(this.caseSensitive)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
-        if (this.isCurrency != other.isCurrency) {
-            errors.append("isCurrency mismatch: expected=")
-                    .append(other.isCurrency)
+        if (this.currency != other.currency) {
+            StringBuilder errors = new StringBuilder();
+            errors.append("currency mismatch: expected=")
+                    .append(other.currency)
                     .append(", actual=")
-                    .append(this.isCurrency)
+                    .append(this.currency)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
-        if (this.isDefinitelyWritable != other.isDefinitelyWritable) {
-            errors.append("isDefinitelyWritable mismatch: expected=")
-                    .append(other.isDefinitelyWritable)
+        if (this.definitelyWritable != other.definitelyWritable) {
+            StringBuilder errors = new StringBuilder();
+            errors.append("definitelyWritable mismatch: expected=")
+                    .append(other.definitelyWritable)
                     .append(", actual=")
-                    .append(this.isDefinitelyWritable)
+                    .append(this.definitelyWritable)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
-        if (this.isReadOnly != other.isReadOnly) {
-            errors.append("isReadOnly mismatch: expected=")
-                    .append(other.isReadOnly)
+        if (this.readOnly != other.readOnly) {
+            StringBuilder errors = new StringBuilder();
+            errors.append("readOnly mismatch: expected=")
+                    .append(other.readOnly)
                     .append(", actual=")
-                    .append(this.isReadOnly)
+                    .append(this.readOnly)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
-        if (this.isSearchable != other.isSearchable) {
-            errors.append("isSearchable mismatch: expected=")
-                    .append(other.isSearchable)
+        if (this.searchable != other.searchable) {
+            StringBuilder errors = new StringBuilder();
+            errors.append("searchable mismatch: expected=")
+                    .append(other.searchable)
                     .append(", actual=")
-                    .append(this.isSearchable)
+                    .append(this.searchable)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
-        if (this.isSigned != other.isSigned) {
-            errors.append("isSigned mismatch: expected=")
-                    .append(other.isSigned)
+        if (this.signed != other.signed) {
+            StringBuilder errors = new StringBuilder();
+            errors.append("signed mismatch: expected=")
+                    .append(other.signed)
                     .append(", actual=")
-                    .append(this.isSigned)
+                    .append(this.signed)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
-        if (this.isWritable != other.isWritable) {
-            errors.append("isWritable mismatch: expected=")
-                    .append(other.isWritable)
+        if (this.writable != other.writable) {
+            StringBuilder errors = new StringBuilder();
+            errors.append("writable mismatch: expected=")
+                    .append(other.writable)
                     .append(", actual=")
-                    .append(this.isWritable)
+                    .append(this.writable)
                     .append("\n");
+            differences.add(errors.toString());
         }
 
         // Consciously ignore labels and names as they can differ between databases
@@ -233,9 +246,6 @@ public class ColumnMetadata {
         // - columnLabel
         // - columnName
 
-        // If there are any errors, throw exception with all details
-        if (errors.length() > 0) {
-            throw new IllegalArgumentException("ColumnMetadata validation failed:\n" + errors.toString());
-        }
+        return differences;
     }
 }

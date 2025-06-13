@@ -39,10 +39,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 @ExtendWith(HyperTestBase.class)
-public class JDBCTypesTest {
+/**
+ * This test case compares our JDBC driver against the behavior of the
+ * PostgreSQL JDBC driver. It loads the pre-materialized test expectations
+ * from`reference.json` and makes sure our driver behaves the same.
+ */
+public class JDBCReferenceTest {
 
     /**
-     * Loads baseline entries from the baseline.json file.
+     * Loads baseline entries from the reference.json file.
      *
      * @return Stream of ReferenceEntry objects
      */
@@ -60,7 +65,8 @@ public class JDBCTypesTest {
                 boolean isTestable = true;
                 // Patch result metadata expectations
                 for (ColumnMetadata c : e.getColumnMetadata()) {
-                    // We consciously decided to mark fields as non writeable (like Snowflake) as it aligns more with the
+                    // We consciously decided to mark fields as non writeable (like Snowflake) as it aligns more with
+                    // the
                     // semantics of a result set.
                     c.setWritable(false);
                     // We consciously decided to mark fields as nullable to represent what the arrow metadata returns
@@ -82,7 +88,8 @@ public class JDBCTypesTest {
                     if (c.getColumnTypeName().endsWith("interval")) {
                         isTestable = false;
                     }
-                    // These types have a bug in Hyper
+                    // Timestamps have a bug for timestamp values before the Gregorian epoch.
+                    // It is currently unclear if the bug is in Hyper, the JDBC driver or the Java Arrow library
                     else if (c.getColumnTypeName().equals("_timestamptz")
                             || c.getColumnTypeName().equals("_timestamp")) {
                         isTestable = false;
@@ -129,7 +136,7 @@ public class JDBCTypesTest {
                         c.setColumnType(JDBCType.BOOLEAN.getVendorTypeNumber());
                         c.setColumnTypeName(JDBCType.BOOLEAN.getName());
                     }
-                    // We don't have an custom representation for the SQL JSON type
+                    // We don't have a custom representation for the SQL JSON type
                     if (JDBCType.OTHER.getVendorTypeNumber().equals(c.getColumnType())
                             && "JSON".equals(c.getColumnTypeName())) {
                         c.setColumnType(JDBCType.VARCHAR.getVendorTypeNumber());
@@ -186,8 +193,6 @@ public class JDBCTypesTest {
             } catch (Exception e) {
                 System.out.println("Failed to execute query: " + referenceEntry.getQuery());
                 System.out.println("Error: " + e.getMessage());
-                // Skip queries that fail to execute - these might be PostgreSQL-specific
-                // In production, we'd want to catalog which queries work vs don't work
                 throw (e);
             }
         }
