@@ -73,7 +73,8 @@ public class DataCloudJdbcManagedChannel implements AutoCloseable {
 
         if (!queryTimeout.isZero() && !queryTimeout.isNegative()) {
             log.info("Built stub with queryTimeout={}, interceptors={}", queryTimeout, interceptors.length);
-            stub = stub.withDeadlineAfter(queryTimeout.getSeconds(), TimeUnit.SECONDS);
+            // COMPATIBILITY WARNING: Do not use Duration overload since older versions of gRPC don't have it
+            stub = stub.withDeadlineAfter(queryTimeout.getSeconds(), TimeUnit.SECONDS); // COMPATIBILITY WARNING
         } else {
             log.info("Built stub with queryTimeout=none, interceptors={}", interceptors.length);
         }
