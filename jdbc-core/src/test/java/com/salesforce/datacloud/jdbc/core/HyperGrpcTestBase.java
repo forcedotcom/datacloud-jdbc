@@ -15,8 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
-import com.salesforce.datacloud.jdbc.hyper.HyperServerProcess;
+import com.salesforce.datacloud.hyper.HyperServerConfig;
+import com.salesforce.datacloud.hyper.HyperServerProcess;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
 import io.grpc.ClientInterceptor;

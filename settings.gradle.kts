@@ -7,3 +7,5 @@ include(":jdbc-http")
 include(":jdbc-util")
 include(":jdbc-reference")
 include(":verification")
+
+include("hyper-test-util")

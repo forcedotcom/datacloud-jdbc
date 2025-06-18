@@ -95,7 +95,7 @@ tasks.register<Exec>("hyperd") {
     }
 
     val executable = project.layout.projectDirectory.dir(hyperDir).file(name).asFile.absolutePath
-    val config = project.project(":jdbc-core").file("src/test/resources/hyper.yaml")
+    val config = project.project(":hyper-test-util").file("src/main/resources/hyper.yaml")
 
     commandLine(executable)
     args("--config", config.absolutePath, "run")
