@@ -15,11 +15,12 @@
  */
 package com.salesforce.datacloud.jdbc.hyper;
 
-import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableMap;
+import com.salesforce.datacloud.hyper.HyperServerProcess;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
+import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 import io.grpc.ClientInterceptor;
@@ -91,7 +92,7 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
     @SneakyThrows
     public static DataCloudConnection getHyperQueryConnection(Properties properties) {
         properties.put(DirectDataCloudConnection.DIRECT, "true");
-        val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getInstancePort();
+        val url = DataCloudConnectionString.CONNECTION_PROTOCOL + "//127.0.0.1:" + getInstancePort();
         return DirectDataCloudConnection.of(url, properties);
     }
 

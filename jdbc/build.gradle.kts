@@ -19,6 +19,7 @@ dependencies {
     implementation(libs.slf4j.api)
 
     testImplementation(platform(libs.junit.bom))
+    testImplementation(project(":hyper-test-util"))
     testImplementation(libs.bundles.testing)
     testImplementation(libs.bundles.mocking)
 }

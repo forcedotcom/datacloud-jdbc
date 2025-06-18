@@ -21,10 +21,10 @@ import static org.grpcmock.GrpcMock.calledMethod;
 import static org.grpcmock.GrpcMock.times;
 import static org.grpcmock.GrpcMock.verifyThat;
 
+import com.salesforce.datacloud.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
