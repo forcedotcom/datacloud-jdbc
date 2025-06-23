@@ -33,9 +33,10 @@ private case class HyperResultTable(
   ): ScanBuilder = {
     val (chunkCount, rowCount) =
       Using(connectionOptions.createConnection()) { conn =>
-        // TODO XXX: set infinite timeout
+        // We don't have any separate query timeouts here, as Spark already has a global job timeout, anyway.
+        // TODO (W-18851398): Set the timeout to infinite, as soon as `waitForQueryStatus` accepts it.abstract
         val queryStatus =
-          conn.waitForResultsProduced(resultSetId, Duration.ofDays(2))
+          conn.waitForResultsProduced(resultSetId, Duration.ofDays(1))
         (queryStatus.getChunkCount(), queryStatus.getRowCount())
       }.get
 

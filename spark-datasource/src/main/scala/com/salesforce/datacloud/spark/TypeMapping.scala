@@ -52,13 +52,14 @@ object TypeMapping {
       case Types.SMALLINT => Some(ShortType)
       case Types.INTEGER  => Some(IntegerType)
       case Types.BIGINT   => Some(LongType)
-      case Types.DECIMAL => {
-        // TODO: use `getPrecision` and `getScale` as soon as they actually report the right values
-        // For now, simply hard-code the values to match the values which we happen to expect in our test
-        // case.
-        Some(DecimalType(10, 2))
-      }
-      case Types.FLOAT  => Some(FloatType)
+      case Types.DECIMAL =>
+        Some(
+          DecimalType(
+            md.getPrecision(columnId),
+            md.getScale(columnId)
+          )
+        )
+      case Types.REAL   => Some(FloatType)
       case Types.DOUBLE => Some(DoubleType)
       case Types.DATE   => Some(DateType)
       // TODO: distinguish between Timestamp and TimestampTZ
@@ -131,7 +132,7 @@ object TypeMapping {
             pos,
             nullSafeConvert(rs.getBigDecimal(pos + 1), Decimal.fromDecimal)
           )
-      case Types.FLOAT =>
+      case Types.REAL =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
           row.setFloat(pos, rs.getFloat(pos + 1))
       case Types.DOUBLE =>
@@ -160,7 +161,7 @@ object TypeMapping {
           // We use getBytes for better performance, to avoid encoding UTF-8 to Java's UTF-16.
           row.update(
             pos,
-            nullSafeConvert(rs.getBytes(pos + 1), UTF8String.fromBytes)
+            UTF8String.fromBytes(rs.getBytes(pos + 1))
           )
       case Types.BINARY | Types.VARBINARY | Types.LONGVARBINARY =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
