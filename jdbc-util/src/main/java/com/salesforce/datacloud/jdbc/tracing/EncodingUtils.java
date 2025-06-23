@@ -16,15 +16,17 @@
 package com.salesforce.datacloud.jdbc.tracing;
 
 import javax.annotation.concurrent.Immutable;
-import lombok.experimental.UtilityClass;
 
 @Immutable
-@UtilityClass
 public final class EncodingUtils {
     static final int BYTE_BASE16 = 2;
     private static final String ALPHABET = "0123456789abcdef";
     private static final char[] ENCODING = buildEncodingArray();
     private static final boolean[] VALID_HEX = buildValidHexArray();
+
+    private EncodingUtils() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     private static char[] buildEncodingArray() {
         char[] encoding = new char[512];

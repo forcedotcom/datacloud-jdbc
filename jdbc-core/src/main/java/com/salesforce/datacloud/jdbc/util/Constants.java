@@ -15,9 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
-import lombok.experimental.UtilityClass;
-
-@UtilityClass
 public final class Constants {
     /**
      * Because Java doesn't have the concept of an infinite duration we'll use 3 days as the default timeout
@@ -47,4 +44,8 @@ public final class Constants {
     // Date Time constants
 
     public static final String ISO_TIME_FORMAT = "HH:mm:ss";
+
+    private Constants() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 }

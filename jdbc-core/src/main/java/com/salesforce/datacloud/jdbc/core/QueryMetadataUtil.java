@@ -16,11 +16,11 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static com.google.common.collect.Maps.immutableEntry;
+import static com.salesforce.datacloud.jdbc.config.QueryResources.*;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.salesforce.datacloud.jdbc.config.QueryResources;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.ArrowUtils;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
@@ -35,7 +35,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.calcite.avatica.AvaticaResultSet;
@@ -46,8 +45,7 @@ import org.apache.calcite.avatica.SqlType;
 import org.apache.commons.lang3.StringUtils;
 
 @Slf4j
-@UtilityClass
-class QueryMetadataUtil {
+final class QueryMetadataUtil {
     static final int NUM_TABLE_METADATA_COLUMNS = 10;
     static final int NUM_COLUMN_METADATA_COLUMNS = 24;
     static final int NUM_SCHEMA_METADATA_COLUMNS = 2;
@@ -97,6 +95,10 @@ class QueryMetadataUtil {
             immutableEntry("timestamptz", SqlType.TIMESTAMP.toString()),
             immutableEntry("array", SqlType.ARRAY.toString()));
 
+    private QueryMetadataUtil() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
     public static ResultSet createTableResultSet(
             String schemaPattern, String tableNamePattern, String[] types, Connection connection) throws SQLException {
         final List<Object> data;
@@ -145,7 +147,7 @@ class QueryMetadataUtil {
     }
 
     private static String getTablesQuery(String schemaPattern, String tableNamePattern, String[] types) {
-        String tablesQuery = QueryResources.getTablesQuery();
+        String tablesQuery = getTablesQueryText();
 
         if (schemaPattern != null && !schemaPattern.isEmpty()) {
             tablesQuery += " AND n.nspname LIKE " + quoteStringLiteral(schemaPattern);
@@ -179,7 +181,7 @@ class QueryMetadataUtil {
         final List<Object> data;
 
         try (val statement = connection.createStatement()) {
-            val getColumnsQuery = getColumnsQuery(schemaPattern, tableNamePattern, columnNamePattern);
+            val getColumnsQuery = getColumnsQueryInner(schemaPattern, tableNamePattern, columnNamePattern);
             val resultSet = statement.executeQuery(getColumnsQuery);
             data = constructColumnData(resultSet);
         }
@@ -187,21 +189,22 @@ class QueryMetadataUtil {
         return getMetadataResultSet(QueryDBMetadata.GET_COLUMNS, NUM_COLUMN_METADATA_COLUMNS, data);
     }
 
-    private static String getColumnsQuery(String schemaPattern, String tableNamePattern, String columnNamePattern) {
-        String getColumnsQuery = QueryResources.getColumnsQuery();
+    private static String getColumnsQueryInner(
+            String schemaPattern, String tableNamePattern, String columnNamePattern) {
+        String columnsQuery = getColumnsQueryText();
 
         if (schemaPattern != null && !schemaPattern.isEmpty()) {
-            getColumnsQuery += " AND n.nspname LIKE " + quoteStringLiteral(schemaPattern);
+            columnsQuery += " AND n.nspname LIKE " + quoteStringLiteral(schemaPattern);
         }
         if (tableNamePattern != null && !tableNamePattern.isEmpty()) {
-            getColumnsQuery += " AND c.relname LIKE " + quoteStringLiteral(tableNamePattern);
+            columnsQuery += " AND c.relname LIKE " + quoteStringLiteral(tableNamePattern);
         }
         if (columnNamePattern != null && !columnNamePattern.isEmpty()) {
-            getColumnsQuery += " AND attname LIKE " + quoteStringLiteral(columnNamePattern);
+            columnsQuery += " AND attname LIKE " + quoteStringLiteral(columnNamePattern);
         }
-        getColumnsQuery += " ORDER BY nspname, c.relname, attnum ";
+        columnsQuery += " ORDER BY nspname, c.relname, attnum ";
 
-        return getColumnsQuery;
+        return columnsQuery;
     }
 
     private static List<Object> constructColumnData(ResultSet resultSet) throws SQLException {
@@ -310,7 +313,7 @@ class QueryMetadataUtil {
     }
 
     private static String getSchemasQuery(String schemaPattern) {
-        String schemasQuery = QueryResources.getSchemasQuery();
+        String schemasQuery = getSchemasQueryText();
         if (StringCompatibility.isNotEmpty(schemaPattern)) {
             schemasQuery += " AND nspname LIKE " + quoteStringLiteral(schemaPattern);
         }

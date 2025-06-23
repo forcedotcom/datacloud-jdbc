@@ -18,15 +18,16 @@ package com.salesforce.datacloud.jdbc.config;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.Getter;
-import lombok.experimental.UtilityClass;
 import lombok.val;
 
-@UtilityClass
-public class KeywordResources {
+public final class KeywordResources {
+    public static String getSqlKeywords() {
+        return loadSqlKeywords();
+    }
 
-    @Getter(lazy = true)
-    private final String sqlKeywords = loadSqlKeywords();
+    private KeywordResources() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     private static String loadSqlKeywords() {
         val hyperSqlLexerKeywords = ResourceReader.readResourceAsStringList("/keywords/hyper_sql_lexer_keywords.txt");

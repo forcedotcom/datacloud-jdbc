@@ -15,10 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
-import lombok.experimental.UtilityClass;
-
-@UtilityClass
-public class SqlErrorCodes {
+public final class SqlErrorCodes {
     public static final String FEATURE_NOT_SUPPORTED = "0A000";
     public static final String UNDEFINED_FILE = "58P01";
+
+    private SqlErrorCodes() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 }

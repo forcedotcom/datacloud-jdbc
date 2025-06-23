@@ -24,13 +24,15 @@ import io.grpc.ManagedChannelBuilder;
 import java.net.URI;
 import java.sql.SQLException;
 import java.util.Properties;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@UtilityClass
-public class DirectDataCloudConnection {
+public final class DirectDataCloudConnection {
     public static final String DIRECT = "direct";
+
+    private DirectDataCloudConnection() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     public static boolean isDirect(Properties properties) {
         return getBooleanOrDefault(properties, DIRECT, false);

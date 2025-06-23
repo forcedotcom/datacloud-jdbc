@@ -30,7 +30,6 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
@@ -39,8 +38,7 @@ import lombok.val;
  * <a href="https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_endpoints.htm&type=5">OAuth documentation</a>
  */
 @Slf4j
-@UtilityClass
-class Audience {
+final class Audience {
     private static final Pattern PROD = Pattern.compile("^login\\.salesforce\\.com$");
     private static final Pattern MY_DOMAIN = Pattern.compile("^.+\\.my\\.salesforce\\.com$");
     private static final Pattern EXPERIENCE = Pattern.compile("^.+\\.my\\.site\\.com$");
@@ -50,6 +48,10 @@ class Audience {
 
     private static final List<Pattern> PATTERNS =
             ImmutableList.of(PROD, MY_DOMAIN, EXPERIENCE, SANDBOX, TEST, MY_SANDBOX);
+
+    private Audience() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     public static String getAudience(String url) throws SQLException {
         if (url == null) {
@@ -76,8 +78,11 @@ class Audience {
     }
 }
 
-@UtilityClass
-class JwtParts {
+final class JwtParts {
+    private JwtParts() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
     public static String buildJwt(PrivateKeyAuthenticationSettings settings) throws DataCloudJDBCException {
         try {
             val now = Instant.now();
@@ -114,7 +119,7 @@ class JwtParts {
         }
     }
 
-    private byte[] decodeBase64(String input) {
+    private static byte[] decodeBase64(String input) {
         return Base64.getDecoder().decode(input);
     }
 

@@ -25,7 +25,6 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import lombok.experimental.UtilityClass;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 
@@ -48,17 +47,23 @@ interface AuthenticationStrategy {
         }
     }
 
-    @UtilityClass
-    class Messages {
+    final class Messages {
         static final String UNKNOWN_SETTINGS_TYPE = "Resolved settings were an unknown type of AuthenticationSettings";
+
+        private Messages() {
+            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        }
     }
 
-    @UtilityClass
-    class Keys {
+    final class Keys {
         static final String GRANT_TYPE = "grant_type";
         static final String CLIENT_ID = "client_id";
         static final String CLIENT_SECRET = "client_secret";
         static final String USER_AGENT = "User-Agent";
+
+        private Keys() {
+            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        }
     }
 
     FormCommand buildAuthenticate() throws SQLException;

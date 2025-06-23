@@ -15,7 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
-import lombok.experimental.UtilityClass;
 import org.apache.arrow.vector.TimeMicroVector;
 import org.apache.arrow.vector.TimeMilliVector;
 import org.apache.arrow.vector.TimeNanoVector;
@@ -25,8 +24,11 @@ import org.apache.arrow.vector.holders.NullableTimeMilliHolder;
 import org.apache.arrow.vector.holders.NullableTimeNanoHolder;
 import org.apache.arrow.vector.holders.NullableTimeSecHolder;
 
-@UtilityClass
-public class TimeVectorGetter {
+public final class TimeVectorGetter {
+
+    private TimeVectorGetter() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     static class Holder {
         int isSet;
@@ -34,7 +36,7 @@ public class TimeVectorGetter {
     }
 
     @FunctionalInterface
-    interface Getter {
+    static interface Getter {
         void get(int index, Holder holder);
     }
 

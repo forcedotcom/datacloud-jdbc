@@ -26,21 +26,23 @@ import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import lombok.experimental.UtilityClass;
 import lombok.val;
 
-@UtilityClass
-public class StreamUtilities {
-    public <T> Stream<T> lazyLimitedStream(Supplier<Stream<T>> streamSupplier, LongSupplier limitSupplier) {
+public final class StreamUtilities {
+    private StreamUtilities() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
+    public static <T> Stream<T> lazyLimitedStream(Supplier<Stream<T>> streamSupplier, LongSupplier limitSupplier) {
         return streamSupplier.get().limit(limitSupplier.getAsLong());
     }
 
-    public <T> Stream<T> toStream(Iterator<T> iterator) {
+    public static <T> Stream<T> toStream(Iterator<T> iterator) {
         val spliterator = Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED);
         return StreamSupport.stream(spliterator, false);
     }
 
-    public <T, E extends Exception> Optional<T> tryTimes(
+    public static <T, E extends Exception> Optional<T> tryTimes(
             int times, ThrowingSupplier<T, E> attempt, Consumer<Throwable> consumer) {
         return Stream.iterate(attempt, UnaryOperator.identity())
                 .limit(times)
@@ -56,7 +58,7 @@ public class StreamUtilities {
                 .flatMap(Result::get);
     }
 
-    public <T> Stream<T> takeWhile(Stream<T> stream, Predicate<T> predicate) {
+    public static <T> Stream<T> takeWhile(Stream<T> stream, Predicate<T> predicate) {
         val split = stream.spliterator();
 
         return StreamSupport.stream(

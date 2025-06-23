@@ -18,10 +18,12 @@ package com.salesforce.datacloud.jdbc.interceptor;
 import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 
 import io.grpc.Metadata;
-import lombok.experimental.UtilityClass;
 
-@UtilityClass
-public class MetadataUtilities {
+public final class MetadataUtilities {
+    private MetadataUtilities() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
     public static Metadata.Key<String> keyOf(String key) {
         return Metadata.Key.of(key, ASCII_STRING_MARSHALLER);
     }

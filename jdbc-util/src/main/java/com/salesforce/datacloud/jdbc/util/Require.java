@@ -15,10 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
-import lombok.experimental.UtilityClass;
+public final class Require {
+    private Require() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
-@UtilityClass
-public class Require {
     public static void requireNotNullOrBlank(String value, String name) {
         if (StringCompatibility.isNullOrBlank(value)) {
             throw new IllegalArgumentException("Expected argument '" + name + "' to not be null or blank");

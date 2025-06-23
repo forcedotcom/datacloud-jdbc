@@ -15,19 +15,22 @@
  */
 package com.salesforce.datacloud.jdbc.config;
 
-import lombok.Getter;
-import lombok.experimental.UtilityClass;
+public final class QueryResources {
+    public static String getColumnsQueryText() {
+        return loadQuery("get_columns_query");
+    }
 
-@UtilityClass
-public class QueryResources {
-    @Getter(lazy = true)
-    private final String columnsQuery = loadQuery("get_columns_query");
+    public static String getSchemasQueryText() {
+        return loadQuery("get_schemas_query");
+    }
 
-    @Getter(lazy = true)
-    private final String schemasQuery = loadQuery("get_schemas_query");
+    public static String getTablesQueryText() {
+        return loadQuery("get_tables_query");
+    }
 
-    @Getter(lazy = true)
-    private final String tablesQuery = loadQuery("get_tables_query");
+    private QueryResources() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     private static String loadQuery(String name) {
         return ResourceReader.readResourceAsString("/sql/" + name + ".sql");

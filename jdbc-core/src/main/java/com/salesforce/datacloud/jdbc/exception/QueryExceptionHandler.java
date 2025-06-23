@@ -21,16 +21,18 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.StatusProto;
 import java.sql.SQLException;
 import java.util.List;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import salesforce.cdp.hyperdb.v1.ErrorInfo;
 
 @Slf4j
-@UtilityClass
-public class QueryExceptionHandler {
+public final class QueryExceptionHandler {
     // We introduce a limit to avoid truncating important details from the log due to large queries.
     // When testing with 60 MB queries the exception formatting also took multi second hangs.
     private static final int MAX_QUERY_LENGTH_IN_EXCEPTION = 16 * 1024;
+
+    private QueryExceptionHandler() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     public static DataCloudJDBCException createQueryException(String query, Exception e) {
         String exceptionQuery = query.length() > MAX_QUERY_LENGTH_IN_EXCEPTION

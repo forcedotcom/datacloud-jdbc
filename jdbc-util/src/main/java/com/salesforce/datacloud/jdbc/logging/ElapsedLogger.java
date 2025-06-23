@@ -19,12 +19,14 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.SQLException;
 import java.time.Duration;
-import lombok.experimental.UtilityClass;
 import lombok.val;
 import org.slf4j.Logger;
 
-@UtilityClass
-public class ElapsedLogger {
+public final class ElapsedLogger {
+    private ElapsedLogger() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
     public static <T> T logTimedValue(ThrowingJdbcSupplier<T> supplier, String name, Logger logger)
             throws DataCloudJDBCException {
         val start = System.currentTimeMillis();

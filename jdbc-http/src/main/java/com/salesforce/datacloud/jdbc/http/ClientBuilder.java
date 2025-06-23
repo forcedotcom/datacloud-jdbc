@@ -22,15 +22,13 @@ import com.salesforce.datacloud.jdbc.http.internal.SFDefaultSocketFactoryWrapper
 import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 
 @Slf4j
-@UtilityClass
-public class ClientBuilder {
+public final class ClientBuilder {
     static final String LOG_LEVEL = "okhttp.logging.level";
     static final HttpLoggingInterceptor.Level DEFAULT_LOG_LEVEL = HttpLoggingInterceptor.Level.BASIC;
 
@@ -45,6 +43,10 @@ public class ClientBuilder {
 
     static final String DISABLE_SOCKS_PROXY_KEY = "disableSocksProxy";
     static final Boolean DISABLE_SOCKS_PROXY_DEFAULT = false;
+
+    private ClientBuilder() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     public static OkHttpClient buildOkHttpClient(Properties properties) {
         val disableSocksProxy = optional(properties, DISABLE_SOCKS_PROXY_KEY)

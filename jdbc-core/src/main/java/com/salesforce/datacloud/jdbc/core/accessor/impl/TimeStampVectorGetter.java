@@ -17,7 +17,6 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.SQLException;
-import lombok.experimental.UtilityClass;
 import lombok.val;
 import org.apache.arrow.vector.TimeStampMicroTZVector;
 import org.apache.arrow.vector.TimeStampMicroVector;
@@ -37,10 +36,13 @@ import org.apache.arrow.vector.holders.NullableTimeStampNanoTZHolder;
 import org.apache.arrow.vector.holders.NullableTimeStampSecHolder;
 import org.apache.arrow.vector.holders.NullableTimeStampSecTZHolder;
 
-@UtilityClass
 final class TimeStampVectorGetter {
 
     private static final String INVALID_VECTOR_ERROR_RESPONSE = "Unsupported Timestamp vector provided";
+
+    private TimeStampVectorGetter() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     static class Holder {
         int isSet;
@@ -48,7 +50,7 @@ final class TimeStampVectorGetter {
     }
 
     @FunctionalInterface
-    interface Getter {
+    static interface Getter {
         void get(int index, Holder holder);
     }
 

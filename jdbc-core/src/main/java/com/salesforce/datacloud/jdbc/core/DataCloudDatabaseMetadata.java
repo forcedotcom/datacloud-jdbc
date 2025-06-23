@@ -15,8 +15,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.config.KeywordResources.getSqlKeywords;
+import static com.salesforce.datacloud.jdbc.core.QueryMetadataUtil.*;
+
 import com.google.common.collect.ImmutableList;
-import com.salesforce.datacloud.jdbc.config.KeywordResources;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
@@ -176,7 +178,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public String getSQLKeywords() {
-        return KeywordResources.getSqlKeywords();
+        return getSqlKeywords();
     }
 
     @Override
@@ -658,28 +660,28 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     @Override
     public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types)
             throws SQLException {
-        return QueryMetadataUtil.createTableResultSet(schemaPattern, tableNamePattern, types, connection);
+        return createTableResultSet(schemaPattern, tableNamePattern, types, connection);
     }
 
     @Override
     public ResultSet getSchemas() throws SQLException {
-        return QueryMetadataUtil.createSchemaResultSet(null, connection);
+        return createSchemaResultSet(null, connection);
     }
 
     @Override
     public ResultSet getCatalogs() throws SQLException {
-        return QueryMetadataUtil.createCatalogsResultSet(lakehouseSupplier);
+        return createCatalogsResultSet(lakehouseSupplier);
     }
 
     @Override
     public ResultSet getTableTypes() throws SQLException {
-        return QueryMetadataUtil.createTableTypesResultSet();
+        return createTableTypesResultSet();
     }
 
     @Override
     public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern)
             throws SQLException {
-        return QueryMetadataUtil.createColumnResultSet(schemaPattern, tableNamePattern, columnNamePattern, connection);
+        return createColumnResultSet(schemaPattern, tableNamePattern, columnNamePattern, connection);
     }
 
     @Override
@@ -896,7 +898,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getSchemas(String catalog, String schemaPattern) throws SQLException {
-        return QueryMetadataUtil.createSchemaResultSet(schemaPattern, connection);
+        return createSchemaResultSet(schemaPattern, connection);
     }
 
     @Override

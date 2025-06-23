@@ -15,14 +15,16 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
-import lombok.experimental.UtilityClass;
 import org.apache.arrow.vector.DateDayVector;
 import org.apache.arrow.vector.DateMilliVector;
 import org.apache.arrow.vector.holders.NullableDateDayHolder;
 import org.apache.arrow.vector.holders.NullableDateMilliHolder;
 
-@UtilityClass
 final class DateVectorGetter {
+
+    private DateVectorGetter() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     static class Holder {
         int isSet;

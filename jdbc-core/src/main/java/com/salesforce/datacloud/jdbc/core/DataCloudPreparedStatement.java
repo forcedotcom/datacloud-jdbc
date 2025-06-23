@@ -51,7 +51,6 @@ import java.sql.Types;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.TimeZone;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryParam;
@@ -439,7 +438,6 @@ interface TypeHandler {
     void setParameter(PreparedStatement ps, int parameterIndex, Object value) throws SQLException;
 }
 
-@UtilityClass
 final class TypeHandlers {
     public static final TypeHandler STRING_HANDLER = (ps, idx, value) -> ps.setString(idx, (String) value);
     public static final TypeHandler BIGDECIMAL_HANDLER = (ps, idx, value) -> ps.setBigDecimal(idx, (BigDecimal) value);
@@ -464,4 +462,8 @@ final class TypeHandlers {
             Maps.immutableEntry(Time.class, TIME_HANDLER),
             Maps.immutableEntry(Timestamp.class, TIMESTAMP_HANDLER),
             Maps.immutableEntry(Boolean.class, BOOLEAN_HANDLER));
+
+    private TypeHandlers() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 }

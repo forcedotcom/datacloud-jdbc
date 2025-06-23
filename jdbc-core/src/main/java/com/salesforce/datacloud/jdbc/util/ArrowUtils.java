@@ -34,7 +34,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.arrow.memory.RootAllocator;
@@ -51,9 +50,12 @@ import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.avatica.proto.Common;
 
-@UtilityClass
 @Slf4j
-public class ArrowUtils {
+public final class ArrowUtils {
+
+    private ArrowUtils() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     public static List<ColumnMetaData> toColumnMetaData(List<Field> fields) {
         AtomicInteger index = new AtomicInteger();

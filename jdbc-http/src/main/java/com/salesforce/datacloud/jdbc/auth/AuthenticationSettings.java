@@ -152,20 +152,26 @@ public abstract class AuthenticationSettings {
                 .collect(Collectors.toSet());
     }
 
-    @UtilityClass
-    protected static class Defaults {
+    protected static final class Defaults {
         static final int MAX_RETRIES = 3;
         static final String DATASPACE = null;
         static final String USER_AGENT = DriverVersion.formatDriverInfo();
+
+        private Defaults() {
+            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        }
     }
 
-    @UtilityClass
-    protected static class Messages {
+    protected static final class Messages {
         static final String PROPERTIES_NULL = "properties is marked non-null but is null";
         static final String PROPERTIES_EMPTY = "Properties cannot be empty when creating AuthenticationSettings.";
         static final String PROPERTIES_MISSING =
                 "Properties did not contain valid settings for known authentication strategies: password, privateKey, or refreshToken with coreToken";
         static final String PROPERTIES_REQUIRED = "Properties did not contain the following required settings: ";
+
+        private Messages() {
+            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        }
     }
 }
 

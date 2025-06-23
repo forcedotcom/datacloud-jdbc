@@ -23,14 +23,16 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Calendar;
 import java.util.TimeZone;
-import lombok.experimental.UtilityClass;
 import lombok.val;
 
 /** Datetime utility functions. */
-@UtilityClass
-public class DateTimeUtils {
+public final class DateTimeUtils {
 
     public static final long MILLIS_TO_MICRO_SECS_CONVERSION_FACTOR = 1000;
+
+    private DateTimeUtils() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     /** Subtracts default Calendar's timezone offset from epoch milliseconds to get relative UTC milliseconds */
     public static long applyCalendarOffset(long milliseconds) {

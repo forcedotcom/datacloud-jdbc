@@ -28,7 +28,6 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import lombok.experimental.UtilityClass;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateDayVector;
@@ -46,8 +45,11 @@ import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Field;
 
 /** Populates vectors in a VectorSchemaRoot with values from a list of parameters. */
-@UtilityClass
 public final class VectorPopulator {
+
+    private VectorPopulator() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     /**
      * Populates the vectors in the given VectorSchemaRoot.

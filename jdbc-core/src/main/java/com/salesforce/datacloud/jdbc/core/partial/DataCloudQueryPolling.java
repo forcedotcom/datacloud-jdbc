@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import lombok.SneakyThrows;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
@@ -39,8 +38,11 @@ import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 
 @Unstable
 @Slf4j
-@UtilityClass
-public class DataCloudQueryPolling {
+public final class DataCloudQueryPolling {
+    private DataCloudQueryPolling() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
     public static DataCloudQueryStatus waitForChunksAvailable(
             HyperServiceGrpc.HyperServiceBlockingStub stub,
             String queryId,
@@ -201,7 +203,7 @@ public class DataCloudQueryPolling {
         return last.get();
     }
 
-    private Duration remaining(Instant deadline) {
+    private static Duration remaining(Instant deadline) {
         return Duration.between(Instant.now(), deadline);
     }
 }

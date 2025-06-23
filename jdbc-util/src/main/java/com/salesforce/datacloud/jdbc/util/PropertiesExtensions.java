@@ -22,13 +22,15 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 @Slf4j
-@UtilityClass
-public class PropertiesExtensions {
+public final class PropertiesExtensions {
+    private PropertiesExtensions() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
     public static Optional<String> optional(Properties properties, String key) {
         if (properties == null) {
             return Optional.empty();
@@ -116,8 +118,11 @@ public class PropertiesExtensions {
                 .collect(Collectors.toList());
     }
 
-    @UtilityClass
-    class Messages {
+    static final class Messages {
         static final String REQUIRED_MISSING_PREFIX = "Properties missing required value for key: ";
+
+        private Messages() {
+            throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        }
     }
 }

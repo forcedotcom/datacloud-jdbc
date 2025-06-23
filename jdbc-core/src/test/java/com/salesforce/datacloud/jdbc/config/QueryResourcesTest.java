@@ -24,7 +24,7 @@ class QueryResourcesTest {
 
     @Test
     void getColumnsQuery() {
-        val actual = QueryResources.getColumnsQuery();
+        val actual = QueryResources.getColumnsQueryText();
         assertThat(actual)
                 .contains("SELECT n.nspname,")
                 .contains("FROM pg_catalog.pg_namespace n")
@@ -33,7 +33,7 @@ class QueryResourcesTest {
 
     @Test
     void getSchemasQuery() {
-        val actual = QueryResources.getSchemasQuery();
+        val actual = QueryResources.getSchemasQueryText();
         assertThat(actual)
                 .contains("SELECT nspname")
                 .contains("FROM pg_catalog.pg_namespace")
@@ -42,7 +42,7 @@ class QueryResourcesTest {
 
     @Test
     void getTablesQuery() {
-        val actual = QueryResources.getTablesQuery();
+        val actual = QueryResources.getTablesQueryText();
         assertThat(actual)
                 .contains("SELECT")
                 .contains("FROM pg_catalog.pg_namespace")

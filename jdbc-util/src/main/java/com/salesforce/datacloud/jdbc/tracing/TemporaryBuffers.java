@@ -15,12 +15,13 @@
  */
 package com.salesforce.datacloud.jdbc.tracing;
 
-import lombok.experimental.UtilityClass;
-
-@UtilityClass
 public final class TemporaryBuffers {
 
     private static final ThreadLocal<char[]> CHAR_ARRAY = new ThreadLocal<>();
+
+    private TemporaryBuffers() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     /**
      * A {@link ThreadLocal} {@code char[]} of size {@code len}. Take care when using a large value of {@code len} as

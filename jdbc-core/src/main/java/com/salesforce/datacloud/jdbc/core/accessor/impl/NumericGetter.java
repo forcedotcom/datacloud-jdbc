@@ -17,7 +17,6 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.SQLException;
-import lombok.experimental.UtilityClass;
 import lombok.val;
 import org.apache.arrow.vector.BaseIntVector;
 import org.apache.arrow.vector.BigIntVector;
@@ -31,10 +30,13 @@ import org.apache.arrow.vector.holders.NullableSmallIntHolder;
 import org.apache.arrow.vector.holders.NullableTinyIntHolder;
 import org.apache.arrow.vector.holders.NullableUInt4Holder;
 
-@UtilityClass
-class NumericGetter {
+final class NumericGetter {
 
     private static final String INVALID_VECTOR_ERROR_RESPONSE = "Invalid Integer Vector provided";
+
+    private NumericGetter() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     static class NumericHolder {
         int isSet;
@@ -42,7 +44,7 @@ class NumericGetter {
     }
 
     @FunctionalInterface
-    interface Getter {
+    static interface Getter {
         void get(int index, NumericHolder holder);
     }
 

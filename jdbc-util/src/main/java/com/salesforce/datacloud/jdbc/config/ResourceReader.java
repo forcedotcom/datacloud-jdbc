@@ -28,13 +28,15 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.SneakyThrows;
-import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
 @Slf4j
-@UtilityClass
-public class ResourceReader {
+public final class ResourceReader {
+    private ResourceReader() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
+
     public static String readResourceAsString(@NonNull String path) {
         val result = new AtomicReference<String>();
         withResourceAsStream(path, in -> result.set(new String(ByteStreams.toByteArray(in), StandardCharsets.UTF_8)));
@@ -74,7 +76,7 @@ public class ResourceReader {
     private static final String IO_EXCEPTION_MESSAGE = "Error while loading resource file";
 
     @FunctionalInterface
-    public interface IOExceptionThrowingConsumer<T> {
+    public static interface IOExceptionThrowingConsumer<T> {
         void accept(T t) throws IOException;
     }
 }

@@ -20,17 +20,19 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Value;
-import lombok.experimental.UtilityClass;
 import lombok.val;
 
-@UtilityClass
-public class DriverVersion {
+public final class DriverVersion {
     private static final String DRIVER_NAME = "salesforce-datacloud-jdbc";
     private static final String DATABASE_PRODUCT_NAME = "salesforce-datacloud-queryservice";
     private static final String DATABASE_PRODUCT_VERSION = "1.0";
 
     @Getter(lazy = true)
     private static final DriverVersionInfo driverVersionInfo = DriverVersionInfo.of();
+
+    private DriverVersion() {
+        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+    }
 
     public static int getMajorVersion() {
         return getDriverVersionInfo().getMajor();
