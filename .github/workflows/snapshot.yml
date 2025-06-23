@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - jschneidereit/maven-central-publishing
 
 jobs:
   call-reusable-workflow:

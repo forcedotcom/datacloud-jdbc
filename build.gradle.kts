@@ -3,7 +3,7 @@ plugins {
     id("base-conventions")
     id("com.diffplug.spotless")
     id("dev.iurysouza.modulegraph") version "0.12.0"
-
+    id("com.gradleup.nmcp") version "0.0.8"
 }
 
 subprojects {
@@ -65,5 +65,13 @@ tasks.register("flattenJars") {
         }
         
         logger.lifecycle("All JARs have been collected in ${outputDir.absolutePath}")
+    }
+}
+
+nmcp {
+    publishAllProjectsProbablyBreakingProjectIsolation {
+        username = System.getenv("OSSRH_USERNAME")
+        password = System.getenv("OSSRH_PASSWORD")
+        publicationType = "USER_MANAGED"
     }
 }
