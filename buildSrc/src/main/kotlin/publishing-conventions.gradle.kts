@@ -67,13 +67,11 @@ publishing {
     
     repositories {
         maven {
-            url = layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
+            url = layout.buildDirectory.dir("staging-deploy").map { it.asFile.toURI() }.get()
         }
     }
 }
 
-
-val stagingRepoPath = layout.buildDirectory.dir("staging-deploy").get().asFile.path
 
 jreleaser {
     gitRootSearch = true
@@ -84,7 +82,7 @@ jreleaser {
                 register("sonatype") {
                     active = Active.ALWAYS
                     url = "https://central.sonatype.com/api/v1/publisher"
-                    stagingRepository(stagingRepoPath)
+                    stagingRepository(layout.buildDirectory.dir("staging-deploy").map { it.asFile.path }.get())
                 }
             }
         }
