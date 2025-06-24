@@ -4,6 +4,10 @@ plugins {
     alias(libs.plugins.lombok)
 }
 
+description = "Salesforce Data Cloud JDBC core implementation"
+val mavenName: String by extra("Salesforce Data Cloud JDBC Core")
+val mavenDescription: String by extra("${project.description}")
+
 dependencies {
     compileOnly(project(":jdbc-grpc"))
     compileOnly(libs.grpc.stub)

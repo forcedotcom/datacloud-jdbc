@@ -1,9 +1,13 @@
 plugins {
-    id("java-conventions")
-    id("publishing-conventions")
     alias(libs.plugins.shadow)
     alias(libs.plugins.lombok)
+    id("java-conventions")
+    id("publishing-conventions")
 }
+
+description = "Salesforce Data Cloud JDBC driver"
+val mavenName: String by extra("Salesforce Data Cloud JDBC Driver")
+val mavenDescription: String by extra("${project.description}")
 
 dependencies {
     implementation(project(":jdbc-core"))
@@ -99,15 +103,15 @@ tasks.assemble {
     dependsOn(shadedJar)
 }
 
-// Make sure all JAR artifacts are included in the Maven publication
+// Configure publishing to include the shaded JAR after evaluation
 afterEvaluate {
-    publishing {
-        publications {
-            named<MavenPublication>("mavenJava") {
-                artifact(shadedJar.get()) {
-                    classifier = "shaded"
-                }
-            }
-        }
-    }
+   publishing {
+       publications {
+           named<MavenPublication>("mavenJava") {
+               artifact(shadedJar.get()) {
+                   classifier = "shaded"
+               }
+           }
+       }
+   }
 }

@@ -7,13 +7,23 @@ plugins {
 dependencies {
   devPublication(project(":jdbc"))
   devPublication(project(":jdbc-core"))
+  devPublication(project(":jdbc-proto"))
   devPublication(project(":jdbc-grpc"))
   devPublication(project(":jdbc-http"))
   devPublication(project(":jdbc-util"))
 }
 
+tasks.named("updateDevRepo") {
+  dependsOn(":jdbc:publishAllToDevRepo")
+  dependsOn(":jdbc-core:publishAllToDevRepo") 
+  dependsOn(":jdbc-proto:publishAllToDevRepo")
+  dependsOn(":jdbc-grpc:publishAllToDevRepo")
+  dependsOn(":jdbc-http:publishAllToDevRepo")
+  dependsOn(":jdbc-util:publishAllToDevRepo")
+}
+
 tasks.named("check") {
-  dependsOn("updateDevRepo")
+  dependsOn(tasks.updateDevRepo)
 
   group = "verification"
   description = "Verifies that all subprojects produce required JAR artifacts"

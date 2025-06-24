@@ -122,8 +122,8 @@ jobs:
       - name: Publish to Maven Central
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-          OSSRH_USERNAME: ${{ secrets.publish_user }}
-          OSSRH_PASSWORD: ${{ secrets.publish_pass }}
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.signing_key }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.signing_pass }}
-        run: ./gradlew publishAggregationToCentralPortal -x test
+          JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.publish_user }}
+          JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.publish_pass }}
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.signing_key }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.signing_pass }}
+        run: ./gradlew jreleaserDeploy

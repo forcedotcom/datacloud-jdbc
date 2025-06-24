@@ -7,12 +7,24 @@ plugins {
     alias(libs.plugins.protobuf)
 }
 
+description = "Salesforce Data Cloud Query v3 API gRPC stubs"
+val mavenName: String by extra("Salesforce Data Cloud JDBC gRPC")
+val mavenDescription: String by extra("${project.description}")
+
 dependencies {
     api(platform(libs.protobuf.bom))
     implementation(libs.bundles.grpc.impl)
 }
 
 // Based on: https://github.com/google/protobuf-gradle-plugin/blob/master/examples/exampleKotlinDslProject
+sourceSets {
+    main {
+        proto {
+            srcDir(project(":jdbc-proto").projectDir.resolve("src/main/proto"))
+        }
+    }
+}
+
 protobuf {
     protoc {
         artifact = libs.protoc.get().toString()
@@ -36,13 +48,6 @@ tasks.withType<JavaCompile> {
     dependsOn("generateProto")
 }
 
-val protoJar by tasks.registering(Jar::class) {
-    group = LifecycleBasePlugin.BUILD_GROUP
-    archiveBaseName.set("jdbc-proto")
-    from(project.projectDir.resolve("src/main/proto"))
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-
 tasks.jar {
     archiveBaseName.set("jdbc-grpc")
     val tasks = sourceSets.map { sourceSet ->
@@ -50,32 +55,14 @@ tasks.jar {
         sourceSet.getCompileTaskName("java")
     }.toTypedArray()
 
-    dependsOn(protoJar, *tasks)
-
+    dependsOn(*tasks)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-val emptySourcesJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("sources")
-    archiveBaseName.set("jdbc-proto")
-}
-
-val emptyJavadocJar by tasks.registering(Jar::class) {
-    archiveClassifier.set("javadoc")
-    archiveBaseName.set("jdbc-proto")
-}
-
-publishing {
-    publications {
-        named<MavenPublication>("mavenJava") {
-            artifactId = "jdbc-grpc"
-        }
-
-        create<MavenPublication>("mavenProto") {
-            artifactId = "jdbc-proto"
-            artifact(protoJar)
-            artifact(emptySourcesJar)
-            artifact(emptyJavadocJar)
-        }
-    }
-}
+//publishing {
+//    publications {
+//        named<MavenPublication>("mavenJava") {
+//            artifactId = "jdbc-grpc"
+//        }
+//    }
+//}

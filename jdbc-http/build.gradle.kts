@@ -4,6 +4,10 @@ plugins {
     alias(libs.plugins.lombok)
 }
 
+description = "HTTP utilities including Auth implementations for establishing a connection and SOQL for fetching metadata for Salesforce Data Cloud JDBC driver"
+val mavenName: String by extra("Salesforce Data Cloud JDBC HTTP")
+val mavenDescription: String by extra("${project.description}")
+
 dependencies {
     implementation(project(":jdbc-util"))
     implementation(libs.okhttp3.client)
