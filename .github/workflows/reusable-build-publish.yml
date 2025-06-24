@@ -126,4 +126,4 @@ jobs:
           OSSRH_PASSWORD: ${{ secrets.publish_pass }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.signing_key }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.signing_pass }}
-        run: ./gradlew publishAllPublicationsToCentralPortal -x test
+        run: ./gradlew publishAggregationToCentralPortal -x test
