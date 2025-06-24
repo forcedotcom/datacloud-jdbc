@@ -69,7 +69,13 @@ tasks.register("flattenJars") {
 }
 
 nmcp {
-    publishAllProjectsProbablyBreakingProjectIsolation {
+    publishAggregation {
+        project(":jdbc")
+        project(":jdbc-core")
+        project(":jdbc-grpc")
+        project(":jdbc-http")
+        project(":jdbc-util")
+
         username = System.getenv("OSSRH_USERNAME")
         password = System.getenv("OSSRH_PASSWORD")
         publicationType = "USER_MANAGED"
