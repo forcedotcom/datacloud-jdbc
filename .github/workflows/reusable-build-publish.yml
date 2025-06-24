@@ -1,5 +1,8 @@
 name: Reusable Build and Publish
 
+env:
+  GRADLE_VERSION: "8.14"
+
 on:
   workflow_call:
     inputs:
@@ -21,9 +24,6 @@ on:
         required: false
       publish_pass:
         required: false
-
-env:
-  GRADLE_VERSION: "8.12"
 
 jobs:
   prepare:
@@ -75,12 +75,12 @@ jobs:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Extract Hyper
         id: extract_hyper
-        run: ./gradlew extractHyper
+        run: gradle extractHyper
       - name: Gradle build (with version)
         id: build-and-test
         run: |
           echo "build and test with version='${{ inputs.version }}'"
-          ./gradlew clean build --no-build-cache --rerun-tasks
+          gradle clean build --no-build-cache --rerun-tasks
         env:
           RELEASE_VERSION: ${{ inputs.version }}
       - name: Look at files in verification
@@ -126,4 +126,4 @@ jobs:
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.publish_pass }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.signing_key }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.signing_pass }}
-        run: ./gradlew jreleaserDeploy
+        run: gradle jreleaserDeploy

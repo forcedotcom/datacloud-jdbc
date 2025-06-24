@@ -73,6 +73,8 @@ publishing {
 }
 
 
+val stagingRepoPath = layout.buildDirectory.dir("staging-deploy").get().asFile.path
+
 jreleaser {
     gitRootSearch = true
     deploy {
@@ -82,7 +84,7 @@ jreleaser {
                 register("sonatype") {
                     active = Active.ALWAYS
                     url = "https://central.sonatype.com/api/v1/publisher"
-                    stagingRepository(layout.buildDirectory.dir("staging-deploy").get().asFile.path)
+                    stagingRepository(stagingRepoPath)
                 }
             }
         }
