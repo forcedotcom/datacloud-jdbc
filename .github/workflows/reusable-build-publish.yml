@@ -121,11 +121,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
+      - name: Double check jars
+        run: gradle :verification:check -x :jdbc:test -x :jdbc-core:test -x :jdbc-http:test -x :jdbc-util:test --no-build-cache --scan
       - name: Publish to Maven Central
+        uses: jreleaser/release-action@v2
         env:
           RELEASE_VERSION: ${{ inputs.version }}
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.publish_user }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.publish_pass }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.signing_key }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.signing_pass }}
-        run: gradle jreleaserDeploy --dryrun -x test

@@ -1,11 +1,11 @@
-import org.jreleaser.model.Active
+// import org.jreleaser.model.Active
 
 plugins {
     id("hyper-conventions")
     id("base-conventions")
     id("com.diffplug.spotless")
     id("dev.iurysouza.modulegraph") version "0.12.0"
-    id("org.jreleaser") version "1.18.0"
+    // id("org.jreleaser") version "1.18.0"
 
 }
 
@@ -25,6 +25,8 @@ moduleGraphConfig {
 
 // jreleaser {
 //     gitRootSearch = true
+// }
+
 //     deploy {
 //         maven {
 //             mavenCentral {
