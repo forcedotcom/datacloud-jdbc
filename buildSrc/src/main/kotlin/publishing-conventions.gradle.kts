@@ -1,11 +1,8 @@
-import org.jreleaser.model.Active
-
 plugins {
     id("base-conventions")
     id("version-conventions")
     signing
     `maven-publish`
-    id("org.jreleaser")
     id("dev.adamko.dev-publish")
 }
 
@@ -65,33 +62,3 @@ publishing {
         }
     }
 }
-
-
-jreleaser {
-    gitRootSearch = true
-    deploy {
-        maven {
-            mavenCentral {
-                active.set(Active.ALWAYS)
-                register("sonatype") {
-                    active = Active.ALWAYS
-                    url = "https://central.sonatype.com/api/v1/publisher"
-                }
-            }
-        }
-    }
-
-    signing {
-        active.set(Active.ALWAYS)
-        armored.set(true)
-    }
-
-    release {
-        github {
-            enabled = false
-            skipRelease = true
-            skipTag = true
-        }
-    }
-}
-

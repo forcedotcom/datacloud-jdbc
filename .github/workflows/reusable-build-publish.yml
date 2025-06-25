@@ -128,4 +128,4 @@ jobs:
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.publish_pass }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.signing_key }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.signing_pass }}
-        run: gradle jreleaserDeploy -x test
+        run: gradle jreleaserDeploy --dryrun -x test
