@@ -29,11 +29,12 @@ deploy:
   maven:
     mavenCentral:
       release-deploy:
-        active: RELEASE
+        active: ALWAYS
         url: https://central.sonatype.com/api/v1/publisher
         snapshotSupported: true
         stagingRepositories:
           - verification/build/maven-dev
+
 
 release:
   github:
