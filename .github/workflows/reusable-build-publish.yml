@@ -137,7 +137,9 @@ jobs:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Double check jars
         run: gradle :verification:check -x :jdbc:test -x :jdbc-core:test -x :jdbc-http:test -x :jdbc-util:test --no-build-cache --scan
-      - name: Resolve version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+      - name: Get version for jreleaser
         id: resolve_version
         run: |
           RESOLVED_VERSION=$(gradle -q printVersion)
