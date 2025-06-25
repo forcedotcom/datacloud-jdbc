@@ -11,6 +11,7 @@ jobs:
     uses: './.github/workflows/reusable-build-publish.yml'
     with:
       publish: true
+      version: "0.0.1"
     secrets:
       signing_key: ${{ secrets.GPG_SIGNING_KEY }}
       signing_pub: ${{ secrets.GPG_SIGNING_PUBLIC_KEY }}
