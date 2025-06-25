@@ -42,7 +42,6 @@ import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.junit.jupiter.api.Assertions;
 
 @Slf4j
 public class HyperServerProcess implements AutoCloseable {
@@ -62,13 +61,14 @@ public class HyperServerProcess implements AutoCloseable {
 
         val isWindows = System.getProperty("os.name").toLowerCase().contains("win");
         val executable = new File("../.hyperd/hyperd" + (isWindows ? ".exe" : ""));
-        val yaml = Paths.get(requireNonNull(HyperTestBase.class.getResource("/hyper.yaml"))
+        val yaml = Paths.get(requireNonNull(HyperServerProcess.class.getResource("/hyper.yaml"))
                         .toURI())
                 .toFile();
 
         if (!executable.exists()) {
-            Assertions.fail("hyperd executable couldn't be found, have you run `gradle extractHyper`? expected="
-                    + executable.getAbsolutePath() + ", os=" + System.getProperty("os.name"));
+            throw new IllegalStateException(
+                "hyperd executable couldn't be found, have you run `gradle extractHyper`? expected="
+                        + executable.getAbsolutePath() + ", os=" + System.getProperty("os.name"));
         }
 
         val builder = new ProcessBuilder()
@@ -97,7 +97,8 @@ public class HyperServerProcess implements AutoCloseable {
         }));
 
         if (!latch.await(30, TimeUnit.SECONDS)) {
-            Assertions.fail("failed to start instance of hyper within 30 seconds");
+            throw new IllegalStateException(
+                "failed to start instance of hyper within 30 seconds");
         }
     }
 
@@ -105,7 +106,7 @@ public class HyperServerProcess implements AutoCloseable {
         return port;
     }
 
-    boolean isHealthy() {
+    public boolean isHealthy() {
         return hyperProcess != null && hyperProcess.isAlive();
     }
 

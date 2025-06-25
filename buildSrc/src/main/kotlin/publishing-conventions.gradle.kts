@@ -112,6 +112,7 @@ fun MavenPublication.updateName() {
         "jdbc-proto" -> "Salesforce Data Cloud JDBC Proto Files"
         "jdbc-http" -> "Salesforce Data Cloud JDBC HTTP"
         "jdbc-util" -> "Salesforce Data Cloud JDBC Utilities"
+        "spark-datasource" -> "Salesforce Data Cloud Spark Datasource"
         else -> {
             logger.lifecycle("Unknown project, can't update name. artifactId=${this.artifactId}")
             null
@@ -132,6 +133,7 @@ fun MavenPublication.updateDescription() {
         "jdbc-proto" -> "Salesforce Data Cloud Query API proto files"
         "jdbc-http" -> "HTTP utilities including Auth implementations for establishing a connection and SOQL for fetching metadata for Salesforce Data Cloud JDBC driver"
         "jdbc-util" -> "Utilities for Java's Stream, Properties, String, etc. for Salesforce Data Cloud JDBC driver"
+        "spark-datasource" -> "Spark Datasource for reading SQL query results from Salesforce Data Cloud"
         else -> {
             logger.lifecycle("Unknown project, can't update description. artifactId=${this.artifactId}")
             null
