@@ -8,3 +8,5 @@ include(":jdbc-proto")
 include(":jdbc-util")
 include(":jdbc-reference")
 include(":verification")
+
+include("hyper-test-util")

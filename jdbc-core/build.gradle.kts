@@ -27,9 +27,10 @@ dependencies {
 
     implementation(libs.apache.commons.lang3)
 
+    testImplementation(platform(libs.junit.bom))
     testImplementation(project(":jdbc-grpc"))
     testImplementation(project(":jdbc-reference"))
-    testImplementation(platform(libs.junit.bom))
+    testImplementation(project(":hyper-test-util"))
     testImplementation(libs.bundles.testing)
     testImplementation(libs.bundles.mocking)
     testImplementation(libs.bundles.grpc.impl)

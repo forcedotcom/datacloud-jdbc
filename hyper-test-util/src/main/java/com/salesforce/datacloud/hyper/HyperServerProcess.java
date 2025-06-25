@@ -13,26 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.salesforce.datacloud.jdbc.hyper;
+package com.salesforce.datacloud.hyper;
 
-import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
-import static java.util.Objects.requireNonNull;
-
-import com.google.common.collect.ImmutableMap;
-import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
-import com.salesforce.datacloud.jdbc.core.DataCloudJdbcManagedChannel;
-import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
-import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
-import io.grpc.ManagedChannelBuilder;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.file.Paths;
-import java.time.Duration;
-import java.util.Map;
-import java.util.Properties;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,6 +40,7 @@ public class HyperServerProcess implements AutoCloseable {
 
     private final Process hyperProcess;
     private final ExecutorService hyperMonitors;
+    private final Path tempYamlFile;
     private Integer port;
 
     public HyperServerProcess() {
@@ -62,9 +53,8 @@ public class HyperServerProcess implements AutoCloseable {
 
         val isWindows = System.getProperty("os.name").toLowerCase().contains("win");
         val executable = new File("../.hyperd/hyperd" + (isWindows ? ".exe" : ""));
-        val yaml = Paths.get(requireNonNull(HyperTestBase.class.getResource("/hyper.yaml"))
-                        .toURI())
-                .toFile();
+
+        tempYamlFile = extractHyperYamlToTempFile();
 
         if (!executable.exists()) {
             Assertions.fail("hyperd executable couldn't be found, have you run `gradle extractHyper`? expected="
@@ -76,14 +66,13 @@ public class HyperServerProcess implements AutoCloseable {
                         executable.getAbsolutePath(),
                         config.build().toString(),
                         "--config",
-                        yaml.getAbsolutePath(),
+                        tempYamlFile.toAbsolutePath().toString(),
                         "--no-password",
                         "run");
 
         log.warn("hyper command: {}", builder.command());
         hyperProcess = builder.start();
 
-        // Wait until process is listening and extract port on which it is listening
         val latch = new CountDownLatch(1);
         hyperMonitors = Executors.newFixedThreadPool(2);
         hyperMonitors.execute(() -> logStream(hyperProcess.getErrorStream(), log::error));
@@ -101,11 +90,26 @@ public class HyperServerProcess implements AutoCloseable {
         }
     }
 
+    private Path extractHyperYamlToTempFile() throws IOException {
+        val tempFile = Files.createTempFile("hyper", ".yaml");
+        tempFile.toFile().deleteOnExit();
+
+        try (val inputStream = HyperServerProcess.class.getResourceAsStream("/hyper.yaml")) {
+            if (inputStream == null) {
+                throw new IllegalStateException("Could not find hyper.yaml resource in classpath");
+            }
+            Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        log.info("Extracted hyper.yaml to temporary file: {}", tempFile.toAbsolutePath());
+        return tempFile;
+    }
+
     public int getPort() {
         return port;
     }
 
-    boolean isHealthy() {
+    public boolean isHealthy() {
         return hyperProcess != null && hyperProcess.isAlive();
     }
 
@@ -132,26 +136,5 @@ public class HyperServerProcess implements AutoCloseable {
 
         log.warn("shutdown hyper monitors");
         hyperMonitors.shutdown();
-    }
-
-    public DataCloudConnection getConnection() {
-        return getConnection(ImmutableMap.of());
-    }
-
-    @SneakyThrows
-    public HyperGrpcClientExecutor getRawClient() {
-        val channel = DataCloudJdbcManagedChannel.of(
-                ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext());
-        val stub = channel.getStub(new Properties(), Duration.ZERO);
-        return HyperGrpcClientExecutor.of(stub, new Properties());
-    }
-
-    @SneakyThrows
-    public DataCloudConnection getConnection(Map<String, String> connectionSettings) {
-        val properties = new Properties();
-        properties.put(DirectDataCloudConnection.DIRECT, "true");
-        properties.putAll(connectionSettings);
-        val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getPort();
-        return DirectDataCloudConnection.of(url, properties);
     }
 }
