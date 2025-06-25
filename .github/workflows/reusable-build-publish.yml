@@ -58,7 +58,7 @@ jobs:
     needs: prepare
     strategy:
       matrix:
-        os: [ ubuntu-latest ] #, windows-latest
+        os: [ ubuntu-latest, windows-latest ]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
