@@ -47,16 +47,17 @@ fun MavenPublication.configurePom(nameProvider: Provider<String>, descProvider: 
 
 publishing {
     publications {
+        val nameProvider = provider { mavenName }
+        val descProvider = provider { mavenDescription }
         if (components.findByName("java") != null) {
             create<MavenPublication>("mavenJava") {
                 from(components["java"])
-                configurePom(provider { mavenName }, provider { mavenDescription })
+                configurePom(nameProvider, descProvider)
             }
-        }
-         else {
+        } else {
             afterEvaluate {
                 findByName("mavenProto")?.let { publication ->
-                    (publication as MavenPublication).configurePom(provider { mavenName }, provider { mavenDescription })
+                    (publication as MavenPublication).configurePom(nameProvider, descProvider)
                 }
             }
         }

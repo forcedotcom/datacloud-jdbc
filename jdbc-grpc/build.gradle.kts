@@ -58,11 +58,3 @@ tasks.jar {
     dependsOn(*tasks)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
-
-//publishing {
-//    publications {
-//        named<MavenPublication>("mavenJava") {
-//            artifactId = "jdbc-grpc"
-//        }
-//    }
-//}
