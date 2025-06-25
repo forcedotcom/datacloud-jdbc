@@ -1,5 +1,5 @@
 project:
-  name: Salesforce Data Cloud JDBC driver
+  name: jdbc
   description: Salesforce Data Cloud JDBC driver
   links:
     homepage: https://www.salesforce.com/data/
@@ -17,7 +17,7 @@ project:
 
   languages:
     java:
-      groupId: com.salesforce.datacloud
+      groupId: com.salesforce
       version: "8"
       multiProject: true
 
