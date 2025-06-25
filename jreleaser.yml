@@ -34,3 +34,7 @@ deploy:
         snapshotSupported: true
         stagingRepositories:
           - verification/build/maven-dev
+
+release:
+  github:
+    enabled: false
