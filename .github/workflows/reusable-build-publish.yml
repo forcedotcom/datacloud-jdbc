@@ -152,7 +152,8 @@ jobs:
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.publish_pass }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.signing_key }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.signing_pass }}
-          JRELEASER_GITHUB_TOKEN: "intentionally-empty"
+          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JRELEASER_SKIP_TAG: true
       - name: Upload JReleaser logs on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4

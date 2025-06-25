@@ -28,14 +28,27 @@ signing:
 
 deploy:
   maven:
-    mavenCentral:
-      release-deploy:
-        active: ALWAYS
-        url: https://central.sonatype.com/api/v1/publisher
+    github:
+      snapshot-deploy:
+        active: SNAPSHOT
+        url: https://maven.pkg.github.com/forcedotcom/datacloud-jdbc
         snapshotSupported: true
+        sign: false
         stagingRepositories:
           - verification/build/maven-dev
 
+    mavenCentral:
+      release-deploy:
+        active: RELEASE
+        url: https://central.sonatype.com/api/v1/publisher
+        sign: true
+        checksums: true
+        sourceJar: true
+        javadocJar: true
+        verifyPom: true
+        applyMavenCentralRules: true
+        stagingRepositories:
+          - verification/build/maven-dev
 
 release:
   github:
