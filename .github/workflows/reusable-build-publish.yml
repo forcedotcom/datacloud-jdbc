@@ -24,21 +24,37 @@ on:
         required: false
       publish_pass:
         required: false
+      signing_pub:
+        required: false
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
       hyper_version: ${{ steps.get_version.outputs.hyper_version }}
+      resolved_version: ${{ steps.get_version.outputs.resolved_version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Get hyperd version
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+      - name: Get hyperd version and resolved version
         id: get_version
         run: |
-          HYPER_VERSION=$(sed -n 's/^hyperApiVersion=\(.*\)/\1/p' gradle.properties)
+          HYPER_VERSION=$(gradle -q printHyperApiVersion)
           echo "hyper_version=$HYPER_VERSION" >> $GITHUB_OUTPUT
+          RESOLVED_VERSION=$(gradle -q printVersion)
+          echo "resolved_version=$RESOLVED_VERSION" >> $GITHUB_OUTPUT
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
 
   build:
     needs: prepare
@@ -82,9 +98,11 @@ jobs:
         id: build-and-test
         run: |
           echo "build and test with version='${{ inputs.version }}'"
+          echo "resolved version='${{ needs.prepare.outputs.resolved_version }}'"
           gradle clean build --no-build-cache --rerun-tasks -x test
         env:
           RELEASE_VERSION: ${{ inputs.version }}
+          RESOLVED_VERSION: ${{ needs.prepare.outputs.resolved_version }}
       - name: Look at files in verification
         if: ${{ failure() }}
         uses: jaywcjlove/github-action-folder-tree@main
@@ -127,7 +145,10 @@ jobs:
         uses: jreleaser/release-action@v2
         env:
           RELEASE_VERSION: ${{ inputs.version }}
+          JRELEASER_PROJECT_VERSION: ${{ inputs.version }}
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.publish_user }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.publish_pass }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.signing_key }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.signing_pass }}
+          JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.signing_pub }}
+          JRELEASER_GITHUB_TOKEN: ""

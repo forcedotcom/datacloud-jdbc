@@ -3,10 +3,25 @@
 plugins {
     id("hyper-conventions")
     id("base-conventions")
+    id("version-conventions")
     id("com.diffplug.spotless")
     id("dev.iurysouza.modulegraph") version "0.12.0"
     // id("org.jreleaser") version "1.18.0"
 
+}
+
+tasks.register("printVersion") {
+    val projectVersion = version.toString()
+    doLast {
+        println(projectVersion)
+    }
+}
+
+tasks.register("printHyperApiVersion") {
+    val hyperVersion = project.findProperty("hyperApiVersion")?.toString() ?: "unknown"
+    doLast {
+        println(hyperVersion)
+    }
 }
 
 subprojects {
