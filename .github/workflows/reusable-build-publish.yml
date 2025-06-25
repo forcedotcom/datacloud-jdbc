@@ -51,8 +51,6 @@ jobs:
         run: |
           HYPER_VERSION=$(gradle -q printHyperApiVersion)
           echo "hyper_version=$HYPER_VERSION" >> $GITHUB_OUTPUT
-          RESOLVED_VERSION=$(gradle -q printVersion)
-          echo "resolved_version=$RESOLVED_VERSION" >> $GITHUB_OUTPUT
         env:
           RELEASE_VERSION: ${{ inputs.version }}
 
@@ -98,11 +96,9 @@ jobs:
         id: build-and-test
         run: |
           echo "build and test with version='${{ inputs.version }}'"
-          echo "resolved version='${{ needs.prepare.outputs.resolved_version }}'"
           gradle clean build --no-build-cache --rerun-tasks -x test
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-          RESOLVED_VERSION: ${{ needs.prepare.outputs.resolved_version }}
       - name: Look at files in verification
         if: ${{ failure() }}
         uses: jaywcjlove/github-action-folder-tree@main
@@ -141,11 +137,16 @@ jobs:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Double check jars
         run: gradle :verification:check -x :jdbc:test -x :jdbc-core:test -x :jdbc-http:test -x :jdbc-util:test --no-build-cache --scan
+      - name: Resolve version
+        id: resolve_version
+        run: |
+          RESOLVED_VERSION=$(gradle -q printVersion)
+          echo "resolved_version=$RESOLVED_VERSION" >> $GITHUB_OUTPUT
       - name: Publish to Maven Central
         uses: jreleaser/release-action@v2
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-          JRELEASER_PROJECT_VERSION: ${{ steps.get_version.outputs.resolved_version }}
+          JRELEASER_PROJECT_VERSION: ${{ steps.resolve_version.outputs.resolved_version }}
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.publish_user }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.publish_pass }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.signing_key }}
