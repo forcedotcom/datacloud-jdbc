@@ -145,7 +145,7 @@ jobs:
         uses: jreleaser/release-action@v2
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-          JRELEASER_PROJECT_VERSION: ${{ inputs.version }}
+          JRELEASER_PROJECT_VERSION: ${{ steps.get_version.outputs.resolved_version }}
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.publish_user }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.publish_pass }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.signing_key }}
