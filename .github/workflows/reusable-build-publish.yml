@@ -119,6 +119,8 @@ jobs:
     needs: [ prepare, build ]
     if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -137,8 +139,6 @@ jobs:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Double check jars
         run: gradle :verification:check -x :jdbc:test -x :jdbc-core:test -x :jdbc-http:test -x :jdbc-util:test --no-build-cache --scan
-        env:
-          RELEASE_VERSION: ${{ inputs.version }}
       - name: Get version for jreleaser
         id: resolve_version
         run: |
@@ -147,7 +147,6 @@ jobs:
       - name: Publish to Maven Central
         uses: jreleaser/release-action@v2
         env:
-          RELEASE_VERSION: ${{ inputs.version }}
           JRELEASER_PROJECT_VERSION: ${{ steps.resolve_version.outputs.resolved_version }}
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.publish_user }}
           JRELEASER_MAVENCENTRAL_PASSWORD: ${{ secrets.publish_pass }}
