@@ -15,17 +15,20 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.util.Constants.INTEGER;
+import static com.salesforce.datacloud.jdbc.util.Constants.SHORT;
+import static com.salesforce.datacloud.jdbc.util.Constants.TEXT;
+
 import com.google.common.collect.ImmutableList;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import java.sql.Types;
 import java.util.List;
 
 public enum QueryDBMetadata {
-    GET_TABLE_TYPES(ImmutableList.of("TABLE_TYPE"), ImmutableList.of(Constants.TEXT), ImmutableList.of(Types.VARCHAR)),
-    GET_CATALOGS(ImmutableList.of("TABLE_CAT"), ImmutableList.of(Constants.TEXT), ImmutableList.of(Types.VARCHAR)),
+    GET_TABLE_TYPES(ImmutableList.of("TABLE_TYPE"), ImmutableList.of(TEXT), ImmutableList.of(Types.VARCHAR)),
+    GET_CATALOGS(ImmutableList.of("TABLE_CAT"), ImmutableList.of(TEXT), ImmutableList.of(Types.VARCHAR)),
     GET_SCHEMAS(
             ImmutableList.of("TABLE_SCHEM", "TABLE_CATALOG"),
-            ImmutableList.of(Constants.TEXT, Constants.TEXT),
+            ImmutableList.of(TEXT, TEXT),
             ImmutableList.of(Types.VARCHAR, Types.VARCHAR)),
     GET_TABLES(
             ImmutableList.of(
@@ -39,17 +42,7 @@ public enum QueryDBMetadata {
                     "TYPE_NAME",
                     "SELF_REFERENCING_COL_NAME",
                     "REF_GENERATION"),
-            ImmutableList.of(
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT),
+            ImmutableList.of(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT),
             ImmutableList.of(
                     Types.VARCHAR,
                     Types.VARCHAR,
@@ -88,30 +81,8 @@ public enum QueryDBMetadata {
                     "IS_AUTOINCREMENT",
                     "IS_GENERATEDCOLUMN"),
             ImmutableList.of(
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.INTEGER,
-                    Constants.TEXT,
-                    Constants.INTEGER,
-                    Constants.INTEGER,
-                    Constants.INTEGER,
-                    Constants.INTEGER,
-                    Constants.INTEGER,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.INTEGER,
-                    Constants.INTEGER,
-                    Constants.INTEGER,
-                    Constants.INTEGER,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.TEXT,
-                    Constants.SHORT,
-                    Constants.TEXT,
-                    Constants.TEXT),
+                    TEXT, TEXT, TEXT, TEXT, INTEGER, TEXT, INTEGER, INTEGER, INTEGER, INTEGER, INTEGER, TEXT, TEXT,
+                    INTEGER, INTEGER, INTEGER, INTEGER, TEXT, TEXT, TEXT, TEXT, SHORT, TEXT, TEXT),
             ImmutableList.of(
                     Types.VARCHAR,
                     Types.VARCHAR,

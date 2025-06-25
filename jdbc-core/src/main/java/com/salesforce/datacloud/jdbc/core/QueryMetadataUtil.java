@@ -16,13 +16,15 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static com.google.common.collect.Maps.immutableEntry;
-import static com.salesforce.datacloud.jdbc.config.QueryResources.*;
+import static com.salesforce.datacloud.jdbc.config.QueryResources.getColumnsQueryText;
+import static com.salesforce.datacloud.jdbc.config.QueryResources.getSchemasQueryText;
+import static com.salesforce.datacloud.jdbc.config.QueryResources.getTablesQueryText;
+import static com.salesforce.datacloud.jdbc.util.ArrowUtils.convertJDBCMetadataToAvaticaColumns;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.ArrowUtils;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
@@ -115,8 +117,7 @@ final class QueryMetadataUtil {
     static AvaticaResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, int columnsCount, List<Object> data)
             throws SQLException {
         QueryResultSetMetadata queryResultSetMetadata = new QueryResultSetMetadata(queryDbMetadata);
-        List<ColumnMetaData> columnMetaData =
-                ArrowUtils.convertJDBCMetadataToAvaticaColumns(queryResultSetMetadata, columnsCount);
+        List<ColumnMetaData> columnMetaData = convertJDBCMetadataToAvaticaColumns(queryResultSetMetadata, columnsCount);
         Meta.Signature signature = new Meta.Signature(
                 columnMetaData, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
         return MetadataResultSet.of(

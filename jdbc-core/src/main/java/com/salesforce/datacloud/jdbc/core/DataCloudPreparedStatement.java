@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toArrowByteArray;
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCDateFromDateAndCalendar;
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimeFromTimeAndCalendar;
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimestampFromTimestampAndCalendar;
@@ -24,7 +25,6 @@ import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.ArrowUtils;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.io.IOException;
 import java.io.InputStream;
@@ -97,7 +97,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     protected HyperGrpcClientExecutor getQueryExecutor() throws DataCloudJDBCException {
         final byte[] encodedRow;
         try {
-            encodedRow = ArrowUtils.toArrowByteArray(parameterManager.getParameters(), calendar);
+            encodedRow = toArrowByteArray(parameterManager.getParameters(), calendar);
         } catch (IOException e) {
             throw new DataCloudJDBCException("Failed to encode parameters on prepared statement", e);
         }

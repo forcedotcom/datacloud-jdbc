@@ -16,11 +16,11 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
+import static com.salesforce.datacloud.jdbc.util.Constants.DEFAULT_QUERY_TIMEOUT;
 
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
@@ -81,7 +81,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     private Properties clientInfo = new Properties();
 
     HyperGrpcClientExecutor getExecutor() {
-        val stub = channel.getStub(clientInfo, Duration.ofSeconds(Constants.DEFAULT_QUERY_TIMEOUT));
+        val stub = channel.getStub(clientInfo, Duration.ofSeconds(DEFAULT_QUERY_TIMEOUT));
         return HyperGrpcClientExecutor.of(stub, clientInfo);
     }
 

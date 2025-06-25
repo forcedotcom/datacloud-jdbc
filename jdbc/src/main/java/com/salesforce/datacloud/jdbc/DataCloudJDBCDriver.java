@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc;
 
+import static com.salesforce.datacloud.jdbc.config.DriverVersion.formatDriverInfo;
 import static com.salesforce.datacloud.jdbc.util.Constants.LOGIN_URL;
 import static com.salesforce.datacloud.jdbc.util.Constants.USER;
 import static com.salesforce.datacloud.jdbc.util.Constants.USER_NAME;
@@ -48,7 +49,7 @@ public class DataCloudJDBCDriver implements Driver {
         try {
             log.info(
                     "Registering DataCloud JDBC driver. info={}, classLoader={}",
-                    DriverVersion.formatDriverInfo(),
+                    formatDriverInfo(),
                     DataCloudJDBCDriver.class.getClassLoader());
             register();
             log.info("DataCloud JDBC driver registered");

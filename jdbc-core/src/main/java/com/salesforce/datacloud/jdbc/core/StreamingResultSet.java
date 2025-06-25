@@ -15,9 +15,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
+import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
+
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
-import com.salesforce.datacloud.jdbc.util.ArrowUtils;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import java.sql.ResultSet;
@@ -71,7 +72,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
             val channel = ExecuteQueryResponseChannel.of(StreamUtilities.toStream(iterator));
             val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
             val schemaRoot = reader.getVectorSchemaRoot();
-            val columns = ArrowUtils.toColumnMetaData(schemaRoot.getSchema().getFields());
+            val columns = toColumnMetaData(schemaRoot.getSchema().getFields());
             val timezone = TimeZone.getDefault();
             val state = new QueryState();
             val signature = new Meta.Signature(
@@ -84,7 +85,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
             return result;
         } catch (Exception ex) {
-            throw QueryExceptionHandler.createException(QUERY_FAILURE + queryId, ex);
+            throw createException(QUERY_FAILURE + queryId, ex);
         }
     }
 

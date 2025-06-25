@@ -16,11 +16,15 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.config.KeywordResources.getSqlKeywords;
-import static com.salesforce.datacloud.jdbc.core.QueryMetadataUtil.*;
+import static com.salesforce.datacloud.jdbc.core.QueryMetadataUtil.createCatalogsResultSet;
+import static com.salesforce.datacloud.jdbc.core.QueryMetadataUtil.createColumnResultSet;
+import static com.salesforce.datacloud.jdbc.core.QueryMetadataUtil.createSchemaResultSet;
+import static com.salesforce.datacloud.jdbc.core.QueryMetadataUtil.createTableResultSet;
+import static com.salesforce.datacloud.jdbc.core.QueryMetadataUtil.createTableTypesResultSet;
+import static com.salesforce.datacloud.jdbc.util.Constants.*;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -93,22 +97,22 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public String getDatabaseProductName() {
-        return Constants.DATABASE_PRODUCT_NAME;
+        return DATABASE_PRODUCT_NAME;
     }
 
     @Override
     public String getDatabaseProductVersion() {
-        return Constants.DATABASE_PRODUCT_VERSION;
+        return DATABASE_PRODUCT_VERSION;
     }
 
     @Override
     public String getDriverName() {
-        return Constants.DRIVER_NAME;
+        return DRIVER_NAME;
     }
 
     @Override
     public String getDriverVersion() {
-        return Constants.DRIVER_VERSION;
+        return DRIVER_VERSION;
     }
 
     @Override

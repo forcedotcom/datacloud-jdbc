@@ -15,12 +15,12 @@
  */
 package com.salesforce.datacloud.jdbc.auth;
 
+import static com.salesforce.datacloud.jdbc.config.DriverVersion.formatDriverInfo;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.copy;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.required;
 
 import com.google.common.collect.ImmutableSet;
-import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.PropertiesExtensions;
 import java.net.URI;
@@ -155,7 +155,7 @@ public abstract class AuthenticationSettings {
     protected static final class Defaults {
         static final int MAX_RETRIES = 3;
         static final String DATASPACE = null;
-        static final String USER_AGENT = DriverVersion.formatDriverInfo();
+        static final String USER_AGENT = formatDriverInfo();
 
         private Defaults() {
             throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");

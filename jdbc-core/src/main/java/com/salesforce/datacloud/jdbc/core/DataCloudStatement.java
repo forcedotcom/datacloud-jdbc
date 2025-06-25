@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor.HYPER_MAX_ROW_LIMIT_BYTE_SIZE;
 import static com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor.HYPER_MIN_ROW_LIMIT_BYTE_SIZE;
+import static com.salesforce.datacloud.jdbc.util.Constants.BYTE_LIMIT;
 import static com.salesforce.datacloud.jdbc.util.Constants.DEFAULT_QUERY_TIMEOUT;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
 
@@ -24,7 +25,6 @@ import com.salesforce.datacloud.jdbc.core.listener.AdaptiveQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -56,7 +56,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         this.connection = connection;
         val properties = connection.getClientInfo();
         this.queryTimeout = getIntegerOrDefault(properties, QUERY_TIMEOUT, DEFAULT_QUERY_TIMEOUT);
-        this.targetMaxBytes = getIntegerOrDefault(properties, Constants.BYTE_LIMIT, HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
+        this.targetMaxBytes = getIntegerOrDefault(properties, BYTE_LIMIT, HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
     }
 
     protected HyperGrpcClientExecutor getQueryExecutor() throws DataCloudJDBCException {

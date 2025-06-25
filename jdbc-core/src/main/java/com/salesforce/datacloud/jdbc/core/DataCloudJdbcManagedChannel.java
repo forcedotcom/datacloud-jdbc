@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.config.DriverVersion.formatDriverInfo;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getBooleanOrDefault;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getListOrDefault;
@@ -22,7 +23,6 @@ import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
@@ -87,7 +87,7 @@ public class DataCloudJdbcManagedChannel implements AutoCloseable {
      */
     public static DataCloudJdbcManagedChannel of(ManagedChannelBuilder<?> builder) {
         builder.maxInboundMessageSize(GRPC_INBOUND_MESSAGE_MAX_SIZE);
-        builder.userAgent(DriverVersion.formatDriverInfo());
+        builder.userAgent(formatDriverInfo());
 
         return new DataCloudJdbcManagedChannel(builder.build());
     }

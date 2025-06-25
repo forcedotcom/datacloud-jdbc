@@ -15,12 +15,13 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
+import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createQueryException;
+
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
@@ -67,7 +68,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
             return new AdaptiveQueryStatusListener(queryId, client, timeout, response);
         } catch (StatusRuntimeException ex) {
-            throw QueryExceptionHandler.createQueryException(query, ex);
+            throw createQueryException(query, ex);
         }
     }
 
@@ -81,7 +82,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
             return new RowBasedAdaptiveQueryStatusListener(queryId, client, response);
         } catch (StatusRuntimeException ex) {
-            throw QueryExceptionHandler.createQueryException(query, ex);
+            throw createQueryException(query, ex);
         }
     }
 
