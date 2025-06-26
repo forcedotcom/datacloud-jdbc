@@ -22,7 +22,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -61,11 +60,9 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     static DataCloudStatement statement;
 
     @BeforeEach
+    @SneakyThrows
     public void beforeEach() {
-        connection = Mockito.mock(DataCloudConnection.class);
-        properties = new Properties();
-        when(connection.getChannel()).thenReturn(channel);
-        when(connection.getClientInfo()).thenReturn(properties);
+        connection = DataCloudConnection.of(channel, new Properties(), false);
         statement = new DataCloudStatement(connection);
     }
 

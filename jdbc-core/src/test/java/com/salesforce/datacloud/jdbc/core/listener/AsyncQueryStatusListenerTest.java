@@ -15,11 +15,11 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
-import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionMocker.mockedConnection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -113,8 +113,9 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
         }
     }
 
+    @SneakyThrows
     DataCloudStatement statement() {
-        val connection = mockedConnection(new Properties(), channel);
+        val connection = DataCloudConnection.of(channel, new Properties(), false);
         return new DataCloudStatement(connection);
     }
 

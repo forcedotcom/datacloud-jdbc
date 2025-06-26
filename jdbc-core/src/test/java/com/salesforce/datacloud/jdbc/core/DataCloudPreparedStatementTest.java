@@ -25,7 +25,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Constants;
@@ -66,8 +65,7 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
 
-    @Mock
-    private DataCloudConnection mockConnection;
+    private DataCloudConnection connection;
 
     @Mock
     private ParameterManager mockParameterManager;
@@ -78,15 +76,9 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
 
     @BeforeEach
     public void beforeEach() throws DataCloudJDBCException {
-
-        mockConnection = mock(DataCloudConnection.class);
-        val properties = new Properties();
-        when(mockConnection.getChannel()).thenReturn(channel);
-        when(mockConnection.getClientInfo()).thenReturn(properties);
-
+        connection = DataCloudConnection.of(channel, new Properties(), false);
         mockParameterManager = mock(ParameterManager.class);
-
-        preparedStatement = new DataCloudPreparedStatement(mockConnection, "SELECT * FROM table", mockParameterManager);
+        preparedStatement = new DataCloudPreparedStatement(connection, "SELECT * FROM table", mockParameterManager);
     }
 
     @Test
@@ -130,7 +122,7 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
     @Test
     void testSetParameterNegativeIndexThrowsSQLException() {
         ParameterManager parameterManager = new DefaultParameterManager();
-        preparedStatement = new DataCloudPreparedStatement(mockConnection, parameterManager);
+        preparedStatement = new DataCloudPreparedStatement(connection, parameterManager);
 
         assertThatThrownBy(() -> preparedStatement.setString(0, "TEST"))
                 .isInstanceOf(DataCloudJDBCException.class)
