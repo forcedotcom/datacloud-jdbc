@@ -17,18 +17,22 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import io.grpc.ClientInterceptor;
 import java.sql.Connection;
+import java.time.Duration;
 import java.util.Properties;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 @ExtendWith(MockitoExtension.class)
 class DataCloudConnectionTest extends HyperGrpcTestBase {
@@ -100,6 +104,49 @@ class DataCloudConnectionTest extends HyperGrpcTestBase {
         connection.close();
 
         verify(mockChannel).close();
+    }
+
+    /**
+     * Stub provider that allows us to control whether interceptors should be added to the stub.
+     */
+    private static class TestStubProvider implements HyperGrpcStubProvider {
+        public final HyperServiceGrpc.HyperServiceBlockingStub stub =
+                mock(HyperServiceGrpc.HyperServiceBlockingStub.class);
+        public boolean shouldInject = false;
+
+        @Override
+        public HyperServiceGrpc.HyperServiceBlockingStub getStub() {
+            return stub;
+        }
+
+        @Override
+        public boolean injectJdbcConnectionBasedInterceptors() {
+            return shouldInject;
+        }
+
+        @Override
+        public void close() throws Exception {
+            // No-op
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void testHonorsInjectJdbcConnectionBasedInterceptorsFlag() {
+        val properties = new Properties();
+        properties.setProperty("workload", "test");
+        // No interceptors should have been added when injectJdbcConnectionBasedInterceptors is false
+        val stubProvider = new TestStubProvider();
+        val connection = DataCloudConnection.of(stubProvider, properties);
+        connection.getStub(Duration.ZERO);
+        verify(stubProvider.stub, never()).withInterceptors(any(ClientInterceptor[].class));
+        connection.close();
+
+        // Interceptors should have been added when injectJdbcConnectionBasedInterceptors is true
+        stubProvider.shouldInject = true;
+        connection.getStub(Duration.ZERO);
+        verify(stubProvider.stub).withInterceptors(any(ClientInterceptor[].class));
+        connection.close();
     }
 
     @SneakyThrows
