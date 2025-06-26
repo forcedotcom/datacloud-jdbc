@@ -19,7 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.google.protobuf.ByteString;
 import java.sql.SQLException;
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.Properties;
 import lombok.val;
@@ -45,7 +44,7 @@ class HyperGrpcClientTest extends HyperGrpcTestBase {
                 .willReturn(chunk1));
 
         String query = "SELECT * FROM test";
-        val stub = stubProvider.getStub(new Properties(), Duration.ZERO);
+        val stub = stubProvider.getStub();
         val client = HyperGrpcClientExecutor.of(stub, new Properties());
         Iterator<ExecuteQueryResponse> queryResultIterator = client.executeQuery(query);
         assertDoesNotThrow(() -> {

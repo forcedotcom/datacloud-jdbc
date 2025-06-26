@@ -25,7 +25,6 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -165,6 +164,7 @@ public class HyperGrpcTestBase {
         }));
     }
 
+    @SneakyThrows
     public HyperGrpcClientExecutor setupClientWith(ClientInterceptor... interceptors) {
         val builder = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
                 .usePlaintext()
@@ -176,8 +176,9 @@ public class HyperGrpcTestBase {
 
         channel = DataCloudJdbcManagedChannel.of(builder);
         stubProvider = new JdbcDriverStubProvider(channel, false);
+        val connection = DataCloudConnection.of(stubProvider, new Properties());
 
-        return HyperGrpcClientExecutor.of(stubProvider.getStub(new Properties(), Duration.ZERO), new Properties());
+        return connection.getExecutor();
     }
 
     @BeforeEach

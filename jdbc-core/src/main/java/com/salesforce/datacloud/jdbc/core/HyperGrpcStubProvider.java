@@ -15,8 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import java.time.Duration;
-import java.util.Properties;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 /**
@@ -28,12 +26,16 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 public interface HyperGrpcStubProvider extends AutoCloseable {
 
     /**
-     * Returns a new HyperServiceGrpc.HyperServiceBlockingStub configured with the given properties and query timeout.
+     * Returns a new HyperServiceGrpc.HyperServiceBlockingStub
      *
-     * @param properties the properties used to initialize the JDBC connection which should be used to configure the
-     *                   stub
-     * @param queryTimeout the query timeout to use for the stub
-     * @return a new HyperServiceGrpc.HyperServiceBlockingStub configured using the Properties
+     * @return the stub
      */
-    public HyperServiceGrpc.HyperServiceBlockingStub getStub(Properties properties, Duration queryTimeout);
+    public HyperServiceGrpc.HyperServiceBlockingStub getStub();
+
+    /**
+     * Should returns true if the JDBC Connection that consumes the stub should inject interceptors that adjust stub behavior
+     * based off the properties and timeout configured in the JDBC Connection.
+     * @return true if the JDBC Connection should inject its own interceptors in addition
+     */
+    public boolean injectJdbcConnectionBasedInterceptors();
 }

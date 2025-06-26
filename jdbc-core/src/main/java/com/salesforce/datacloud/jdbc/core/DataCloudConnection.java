@@ -21,6 +21,9 @@ import static com.salesforce.datacloud.jdbc.util.Constants.DEFAULT_QUERY_TIMEOUT
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
+import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
@@ -43,10 +46,13 @@ import java.sql.Struct;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -55,13 +61,13 @@ import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc.HyperServiceBlockingStub;
 
 @Slf4j
 @Builder(access = AccessLevel.PRIVATE)
 public class DataCloudConnection implements Connection, AutoCloseable {
     public static final int DEFAULT_PORT = 443;
 
-    @Getter(AccessLevel.PACKAGE)
     private final HyperGrpcStubProvider stubProvider;
 
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -78,9 +84,9 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     private Properties clientInfo = new Properties();
 
     HyperGrpcClientExecutor getExecutor() {
-        return HyperGrpcClientExecutor.of(
-                stubProvider.getStub(clientInfo, Duration.ofSeconds(DEFAULT_QUERY_TIMEOUT)), clientInfo);
+        return HyperGrpcClientExecutor.of(getStub(Duration.ofSeconds(DEFAULT_QUERY_TIMEOUT)), clientInfo);
     }
+
     /**
      * This allows you to create a DataCloudConnection with full control over gRPC stub details.
      * To configure the channel with the bare minimum use {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder)}
@@ -147,6 +153,38 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                         .build(),
                 "DataCloudConnection::of with oauth enabled suppliers",
                 log);
+    }
+
+    /**
+     * Initializes a stub with the appropriate interceptors based on the properties and timeout configured in the JDBC Connection.
+     * @param queryTimeout the timeout for a query
+     * @return the initialized stub
+     */
+    HyperServiceBlockingStub getStub(Duration queryTimeout) {
+        HyperServiceBlockingStub stub = stubProvider.getStub();
+
+        if (stubProvider.injectJdbcConnectionBasedInterceptors()) {
+            // Initializes a list of interceptors that handle request level concerns that can be defined through
+            // properties
+            ClientInterceptor[] interceptors = Stream.of(
+                            HyperExternalClientContextHeaderInterceptor.of(clientInfo),
+                            HyperWorkloadHeaderInterceptor.of(clientInfo),
+                            DataspaceHeaderInterceptor.of(clientInfo))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList())
+                    .toArray(new ClientInterceptor[0]);
+            // Append the interceptors to the stub
+            stub = stub.withInterceptors(interceptors);
+
+            // Adjust timeout
+            if (!queryTimeout.isZero() && !queryTimeout.isNegative()) {
+                log.info("Built stub with queryTimeout={}, interceptors={}", queryTimeout, interceptors.length);
+                stub = stub.withDeadlineAfter(queryTimeout.getSeconds(), TimeUnit.SECONDS);
+            } else {
+                log.info("Built stub with queryTimeout=none, interceptors={}", interceptors.length);
+            }
+        }
+        return stub;
     }
 
     @Override

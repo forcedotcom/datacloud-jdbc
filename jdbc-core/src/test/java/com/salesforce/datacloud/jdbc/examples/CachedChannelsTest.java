@@ -30,9 +30,7 @@ import io.grpc.stub.MetadataUtils;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Duration;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -146,15 +144,18 @@ public class CachedChannelsTest {
 
         /** Return stub with configured interceptors and query timeout. The properties are ignored. */
         @Override
-        public HyperServiceBlockingStub getStub(Properties properties, Duration queryTimeout) {
-            return HyperServiceGrpc.newBlockingStub(channel)
-                    .withInterceptors(interceptors)
-                    .withDeadlineAfter(queryTimeout.getSeconds(), TimeUnit.SECONDS);
+        public HyperServiceBlockingStub getStub() {
+            return HyperServiceGrpc.newBlockingStub(channel).withInterceptors(interceptors);
         }
 
         @Override
         public void close() throws Exception {
             // No-op
+        }
+
+        @Override
+        public boolean injectJdbcConnectionBasedInterceptors() {
+            return true;
         }
     }
 }
