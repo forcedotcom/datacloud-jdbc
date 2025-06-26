@@ -23,31 +23,24 @@ import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
-import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class DataCloudJdbcManagedChannel implements AutoCloseable {
-    private final ManagedChannel channel;
+    @Getter()
+    public final ManagedChannel channel;
 
     private static final int GRPC_INBOUND_MESSAGE_MAX_SIZE = 64 * 1024 * 1024;
 
@@ -63,23 +56,6 @@ public class DataCloudJdbcManagedChannel implements AutoCloseable {
     public static final String GRPC_RETRY_POLICY_MAX_BACKOFF = "grpc.retryPolicy.maxBackoff";
     public static final String GRPC_RETRY_POLICY_BACKOFF_MULTIPLIER = "grpc.retryPolicy.backoffMultiplier";
     public static final String GRPC_RETRY_POLICY_RETRYABLE_STATUS_CODES = "grpc.retryPolicy.retryableStatusCodes";
-
-    public HyperServiceGrpc.HyperServiceBlockingStub getStub(Properties properties, Duration queryTimeout) {
-        val interceptors =
-                configurePropertyDerivedClientInterceptors(properties).toArray(new ClientInterceptor[0]);
-
-        HyperServiceGrpc.HyperServiceBlockingStub stub =
-                HyperServiceGrpc.newBlockingStub(channel).withInterceptors(interceptors);
-
-        if (!queryTimeout.isZero() && !queryTimeout.isNegative()) {
-            log.info("Built stub with queryTimeout={}, interceptors={}", queryTimeout, interceptors.length);
-            stub = stub.withDeadlineAfter(queryTimeout.getSeconds(), TimeUnit.SECONDS);
-        } else {
-            log.info("Built stub with queryTimeout=none, interceptors={}", interceptors.length);
-        }
-
-        return stub;
-    }
 
     /**
      * Configure only required settings ({@link ManagedChannelBuilder#maxInboundMessageSize(int)} and {@link ManagedChannelBuilder#userAgent(String)}) and immediately builds and stores a {@link ManagedChannel}.
@@ -211,20 +187,5 @@ public class DataCloudJdbcManagedChannel implements AutoCloseable {
                 channel.shutdownNow();
             }
         }
-    }
-
-    /**
-     * Initializes a list of interceptors that handle channel level concerns that can be defined through properties
-     *
-     * @param properties - The connection properties
-     * @return a list of client interceptors
-     */
-    private static List<ClientInterceptor> configurePropertyDerivedClientInterceptors(Properties properties) {
-        return Stream.of(
-                        HyperExternalClientContextHeaderInterceptor.of(properties),
-                        HyperWorkloadHeaderInterceptor.of(properties),
-                        DataspaceHeaderInterceptor.of(properties))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
     }
 }

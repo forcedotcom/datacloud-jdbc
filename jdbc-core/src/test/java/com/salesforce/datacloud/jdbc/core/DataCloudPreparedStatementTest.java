@@ -76,7 +76,7 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
 
     @BeforeEach
     public void beforeEach() throws DataCloudJDBCException {
-        connection = DataCloudConnection.of(channel, new Properties(), false);
+        connection = DataCloudConnection.of(stubProvider, new Properties());
         mockParameterManager = mock(ParameterManager.class);
         preparedStatement = new DataCloudPreparedStatement(connection, "SELECT * FROM table", mockParameterManager);
     }

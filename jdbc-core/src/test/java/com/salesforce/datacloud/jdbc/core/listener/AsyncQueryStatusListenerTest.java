@@ -115,7 +115,7 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
 
     @SneakyThrows
     DataCloudStatement statement() {
-        val connection = DataCloudConnection.of(channel, new Properties(), false);
+        val connection = DataCloudConnection.of(stubProvider, new Properties());
         return new DataCloudStatement(connection);
     }
 

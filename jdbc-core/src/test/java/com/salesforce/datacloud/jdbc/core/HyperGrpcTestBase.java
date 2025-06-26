@@ -54,6 +54,8 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
 public class HyperGrpcTestBase {
     protected DataCloudJdbcManagedChannel channel;
 
+    protected JdbcDriverStubProvider stubProvider;
+
     protected static HyperGrpcClientExecutor hyperGrpcClient;
 
     private final List<HyperServerProcess> servers = new ArrayList<>();
@@ -173,10 +175,9 @@ public class HyperGrpcTestBase {
         }
 
         channel = DataCloudJdbcManagedChannel.of(builder);
+        stubProvider = new JdbcDriverStubProvider(channel, false);
 
-        val stub = channel.getStub(new Properties(), Duration.ZERO);
-
-        return HyperGrpcClientExecutor.of(stub, new Properties());
+        return HyperGrpcClientExecutor.of(stubProvider.getStub(new Properties(), Duration.ZERO), new Properties());
     }
 
     @BeforeEach
@@ -185,8 +186,10 @@ public class HyperGrpcTestBase {
     }
 
     @AfterEach
+    @SneakyThrows
     public void cleanup() {
         if (channel != null) {
+            stubProvider.close();
             channel.close();
         }
     }

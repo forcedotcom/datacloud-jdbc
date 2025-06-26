@@ -45,12 +45,12 @@ public class SubmitQueryAndConsumeResultsTest {
 
         // You can bring your own gRPC channels, setup in the way you like (mTLS / Plaintext / ...) and your own
         // interceptors as well as executors.
-        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress(
+        ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
 
         // Use the JDBC Driver interface
-        try (DataCloudConnection conn = DataCloudConnection.of(channel, properties)) {
+        try (DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties)) {
             try (Statement stmt = conn.createStatement()) {
                 ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(1,10) s");
                 while (rs.next()) {

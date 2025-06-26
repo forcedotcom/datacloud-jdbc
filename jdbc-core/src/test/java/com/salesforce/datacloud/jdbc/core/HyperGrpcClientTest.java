@@ -45,7 +45,7 @@ class HyperGrpcClientTest extends HyperGrpcTestBase {
                 .willReturn(chunk1));
 
         String query = "SELECT * FROM test";
-        val stub = channel.getStub(new Properties(), Duration.ZERO);
+        val stub = stubProvider.getStub(new Properties(), Duration.ZERO);
         val client = HyperGrpcClientExecutor.of(stub, new Properties());
         Iterator<ExecuteQueryResponse> queryResultIterator = client.executeQuery(query);
         assertDoesNotThrow(() -> {

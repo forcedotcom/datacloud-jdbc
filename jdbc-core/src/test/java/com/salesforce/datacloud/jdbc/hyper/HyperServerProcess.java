@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -43,6 +42,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.junit.jupiter.api.Assertions;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 @Slf4j
 public class HyperServerProcess implements AutoCloseable {
@@ -142,7 +142,7 @@ public class HyperServerProcess implements AutoCloseable {
     public HyperGrpcClientExecutor getRawClient() {
         val channel = DataCloudJdbcManagedChannel.of(
                 ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext());
-        val stub = channel.getStub(new Properties(), Duration.ZERO);
+        val stub = HyperServiceGrpc.newBlockingStub(channel.getChannel());
         return HyperGrpcClientExecutor.of(stub, new Properties());
     }
 

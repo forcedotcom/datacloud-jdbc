@@ -41,13 +41,13 @@ public class ResultScanTest {
     void testResultScanWithWait() {
         int size = 10;
         Properties properties = new Properties();
-        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress(
+        ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
 
         final String queryId;
 
-        try (val conn = DataCloudConnection.of(channel, properties);
+        try (val conn = DataCloudConnection.of(channelBuilder, properties);
                 val stmt = conn.prepareStatement("SELECT a from generate_series(1,?) a")
                         .unwrap(DataCloudPreparedStatement.class)) {
             stmt.setInt(1, size);
@@ -57,7 +57,7 @@ public class ResultScanTest {
 
         val results = new ArrayList<Integer>();
 
-        try (val conn = DataCloudConnection.of(channel, properties);
+        try (val conn = DataCloudConnection.of(channelBuilder, properties);
                 val stmt = conn.createStatement()) {
             conn.waitForQueryStatus(queryId, Duration.ofDays(1), DataCloudQueryStatus::isExecutionFinished);
 

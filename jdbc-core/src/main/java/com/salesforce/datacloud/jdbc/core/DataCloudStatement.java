@@ -61,7 +61,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     protected HyperGrpcClientExecutor getQueryExecutor() throws DataCloudJDBCException {
         val properties = connection.getClientInfo();
-        val stub = connection.getChannel().getStub(properties, getQueryTimeoutDuration());
+        val stub = connection.getStubProvider().getStub(properties, getQueryTimeoutDuration());
         return HyperGrpcClientExecutor.of(stub, properties, targetMaxBytes);
     }
 

@@ -75,8 +75,9 @@ class HyperConnectionSettingsTest extends HyperGrpcTestBase {
                 .usePlaintext();
 
         val channel = DataCloudJdbcManagedChannel.of(builder);
+        val stubProvider = new JdbcDriverStubProvider(channel, false);
 
-        val stub = channel.getStub(properties, Duration.ZERO);
+        val stub = stubProvider.getStub(properties, Duration.ZERO);
 
         val client = HyperGrpcClientExecutor.of(stub, properties);
 
@@ -91,6 +92,7 @@ class HyperConnectionSettingsTest extends HyperGrpcTestBase {
 
         assertThat(actual.get()).containsOnly(Maps.immutableEntry(key, setting));
 
+        stubProvider.close();
         channel.close();
     }
 }

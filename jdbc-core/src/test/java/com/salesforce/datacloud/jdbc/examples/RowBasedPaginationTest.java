@@ -54,7 +54,7 @@ public class RowBasedPaginationTest {
 
         // Create a connection to the database
         final Properties properties = new Properties();
-        ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress(
+        ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
 
@@ -63,7 +63,7 @@ public class RowBasedPaginationTest {
         final String queryId;
         long currentOffset = 0;
 
-        try (final DataCloudConnection conn = DataCloudConnection.of(channel, properties);
+        try (final DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties);
                 final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
             // Set the initial page size
             stmt.setResultSetConstraints(pageSize);
@@ -85,7 +85,7 @@ public class RowBasedPaginationTest {
         assertThat(allResults).containsExactly(1L, 2L);
 
         // Step 2: Retrieve remaining pages
-        try (final DataCloudConnection conn = DataCloudConnection.of(channel, properties)) {
+        try (final DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties)) {
             DataCloudQueryStatus status = conn.waitForRowsAvailable(queryId, currentOffset, pageSize, timeout, true);
 
             while (true) {

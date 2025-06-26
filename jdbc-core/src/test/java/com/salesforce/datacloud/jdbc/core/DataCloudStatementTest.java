@@ -55,14 +55,12 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @Mock
     private DataCloudConnection connection;
 
-    private Properties properties;
-
     static DataCloudStatement statement;
 
     @BeforeEach
     @SneakyThrows
     public void beforeEach() {
-        connection = DataCloudConnection.of(channel, new Properties(), false);
+        connection = DataCloudConnection.of(stubProvider, new Properties());
         statement = new DataCloudStatement(connection);
     }
 
@@ -204,7 +202,9 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     public void testConstraintsConfiguration() {
         val bytes = ThreadLocalRandom.current().nextInt(HYPER_MIN_ROW_LIMIT_BYTE_SIZE, HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
 
+        val properties = new Properties();
         properties.setProperty(Constants.BYTE_LIMIT, Integer.toString(bytes));
+        val connection = DataCloudConnection.of(new JdbcDriverStubProvider(channel, false), properties);
 
         val stmt = new DataCloudStatement(connection);
 
