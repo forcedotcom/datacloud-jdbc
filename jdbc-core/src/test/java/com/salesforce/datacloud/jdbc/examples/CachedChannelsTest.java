@@ -48,7 +48,7 @@ public class CachedChannelsTest {
         // The connection properties
         Properties properties = new Properties();
 
-        // You can bring your own gRPC channels, setup in the way you like (mTLS / Plaintext / ...) and your own
+        // You can bring your own gRPC channels that is set up in the way you like (mTLS / Plaintext / ...) and your own
         // interceptors as well as executors.
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
@@ -88,15 +88,15 @@ public class CachedChannelsTest {
         // The connection properties
         Properties properties = new Properties();
 
-        // You can bring your own gRPC channels, setup in the way you like (mTLS / Plaintext / ...) and your own
+        // You can bring your own gRPC channels, set up in the way you like (mTLS / Plaintext / ...) and your own
         // channel level interceptors as well as executors.
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
         ManagedChannel channel = channelBuilder.build();
 
-        // This is the first connection that uses this channel and it has a custom interceptor that sets the workload
-        // name to "test1"
+        // This is the first connection that uses this channel and it has a custom interceptor that sets the
+        // external-client-context to "123"
         Metadata metadata = new Metadata();
         metadata.put(Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER), "123");
         ClientInterceptor interceptor = MetadataUtils.newAttachHeadersInterceptor(metadata);
@@ -110,8 +110,8 @@ public class CachedChannelsTest {
             }
         }
 
-        // This is the first connection that uses this channel and it has a custom interceptor that sets the workload
-        // name to "test2"
+        // This is the second connection that uses this channel and it has a custom interceptor that sets the
+        // external-client-context to "456"
         Metadata metadata2 = new Metadata();
         metadata2.put(Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER), "456");
         ClientInterceptor interceptor2 = MetadataUtils.newAttachHeadersInterceptor(metadata2);
@@ -130,7 +130,7 @@ public class CachedChannelsTest {
 
     /**
      * This class is used to provide a stub for the Hyper gRPC client used by the JDBC Connection.
-     * It creates the stub with the provided interceptors and query timeout.
+     * It creates the stub with the provided interceptors.
      */
     private static class InterceptorStubProvider implements HyperGrpcStubProvider {
         private final ManagedChannel channel;
@@ -146,7 +146,7 @@ public class CachedChannelsTest {
             this.interceptors = interceptors;
         }
 
-        /** Return stub with configured interceptors and query timeout. The properties are ignored. */
+        /** Return stub with configured interceptors. */
         @Override
         public HyperServiceBlockingStub getStub() {
             return HyperServiceGrpc.newBlockingStub(channel).withInterceptors(interceptors);
