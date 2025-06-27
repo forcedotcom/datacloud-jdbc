@@ -48,8 +48,8 @@ public class CachedChannelsTest {
         // The connection properties
         Properties properties = new Properties();
 
-        // You can bring your own gRPC channels that are set up in the way you like (mTLS / Plaintext / ...) and your own
-        // interceptors as well as executors.
+        // You can bring your own gRPC channels that are set up in the way you like (mTLS / Plaintext / ...) and your
+        // own interceptors as well as executors.
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
@@ -88,8 +88,8 @@ public class CachedChannelsTest {
         // The connection properties
         Properties properties = new Properties();
 
-        // You can bring your own gRPC channels that are set up in the way you like (mTLS / Plaintext / ...) and your own
-        // channel-level interceptors as well as executors.
+        // You can bring your own gRPC channels that are set up in the way you like (mTLS / Plaintext / ...) and your
+        // own channel-level interceptors as well as executors.
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
