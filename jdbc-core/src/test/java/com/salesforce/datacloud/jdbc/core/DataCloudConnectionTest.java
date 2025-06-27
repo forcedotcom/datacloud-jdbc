@@ -128,7 +128,7 @@ class DataCloudConnectionTest extends HyperGrpcTestBase {
         val stubProvider = new TestStubProvider();
         val connection = DataCloudConnection.of(stubProvider, properties);
         connection.getStub(Duration.ZERO);
-        // Interceptors should have been added to set default workload header (x-hyperdb-workload)
+        // Interceptors should have been added to set the default workload header (x-hyperdb-workload)
         verify(stubProvider.stub).withInterceptors(any(ClientInterceptor[].class));
         connection.close();
     }

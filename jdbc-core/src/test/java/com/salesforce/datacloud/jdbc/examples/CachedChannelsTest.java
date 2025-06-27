@@ -48,7 +48,7 @@ public class CachedChannelsTest {
         // The connection properties
         Properties properties = new Properties();
 
-        // You can bring your own gRPC channels that is set up in the way you like (mTLS / Plaintext / ...) and your own
+        // You can bring your own gRPC channels that are set up in the way you like (mTLS / Plaintext / ...) and your own
         // interceptors as well as executors.
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
@@ -88,8 +88,8 @@ public class CachedChannelsTest {
         // The connection properties
         Properties properties = new Properties();
 
-        // You can bring your own gRPC channels, set up in the way you like (mTLS / Plaintext / ...) and your own
-        // channel level interceptors as well as executors.
+        // You can bring your own gRPC channels that are set up in the way you like (mTLS / Plaintext / ...) and your own
+        // channel-level interceptors as well as executors.
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
@@ -129,24 +129,24 @@ public class CachedChannelsTest {
     }
 
     /**
-     * This class is used to provide a stub for the Hyper gRPC client used by the JDBC Connection.
-     * It creates the stub with the provided interceptors.
+     * This class provides a stub for the Hyper gRPC client used by the JDBC Connection.
+     * It creates the stub with the provided interceptors applied.
      */
     private static class InterceptorStubProvider implements HyperGrpcStubProvider {
         private final ManagedChannel channel;
         private final ClientInterceptor[] interceptors;
 
         /**
-         * Initialize the stub provider with the provided channel and interceptors that should be applied to all stubs.
+         * Initializes the stub provider with the provided channel and interceptors that should be applied to all stubs.
          * @param channel The channel to use for the stub
-         * @param interceptors The interceptors to use for the stub
+         * @param interceptors The interceptors to apply to the stub
          */
         public InterceptorStubProvider(ManagedChannel channel, ClientInterceptor... interceptors) {
             this.channel = channel;
             this.interceptors = interceptors;
         }
 
-        /** Return stub with configured interceptors. */
+        /** Returns a stub with the configured interceptors applied. */
         @Override
         public HyperServiceBlockingStub getStub() {
             return HyperServiceGrpc.newBlockingStub(channel).withInterceptors(interceptors);

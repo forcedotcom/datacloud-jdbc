@@ -43,7 +43,7 @@ public class SubmitQueryAndConsumeResultsTest {
         // The connection properties
         Properties properties = new Properties();
 
-        // You can bring your own gRPC channels that is set up in the way you like (mTLS / Plaintext / ...) and your own
+        // You can bring your own gRPC channels that are set up in the way you like (mTLS / Plaintext / ...) and your own
         // interceptors as well as executors.
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
