@@ -53,31 +53,30 @@ public class CachedChannelsTest {
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
-        DataCloudJdbcManagedChannel channel = DataCloudJdbcManagedChannel.of(channelBuilder, properties);
+        try (DataCloudJdbcManagedChannel jdbcManagedChannel =
+                DataCloudJdbcManagedChannel.of(channelBuilder, properties)) {
+            // This is the first connection that uses this channel
+            try (DataCloudConnection conn =
+                    DataCloudConnection.of(new JdbcDriverStubProvider(jdbcManagedChannel, false), properties)) {
+                try (Statement stmt = conn.createStatement()) {
+                    ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(1,10) s");
+                    while (rs.next()) {
+                        System.out.println("Retrieved value for first query:" + rs.getLong(1));
+                    }
+                }
+            }
 
-        // This is the first connection that uses this channel
-        try (DataCloudConnection conn =
-                DataCloudConnection.of(new JdbcDriverStubProvider(channel, false), properties)) {
-            try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(1,10) s");
-                while (rs.next()) {
-                    System.out.println("Retrieved value for first query:" + rs.getLong(1));
+            // This is the second connection that uses the same channel
+            try (DataCloudConnection conn =
+                    DataCloudConnection.of(new JdbcDriverStubProvider(jdbcManagedChannel, false), properties)) {
+                try (Statement stmt = conn.createStatement()) {
+                    ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(20,30) s");
+                    while (rs.next()) {
+                        System.out.println("Retrieved value for second query:" + rs.getLong(1));
+                    }
                 }
             }
         }
-
-        // This is the second connection that uses the same channel
-        try (DataCloudConnection conn =
-                DataCloudConnection.of(new JdbcDriverStubProvider(channel, false), properties)) {
-            try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(20,30) s");
-                while (rs.next()) {
-                    System.out.println("Retrieved value for second query:" + rs.getLong(1));
-                }
-            }
-        }
-
-        channel.close();
     }
 
     /**
@@ -93,39 +92,41 @@ public class CachedChannelsTest {
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
                         "127.0.0.1", HyperTestBase.getInstancePort())
                 .usePlaintext();
-        ManagedChannel channel = channelBuilder.build();
-
-        // This is the first connection that uses this channel and it has a custom interceptor that sets the
-        // external-client-context to "123"
-        Metadata metadata = new Metadata();
-        metadata.put(Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER), "123");
-        ClientInterceptor interceptor = MetadataUtils.newAttachHeadersInterceptor(metadata);
-        try (DataCloudConnection conn =
-                DataCloudConnection.of(new InterceptorStubProvider(channel, interceptor), properties)) {
-            try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SHOW external_client_context");
-                rs.next();
-                System.out.println("Retrieved value for first query:" + rs.getString(1));
-                assertThat(rs.getString(1)).isEqualTo("123");
+        ManagedChannel managedChannel = channelBuilder.build();
+        try {
+            // This is the first connection that uses this channel and it has a custom interceptor that sets the
+            // external-client-context to "123"
+            Metadata metadata = new Metadata();
+            metadata.put(Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER), "123");
+            ClientInterceptor interceptor = MetadataUtils.newAttachHeadersInterceptor(metadata);
+            try (DataCloudConnection conn =
+                    DataCloudConnection.of(new InterceptorStubProvider(managedChannel, interceptor), properties)) {
+                try (Statement stmt = conn.createStatement()) {
+                    ResultSet rs = stmt.executeQuery("SHOW external_client_context");
+                    rs.next();
+                    System.out.println("Retrieved value for first query:" + rs.getString(1));
+                    assertThat(rs.getString(1)).isEqualTo("123");
+                }
             }
-        }
 
-        // This is the second connection that uses this channel and it has a custom interceptor that sets the
-        // external-client-context to "456"
-        Metadata metadata2 = new Metadata();
-        metadata2.put(Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER), "456");
-        ClientInterceptor interceptor2 = MetadataUtils.newAttachHeadersInterceptor(metadata2);
-        try (DataCloudConnection conn =
-                DataCloudConnection.of(new InterceptorStubProvider(channel, interceptor2), properties)) {
-            try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SHOW external_client_context");
-                rs.next();
-                System.out.println("Retrieved value for first query:" + rs.getString(1));
-                assertThat(rs.getString(1)).isEqualTo("456");
+            // This is the second connection that uses this channel and it has a custom interceptor that sets the
+            // external-client-context to "456"
+            Metadata metadata2 = new Metadata();
+            metadata2.put(
+                    Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER), "456");
+            ClientInterceptor interceptor2 = MetadataUtils.newAttachHeadersInterceptor(metadata2);
+            try (DataCloudConnection conn =
+                    DataCloudConnection.of(new InterceptorStubProvider(managedChannel, interceptor2), properties)) {
+                try (Statement stmt = conn.createStatement()) {
+                    ResultSet rs = stmt.executeQuery("SHOW external_client_context");
+                    rs.next();
+                    System.out.println("Retrieved value for first query:" + rs.getString(1));
+                    assertThat(rs.getString(1)).isEqualTo("456");
+                }
             }
+        } finally {
+            managedChannel.shutdown();
         }
-
-        channel.shutdown();
     }
 
     /**
