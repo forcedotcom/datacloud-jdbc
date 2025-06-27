@@ -27,6 +27,7 @@ import io.grpc.ClientInterceptor;
 import java.sql.Connection;
 import java.time.Duration;
 import java.util.Properties;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.Test;
@@ -107,22 +108,12 @@ class DataCloudConnectionTest extends HyperGrpcTestBase {
     }
 
     /**
-     * Stub provider that allows us to control whether interceptors should be added to the stub.
+     * Minimal stub provider
      */
     private static class TestStubProvider implements HyperGrpcStubProvider {
+        @Getter
         public final HyperServiceGrpc.HyperServiceBlockingStub stub =
                 mock(HyperServiceGrpc.HyperServiceBlockingStub.class);
-        public boolean shouldInject = false;
-
-        @Override
-        public HyperServiceGrpc.HyperServiceBlockingStub getStub() {
-            return stub;
-        }
-
-        @Override
-        public boolean injectJdbcConnectionBasedInterceptors() {
-            return shouldInject;
-        }
 
         @Override
         public void close() throws Exception {
@@ -132,19 +123,12 @@ class DataCloudConnectionTest extends HyperGrpcTestBase {
 
     @SneakyThrows
     @Test
-    void testHonorsInjectJdbcConnectionBasedInterceptorsFlag() {
+    void testDriverInterceptorsAreAddedWhenStubProviderIsUsed() {
         val properties = new Properties();
-        properties.setProperty("workload", "test");
-        // No interceptors should have been added when injectJdbcConnectionBasedInterceptors is false
         val stubProvider = new TestStubProvider();
         val connection = DataCloudConnection.of(stubProvider, properties);
         connection.getStub(Duration.ZERO);
-        verify(stubProvider.stub, never()).withInterceptors(any(ClientInterceptor[].class));
-        connection.close();
-
-        // Interceptors should have been added when injectJdbcConnectionBasedInterceptors is true
-        stubProvider.shouldInject = true;
-        connection.getStub(Duration.ZERO);
+        // Interceptors should have been added to set default workload name header
         verify(stubProvider.stub).withInterceptors(any(ClientInterceptor[].class));
         connection.close();
     }

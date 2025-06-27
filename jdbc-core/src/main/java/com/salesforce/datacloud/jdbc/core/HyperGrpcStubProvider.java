@@ -19,7 +19,7 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 /**
  * This interface allows to provide a custom initialized stub for the Hyper gRPC client used by the JDBC Connection.
- * This is useful for example to provide a stub that uses a custom interceptor or a custom channel. To allow
+ * This is useful for example to provide a stub that uses additional custom interceptors or a custom channel. To allow
  * implementations to do proper cleanup, the interface extends AutoCloseable and the driver will call close() on the
  * provider when DataCloudConnection is closed.
  */
@@ -31,15 +31,4 @@ public interface HyperGrpcStubProvider extends AutoCloseable {
      * @return the stub
      */
     public HyperServiceGrpc.HyperServiceBlockingStub getStub();
-
-    /**
-     * Should returns true if the JDBC Connection that consumes the stub should inject interceptors that adjust stub behavior
-     * based off the properties and timeout configured in the JDBC Connection.
-     * Note: This doesn't cover the properties that control the channel as the stub provider has the responsibility for
-     * initializing the channel. To ensure that the channel relevant properties are applied for channel creation use
-     * {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)} to create the channel you use in your stub
-     * provider.
-     * @return true if the JDBC Connection should inject its own interceptors in addition
-     */
-    public boolean injectJdbcConnectionBasedInterceptors();
 }

@@ -21,13 +21,12 @@ import static com.salesforce.datacloud.jdbc.util.Constants.DEFAULT_QUERY_TIMEOUT
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.interceptor.DataspaceHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.interceptor.HyperExternalClientContextHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.interceptor.HyperWorkloadHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Metadata;
+import io.grpc.stub.MetadataUtils;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -46,13 +45,11 @@ import java.sql.Struct;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -92,9 +89,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * To configure the channel with the bare minimum use {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder)}
      * To configure the channel with property controlled settings like retries and keep alive use {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)}
      *
-     * Only the other {@link DataCloudJdbcManagedChannel.of} methods always guarantee that the following headers are set from the properties:
-     * "x-hyperdb-external-client-context", "x-hyperdb-workload", and "dataspace"
-     * In this variant the behavior depends on the stub provider. This method will also not provide auth or tracing,
+     * This method will also not provide auth or tracing.
      * @param stubProvider The stub provider to use for the connection
      * @param properties The properties to use for the connection
      * @return A DataCloudConnection with the given channel and properties
@@ -163,28 +158,45 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     HyperServiceBlockingStub getStub(Duration queryTimeout) {
         HyperServiceBlockingStub stub = stubProvider.getStub();
 
-        if (stubProvider.injectJdbcConnectionBasedInterceptors()) {
-            // Initializes a list of interceptors that handle request level concerns that can be defined through
-            // properties
-            ClientInterceptor[] interceptors = Stream.of(
-                            HyperExternalClientContextHeaderInterceptor.of(clientInfo),
-                            HyperWorkloadHeaderInterceptor.of(clientInfo),
-                            DataspaceHeaderInterceptor.of(clientInfo))
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList())
-                    .toArray(new ClientInterceptor[0]);
-            // Append the interceptors to the stub
-            stub = stub.withInterceptors(interceptors);
+        // Attach headers derived from properties to the stub
+        val metadata = deriveMetadataFromProperties(clientInfo);
+        stub = stub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
 
-            // Adjust timeout
-            if (!queryTimeout.isZero() && !queryTimeout.isNegative()) {
-                log.info("Built stub with queryTimeout={}, interceptors={}", queryTimeout, interceptors.length);
-                stub = stub.withDeadlineAfter(queryTimeout.getSeconds(), TimeUnit.SECONDS);
-            } else {
-                log.info("Built stub with queryTimeout=none, interceptors={}", interceptors.length);
-            }
+        // Adjust timeout
+        if (!queryTimeout.isZero() && !queryTimeout.isNegative()) {
+            log.info(
+                    "Built stub with queryTimeout={}, interceptors={}",
+                    queryTimeout,
+                    metadata.keys().size());
+            stub = stub.withDeadlineAfter(queryTimeout.getSeconds(), TimeUnit.SECONDS);
+        } else {
+            log.info(
+                    "Built stub with queryTimeout=none, interceptors={}",
+                    metadata.keys().size());
         }
         return stub;
+    }
+
+    static Metadata deriveMetadataFromProperties(Properties properties) {
+        final String EXTERNAL_CLIENT_CONTEXT_PROPERTY = "external-client-context";
+        final String DATASPACE_PROPERTY = "dataspace";
+
+        Metadata metadata = new Metadata();
+        // We always add a workload name, if the property is not set we use the default value
+        metadata.put(
+                Metadata.Key.of("x-hyperdb-workload", Metadata.ASCII_STRING_MARSHALLER),
+                properties.getProperty("workload", "jdbcv3"));
+        if (properties.containsKey(EXTERNAL_CLIENT_CONTEXT_PROPERTY)) {
+            metadata.put(
+                    Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER),
+                    properties.getProperty(EXTERNAL_CLIENT_CONTEXT_PROPERTY));
+        }
+        if (properties.containsKey(DATASPACE_PROPERTY)) {
+            metadata.put(
+                    Metadata.Key.of("dataspace", Metadata.ASCII_STRING_MARSHALLER),
+                    properties.getProperty(DATASPACE_PROPERTY));
+        }
+        return metadata;
     }
 
     @Override

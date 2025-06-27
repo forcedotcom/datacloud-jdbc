@@ -49,15 +49,6 @@ public class JdbcDriverStubProvider implements HyperGrpcStubProvider {
         return HyperServiceGrpc.newBlockingStub(channel.getChannel());
     }
 
-    /**
-     * The default behavior for the driver should be to interpret the properties
-     * @return
-     */
-    @Override
-    public boolean injectJdbcConnectionBasedInterceptors() {
-        return true;
-    }
-
     @Override
     public void close() throws Exception {
         if (shouldCloseChannelWithStub) {

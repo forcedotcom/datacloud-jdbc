@@ -76,6 +76,8 @@ public class CachedChannelsTest {
                 }
             }
         }
+
+        channel.close();
     }
 
     /**
@@ -96,32 +98,34 @@ public class CachedChannelsTest {
         // This is the first connection that uses this channel and it has a custom interceptor that sets the workload
         // name to "test1"
         Metadata metadata = new Metadata();
-        metadata.put(Metadata.Key.of("x-hyperdb-workload", Metadata.ASCII_STRING_MARSHALLER), "test1");
+        metadata.put(Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER), "123");
         ClientInterceptor interceptor = MetadataUtils.newAttachHeadersInterceptor(metadata);
         try (DataCloudConnection conn =
                 DataCloudConnection.of(new InterceptorStubProvider(channel, interceptor), properties)) {
             try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SHOW workload");
+                ResultSet rs = stmt.executeQuery("SHOW external_client_context");
                 rs.next();
                 System.out.println("Retrieved value for first query:" + rs.getString(1));
-                assertThat(rs.getString(1)).isEqualTo("test1");
+                assertThat(rs.getString(1)).isEqualTo("123");
             }
         }
 
         // This is the first connection that uses this channel and it has a custom interceptor that sets the workload
         // name to "test2"
         Metadata metadata2 = new Metadata();
-        metadata2.put(Metadata.Key.of("x-hyperdb-workload", Metadata.ASCII_STRING_MARSHALLER), "test2");
+        metadata2.put(Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER), "456");
         ClientInterceptor interceptor2 = MetadataUtils.newAttachHeadersInterceptor(metadata2);
         try (DataCloudConnection conn =
                 DataCloudConnection.of(new InterceptorStubProvider(channel, interceptor2), properties)) {
             try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SHOW workload");
+                ResultSet rs = stmt.executeQuery("SHOW external_client_context");
                 rs.next();
                 System.out.println("Retrieved value for first query:" + rs.getString(1));
-                assertThat(rs.getString(1)).isEqualTo("test2");
+                assertThat(rs.getString(1)).isEqualTo("456");
             }
         }
+
+        channel.shutdown();
     }
 
     /**
@@ -151,11 +155,6 @@ public class CachedChannelsTest {
         @Override
         public void close() throws Exception {
             // No-op
-        }
-
-        @Override
-        public boolean injectJdbcConnectionBasedInterceptors() {
-            return true;
         }
     }
 }
