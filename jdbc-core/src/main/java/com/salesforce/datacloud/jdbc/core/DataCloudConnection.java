@@ -16,8 +16,8 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
-import static com.salesforce.datacloud.jdbc.util.Constants.DEFAULT_QUERY_TIMEOUT;
 
+import com.salesforce.datacloud.jdbc.core.Settings.ConnectionSettings;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -36,6 +36,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;
@@ -43,6 +44,7 @@ import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -55,7 +57,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc.HyperServiceBlockingStub;
@@ -75,14 +76,13 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     private final DataCloudConnectionString connectionString;
 
+    // The timeout used for network operations. This can be used as a last resort safety net to protect against
+    // hanging connections. The default is zero which means no timeout.
     @Builder.Default
-    @Getter
-    @Setter
-    private Properties clientInfo = new Properties();
+    private Duration networkTimeout = Duration.ZERO;
 
-    HyperGrpcClientExecutor getExecutor() {
-        return HyperGrpcClientExecutor.of(getStub(Duration.ofSeconds(DEFAULT_QUERY_TIMEOUT)), clientInfo);
-    }
+    @Getter(AccessLevel.PACKAGE)
+    private Settings settings;
 
     /**
      * This allows you to create a DataCloudConnection with full control over gRPC stub details.
@@ -99,7 +99,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return logTimedValue(
                 () -> DataCloudConnection.builder()
                         .stubProvider(stubProvider)
-                        .clientInfo(properties)
+                        .settings(Settings.of(properties))
                         .build(),
                 "DataCloudConnection::of with provided stub provider",
                 log);
@@ -141,7 +141,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                 () -> DataCloudConnection.builder()
                         .stubProvider(new JdbcDriverStubProvider(
                                 DataCloudJdbcManagedChannel.of(builder.intercept(authInterceptor), properties), true))
-                        .clientInfo(properties)
+                        .settings(Settings.of(properties))
                         .lakehouseSupplier(lakehouseSupplier)
                         .dataspacesSupplier(dataspacesSupplier)
                         .connectionString(connectionString)
@@ -152,49 +152,41 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     /**
      * Initializes a stub with the appropriate interceptors based on the properties and timeout configured in the JDBC Connection.
-     * @param queryTimeout the timeout for a query
+     * @param networkTimeout the timeout for a query
      * @return the initialized stub
      */
-    HyperServiceBlockingStub getStub(Duration queryTimeout) {
+    HyperServiceBlockingStub getStub() {
         HyperServiceBlockingStub stub = stubProvider.getStub();
 
         // Attach headers derived from properties to the stub
-        val metadata = deriveMetadataFromProperties(clientInfo);
+        val metadata = deriveHeadersFromSettings(settings.getConnectionSettings());
         stub = stub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
 
-        // Adjust timeout
-        if (!queryTimeout.isZero() && !queryTimeout.isNegative()) {
-            log.info(
-                    "Built stub with queryTimeout={}, interceptors={}",
-                    queryTimeout,
-                    metadata.keys().size());
-            stub = stub.withDeadlineAfter(queryTimeout.getSeconds(), TimeUnit.SECONDS);
-        } else {
-            log.info(
-                    "Built stub with queryTimeout=none, interceptors={}",
-                    metadata.keys().size());
+        if (!networkTimeout.isZero()) {
+            stub = stub.withDeadlineAfter(networkTimeout.toMillis(), TimeUnit.MILLISECONDS);
         }
+
+        log.info(
+                "Built stub with networkTimeout={}, interceptors={}",
+                networkTimeout,
+                metadata.keys().size());
         return stub;
     }
 
-    static Metadata deriveMetadataFromProperties(Properties properties) {
-        final String EXTERNAL_CLIENT_CONTEXT_PROPERTY = "external-client-context";
-        final String DATASPACE_PROPERTY = "dataspace";
-
+    static Metadata deriveHeadersFromSettings(ConnectionSettings connectionSettings) {
         Metadata metadata = new Metadata();
         // We always add a workload name, if the property is not set we use the default value
         metadata.put(
                 Metadata.Key.of("x-hyperdb-workload", Metadata.ASCII_STRING_MARSHALLER),
-                properties.getProperty("workload", "jdbcv3"));
-        if (properties.containsKey(EXTERNAL_CLIENT_CONTEXT_PROPERTY)) {
+                connectionSettings.getWorkload());
+        if (!connectionSettings.getExternalClientContext().isEmpty()) {
             metadata.put(
                     Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER),
-                    properties.getProperty(EXTERNAL_CLIENT_CONTEXT_PROPERTY));
+                    connectionSettings.getExternalClientContext());
         }
-        if (properties.containsKey(DATASPACE_PROPERTY)) {
+        if (!connectionSettings.getDataspace().isEmpty()) {
             metadata.put(
-                    Metadata.Key.of("dataspace", Metadata.ASCII_STRING_MARSHALLER),
-                    properties.getProperty(DATASPACE_PROPERTY));
+                    Metadata.Key.of("dataspace", Metadata.ASCII_STRING_MARSHALLER), connectionSettings.getDataspace());
         }
         return metadata;
     }
@@ -231,7 +223,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit, RowBased.Mode mode)
             throws DataCloudJDBCException {
         log.info("Get row-based result set. queryId={}, offset={}, limit={}, mode={}", queryId, offset, limit, mode);
-        val executor = getExecutor();
+        val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = RowBased.of(executor, queryId, offset, limit, mode);
         return StreamingResultSet.of(queryId, executor, iterator);
     }
@@ -239,7 +231,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit)
             throws DataCloudJDBCException {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
-        val executor = getExecutor();
+        val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = ChunkBased.of(executor, queryId, chunkId, limit);
         return StreamingResultSet.of(queryId, executor, iterator);
     }
@@ -262,7 +254,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public DataCloudQueryStatus waitForRowsAvailable(
             String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
             throws DataCloudJDBCException {
-        val executor = getExecutor();
+        val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         return executor.waitForRowsAvailable(queryId, offset, limit, timeout, allowLessThan);
     }
 
@@ -280,7 +272,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public DataCloudQueryStatus waitForChunksAvailable(
             String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
             throws DataCloudJDBCException {
-        val executor = getExecutor();
+        val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         return executor.waitForChunksAvailable(queryId, offset, limit, timeout, allowLessThan);
     }
 
@@ -303,8 +295,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      */
     public DataCloudQueryStatus waitForQueryStatus(
             String queryId, Duration timeout, Predicate<DataCloudQueryStatus> predicate) throws DataCloudJDBCException {
-        val executor = getExecutor();
-        return executor.waitForQueryStatus(queryId, timeout, predicate);
+        return HyperGrpcClientExecutor.forSubmittedQuery(getStub()).waitForQueryStatus(queryId, timeout, predicate);
     }
 
     /**
@@ -312,15 +303,14 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * @param queryId The query id for the query you want to cancel
      */
     public void cancelQuery(String queryId) throws DataCloudJDBCException {
-        getExecutor().cancel(queryId);
+        HyperGrpcClientExecutor.forSubmittedQuery(getStub()).cancel(queryId);
     }
 
     /**
      * Use this to determine when a given query is complete by filtering the responses and a subsequent findFirst()
      */
     public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {
-        val executor = getExecutor();
-        return executor.getQueryStatus(queryId);
+        return HyperGrpcClientExecutor.forSubmittedQuery(getStub()).getQueryStatus(queryId);
     }
 
     @Override
@@ -365,7 +355,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     @Override
     public DatabaseMetaData getMetaData() {
-        val userName = this.clientInfo.getProperty("userName");
+        val userName = settings.getConnectionSettings().getUserName();
         return new DataCloudDatabaseMetadata(this, connectionString, lakehouseSupplier, dataspacesSupplier, userName);
     }
 
@@ -508,14 +498,35 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return !isClosed();
     }
 
+    /**
+     * The driver doesn't support any client info properties and thus this method does nothing
+     */
     @Override
     public void setClientInfo(String name, String value) {
-        clientInfo.setProperty(name, value);
+        return;
     }
 
+    /**
+     * The driver doesn't support any client info properties and thus this method does nothing
+     */
+    @Override
+    public void setClientInfo(Properties properties) throws SQLClientInfoException {
+        return;
+    }
+
+    /**
+     * The driver doesn't support any client info properties and thus returns null
+     */
     @Override
     public String getClientInfo(String name) {
-        return clientInfo.getProperty(name);
+        return null;
+    }
+    /**
+     * The driver doesn't support any client info properties and thus returns an empty properties object
+     */
+    @Override
+    public Properties getClientInfo() throws SQLException {
+        return new Properties();
     }
 
     @Override
@@ -539,12 +550,25 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     @Override
     public void abort(Executor executor) {}
 
+    /**
+     * Set the network timeout for network operations in this connection. This is a safety net to protect against hanging connections.
+     * To enforce a query timeout rather use {@link DataCloudStatement#setQueryTimeout(int)}.
+     * A too low network timeout might cause the JDBC driver to fail to operate properly.
+     * @param executor This will be ignored
+     * @param milliseconds The network timeout in milliseconds.
+     */
     @Override
-    public void setNetworkTimeout(Executor executor, int milliseconds) {}
+    public void setNetworkTimeout(Executor executor, int milliseconds) {
+        networkTimeout = Duration.ofMillis(milliseconds);
+    }
 
+    /**
+     * Returns the network timeout for this connection.
+     * @return The network timeout for this connection in milliseconds.
+     */
     @Override
     public int getNetworkTimeout() {
-        return 0;
+        return (int) networkTimeout.get(ChronoUnit.MILLIS);
     }
 
     @Override

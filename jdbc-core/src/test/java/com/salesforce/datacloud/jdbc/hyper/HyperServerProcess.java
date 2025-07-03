@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -143,7 +144,7 @@ public class HyperServerProcess implements AutoCloseable {
         val channel = DataCloudJdbcManagedChannel.of(
                 ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext());
         val stub = HyperServiceGrpc.newBlockingStub(channel.getChannel());
-        return HyperGrpcClientExecutor.of(stub, new Properties());
+        return HyperGrpcClientExecutor.of(stub, new HashMap<String, String>());
     }
 
     @SneakyThrows

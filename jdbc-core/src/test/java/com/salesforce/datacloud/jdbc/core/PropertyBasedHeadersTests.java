@@ -19,6 +19,7 @@ import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableSet;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import io.grpc.Metadata;
 import java.util.Properties;
 import lombok.val;
@@ -26,22 +27,24 @@ import org.junit.Test;
 
 public class PropertyBasedHeadersTests {
     @Test
-    public void testEmptyPropertiesOnlyContainsWorkload() {
+    public void testEmptyPropertiesOnlyContainsWorkload() throws DataCloudJDBCException {
         val properties = new Properties();
-        val metadata = DataCloudConnection.deriveMetadataFromProperties(properties);
+        val settings = Settings.of(properties);
+        val metadata = DataCloudConnection.deriveHeadersFromSettings(settings.getConnectionSettings());
         assertThat(metadata.keys()).containsExactly("x-hyperdb-workload");
         assertThat(metadata.get(Metadata.Key.of("x-hyperdb-workload", ASCII_STRING_MARSHALLER)))
                 .isEqualTo("jdbcv3");
     }
 
     @Test
-    public void testPropertyForwarding() {
+    public void testPropertyForwarding() throws DataCloudJDBCException {
         val properties = new Properties();
         properties.setProperty("dataspace", "ds");
         properties.setProperty("workload", "wl");
         properties.setProperty("external-client-context", "ctx");
+        val settings = Settings.of(properties);
 
-        val metadata = DataCloudConnection.deriveMetadataFromProperties(properties);
+        val metadata = DataCloudConnection.deriveHeadersFromSettings(settings.getConnectionSettings());
         assertThat(metadata.keys())
                 .containsAll(ImmutableSet.of("x-hyperdb-workload", "dataspace", "x-hyperdb-external-client-context"));
         assertThat(metadata.get(Metadata.Key.of("x-hyperdb-workload", ASCII_STRING_MARSHALLER)))

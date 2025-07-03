@@ -25,9 +25,10 @@ import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
@@ -55,31 +56,28 @@ import salesforce.cdp.hyperdb.v1.ResultRange;
 @Unstable
 public class HyperGrpcClientExecutor {
 
-    public static final int HYPER_MAX_ROW_LIMIT_BYTE_SIZE = 20971520;
-
-    public static final int HYPER_MIN_ROW_LIMIT_BYTE_SIZE = 1024;
-
     @NonNull private final HyperServiceGrpc.HyperServiceBlockingStub stub;
-
-    private final int byteLimit;
 
     private final QueryParam settingsQueryParams;
 
     private QueryParam additionalQueryParams;
 
-    public static HyperGrpcClientExecutor of(
-            @NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, @NonNull Properties properties) {
-        return of(stub, properties, HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
+    /**
+     * This creates an executor for operations on an already submitted query, it thus does not support query settings.
+     * @param stub The stub to use for the executor.
+     * @return A new executor to interact with a submitted query
+     */
+    public static HyperGrpcClientExecutor forSubmittedQuery(@NonNull HyperServiceGrpc.HyperServiceBlockingStub stub) {
+        return of(stub, new HashMap<>());
     }
 
     public static HyperGrpcClientExecutor of(
-            @NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, @NonNull Properties properties, int byteLimit) {
-        val builder = HyperGrpcClientExecutor.builder().stub(stub).byteLimit(byteLimit);
+            @NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, Map<String, String> querySettings) {
+        val builder = HyperGrpcClientExecutor.builder().stub(stub);
 
-        val settings = ConnectionQuerySettings.of(properties).getSettings();
-        if (!settings.isEmpty()) {
+        if (!querySettings.isEmpty()) {
             builder.settingsQueryParams(
-                    QueryParam.newBuilder().putAllSettings(settings).build());
+                    QueryParam.newBuilder().putAllSettings(querySettings).build());
         }
 
         return builder.build();
@@ -94,11 +92,11 @@ public class HyperGrpcClientExecutor {
         return execute(sql, QueryParam.TransferMode.ADAPTIVE, QueryParam.newBuilder());
     }
 
-    public Iterator<ExecuteQueryResponse> executeQuery(String sql, long maxRows) throws SQLException {
+    public Iterator<ExecuteQueryResponse> executeQuery(String sql, long maxRows, long maxBytes) throws SQLException {
         val builder = QueryParam.newBuilder();
         if (maxRows > 0) {
-            log.info("setting row limit query. maxRows={}, byteLimit={}", maxRows, byteLimit);
-            val range = ResultRange.newBuilder().setRowLimit(maxRows).setByteLimit(byteLimit);
+            log.info("setting row limit query. maxRows={}, maxBytes={}", maxRows, maxBytes);
+            val range = ResultRange.newBuilder().setRowLimit(maxRows).setByteLimit(maxBytes);
             builder.setResultRange(range);
         }
 
@@ -160,7 +158,8 @@ public class HyperGrpcClientExecutor {
                 log);
     }
 
-    public Iterator<QueryResult> getQueryResult(String queryId, long offset, long rowLimit, boolean omitSchema)
+    public Iterator<QueryResult> getQueryResult(
+            String queryId, long offset, long rowLimit, long byteLimit, boolean omitSchema)
             throws DataCloudJDBCException {
         val rowRange = ResultRange.newBuilder()
                 .setRowOffset(offset)

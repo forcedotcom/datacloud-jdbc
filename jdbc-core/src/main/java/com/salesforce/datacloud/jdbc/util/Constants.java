@@ -19,7 +19,7 @@ public final class Constants {
     /**
      * Because Java doesn't have the concept of an infinite duration we'll use 3 days as the default timeout
      */
-    public static final int DEFAULT_QUERY_TIMEOUT = 259200;
+    public static final int INFINITE_QUERY_TIMEOUT = 259200;
 
     public static final String LOGIN_URL = "loginURL";
 
@@ -29,7 +29,6 @@ public final class Constants {
     public static final String USER = "user";
     public static final String USER_NAME = "userName";
     public static final String PRIVATE_KEY = "privateKey";
-    public static final String BYTE_LIMIT = "resultset.bytelimit";
 
     // Column Types
     public static final String INTEGER = "INTEGER";
