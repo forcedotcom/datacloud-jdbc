@@ -149,14 +149,13 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     @Override
     public void setMaxFieldSize(int max) {}
 
-    // The maximum byte size limit for a row based RPC response. While the server enforces as max well, also having it
-    // on the
-    // client side allows to set appropriate default values and also to provide immediate feedback on the
+    // The maximum byte size limit for a row based RPC response. While the server enforces a max as well, also having
+    // the constant available on the client side allows to set appropriate default values and also to provide immediate
+    // feedback on the
     // ``setResultSetConstraints`` method.
     public static final int HYPER_MAX_ROW_LIMIT_BYTE_SIZE = 20971520;
     // The minimal byte size limit for a row based RPC response. The driver enforces this to guard against code that
-    // accidentally
-    // provides the limit in mega bytes.
+    // accidentally provides the limit in megabytes.
     public static final int HYPER_MIN_ROW_LIMIT_BYTE_SIZE = 1024;
 
     public void clearResultSetConstraints() throws DataCloudJDBCException {
@@ -209,7 +208,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     public void setEscapeProcessing(boolean enable) {}
 
     /**
-     * This translates the user visibile query timeout behavior (zero is infinite) to the internal expectation of the code
+     * This translates the user visible query timeout behavior (zero is infinite) to the internal expectation of the code
      * (which would interpret zero as literal zero timeout). Thus zero is translated to a practically infinite timeout by using
      * a large second count.
      *

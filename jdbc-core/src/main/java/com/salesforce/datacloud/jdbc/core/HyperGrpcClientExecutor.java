@@ -63,7 +63,8 @@ public class HyperGrpcClientExecutor {
     private QueryParam additionalQueryParams;
 
     /**
-     * This creates an executor for operations on an already submitted query, it thus does not support query settings.
+     * Creates an executor for operations on an already submitted query. Since the query has already been submitted,
+     * this executor does not support query settings.
      * @param stub The stub to use for the executor.
      * @return A new executor to interact with a submitted query
      */

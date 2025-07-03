@@ -22,15 +22,16 @@ import java.util.Properties;
 import lombok.Builder;
 
 /**
- * This class is a register of properties that are relevant for the JDBC Connection and Statement.
+ * This class is a registry of properties that are relevant for the JDBC Connection and Statement.
  */
 public class PropertiesRegistry {
     /**
-     * Handle the property deserializiaton concerns
+     * Handle the property deserialization concerns
      */
     static interface PropertyInterpreter {
         /**
          * Interpret the property value and set the interpreted value on the settings object.
+         * @param propertyKey The key of the property.
          * @param propertyValue The string value of the property.
          * @param settings The interpreter will set the interpreted value on this settings object.
          */
@@ -52,9 +53,6 @@ public class PropertiesRegistry {
 
     /**
      * A JdbcProperty is a property that can be set on a DataCloudConnection.
-     *
-     * @param defaultValue The default value of the property.
-     * @param interpreter The interpreter that will be used to interpret the property value.
      */
     @Builder
     static class JdbcProperty {

@@ -71,10 +71,10 @@ public class Settings {
     final ConnectionSettings connectionSettings = new ConnectionSettings();
 
     /**
-     * Interpret the generic JDBC properties map and convert it into the interpreted (and default values available) JdbcProperties object.
-     * @param properties The properties de
+     * Interpret the generic JDBC properties map and convert it into the interpreted (and default values available) Settings object.
+     * @param properties The properties to interpret.
      * @return A Settings object.
-     * @throws DataCloudJDBCException throws exception if properties could not properly interpreted
+     * @throws DataCloudJDBCException throws exception if properties could not be properly interpreted
      */
     public static Settings of(Properties properties) throws DataCloudJDBCException {
         Settings settings = new Settings();
@@ -92,8 +92,9 @@ public class Settings {
                     if (parts.length == 2 && PropertiesRegistry.supportedProperties.containsKey(parts[0])) {
                         JdbcProperty property = PropertiesRegistry.supportedProperties.get(parts[0]);
                         if (!property.prefixedSetting) {
-                            throw new DataCloudJDBCException("Property " + key
-                                    + " is a prefixed setting but the property is not a prefixed setting");
+                            throw new DataCloudJDBCException(
+                                    "Property " + key + " appears to be a prefixed setting but " + parts[0]
+                                            + " is not configured as a prefixed property");
                         }
                         property.interpreter.interpret(key, properties.getProperty(key), settings);
                     }
@@ -108,7 +109,7 @@ public class Settings {
     }
 
     /**
-     * Convert the JdbcProperties object into a Properties object. The properties object will contain the explicitly set
+     * Convert the Settings object into a Properties object. The properties object will contain the explicitly set
      * properties as well as the default values for the supported properties.
      * @return A Properties object that contains the explicitly set properties as well as the default values for the supported properties.
      */
