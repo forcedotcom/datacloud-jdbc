@@ -178,7 +178,9 @@ public class HyperGrpcTestBase {
         stubProvider = new JdbcDriverStubProvider(channel, false);
         val connection = DataCloudConnection.of(stubProvider, new Properties());
 
-        return connection.getExecutor();
+        return HyperGrpcClientExecutor.of(
+                connection.getStub(),
+                connection.getSettings().getStatementSettings().getQuerySettings());
     }
 
     @BeforeEach

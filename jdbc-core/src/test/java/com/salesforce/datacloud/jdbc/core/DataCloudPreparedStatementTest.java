@@ -27,7 +27,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Constants;
 import com.salesforce.datacloud.jdbc.util.DateTimeUtils;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
@@ -318,7 +317,7 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
         assertEquals(30, preparedStatement.getQueryTimeout());
 
         preparedStatement.setQueryTimeout(-1);
-        assertThat(preparedStatement.getQueryTimeout()).isEqualTo(Constants.DEFAULT_QUERY_TIMEOUT);
+        assertThat(preparedStatement.getQueryTimeout()).isEqualTo(0);
     }
 
     @Test

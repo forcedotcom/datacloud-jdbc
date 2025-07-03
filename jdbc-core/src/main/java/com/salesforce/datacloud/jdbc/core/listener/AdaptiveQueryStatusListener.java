@@ -73,9 +73,10 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     }
 
     public static RowBasedAdaptiveQueryStatusListener of(
-            String query, HyperGrpcClientExecutor client, Duration timeout, long maxRows) throws SQLException {
+            String query, HyperGrpcClientExecutor client, Duration timeout, long maxRows, long maxBytes)
+            throws SQLException {
         try {
-            val response = client.executeQuery(query, maxRows);
+            val response = client.executeQuery(query, maxRows, maxBytes);
             val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
             log.info("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);

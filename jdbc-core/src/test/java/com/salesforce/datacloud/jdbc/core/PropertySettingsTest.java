@@ -15,11 +15,13 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import java.util.Map;
 import java.util.Properties;
@@ -31,35 +33,64 @@ import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
-class HyperConnectionSettingsTest extends HyperGrpcTestBase {
+class PropertySettingsTest extends HyperGrpcTestBase {
     private static final String HYPER_SETTING = "querySetting.";
 
     @Test
-    void testGetSettingWithCorrectPrefix() {
+    @SneakyThrows
+    public void testQuerySetting() {
+        val settings = Maps.immutableEntry("querySetting.date_style", "YMD");
+
+        assertWithStatement(
+                statement -> {
+                    val result = statement.executeQuery("SHOW date_style");
+                    result.next();
+                    assertThat(result.getString(1)).isEqualTo("ISO, YMD");
+                },
+                settings);
+    }
+
+    @Test
+    void testGetSettingWithCorrectPrefix() throws DataCloudJDBCException {
         Map<String, String> expected = ImmutableMap.of("lc_time", "en_US");
         Properties properties = new Properties();
         properties.setProperty(HYPER_SETTING + "lc_time", "en_US");
         properties.setProperty("username", "alice");
-        ConnectionQuerySettings connectionQuerySettings = ConnectionQuerySettings.of(properties);
-        assertThat(connectionQuerySettings.getSettings()).containsExactlyInAnyOrderEntriesOf(expected);
+        Settings settings = Settings.of(properties);
+        assertThat(settings.getStatementSettings().getQuerySettings()).containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     @Test
-    void testGetSettingReturnEmptyResultSet() {
+    void testGetSettingReturnEmptyResultSet() throws DataCloudJDBCException {
         Map<String, String> expected = ImmutableMap.of();
         Properties properties = new Properties();
         properties.setProperty("c_time", "en_US");
         properties.setProperty("username", "alice");
-        ConnectionQuerySettings connectionQuerySettings = ConnectionQuerySettings.of(properties);
-        assertThat(connectionQuerySettings.getSettings()).containsExactlyInAnyOrderEntriesOf(expected);
+        Settings settings = Settings.of(properties);
+        assertThat(settings.getStatementSettings().getQuerySettings()).containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     @Test
-    void testGetSettingWithEmptyProperties() {
+    void testRoundtrip() throws DataCloudJDBCException {
+        Properties properties = new Properties();
+        // Cover string setting
+        properties.setProperty("workload", "testWorkload");
+        // Cover prefixed setting
+        properties.setProperty("querySetting.A", "A");
+        properties.setProperty("querySetting.B", "B");
+        // Cover setting that internally is represented as non string (`Duration`)
+        properties.setProperty("queryTimeout", "30");
+        Settings settings = Settings.of(properties);
+        Properties roundtripProperties = settings.toProperties();
+        assertThat(roundtripProperties.entrySet()).containsExactlyInAnyOrderElementsOf(roundtripProperties.entrySet());
+    }
+
+    @Test
+    void testGetSettingWithEmptyProperties() throws DataCloudJDBCException {
         Map<String, String> expected = ImmutableMap.of();
         Properties properties = new Properties();
-        ConnectionQuerySettings connectionQuerySettings = ConnectionQuerySettings.of(properties);
-        assertThat(connectionQuerySettings.getSettings()).containsExactlyInAnyOrderEntriesOf(expected);
+        Settings settings = Settings.of(properties);
+        assertThat(settings.getStatementSettings().getQuerySettings()).containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     @SneakyThrows
@@ -76,8 +107,9 @@ class HyperConnectionSettingsTest extends HyperGrpcTestBase {
         val channel = DataCloudJdbcManagedChannel.of(builder);
         val stubProvider = new JdbcDriverStubProvider(channel, false);
         val connection = DataCloudConnection.of(stubProvider, properties);
-
-        val client = connection.getExecutor();
+        val client = HyperGrpcClientExecutor.of(
+                connection.getStub(),
+                connection.getSettings().getStatementSettings().getQuerySettings());
 
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
                 .withRequest(t -> {

@@ -25,7 +25,6 @@ import static org.mockito.Mockito.verify;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import io.grpc.ClientInterceptor;
 import java.sql.Connection;
-import java.time.Duration;
 import java.util.Properties;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -127,7 +126,7 @@ class DataCloudConnectionTest extends HyperGrpcTestBase {
         val properties = new Properties();
         val stubProvider = new TestStubProvider();
         val connection = DataCloudConnection.of(stubProvider, properties);
-        connection.getStub(Duration.ZERO);
+        connection.getStub();
         // Interceptors should have been added to set the default workload header (x-hyperdb-workload)
         verify(stubProvider.stub).withInterceptors(any(ClientInterceptor[].class));
         connection.close();

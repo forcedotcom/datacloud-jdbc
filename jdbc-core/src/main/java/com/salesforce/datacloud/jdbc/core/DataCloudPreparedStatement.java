@@ -114,7 +114,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     public boolean executeAsyncQuery() throws SQLException {
         val client = getQueryExecutor();
-        listener = AsyncQueryStatusListener.of(sql, client, getQueryTimeoutDuration());
+        listener = AsyncQueryStatusListener.of(sql, client, getEffectiveQueryTimeoutDuration());
         return true;
     }
 
@@ -128,7 +128,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     public ResultSet executeQuery() throws SQLException {
         val client = getQueryExecutor();
 
-        resultSet = executeAdaptiveQuery(sql, client, getQueryTimeoutDuration());
+        resultSet = executeAdaptiveQuery(sql, client, getEffectiveQueryTimeoutDuration());
         return resultSet;
     }
 

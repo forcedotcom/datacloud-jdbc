@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.partial;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.util.Iterator;
@@ -44,7 +45,8 @@ class RowBasedContext {
     public Iterator<QueryResult> getQueryResult(boolean omitSchema) throws DataCloudJDBCException {
         val currentOffset = offset + seen.get();
         val currentLimit = limit - seen.get();
-        return client.getQueryResult(queryId, currentOffset, currentLimit, omitSchema);
+        return client.getQueryResult(
+                queryId, currentOffset, currentLimit, DataCloudStatement.HYPER_MAX_ROW_LIMIT_BYTE_SIZE, omitSchema);
     }
 }
 
