@@ -152,7 +152,6 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     /**
      * Initializes a stub with the appropriate interceptors based on the properties and timeout configured in the JDBC Connection.
-     * @param networkTimeout the timeout for a query
      * @return the initialized stub
      */
     HyperServiceBlockingStub getStub() {
