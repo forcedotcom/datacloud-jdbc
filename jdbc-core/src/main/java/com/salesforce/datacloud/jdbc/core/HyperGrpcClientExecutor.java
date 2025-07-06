@@ -32,6 +32,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -65,6 +66,9 @@ public class HyperGrpcClientExecutor {
 
     private final QueryParam settingsQueryParams;
 
+    @Getter
+    private final Properties connectionProperties;
+
     private QueryParam additionalQueryParams;
 
     public static HyperGrpcClientExecutor of(
@@ -74,7 +78,10 @@ public class HyperGrpcClientExecutor {
 
     public static HyperGrpcClientExecutor of(
             @NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, @NonNull Properties properties, int byteLimit) {
-        val builder = HyperGrpcClientExecutor.builder().stub(stub).byteLimit(byteLimit);
+        val builder = HyperGrpcClientExecutor.builder()
+                .stub(stub)
+                .byteLimit(byteLimit)
+                .connectionProperties(properties);
 
         val settings = ConnectionQuerySettings.of(properties).getSettings();
         if (!settings.isEmpty()) {

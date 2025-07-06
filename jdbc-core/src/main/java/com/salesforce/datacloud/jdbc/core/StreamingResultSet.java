@@ -73,12 +73,16 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
             val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
             val schemaRoot = reader.getVectorSchemaRoot();
             val columns = toColumnMetaData(schemaRoot.getSchema().getFields());
-            val timezone = TimeZone.getDefault();
+
+            val connectionQuerySettings = ConnectionQuerySettings.of(client.getConnectionProperties());
+            // Use session timezone from connection properties instead of system default
+            val timezone = connectionQuerySettings.getSessionTimeZone();
+
             val state = new QueryState();
             val signature = new Meta.Signature(
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
-            val cursor = new ArrowStreamReaderCursor(reader);
+            val cursor = new ArrowStreamReaderCursor(reader, client.getConnectionProperties());
             val result =
                     new StreamingResultSet(client, cursor, queryId, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);

@@ -17,6 +17,7 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorGetter.createGetter;
 
+import com.salesforce.datacloud.jdbc.core.ConnectionQuerySettings;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -30,6 +31,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
+import java.util.Properties;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
@@ -49,20 +51,33 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
     }
 
     private final TimeZone timeZone;
+    private final TimeZone sessionTimeZone;
     private final TimeUnit timeUnit;
     private final LongToLocalDateTime longToLocalDateTime;
     private final TimeStampVectorGetter.Holder holder;
     private final TimeStampVectorGetter.Getter getter;
+    private final boolean hasTimezoneInfo;
 
     public TimeStampVectorAccessor(
             TimeStampVector vector,
             IntSupplier currentRowSupplier,
             QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer)
             throws SQLException {
+        this(vector, currentRowSupplier, wasNullConsumer, null);
+    }
+
+    public TimeStampVectorAccessor(
+            TimeStampVector vector,
+            IntSupplier currentRowSupplier,
+            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer,
+            Properties connectionProperties)
+            throws SQLException {
         super(currentRowSupplier, wasNullConsumer);
         this.timeZone = getTimeZoneForVector(vector);
+        this.sessionTimeZone = getSessionTimeZone(connectionProperties);
+        this.hasTimezoneInfo = hasTimezoneInfo(vector);
         this.timeUnit = getTimeUnitForVector(vector);
-        this.longToLocalDateTime = getLongToLocalDateTimeForVector(vector, this.timeZone);
+        this.longToLocalDateTime = getLongToLocalDateTimeForVector(vector, getEffectiveTimeZone());
         this.holder = new TimeStampVectorGetter.Holder();
         this.getter = createGetter(vector);
     }
@@ -191,5 +206,24 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
                 val rootCauseException = new UnsupportedOperationException(INVALID_UNIT_ERROR_RESPONSE);
                 throw new DataCloudJDBCException(INVALID_UNIT_ERROR_RESPONSE, "22007", rootCauseException);
         }
+    }
+
+    private static boolean hasTimezoneInfo(TimeStampVector vector) {
+        ArrowType.Timestamp arrowType =
+                (ArrowType.Timestamp) vector.getField().getFieldType().getType();
+        return arrowType.getTimezone() != null;
+    }
+
+    private static TimeZone getSessionTimeZone(Properties connectionProperties) {
+        return ConnectionQuerySettings.of(connectionProperties).getSessionTimeZone();
+    }
+
+    private TimeZone getEffectiveTimeZone() {
+        // if schema has timezone info, use it
+        if (hasTimezoneInfo) {
+            return timeZone;
+        }
+        // otherwise, use session timezone for timestamp interpretation
+        return sessionTimeZone;
     }
 }
