@@ -44,7 +44,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             "Batch execution is not supported in Data Cloud query";
     protected static final String CHANGE_FETCH_DIRECTION_IS_NOT_SUPPORTED = "Changing fetch direction is not supported";
 
-    private Settings.StatementSettings statementSettings;
+    private StatementProperties statementProperties;
 
     // The target maximum number of rows for a query. The default means disabled.
     @Getter(AccessLevel.PACKAGE)
@@ -57,12 +57,12 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     public DataCloudStatement(@NonNull DataCloudConnection connection) {
         this.connection = connection;
-        statementSettings = connection.getSettings().getStatementSettings();
+        statementProperties = connection.getConnectionProperties().getStatementProperties();
     }
 
     protected HyperGrpcClientExecutor getQueryExecutor() throws DataCloudJDBCException {
         val stub = connection.getStub();
-        return HyperGrpcClientExecutor.of(stub, statementSettings.getQuerySettings());
+        return HyperGrpcClientExecutor.of(stub, statementProperties.getQuerySettings());
     }
 
     protected QueryStatusListener listener;
@@ -216,10 +216,10 @@ public class DataCloudStatement implements Statement, AutoCloseable {
      * @return The effective query timeout duration.
      */
     protected Duration getEffectiveQueryTimeoutDuration() {
-        if (statementSettings.getQueryTimeout() == Duration.ZERO) {
+        if (statementProperties.getQueryTimeout() == Duration.ZERO) {
             return Duration.ofSeconds(Constants.INFINITE_QUERY_TIMEOUT);
         }
-        return statementSettings.getQueryTimeout();
+        return statementProperties.getQueryTimeout();
     }
 
     /**
@@ -227,7 +227,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
      */
     @Override
     public int getQueryTimeout() {
-        return (int) statementSettings.getQueryTimeout().getSeconds();
+        return (int) statementProperties.getQueryTimeout().getSeconds();
     }
 
     /**
@@ -237,12 +237,12 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     @Override
     public void setQueryTimeout(int seconds) {
         // Zero or negative values are interpreted as infinite timeout
-        // We use the ``withQueryTimeout`` method to create a new statement settings object with the updated timeout
+        // We use the ``withQueryTimeout`` method to create a new statement properties object with the updated timeout
         // to avoid changing the shared object with the default connection query timeout.
         if (seconds <= 0) {
-            statementSettings = statementSettings.withQueryTimeout(Duration.ZERO);
+            statementProperties = statementProperties.withQueryTimeout(Duration.ZERO);
         } else {
-            statementSettings = statementSettings.withQueryTimeout(Duration.ofSeconds(seconds));
+            statementProperties = statementProperties.withQueryTimeout(Duration.ofSeconds(seconds));
         }
     }
 

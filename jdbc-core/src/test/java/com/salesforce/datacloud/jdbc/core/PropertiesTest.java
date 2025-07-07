@@ -33,7 +33,7 @@ import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
-class PropertySettingsTest extends HyperGrpcTestBase {
+class PropertiesTest extends HyperGrpcTestBase {
     private static final String HYPER_SETTING = "querySetting.";
 
     @Test
@@ -56,8 +56,9 @@ class PropertySettingsTest extends HyperGrpcTestBase {
         Properties properties = new Properties();
         properties.setProperty(HYPER_SETTING + "lc_time", "en_US");
         properties.setProperty("username", "alice");
-        Settings settings = Settings.of(properties);
-        assertThat(settings.getStatementSettings().getQuerySettings()).containsExactlyInAnyOrderEntriesOf(expected);
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+        assertThat(connectionProperties.getStatementProperties().getQuerySettings())
+                .containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     @Test
@@ -66,8 +67,9 @@ class PropertySettingsTest extends HyperGrpcTestBase {
         Properties properties = new Properties();
         properties.setProperty("c_time", "en_US");
         properties.setProperty("username", "alice");
-        Settings settings = Settings.of(properties);
-        assertThat(settings.getStatementSettings().getQuerySettings()).containsExactlyInAnyOrderEntriesOf(expected);
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+        assertThat(connectionProperties.getStatementProperties().getQuerySettings())
+                .containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     @Test
@@ -80,8 +82,8 @@ class PropertySettingsTest extends HyperGrpcTestBase {
         properties.setProperty("querySetting.B", "B");
         // Cover setting that internally is represented as non string (`Duration`)
         properties.setProperty("queryTimeout", "30");
-        Settings settings = Settings.of(properties);
-        Properties roundtripProperties = settings.toProperties();
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+        Properties roundtripProperties = connectionProperties.toProperties();
         assertThat(roundtripProperties.entrySet()).containsExactlyInAnyOrderElementsOf(roundtripProperties.entrySet());
     }
 
@@ -89,8 +91,9 @@ class PropertySettingsTest extends HyperGrpcTestBase {
     void testGetSettingWithEmptyProperties() throws DataCloudJDBCException {
         Map<String, String> expected = ImmutableMap.of();
         Properties properties = new Properties();
-        Settings settings = Settings.of(properties);
-        assertThat(settings.getStatementSettings().getQuerySettings()).containsExactlyInAnyOrderEntriesOf(expected);
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+        assertThat(connectionProperties.getStatementProperties().getQuerySettings())
+                .containsExactlyInAnyOrderEntriesOf(expected);
     }
 
     @SneakyThrows
@@ -109,7 +112,7 @@ class PropertySettingsTest extends HyperGrpcTestBase {
         val connection = DataCloudConnection.of(stubProvider, properties);
         val client = HyperGrpcClientExecutor.of(
                 connection.getStub(),
-                connection.getSettings().getStatementSettings().getQuerySettings());
+                connection.getConnectionProperties().getStatementProperties().getQuerySettings());
 
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
                 .withRequest(t -> {

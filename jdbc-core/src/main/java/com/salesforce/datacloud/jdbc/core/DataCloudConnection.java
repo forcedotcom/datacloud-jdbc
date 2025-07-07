@@ -17,7 +17,6 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 
-import com.salesforce.datacloud.jdbc.core.Settings.ConnectionSettings;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -82,7 +81,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     private Duration networkTimeout = Duration.ZERO;
 
     @Getter(AccessLevel.PACKAGE)
-    private Settings settings;
+    private ConnectionProperties connectionProperties;
 
     /**
      * This allows you to create a DataCloudConnection with full control over gRPC stub details.
@@ -99,7 +98,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return logTimedValue(
                 () -> DataCloudConnection.builder()
                         .stubProvider(stubProvider)
-                        .settings(Settings.of(properties))
+                        .connectionProperties(ConnectionProperties.of(properties))
                         .build(),
                 "DataCloudConnection::of with provided stub provider",
                 log);
@@ -141,7 +140,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                 () -> DataCloudConnection.builder()
                         .stubProvider(new JdbcDriverStubProvider(
                                 DataCloudJdbcManagedChannel.of(builder.intercept(authInterceptor), properties), true))
-                        .settings(Settings.of(properties))
+                        .connectionProperties(ConnectionProperties.of(properties))
                         .lakehouseSupplier(lakehouseSupplier)
                         .dataspacesSupplier(dataspacesSupplier)
                         .connectionString(connectionString)
@@ -158,7 +157,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         HyperServiceBlockingStub stub = stubProvider.getStub();
 
         // Attach headers derived from properties to the stub
-        val metadata = deriveHeadersFromSettings(settings.getConnectionSettings());
+        val metadata = deriveHeadersFromSettings(connectionProperties);
         stub = stub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
 
         if (!networkTimeout.isZero()) {
@@ -172,20 +171,21 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return stub;
     }
 
-    static Metadata deriveHeadersFromSettings(ConnectionSettings connectionSettings) {
+    static Metadata deriveHeadersFromSettings(ConnectionProperties connectionProperties) {
         Metadata metadata = new Metadata();
         // We always add a workload name, if the property is not set we use the default value
         metadata.put(
                 Metadata.Key.of("x-hyperdb-workload", Metadata.ASCII_STRING_MARSHALLER),
-                connectionSettings.getWorkload());
-        if (!connectionSettings.getExternalClientContext().isEmpty()) {
+                connectionProperties.getWorkload());
+        if (!connectionProperties.getExternalClientContext().isEmpty()) {
             metadata.put(
                     Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER),
-                    connectionSettings.getExternalClientContext());
+                    connectionProperties.getExternalClientContext());
         }
-        if (!connectionSettings.getDataspace().isEmpty()) {
+        if (!connectionProperties.getDataspace().isEmpty()) {
             metadata.put(
-                    Metadata.Key.of("dataspace", Metadata.ASCII_STRING_MARSHALLER), connectionSettings.getDataspace());
+                    Metadata.Key.of("dataspace", Metadata.ASCII_STRING_MARSHALLER),
+                    connectionProperties.getDataspace());
         }
         return metadata;
     }
@@ -354,7 +354,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     @Override
     public DatabaseMetaData getMetaData() {
-        val userName = settings.getConnectionSettings().getUserName();
+        val userName = connectionProperties.getUserName();
         return new DataCloudDatabaseMetadata(this, connectionString, lakehouseSupplier, dataspacesSupplier, userName);
     }
 

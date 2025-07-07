@@ -180,7 +180,7 @@ public class HyperGrpcTestBase {
 
         return HyperGrpcClientExecutor.of(
                 connection.getStub(),
-                connection.getSettings().getStatementSettings().getQuerySettings());
+                connection.getConnectionProperties().getStatementProperties().getQuerySettings());
     }
 
     @BeforeEach
