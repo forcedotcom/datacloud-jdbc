@@ -30,12 +30,16 @@ import lombok.With;
 @Getter
 @Builder
 public class StatementProperties {
-    // The query timeout, a zero duration is interpreted as infinite timeout
+    /**
+     * The query timeout, a zero duration is interpreted as infinite timeout
+     */
     @With
     @Builder.Default
     private final Duration queryTimeout = Duration.ZERO;
 
-    // The query settings to use for the connection
+    /**
+     * The query settings to use for the connection
+     */
     @Builder.Default
     private final Map<String, String> querySettings = new HashMap<>();
 

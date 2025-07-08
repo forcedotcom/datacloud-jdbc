@@ -26,23 +26,33 @@ import lombok.Getter;
 @Getter
 @Builder
 public class ConnectionProperties {
-    // The dataspace to use for the connection
+    /**
+     * The dataspace to use for the connection
+     */
     @Builder.Default
     private final String dataspace = "";
 
-    // The workload to use for the connection (default: jdbcv3)
+    /**
+     * The workload to use for the connection (default: jdbcv3)
+     */
     @Builder.Default
     private final String workload = "jdbcv3";
 
-    // The external client context to use for the connection
+    /**
+     * The external client context to use for the connection
+     */
     @Builder.Default
     private final String externalClientContext = "";
 
-    // The user name to use for the connection
+    /**
+     * The user name to use for the connection
+     */
     @Builder.Default
     private final String userName = "";
 
-    // Statement properties associated with this connection
+    /**
+     * Statement properties associated with this connection
+     */
     @Builder.Default
     private final StatementProperties statementProperties =
             StatementProperties.builder().build();
