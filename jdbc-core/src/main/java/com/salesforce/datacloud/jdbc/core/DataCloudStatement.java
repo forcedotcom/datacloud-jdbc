@@ -46,12 +46,16 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     private StatementProperties statementProperties;
 
-    // The target maximum number of rows for a query. The default means disabled.
+    /**
+     * The target maximum number of rows for a query. The default means disabled.
+     */
     @Getter(AccessLevel.PACKAGE)
     private int targetMaxRows = 0;
 
-    // The target maximum number of bytes per RPC response. This is only relevant when `targetMaxRows > 0`.
-    // The default means disabled.
+    /**
+     * The target maximum number of bytes per RPC response. This is only relevant when `targetMaxRows > 0`.
+     * The default means disabled.
+     */
     @Getter(AccessLevel.PACKAGE)
     private int targetMaxBytes = 0;
 
