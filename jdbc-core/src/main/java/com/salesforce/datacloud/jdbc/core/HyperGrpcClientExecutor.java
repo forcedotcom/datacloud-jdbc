@@ -19,6 +19,7 @@ import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 
 import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.interceptor.DuplicateKeyDetectionInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
@@ -28,8 +29,12 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+
+import io.grpc.Metadata;
+import io.grpc.stub.MetadataUtils;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.NonNull;
@@ -219,11 +224,14 @@ public class HyperGrpcClientExecutor {
     private Iterator<ExecuteQueryResponse> execute(String sql, QueryParam.TransferMode mode, QueryParam.Builder builder)
             throws SQLException {
         val message = "executeQuery. mode=" + mode.name();
+
+        val duplicateKeyDetectionInterceptor = new DuplicateKeyDetectionInterceptor("HyperGrpcClientExecutor::execute");
+        val stubWithInterceptors = stub.withInterceptors(duplicateKeyDetectionInterceptor);
         builder.setTransferMode(mode);
         return logTimedValue(
                 () -> {
                     val request = getQueryParams(sql, builder);
-                    return stub.executeQuery(request);
+                    return stubWithInterceptors.executeQuery(request);
                 },
                 message,
                 log);
@@ -231,6 +239,7 @@ public class HyperGrpcClientExecutor {
 
     private HyperServiceGrpc.HyperServiceBlockingStub getStub(@NonNull String queryId) {
         val queryIdHeaderInterceptor = new QueryIdHeaderInterceptor(queryId);
-        return stub.withInterceptors(queryIdHeaderInterceptor);
+        val duplicateKeyDetectionInterceptor = new DuplicateKeyDetectionInterceptor("HyperGrpcClientExecutor::getStub");
+        return stub.withInterceptors(queryIdHeaderInterceptor, duplicateKeyDetectionInterceptor);
     }
 }

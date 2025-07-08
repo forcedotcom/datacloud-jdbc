@@ -64,10 +64,12 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 
     testLogging {
-        events("passed", "skipped", "failed")
-        showExceptions = true
+        events("skipped", "failed") // "passed" omitted to reduce noise
+        // showExceptions = true
         showStandardStreams = true
-        showStackTraces = true
+        // showStackTraces = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showCauses = true
     }
 
     jvmArgs("-Xmx2g", "-Xms512m")

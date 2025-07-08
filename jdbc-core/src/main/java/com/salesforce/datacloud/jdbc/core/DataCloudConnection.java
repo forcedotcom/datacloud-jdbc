@@ -21,6 +21,8 @@ import static com.salesforce.datacloud.jdbc.util.Constants.DEFAULT_QUERY_TIMEOUT
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.interceptor.DuplicateKeyDetectionInterceptor;
+import com.salesforce.datacloud.jdbc.interceptor.HeaderMutatingClientInterceptor;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
@@ -160,7 +162,12 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
         // Attach headers derived from properties to the stub
         val metadata = deriveMetadataFromProperties(clientInfo);
-        stub = stub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
+        HeaderMutatingClientInterceptor attach = headers -> {
+            log.warn("attaching headers: {}", metadata.keys());
+            headers.merge(metadata);
+        };
+
+        stub = stub.withInterceptors(new DuplicateKeyDetectionInterceptor("DataCloudConnection before"), attach, new DuplicateKeyDetectionInterceptor("DataCloudConnection after")); // MetadataUtils.newAttachHeadersInterceptor(metadata));
 
         // Adjust timeout
         if (!queryTimeout.isZero() && !queryTimeout.isNegative()) {
