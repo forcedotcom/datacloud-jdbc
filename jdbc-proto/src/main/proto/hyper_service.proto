@@ -1,18 +1,19 @@
 /*
- * Copyright (c) 2024, Salesforce, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+  This definition is kept in sync at
+  * https://github.com/hyper-db-emu/hyper-db/blob/main/protos/salesforce/hyperdb/grpc/v1/hyper_service.proto
+  * https://git.soma.salesforce.com/a360/cdp-protos/blob/master/proto/hyperdb-proto/salesforce/hyperdb/grpc/v1/hyper_service.proto
+
+  The version in https://github.com/hyper-db-emu/hyper-db is the source of
+  truth. Always update that version first and then copy over the changes into
+  the other version.
+
+  Furthermore, this is also mirrored into
+  https://github.com/forcedotcom/datacloud-jdbc/blob/main/jdbc-proto/src/main/proto/hyper_service.proto
+
+  The public version is updated on demand, as we pull in new versions of hyperd
+  via HyperAPI. (The JDBC driver relies on the hyperd packaged in Hyper API for
+  testing).
+*/
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
@@ -20,134 +21,426 @@ import "google/protobuf/timestamp.proto";
 
 package salesforce.hyperdb.grpc.v1;
 
-
+// Ensure that we have a sensible java package name and that
+// messages are individual classes for better dev experience.
 option java_multiple_files = true;
 option java_package = "salesforce.cdp.hyperdb.v1";
 option java_outer_classname = "HyperDatabaseServiceProto";
 
+// All methods under `HyperService` use the richer error model
+// (https://grpc.io/docs/guides/error/#richer-error-model). Error details
+// can contain messages types defined in error_details.proto
 service HyperService {
-  rpc ExecuteQuery (QueryParam) returns (stream ExecuteQueryResponse);
-  rpc GetQueryResult (QueryResultParam) returns (stream QueryResult);
-  rpc GetQueryInfo (QueryInfoParam) returns (stream QueryInfo);
-  rpc CancelQuery (CancelQueryParam) returns (google.protobuf.Empty);
+  // Submit a query / statement for execution and retrieve its result.
+  // The result stream will contain the result schema and rows in the requested
+  // OutputFormat.
+  rpc ExecuteQuery(QueryParam) returns (stream ExecuteQueryResponse);
+  // Get query information for a previous `ExecuteQuery` call. See `QueryInfo`.
+  // By default, this call will only return one update before ending the
+  // stream. A client can opt into a streaming mode that will continuously push
+  // updates until the query is done or a timeout is reached.
+  rpc GetQueryInfo(QueryInfoParam) returns (stream QueryInfo);
+  // Retrieve the results of a previous `ExecuteQuery`. See
+  // `QueryParam::TransferMode`
+  rpc GetQueryResult(QueryResultParam) returns (stream QueryResult);
+  // Attempts to cancel a query started via `ExecuteQuery`.
+  // The call is successful regardless of whether the query was actually
+  // canceled.
+  rpc CancelQuery(CancelQueryParam) returns (google.protobuf.Empty);
 }
 
-message CancelQueryParam {
-  string query_id = 1;
-}
+// ----------------------------------------------------------------------------
+// Parameters passed to ExecuteQuery
+// ----------------------------------------------------------------------------
 
-message QueryResultParam {
-  string query_id = 1;
-  OutputFormat output_format = 2;
-  oneof requested_data {
-    uint64 chunk_id = 3;
-    ResultRange result_range = 5;
-  }
-  bool omit_schema = 4;
-}
-
-message ResultRange {
-  uint64 row_offset = 1;
-  optional uint64 row_limit = 2;
-  uint64 byte_limit = 3;
-}
-
-message QueryResult {
-  oneof result {
-    QueryResultPartBinary binary_part = 1;
-    QueryResultPartString string_part = 2;
-  }
-
-  uint64 result_part_row_count = 3;
-}
-
-message QueryInfoParam {
-  string query_id = 1;
-  bool streaming = 2;
-}
-
-message QueryInfo {
-  oneof content {
-    QueryStatus query_status = 1;
-  }
-  bool optional = 2;
-}
-
-message QueryStatus {
-  enum CompletionStatus {
-    RUNNING_OR_UNSPECIFIED = 0;
-    RESULTS_PRODUCED = 1;
-    FINISHED = 2;
-  }
-  string query_id = 1;
-  CompletionStatus completion_status = 2;
-  uint64 chunk_count = 3;
-  uint64 row_count = 4;
-  double progress = 5;
-  google.protobuf.Timestamp expiration_time = 6;
-}
-
-enum OutputFormat {
-  OUTPUT_FORMAT_UNSPECIFIED = 0;
-  reserved 1;
-  ARROW_LEGACY = 2;
-  JSON_LEGACY_DICT = 3;
-  ARROW_LEGACY_IPC = 4;
-  ARROW_IPC = 5;
-  JSON_ARRAY = 6;
-}
-
+// QueryParam represents a query SQL text and the execution context,
+// such as settings, attached databases and parameters. Additionally, the
+// transfer mode and output format for result chunks can be configured.
 message QueryParam {
+  // The requested result transfer mode.
+  // By default, we recommend using `ADAPTIVE` for most workloads.
+  //
+  // `ADAPTIVE` and `ASYNC` are only supported for the `ARROW_IPC` and
+  // `JSON_ARRAY` output formats. All other output formats use `SYNC` mode.
   enum TransferMode {
+    // TRANSFER_MODE_UNSPECIFIED defaults to ADAPTIVE
     TRANSFER_MODE_UNSPECIFIED = 0;
-    ADAPTIVE = 3;
+    // Only returns the header including the schema and query id. Results need
+    // to be fetched via `GetQueryResult`. Only supported for JSON_ARRAY and
+    // ARROW_IPC output format.
     ASYNC = 1;
+    // All results will be returned with the `ExecuteQuery` call
+    // Using this mode is discouraged, as there is a 100s timeout.
     SYNC = 2;
+    // Returns up to one result chunk synchronously. Subsequent result chunks
+    // may be retrieved via `GetQueryResult`. If the client does not retrieve
+    // the chunk in time, the server will close the connection. This does not
+    // imply that the query failed. It is the client’s obligation to query the
+    // status or refetch remaining rows from the first chunk in case of
+    // timeouts.
+    ADAPTIVE = 3;
   }
 
+  // The parameter style
+  //
+  // Hyper supports three different syntaxes for query parameters in SQL.
+  // This field allows specifying which syntax is used by the query.
   enum ParameterStyle {
+    // PARAMETER_STYLE_UNSPECIFIED defaults to QUESTION_MARK
     PARAMETER_STYLE_UNSPECIFIED = 0;
+    // Use the question mark `?`
     QUESTION_MARK = 3;
+    // Use a Dollar sign followed by a number, e.g., `$1`
     DOLLAR_NUMBERED = 1;
+    // Use named parameter, e.g., `:param`
     NAMED = 2;
   }
 
+  // The SQL query text.
+  // See
+  // https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/dc-sql-reference/
+  // for documentation of Hyper's SQL.
   string query = 1;
+  // Specify the list of attached databases for this query (optional)
   repeated AttachedDatabase databases = 2;
+  // Specify the output format for query result data chunks. ARROW_IPC is
+  // recommended. The default is "unspecified" which currently maps to
+  // JSON_LEGACY_DICT.
   OutputFormat output_format = 3;
+  // Settings to allow adjusting the execution of a query.
+  // See
+  // https://tableau.github.io/hyper-db/docs/hyper-api/connection#connection-settings
   map<string, string> settings = 4;
+  // See `TransferMode`
   TransferMode transfer_mode = 5;
+  // See `ParameterStyle`
   ParameterStyle param_style = 6;
+  // The parameter values for the parameters in the SQL query.
+  //
+  // The parameters are specified as a JSON object or an Arrow IPC message.
+  //
+  // The JSON object is a map of parameter names to values. The Arrow IPC
+  // message is a serialized Arrow schema and a serialized Arrow record batch.
+  //
+  // The Arrow IPC message is preferred, as it is more efficient.
   oneof parameters {
+    // The Arrow parameters
     QueryParameterArrow arrow_parameters = 7;
+    // The JSON parameters
     QueryParameterJson json_parameters = 8;
   }
+  // Specifies limits on the row count and byte size from the result set
+  // returned in this call. Only applicable for transfer mode ADAPTIVE and
+  // output formats JSON_ARRAY and ARROW_IPC.
   optional ResultRange result_range = 9;
+  // Acts like a SQL LIMIT clause. It limits the output rows and stops executing
+  // once those are produced. Set to 0 in order to only retrieve the schema
+  // without actually producing any rows.
+  optional uint64 query_row_limit = 10;
+}
+
+// The query parameters of type Arrow, used in `parameters` field of the
+// `QueryParam` message
+message QueryParameterArrow {
+  bytes data = 127;
+}
+
+// The query parameters of type JSON, used in `parameters` field of the
+// `QueryParam` message
+message QueryParameterJson {
+  string data = 127;
+}
+
+// Defines limits on the rows retrieved from a query result set
+// Only applicable for output formats JSON_ARRAY and ARROW_IPC.
+// Used by both `ExecuteQuery` and `GetQueryResult`.
+message ResultRange {
+  // The (zero-based) row offset where the range starts inside the query result.
+  // This parameter is only applicable to `GetQueryResult`.
+  // When calling `ExecuteQuery`, it must be left at its default, i.e. zero.
+  uint64 row_offset = 1;
+  // The maximum number of rows to include in the `ExecuteQuery` or
+  // `GetQueryResult` response stream. Must be greater than zero if specified.
+  // If specified, less rows may be returned e.g. due to timeouts. Returning
+  // less rows is not an error. Just fetch the next rows using a new
+  // `GetQueryResult` call in this case.
+  optional uint64 row_limit = 2;
+  // The targeted maximum total size of the rows in the `ExecuteQuery` or
+  // `GetQueryResult` response stream, measured in bytes. Must be specified with
+  // a value greater than zero. If greater than the setting
+  // `row_based_pagination_max_byte_limit` (default: 20 MB), an error occurs.
+  // Returning less bytes is not an error. Just fetch the next rows using a new
+  // `GetQueryResult` call in this case.
+  uint64 byte_limit = 3;
+}
+
+// The output formats currently supported by HyperService
+//
+// Since Hyper's protocol went through multiple iterations, we have a few
+// deprecated, non-recommend formats.
+//
+// Only `ARROW_IPC` and `JSON_ARRAY` should be used for new workloads.
+// The other formats will likely be removed in the future. Many of the other
+// formats only support the `SYNC` transfer mode and are not fully supported
+// for all HyperService methods.
+enum OutputFormat {
+  // Encode the result chunk in a text-based format intended for debugging gRPC
+  // on the command line. Currently, this format is the same as
+  // `JSON_LEGACY_DICT`, which encodes the result as a JSON array. However, this
+  // format might change in the future. `JSON_ARRAY` or `ARROW_IPC` is strictly
+  // preferable. Not supported by `GetQueryResult`
+  OUTPUT_FORMAT_UNSPECIFIED = 0;
+
+  // Formerly Hyper-Binary. Reserved as long as we expect clients to send it.
+  reserved 1;
+
+  // Encode the result chunk in a proprietary variant similar to the open-source
+  // "Arrow IPC" format.
+  //
+  // Do not use this format when onboarding any new workloads. Not supported by
+  // `GetQueryResult`. `ARROW_IPC` is strictly preferable.
+  //
+  // Each result chunk consists of a schema and a record batch message. This is
+  // the original format of the gRPC proxy. For the JDBC Tableau connector, this
+  // format is passed through directly to a public Data Cloud API endpoint. As
+  // such, we cannot just drop support.
+  ARROW_LEGACY = 2;
+
+  // Encode the result chunk as a JSON array of objects using the Query Service
+  // V1 SQL API convention. Not supported by `GetQueryResult`.
+  //
+  // Do not use this format when onboarding any new workloads. Not supported by
+  // `GetQueryResult`. `ARROW_IPC` and `JSON_ARRAY` are strictly preferable.
+  JSON_LEGACY_DICT = 3;
+
+  // Encode the result chunk as part of a single Arrow IPC stream that
+  // encompasses all result chunks of a query. The first returned message will
+  // be a `QueryResultHeader` describing the schema, or a successful command.
+  // Only the first result chunk will contain an ARROW schema message. The
+  // following result chunks contain one or more record batch messages.
+  //
+  // Do not use this format when onboarding any new workloads. Not supported by
+  // `GetQueryResult`. `ARROW_IPC` is strictly preferable.
+  ARROW_LEGACY_IPC = 4;
+
+  // The first message in the response stream is the `QueryStatus` with the
+  // query id. The result is encoded in multiple `QueryResultPartString`
+  // messages. In concatenation, these form one single Arrow IPC stream, with
+  // one Arrow schema message and one or more Arrow RecordBatches. Unlike
+  // ARROW_LEGACY_IPC, does not return QueryResultHeader.
+  ARROW_IPC = 5;
+
+  // The first message in the response stream is the QueryStatus with the query
+  // id. Each following `QueryResultPartString` message is a JSON object. The
+  // first result message contains a `columns` array describing the column names
+  // and types. E.g.
+  // `{"columns":[{"name":"IntCol","type":"numeric","precision":38,"scale":18,"nullable":false},{"name":"TextCol","type":"varchar","nullable":
+  // true}]}` The following messages contain the result rows encoded as an array
+  // of array of JSON types. Each tuple is encoded as one array. E.g.
+  // `{"data":[[42, "Foo"], [1.4, null]]}`
+  JSON_ARRAY = 6;
 }
 
 message AttachedDatabase {
+  // Access path for the database
   string path = 1;
+  // Alias for the database under which it should be available in SQL
   string alias = 2;
 }
 
+// ----------------------------------------------------------------------------
+// Parameters for GetQueryInfo
+// ----------------------------------------------------------------------------
+
+// The parameters of the `GetQueryInfo` call
+message QueryInfoParam {
+  // The query id unambiguously identifies a query.
+  // !!! You also have to send the query id as header (== gRPC metadata) with
+  // key `x-hyperdb-query-id`.
+  string query_id = 1;
+  // Whether new updates will be streamed to the client until the query is done
+  // or the timeout of 100s is reached. By default, only the current info
+  // message is sent.
+  bool streaming = 2;
+  // Specifies the output format for the query schema.
+  // OUTPUT_FORMAT_UNSPECIFIED means we won't send a schema.
+  // Currently, only JSON_ARRAY and ARROW_IPC are supported.
+  OutputFormat schema_output_format = 3;
+}
+
+// ----------------------------------------------------------------------------
+// Parameters for GetQueryResult
+// ----------------------------------------------------------------------------
+
+// The parameters of the `GetQueryResult` call to unambiguously identify the
+// query and the requested data
+message QueryResultParam {
+  // The query id unambiguously identifies a query.
+  // !!! You also have to send the query id as header (== gRPC metadata) with
+  // key `x-hyperdb-query-id`.
+  string query_id = 1;
+  // Specifies the output format for the query result data.
+  // Currently, only JSON_ARRAY and ARROW_IPC are supported.
+  OutputFormat output_format = 2;
+  // One can either request a specific chunk or a specific range of rows.
+  oneof requested_data {
+    // The id of the chunk to retrieve.
+    uint64 chunk_id = 3;
+    // Limits on the rows retrieved from the query result set.
+    ResultRange result_range = 5;
+  }
+  // By default the schema + data is sent (a complete Arrow IPC stream in case
+  // of ARROW_IPC), in case that is not needed, the initial schema can be
+  // omitted.
+  bool omit_schema = 4;
+}
+
+// ----------------------------------------------------------------------------
+// Parameters for CancelQuery
+// ----------------------------------------------------------------------------
+
+// The parameters of the `CancelQuery` call
+message CancelQueryParam {
+  // The query id unambiguously identifies a query.
+  // !!! You also have to send the query id as header (== gRPC metadata) with
+  // key `x-hyperdb-query-id`.
+  string query_id = 1;
+}
+
+// ----------------------------------------------------------------------------
+// Metadata about a query.
+// ----------------------------------------------------------------------------
+
+// Information about a query, such as its status, schema, and result size.
+message QueryInfo {
+  oneof content {
+    // The status of the query
+    QueryStatus query_status = 1;
+    // The schema of the query result for a binary format (if requested via
+    // `schema_output_format`)
+    QueryResultPartBinary binary_schema = 3;
+    // The schema of the query result for a text format (if requested via
+    // `schema_output_format`)
+    QueryResultPartString string_schema = 4;
+  }
+  // Whether this message is optional or required for client processing. Clients
+  // MUST ignore optional messages which they do not know.
+  bool optional = 2;
+}
+
+// The query status of a previous `ExecuteQuery` call
+message QueryStatus {
+  // The completion status of the query. Errors will be indicated via structured
+  // gRPC errors.
+  enum CompletionStatus {
+    // RUNNING had to be renamed to RUNNING_OR_UNSPECIFIED in order to satisfy
+    // the salesforce proto guidelines. This is a band-aid solution to not break
+    // existing clients: The behavior of clients receiving an unknown enum
+    // value e.g. RUNNING = 3, if we did that, is implementation defined. The
+    // Java protobuf library does not fallback to the default enum value but
+    // deserializes to a special "UNRECOGNIZED". We cannot rely on all our
+    // existing clients handling this edge case correctly and uniformly. The
+    // query is in progress.
+    RUNNING_OR_UNSPECIFIED = 0;
+    // The query completed
+    // All results are ready to be fetched by the client.
+    RESULTS_PRODUCED = 1;
+    // The query status and results have been persisted and
+    // are now guaranteed to be available until the expiration time.
+    FINISHED = 2;
+  }
+  // The query id unambiguously identifies a query.
+  string query_id = 1;
+  // See `CompletionStatus`
+  CompletionStatus completion_status = 2;
+  // The number of chunks that the query has produced. If `completion_status ==
+  // RUNNING_OR_UNSPECIFIED` this value may not be final. The chunks reported
+  // here can be retrieved via `GetQueryResult`.
+  uint64 chunk_count = 3;
+  // The number of rows that the query has produced. If `completion_status ==
+  // RUNNING_OR_UNSPECIFIED` this value may not be final. The rows reported here
+  // can be retrieved via `GetQueryResult`.
+  uint64 row_count = 4;
+  // A number between 0.0 and 1.0 that indicates how much progress the query has
+  // made. For `completion_status = RESULTS_PRODUCED` and `completion_status =
+  // FINISHED` this is always 1.0.
+  double progress = 5;
+  // A timestamp (seconds since Unix epoch) indicating when the results won’t be
+  // available anymore. If `completion_status != FINISHED` this value may not be
+  // final.
+  google.protobuf.Timestamp expiration_time = 6;
+  // The Query execution statistics which contains elapsedTime
+  QueryExecutionStatistics execution_stats = 7;
+}
+
+// The query execution stats present in QueryStatus response
+message QueryExecutionStatistics {
+  // Server side elapsed wall clock time in seconds
+  double wall_clock_time = 1;
+  // Total number of rows processed which includes native, byolFileFederation,
+  // byolLiveQuery
+  uint64 rows_processed = 2;
+}
+
+// ----------------------------------------------------------------------------
+// Query results
+// ----------------------------------------------------------------------------
+
+// The result of a query execution
 message ExecuteQueryResponse {
   oneof result {
+    // DEPRECATED
+    // Header is only used for legacy formats, see QueryResultHeader message
+    // comments. In a ExecuteQueryResponse stream the result header will always
+    // come first and will be followed by the configured result chunk type.
     QueryResultHeader header = 1;
+    // DEPRECATED
+    // New formats use query_result.binary_part instead.
+    // A result part in binary format
     QueryResultPartBinary binary_part = 4;
+    // DEPRECATED
+    // New formats use query_result.binary_part instead.
+    // A result part in textual format
     QueryResultPartString string_part = 5;
+    // Information on the query
     QueryInfo query_info = 6;
+    // Query result data
     QueryResult query_result = 7;
   }
+  // Whether this message is optional or required for client processing. Clients
+  // can skip over optional messages if they have no logic to process them.
   bool optional = 9;
 }
 
+// Result data of a query
+message QueryResult {
+  oneof result {
+    // A result part in binary format
+    QueryResultPartBinary binary_part = 1;
+    // A result part in textual format
+    QueryResultPartString string_part = 2;
+  }
+
+  // The number of rows contained in the result.
+  // If `result` only contains the schema, this field is zero.
+  uint64 result_part_row_count = 3;
+}
+
+// Describes the schema of the query result
+// Is only included for the following formats [OUTPUT_FORMAT_UNSPECIFIED,
+// ARROW_LEGACY, JSON_LEGACY_DICT, ARROW_LEGACY_IPC]
 message QueryResultHeader {
   oneof header {
+    // Returned for normal queries (i.e., SELECT)
     QueryResultSchema schema = 1;
+    // Returned when the query was of statement type
     QueryCommandOk command = 2;
   }
 }
 
+// Returned for statements, some statements additionally return the affected row
+// count. The server will only send this message once the changes of the
+// statement are committed successfully.
 message QueryCommandOk {
   oneof command_return {
     google.protobuf.Empty empty = 2;
@@ -155,15 +448,19 @@ message QueryCommandOk {
   }
 }
 
+// Schema of the query result
 message QueryResultSchema {
   repeated ColumnDescription columns = 1;
 }
 
+// Describes a column
 message ColumnDescription {
   string name = 1;
   SqlType type = 2;
 }
 
+// Type of a result column, provides additional information through the modifier
+// field
 message SqlType {
   enum TypeTag {
     HYPER_UNSPECIFIED = 0;
@@ -189,31 +486,32 @@ message SqlType {
     HYPER_ARRAY_OF_FLOAT = 20;
   }
 
+  // The precision of a numeric column
   message NumericModifier {
     uint32 precision = 1;
     uint32 scale = 2;
   }
 
+  // Matches hyperapi::SqlType enum
   TypeTag tag = 1;
+  // Additional type information, e.g. about precision
   oneof modifier {
     google.protobuf.Empty empty = 2;
+    // Only available if tag is a text type
     uint32 max_length = 3;
+    // Only available if tag is a numeric type
     NumericModifier numeric_modifier = 4;
   }
 }
 
+// A result part which contains multiple rows encoded in the binary format
+// requested via the `output_format` field of the `QueryParam` message
 message QueryResultPartBinary {
   bytes data = 127;
 }
 
+// A result part which contains multiple rows encoded in the textual format
+// requested via the `output_format` field of the `QueryParam` message
 message QueryResultPartString {
-  string data = 127;
-}
-
-message QueryParameterArrow {
-  bytes data = 127;
-}
-
-message QueryParameterJson {
   string data = 127;
 }
