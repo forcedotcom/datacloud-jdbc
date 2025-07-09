@@ -30,7 +30,7 @@ import java.util.UUID;
  * It works by injecting a unique workload name to allow to easily correlate individual queries.
  */
 public class HyperLogScope implements AutoCloseable {
-    private final String id = UUID.randomUUID().toString();
+    private final String id = "test-log-scope-" + UUID.randomUUID().toString();
     private Connection connection = null;
     private Statement statement = null;
 

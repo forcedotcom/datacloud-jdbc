@@ -60,12 +60,13 @@ public class DataCloudConnectionFunctionalTest {
                 statement.executeQuery("select 1");
             }
 
-            // Verify the deadline propagated to HyperServerConfig
-            // We allow up to 1 second of slack to account for busy local testing machine
+            // Verify the deadline propagated to HyperServerConfig, and that it's less than the default (which is test
+            // in
+            // other test case)
             val rs = hyperLogScope.executeQuery(
                     "select CAST(v->>'requested-timeout' as DOUBLE PRECISION)from hyper_log WHERE k='grpc-query-received'");
             rs.next();
-            assertThat(rs.getDouble(1)).isGreaterThan(4);
+            assertThat(rs.getDouble(1)).isLessThan(5);
         }
         hyperLogScope.close();
     }
@@ -100,8 +101,10 @@ public class DataCloudConnectionFunctionalTest {
             val rs = hyperLogScope.executeQuery(
                     "select CAST(v->>'requested-timeout' as DOUBLE PRECISION) from hyper_log WHERE k='grpc-query-received'");
             rs.next();
+            assertThat(rs.getDouble(1)).isLessThan(5);
             assertThat(rs.getDouble(1)).isGreaterThan(4);
             rs.next();
+            assertThat(rs.getDouble(1)).isLessThan(5);
             assertThat(rs.getDouble(1)).isGreaterThan(4);
             assertThat(rs.next()).isFalse();
         }
