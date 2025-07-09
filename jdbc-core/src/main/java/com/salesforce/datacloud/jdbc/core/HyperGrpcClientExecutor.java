@@ -55,7 +55,6 @@ import salesforce.cdp.hyperdb.v1.ResultRange;
 @Slf4j
 @Unstable
 public class HyperGrpcClientExecutor {
-
     @NonNull private final HyperServiceGrpc.HyperServiceBlockingStub stub;
 
     private final QueryParam settingsQueryParams;

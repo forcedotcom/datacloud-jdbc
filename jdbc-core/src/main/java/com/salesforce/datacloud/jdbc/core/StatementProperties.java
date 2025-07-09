@@ -48,7 +48,7 @@ public class StatementProperties {
      *
      * @param props The properties to parse
      * @return A StatementProperties instance
-     * @throws DataCloudJDBCException if parsing of property valuesfails
+     * @throws DataCloudJDBCException if parsing of property values fails
      */
     public static StatementProperties of(Properties props) throws DataCloudJDBCException {
         StatementPropertiesBuilder builder = StatementProperties.builder();

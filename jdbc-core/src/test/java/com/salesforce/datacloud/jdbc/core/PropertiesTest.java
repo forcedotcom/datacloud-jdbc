@@ -15,65 +15,84 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
+import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import io.grpc.inprocess.InProcessChannelBuilder;
-import java.util.Map;
+import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import java.sql.SQLException;
 import java.util.Properties;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
-import lombok.SneakyThrows;
 import lombok.val;
-import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
-import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+@ExtendWith(HyperTestBase.class)
 class PropertiesTest extends HyperGrpcTestBase {
-    private static final String HYPER_SETTING = "querySetting.";
 
     @Test
-    @SneakyThrows
-    public void testQuerySetting() {
-        val settings = Maps.immutableEntry("querySetting.date_style", "YMD");
-
-        assertWithStatement(
-                statement -> {
-                    val result = statement.executeQuery("SHOW date_style");
+    public void testQuerySettingPropagationToServer() throws SQLException {
+        // This test case verifies that the query setting properties are propagated to the server.
+        // We test two different values to verify that we don't accidentally hit the default value.
+        for (val lcTime : ImmutableList.of("en_us", "de_de")) {
+            val properties = new Properties();
+            properties.setProperty("querySetting.lc_time", lcTime);
+            try (val connection = getHyperQueryConnection(properties)) {
+                try (val statement = connection.createStatement()) {
+                    val result = statement.executeQuery("SHOW lc_time");
                     result.next();
-                    assertThat(result.getString(1)).isEqualTo("ISO, YMD");
-                },
-                settings);
+                    assertThat(result.getString(1)).isEqualTo(lcTime);
+                }
+            }
+        }
     }
 
     @Test
-    void testGetSettingWithCorrectPrefix() throws DataCloudJDBCException {
-        Map<String, String> expected = ImmutableMap.of("lc_time", "en_US");
-        Properties properties = new Properties();
-        properties.setProperty(HYPER_SETTING + "lc_time", "en_US");
-        properties.setProperty("username", "alice");
-        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
-        assertThat(connectionProperties.getStatementProperties().getQuerySettings())
-                .containsExactlyInAnyOrderEntriesOf(expected);
+    public void testPropertiesErrorReportingFromServer() throws SQLException {
+        // This test case verifies that the user will get an actionable error message if they submitted an invalid query
+        // setting
+        // This section tests behavior on invalid setting key
+        val invalidSettingKeyProperty = new Properties();
+        invalidSettingKeyProperty.setProperty("querySetting.invalid_setting", "invalid");
+        try (val connection = getHyperQueryConnection(invalidSettingKeyProperty)) {
+            val exception = assertThrows(
+                    DataCloudJDBCException.class,
+                    () -> connection.createStatement().executeQuery("SELECT 1"));
+            assertThat(exception.getMessage()).contains("unrecognized configuration parameter 'invalid_setting'");
+        }
+
+        // This section tests behavior on valid setting key but invalid setting value
+        val invalidSettingValueProperty = new Properties();
+        invalidSettingValueProperty.setProperty("external-client-context", "{invalid: json}");
+        try (val connection = getHyperQueryConnection(invalidSettingValueProperty)) {
+            val exception = assertThrows(
+                    DataCloudJDBCException.class,
+                    () -> connection.createStatement().executeQuery("SELECT 1"));
+            assertThat(exception.getMessage()).contains("invalid JSON in `x-hyperdb-external-client-context` header");
+        }
     }
 
     @Test
-    void testGetSettingReturnEmptyResultSet() throws DataCloudJDBCException {
-        Map<String, String> expected = ImmutableMap.of();
+    void testQuerySettingsParsing() throws DataCloudJDBCException {
         Properties properties = new Properties();
-        properties.setProperty("c_time", "en_US");
-        properties.setProperty("username", "alice");
+        properties.setProperty("querySetting.lc_time", "en_us");
+        // This is not prefixed and thus should not land in query settings
+        properties.setProperty("lc_time", "de_de");
+        // This is a normal interpreted setting and should not land in query settings
+        properties.setProperty("userName", "alice");
         ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+        // Verify that user name is an interpeted property
+        assertThat(connectionProperties.getUserName()).isEqualTo("alice");
+        // Verify that query settings contains `en_us` and not `de_de`
         assertThat(connectionProperties.getStatementProperties().getQuerySettings())
-                .containsExactlyInAnyOrderEntriesOf(expected);
+                .containsExactlyInAnyOrderEntriesOf(ImmutableMap.of("lc_time", "en_us"));
     }
 
     @Test
     void testRoundtrip() throws DataCloudJDBCException {
+        // Verify that converting the interpreted properties back to Properties works.
         Properties properties = new Properties();
         // Cover string setting
         properties.setProperty("workload", "testWorkload");
@@ -84,48 +103,28 @@ class PropertiesTest extends HyperGrpcTestBase {
         properties.setProperty("queryTimeout", "30");
         ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
         Properties roundtripProperties = connectionProperties.toProperties();
-        assertThat(roundtripProperties.entrySet()).containsExactlyInAnyOrderElementsOf(roundtripProperties.entrySet());
+        assertThat(roundtripProperties.entrySet()).containsExactlyInAnyOrderElementsOf(properties.entrySet());
     }
 
     @Test
     void testGetSettingWithEmptyProperties() throws DataCloudJDBCException {
-        Map<String, String> expected = ImmutableMap.of();
+        // Verify that handling empty properties does not throw an exception.
         Properties properties = new Properties();
         ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+        // Verify some default values
+        // - workload is jdbcv3
+        // - querySettings is empty
         assertThat(connectionProperties.getStatementProperties().getQuerySettings())
-                .containsExactlyInAnyOrderEntriesOf(expected);
+                .isEmpty();
+        assertThat(connectionProperties.getWorkload()).isEqualTo("jdbcv3");
     }
 
-    @SneakyThrows
     @Test
-    void itSubmitsSettingsOnCall() {
-        val key = UUID.randomUUID().toString();
-        val setting = UUID.randomUUID().toString();
-        val properties = new Properties();
-        val actual = new AtomicReference<Map<String, String>>();
-        properties.setProperty(HYPER_SETTING + key, setting);
-        val builder = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
-                .usePlaintext();
-
-        val channel = DataCloudJdbcManagedChannel.of(builder);
-        val stubProvider = new JdbcDriverStubProvider(channel, false);
-        val connection = DataCloudConnection.of(stubProvider, properties);
-        val client = HyperGrpcClientExecutor.of(
-                connection.getStub(),
-                connection.getConnectionProperties().getStatementProperties().getQuerySettings());
-
-        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
-                .withRequest(t -> {
-                    actual.set(t.getSettingsMap());
-                    return true;
-                })
-                .willReturn(ImmutableList.of(executeQueryResponse("", null, null))));
-
-        client.executeQuery("").next();
-
-        assertThat(actual.get()).containsOnly(Maps.immutableEntry(key, setting));
-
-        stubProvider.close();
-        channel.close();
+    void testInvalidSettingValue() throws DataCloudJDBCException {
+        // This test case verifies that we raise the right exception when the user provides an invalid setting value
+        Properties properties = new Properties();
+        properties.setProperty("queryTimeout", "invalid");
+        val exception = assertThrows(DataCloudJDBCException.class, () -> ConnectionProperties.of(properties));
+        assertThat(exception.getMessage()).contains("Failed to parse queryTimeout: For input string: \"invalid\"");
     }
 }

@@ -15,8 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.core.DataCloudStatement.HYPER_MAX_ROW_LIMIT_BYTE_SIZE;
-import static com.salesforce.datacloud.jdbc.core.DataCloudStatement.HYPER_MIN_ROW_LIMIT_BYTE_SIZE;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -24,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
@@ -167,8 +166,8 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @SneakyThrows
     @ValueSource(
             ints = {
-                HYPER_MAX_ROW_LIMIT_BYTE_SIZE + 1,
-                HYPER_MIN_ROW_LIMIT_BYTE_SIZE - 1,
+                RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE + 1,
+                RowBased.HYPER_MIN_ROW_LIMIT_BYTE_SIZE - 1,
                 Integer.MAX_VALUE,
                 Integer.MIN_VALUE
             })
@@ -176,12 +175,12 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
         assertThatThrownBy(() -> statement.setResultSetConstraints(0, bytes))
                 .hasMessageContaining(
                         "The specified maxBytes (%d) must satisfy the following constraints: %d >= x >= %d",
-                        bytes, HYPER_MIN_ROW_LIMIT_BYTE_SIZE, HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
+                        bytes, RowBased.HYPER_MIN_ROW_LIMIT_BYTE_SIZE, RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
     }
 
     @ParameterizedTest
     @SneakyThrows
-    @ValueSource(ints = {HYPER_MAX_ROW_LIMIT_BYTE_SIZE, HYPER_MIN_ROW_LIMIT_BYTE_SIZE, 100000})
+    @ValueSource(ints = {RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE, RowBased.HYPER_MIN_ROW_LIMIT_BYTE_SIZE, 100000})
     public void testConstraintsValid(int bytes) {
         val rows = 123 + bytes;
         statement.setResultSetConstraints(rows, bytes);

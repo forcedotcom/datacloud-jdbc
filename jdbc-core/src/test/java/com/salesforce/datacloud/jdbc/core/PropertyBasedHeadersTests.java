@@ -30,7 +30,7 @@ public class PropertyBasedHeadersTests {
     public void testEmptyPropertiesOnlyContainsWorkload() throws DataCloudJDBCException {
         val properties = new Properties();
         val connectionProperties = ConnectionProperties.of(properties);
-        val metadata = DataCloudConnection.deriveHeadersFromSettings(connectionProperties);
+        val metadata = DataCloudConnection.deriveHeadersFromProperties(connectionProperties);
         assertThat(metadata.keys()).containsExactly("x-hyperdb-workload");
         assertThat(metadata.get(Metadata.Key.of("x-hyperdb-workload", ASCII_STRING_MARSHALLER)))
                 .isEqualTo("jdbcv3");
@@ -44,7 +44,7 @@ public class PropertyBasedHeadersTests {
         properties.setProperty("external-client-context", "ctx");
         val connectionProperties = ConnectionProperties.of(properties);
 
-        val metadata = DataCloudConnection.deriveHeadersFromSettings(connectionProperties);
+        val metadata = DataCloudConnection.deriveHeadersFromProperties(connectionProperties);
         assertThat(metadata.keys())
                 .containsAll(ImmutableSet.of("x-hyperdb-workload", "dataspace", "x-hyperdb-external-client-context"));
         assertThat(metadata.get(Metadata.Key.of("x-hyperdb-workload", ASCII_STRING_MARSHALLER)))

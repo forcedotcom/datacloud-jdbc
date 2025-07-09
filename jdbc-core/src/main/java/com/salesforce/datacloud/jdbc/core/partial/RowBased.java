@@ -15,7 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core.partial;
 
-import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.util.Iterator;
@@ -46,7 +45,7 @@ class RowBasedContext {
         val currentOffset = offset + seen.get();
         val currentLimit = limit - seen.get();
         return client.getQueryResult(
-                queryId, currentOffset, currentLimit, DataCloudStatement.HYPER_MAX_ROW_LIMIT_BYTE_SIZE, omitSchema);
+                queryId, currentOffset, currentLimit, RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE, omitSchema);
     }
 }
 
@@ -84,6 +83,15 @@ public interface RowBased extends Iterator<QueryResult> {
         }
         throw new IllegalArgumentException("Unknown mode not supported. mode=" + mode);
     }
+
+    // The maximum byte size limit for a row based RPC response. While the server enforces a max as well, also having
+    // the constant available on the client side allows to set appropriate default values and also to provide immediate
+    // feedback on the
+    // ``setResultSetConstraints`` method.
+    int HYPER_MAX_ROW_LIMIT_BYTE_SIZE = 20971520;
+    // The minimal byte size limit for a row based RPC response. The driver enforces this to guard against code that
+    // accidentally provides the limit in megabytes.
+    int HYPER_MIN_ROW_LIMIT_BYTE_SIZE = 1024;
 }
 
 @Builder

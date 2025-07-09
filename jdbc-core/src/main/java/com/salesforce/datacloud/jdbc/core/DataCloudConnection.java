@@ -157,7 +157,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         HyperServiceBlockingStub stub = stubProvider.getStub();
 
         // Attach headers derived from properties to the stub
-        val metadata = deriveHeadersFromSettings(connectionProperties);
+        val metadata = deriveHeadersFromProperties(connectionProperties);
         stub = stub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
 
         if (!networkTimeout.isZero()) {
@@ -171,7 +171,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return stub;
     }
 
-    static Metadata deriveHeadersFromSettings(ConnectionProperties connectionProperties) {
+    static Metadata deriveHeadersFromProperties(ConnectionProperties connectionProperties) {
         Metadata metadata = new Metadata();
         // We always add a workload name, if the property is not set we use the default value
         metadata.put(
