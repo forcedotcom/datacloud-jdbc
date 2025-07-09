@@ -20,6 +20,7 @@ import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.interceptor.NetworkTimeoutInterceptor;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
@@ -43,12 +44,10 @@ import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -160,14 +159,12 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         val metadata = deriveHeadersFromProperties(connectionProperties);
         stub = stub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
 
+        // The interceptor will enforce the network timeout per gRPC call
         if (!networkTimeout.isZero()) {
-            stub = stub.withDeadlineAfter(networkTimeout.toMillis(), TimeUnit.MILLISECONDS);
+            stub = stub.withInterceptors(new NetworkTimeoutInterceptor(networkTimeout));
         }
 
-        log.info(
-                "Built stub with networkTimeout={}, interceptors={}",
-                networkTimeout,
-                metadata.keys().size());
+        log.info("Built stub with networkTimeout={}, headers={}", networkTimeout, metadata.keys());
         return stub;
     }
 
@@ -567,7 +564,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      */
     @Override
     public int getNetworkTimeout() {
-        return (int) networkTimeout.get(ChronoUnit.MILLIS);
+        return (int) networkTimeout.toMillis();
     }
 
     @Override
