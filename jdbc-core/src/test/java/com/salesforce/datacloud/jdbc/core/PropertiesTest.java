@@ -125,6 +125,7 @@ class PropertiesTest extends HyperGrpcTestBase {
         Properties properties = new Properties();
         properties.setProperty("queryTimeout", "invalid");
         val exception = assertThrows(DataCloudJDBCException.class, () -> ConnectionProperties.of(properties));
-        assertThat(exception.getMessage()).contains("Failed to parse queryTimeout: For input string: \"invalid\"");
+        assertThat(exception.getMessage())
+                .contains("Failed to parse `queryTimeout` property: For input string: \"invalid\"");
     }
 }

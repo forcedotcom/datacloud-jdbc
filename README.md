@@ -145,6 +145,7 @@ openssl pkcs8 -topk8 -nocrypt -in keypair.key -out private.key
 This section describes details around potential pitfalls / ambiguities related to JDBC
 - The standard offers two types for fixed point decimals (`NUMERIC` and `DECIMAL`), this driver uses `DECIMAL` to represent such values
 - The JDBC standard describes that `getObject` for a `SHORT` should return an `Integer`. Due to a current limitation we for now return a `Short` object. This will likely be fixed in a future version of the JDBC driver.
+- The query timeout enforcement is done on the server side for both normal as well as async execution. To provide a safety net with regards to network problems the driver locally also does a delayed enforcement for normal query executions. The default delay is `5` seconds - which typically shouldn't be relevant as in normal circumstances the server will enforce the timeout. The local enforcement delay can be configured through the `queryTimeoutLocalEnforcementDelay` property
 
 ### Optional configuration
 

@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.jdbc.core.partial;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
@@ -23,9 +24,8 @@ import dev.failsafe.Failsafe;
 import dev.failsafe.FailsafeException;
 import dev.failsafe.RetryPolicy;
 import io.grpc.StatusRuntimeException;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -48,11 +48,11 @@ public final class DataCloudQueryPolling {
             String queryId,
             long offset,
             long limit,
-            Duration duration,
+            Deadline deadline,
             boolean allowLessThan)
             throws DataCloudJDBCException {
         return waitForCountAvailabile(
-                stub, queryId, offset, limit, duration, allowLessThan, DataCloudQueryStatus::getChunkCount);
+                stub, queryId, offset, limit, deadline, allowLessThan, DataCloudQueryStatus::getChunkCount);
     }
 
     public static DataCloudQueryStatus waitForRowsAvailable(
@@ -60,11 +60,11 @@ public final class DataCloudQueryPolling {
             String queryId,
             long offset,
             long limit,
-            Duration duration,
+            Deadline deadline,
             boolean allowLessThan)
             throws DataCloudJDBCException {
         return waitForCountAvailabile(
-                stub, queryId, offset, limit, duration, allowLessThan, DataCloudQueryStatus::getRowCount);
+                stub, queryId, offset, limit, deadline, allowLessThan, DataCloudQueryStatus::getRowCount);
     }
 
     private static DataCloudQueryStatus waitForCountAvailabile(
@@ -72,7 +72,7 @@ public final class DataCloudQueryPolling {
             String queryId,
             long offset,
             long limit,
-            Duration timeout,
+            Deadline deadline,
             boolean allowLessThan,
             Function<DataCloudQueryStatus, Long> countSelector)
             throws DataCloudJDBCException {
@@ -85,7 +85,7 @@ public final class DataCloudQueryPolling {
             }
         };
 
-        val result = waitForQueryStatus(stub, queryId, timeout, predicate);
+        val result = waitForQueryStatus(stub, queryId, deadline, predicate);
 
         if (predicate.test(result)) {
             return result;
@@ -103,15 +103,21 @@ public final class DataCloudQueryPolling {
     public static DataCloudQueryStatus waitForQueryStatus(
             HyperServiceGrpc.HyperServiceBlockingStub stub,
             String queryId,
-            Duration timeoutDuration,
+            Deadline deadline,
             Predicate<DataCloudQueryStatus> predicate)
             throws DataCloudJDBCException {
         val last = new AtomicReference<DataCloudQueryStatus>();
-        val deadline = Instant.now().plus(timeoutDuration);
         val attempts = new AtomicInteger(0);
 
+        // RetryPolicy fails if remainingDuration is zero or negative
+        val remainingDuration = deadline.getRemaining();
+        if (remainingDuration.isZero() || remainingDuration.isNegative()) {
+            throw new DataCloudJDBCException(
+                    "Query status polling timed out. queryId=" + queryId + ", lastStatus=" + last.get());
+        }
+
         val retryPolicy = RetryPolicy.<DataCloudQueryStatus>builder()
-                .withMaxDuration(timeoutDuration)
+                .withMaxDuration(remainingDuration)
                 .handleIf(e -> {
                     if (!(e instanceof StatusRuntimeException)) {
                         log.error("Got an unexpected exception when getting query status for queryId={}", queryId, e);
@@ -127,7 +133,7 @@ public final class DataCloudQueryPolling {
                         return false;
                     }
 
-                    if (Instant.now().isAfter(deadline)) {
+                    if (deadline.hasPassed()) {
                         log.error(
                                 "Reached deadline for polling query status, will not try again. queryId={}, attempts={}, lastStatus={}",
                                 queryId,
@@ -163,7 +169,7 @@ public final class DataCloudQueryPolling {
     static DataCloudQueryStatus waitForQueryStatusWithoutRetry(
             HyperServiceGrpc.HyperServiceBlockingStub stub,
             String queryId,
-            Instant deadline,
+            Deadline deadline,
             AtomicReference<DataCloudQueryStatus> last,
             AtomicInteger times,
             Predicate<DataCloudQueryStatus> predicate) {
@@ -172,8 +178,10 @@ public final class DataCloudQueryPolling {
                 .setQueryId(queryId)
                 .setStreaming(true)
                 .build();
-        while (Instant.now().isBefore(deadline)) {
-            val info = stub.getQueryInfo(param);
+        val remaining = deadline.getRemaining();
+        while (!remaining.isZero() && !remaining.isNegative()) {
+            val info = stub.withDeadlineAfter(remaining.toMillis(), TimeUnit.MILLISECONDS)
+                    .getQueryInfo(param);
             val matched = StreamUtilities.toStream(info)
                     .map(DataCloudQueryStatus::of)
                     .filter(Optional::isPresent)
@@ -196,14 +204,10 @@ public final class DataCloudQueryPolling {
             log.info(
                     "end of info stream, starting a new one if the timeout allows. last={}, remaining={}",
                     last.get(),
-                    remaining(deadline));
+                    deadline.getRemaining());
         }
 
         log.warn("exceeded deadline getting query info. last={}", last.get());
         return last.get();
-    }
-
-    private static Duration remaining(Instant deadline) {
-        return Duration.between(Instant.now(), deadline);
     }
 }

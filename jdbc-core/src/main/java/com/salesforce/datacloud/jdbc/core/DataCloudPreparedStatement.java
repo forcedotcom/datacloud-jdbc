@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.io.IOException;
 import java.io.InputStream;
@@ -94,7 +95,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     }
 
     @Override
-    protected HyperGrpcClientExecutor getQueryExecutor() throws DataCloudJDBCException {
+    protected HyperGrpcClientExecutor getQueryExecutor(QueryTimeout queryTimeout) throws DataCloudJDBCException {
         final byte[] encodedRow;
         try {
             encodedRow = toArrowByteArray(parameterManager.getParameters(), calendar);
@@ -109,12 +110,14 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
                         .build())
                 .build();
 
-        return super.getQueryExecutor().withQueryParams(preparedQueryParams);
+        return super.getQueryExecutor(queryTimeout).withQueryParams(preparedQueryParams);
     }
 
     public boolean executeAsyncQuery() throws SQLException {
-        val client = getQueryExecutor();
-        listener = AsyncQueryStatusListener.of(sql, client, getEffectiveQueryTimeoutDuration());
+        val queryTimeout = QueryTimeout.of(
+                statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
+        val client = getQueryExecutor(queryTimeout);
+        listener = AsyncQueryStatusListener.of(sql, client, queryTimeout);
         return true;
     }
 
@@ -126,9 +129,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public ResultSet executeQuery() throws SQLException {
-        val client = getQueryExecutor();
-
-        resultSet = executeAdaptiveQuery(sql, client, getEffectiveQueryTimeoutDuration());
+        resultSet = super.executeQuery(sql);
         return resultSet;
     }
 

@@ -18,7 +18,9 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.google.protobuf.ByteString;
+import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.Iterator;
 import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
@@ -42,7 +44,8 @@ class HyperGrpcClientTest extends HyperGrpcTestBase {
                 .willReturn(chunk1));
 
         String query = "SELECT * FROM test";
-        Iterator<ExecuteQueryResponse> queryResultIterator = hyperGrpcClient.executeQuery(query);
+        Iterator<ExecuteQueryResponse> queryResultIterator =
+                hyperGrpcClient.executeQuery(query, QueryTimeout.of(Duration.ZERO, Duration.ZERO));
         assertDoesNotThrow(() -> {
             while (queryResultIterator.hasNext()) {
                 queryResultIterator.next();

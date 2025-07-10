@@ -20,6 +20,7 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.HyperLogScope;
 import java.sql.SQLException;
+import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.Test;
@@ -42,7 +43,7 @@ public class DataCloudConnectionFunctionalTest {
             val rs = hyperLogScope.executeQuery(
                     "select CAST(v->>'requested-timeout' as DOUBLE PRECISION)from hyper_log WHERE k='grpc-query-received'");
             rs.next();
-            assertThat(rs.getDouble(1)).isGreaterThan(1e12);
+            assertThat(rs.getDouble(1)).isGreaterThan(Duration.ofDays(5).toMillis() / 1000.0);
         }
         hyperLogScope.close();
     }

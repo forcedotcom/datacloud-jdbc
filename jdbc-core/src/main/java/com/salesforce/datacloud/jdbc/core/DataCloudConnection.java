@@ -21,6 +21,7 @@ import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.interceptor.NetworkTimeoutInterceptor;
+import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.ClientInterceptor;
@@ -251,7 +252,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
             String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
             throws DataCloudJDBCException {
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
-        return executor.waitForRowsAvailable(queryId, offset, limit, timeout, allowLessThan);
+        return executor.waitForRowsAvailable(queryId, offset, limit, Deadline.of(timeout), allowLessThan);
     }
 
     /**
@@ -261,25 +262,26 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * @param queryId The identifier of the query to check
      * @param offset The starting chunk offset.
      * @param limit The quantity of chunks relative to the offset to wait for
-     * @param timeout The duration to wait for the engine have results produced.
+     * @param waitTimeout The duration to wait for the engine have results produced.
      * @param allowLessThan Whether to return early when the available chunks is less than {@code offset + limit}
      * @return The first status where the chunks available meet the constraints defined by the parameters or the last status the server replied with.
      */
     public DataCloudQueryStatus waitForChunksAvailable(
-            String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
+            String queryId, long offset, long limit, Duration waitTimeout, boolean allowLessThan)
             throws DataCloudJDBCException {
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
-        return executor.waitForChunksAvailable(queryId, offset, limit, timeout, allowLessThan);
+        return executor.waitForChunksAvailable(queryId, offset, limit, Deadline.of(waitTimeout), allowLessThan);
     }
 
     /**
      * Checks if all the query's results are ready, the row count and chunk count will be stable.
      * @param queryId The identifier of the query to check
-     * @param timeout The duration to wait for the engine have results produced.
+     * @param waitTimeout The duration to wait for the engine have results produced.
      * @return The first status where {@link DataCloudQueryStatus#allResultsProduced()} or the last status the server replied with.
      */
-    public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration timeout) throws DataCloudJDBCException {
-        return waitForQueryStatus(queryId, timeout, DataCloudQueryStatus::allResultsProduced);
+    public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration waitTimeout)
+            throws DataCloudJDBCException {
+        return waitForQueryStatus(queryId, waitTimeout, DataCloudQueryStatus::allResultsProduced);
     }
 
     /**
@@ -290,8 +292,10 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * @return The first satisfactory status or the last {@link DataCloudQueryStatus} the server replied with.
      */
     public DataCloudQueryStatus waitForQueryStatus(
-            String queryId, Duration timeout, Predicate<DataCloudQueryStatus> predicate) throws DataCloudJDBCException {
-        return HyperGrpcClientExecutor.forSubmittedQuery(getStub()).waitForQueryStatus(queryId, timeout, predicate);
+            String queryId, Duration waitTimeout, Predicate<DataCloudQueryStatus> predicate)
+            throws DataCloudJDBCException {
+        return HyperGrpcClientExecutor.forSubmittedQuery(getStub())
+                .waitForQueryStatus(queryId, Deadline.of(waitTimeout), predicate);
     }
 
     /**

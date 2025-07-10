@@ -19,6 +19,7 @@ import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
+import io.grpc.Deadline;
 import io.grpc.MethodDescriptor;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -30,11 +31,24 @@ import lombok.RequiredArgsConstructor;
  */
 @RequiredArgsConstructor
 public class NetworkTimeoutInterceptor implements ClientInterceptor {
-    private final Duration timeout;
+    private final Duration networkTimeout;
 
     @Override
     public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
             MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
-        return next.newCall(method, callOptions.withDeadlineAfter(timeout.toMillis(), TimeUnit.MILLISECONDS));
+        long networkTimeoutRemaining = networkTimeout.toMillis();
+        // If a deadline is already set we'll only override with network timeout if it is shorter than the current
+        // deadline
+        Deadline currentDeadline = callOptions.getDeadline();
+        if (currentDeadline != null) {
+            long currentRemaining = currentDeadline.timeRemaining(TimeUnit.MILLISECONDS);
+            // The current deadline already guarantees a stricter timeout than the network timeout
+            if (currentRemaining <= networkTimeoutRemaining) {
+                return next.newCall(method, callOptions);
+            }
+            // Fall through to set the network timeout
+        }
+        // Inject the network timeout into the call options
+        return next.newCall(method, callOptions.withDeadlineAfter(networkTimeoutRemaining, TimeUnit.MILLISECONDS));
     }
 }

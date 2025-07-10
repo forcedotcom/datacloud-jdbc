@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.jdbc.core.listener;
 
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
+import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -38,9 +39,9 @@ class QueryStatusListenerTest extends HyperGrpcTestBase {
     private QueryStatusListener sut(String query, QueryParam.TransferMode mode, Duration timeout) {
         switch (mode) {
             case ASYNC:
-                return AsyncQueryStatusListener.of(query, hyperGrpcClient, timeout);
+                return AsyncQueryStatusListener.of(query, hyperGrpcClient, QueryTimeout.of(timeout, Duration.ZERO));
             case ADAPTIVE:
-                return AdaptiveQueryStatusListener.of(query, hyperGrpcClient, timeout);
+                return AdaptiveQueryStatusListener.of(query, hyperGrpcClient, QueryTimeout.of(timeout, Duration.ZERO));
             default:
                 Assertions.fail("QueryStatusListener mode not supported. mode=" + mode.name());
                 return null;

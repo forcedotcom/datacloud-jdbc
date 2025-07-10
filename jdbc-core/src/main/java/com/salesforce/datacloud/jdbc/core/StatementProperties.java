@@ -36,6 +36,13 @@ public class StatementProperties {
     @With
     @Builder.Default
     private final Duration queryTimeout = Duration.ZERO;
+    // The amount of time that the local driver waits in additional to the query timeout for the server-side
+    // cancellation. This is used to account for network latency and ensure the server has time to produce and transmit
+    // the (more helpful server-side) error message. The 5 seconds were chosen based off a guess to also accommodate
+    // very slow public internet connections. A zero duration is interpreted as zero.
+    @With
+    @Builder.Default
+    private final Duration queryTimeoutLocalEnforcementDelay = Duration.ofSeconds(5);
 
     /**
      * The query settings to use for the connection
@@ -65,7 +72,19 @@ public class StatementProperties {
                     builder.queryTimeout(timeout);
                 }
             } catch (NumberFormatException e) {
-                throw new DataCloudJDBCException("Failed to parse queryTimeout: " + e.getMessage());
+                throw new DataCloudJDBCException("Failed to parse `queryTimeout` property: " + e.getMessage());
+            }
+        }
+
+        // The query timeout local enforcement delay property
+        String queryTimeoutLocalEnforcementDelayStr = props.getProperty("queryTimeoutLocalEnforcementDelay");
+        if (queryTimeoutLocalEnforcementDelayStr != null) {
+            try {
+                Duration delay = Duration.ofSeconds(Integer.parseInt(queryTimeoutLocalEnforcementDelayStr));
+                builder.queryTimeoutLocalEnforcementDelay(delay);
+            } catch (NumberFormatException e) {
+                throw new DataCloudJDBCException(
+                        "Failed to parse `queryTimeoutLocalEnforcementDelay` property: " + e.getMessage());
             }
         }
 
@@ -75,6 +94,10 @@ public class StatementProperties {
             if (key.startsWith("querySetting.")) {
                 String settingKey = key.substring("querySetting.".length());
                 String settingValue = props.getProperty(key);
+                if ("query_timeout".equalsIgnoreCase(settingKey)) {
+                    throw new DataCloudJDBCException(
+                            "`query_timeout` is not an allowed `querySetting` subkey, use the `queryTimeout` property instead");
+                }
                 querySettings.put(settingKey, settingValue);
             }
         }

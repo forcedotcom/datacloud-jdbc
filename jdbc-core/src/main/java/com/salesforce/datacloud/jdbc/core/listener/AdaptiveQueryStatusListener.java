@@ -22,11 +22,11 @@ import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -52,34 +52,40 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     private final HyperGrpcClientExecutor client;
 
-    private final Duration timeout;
+    private final QueryTimeout queryTimeout;
 
     private final Iterator<ExecuteQueryResponse> response;
 
     private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
 
-    public static AdaptiveQueryStatusListener of(String query, HyperGrpcClientExecutor client, Duration timeout)
-            throws SQLException {
+    public static AdaptiveQueryStatusListener of(
+            String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout) throws SQLException {
         try {
-            val response = client.executeQuery(query);
+            val response = client.executeQuery(query, queryTimeout);
             val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
-            log.info("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);
+            log.info(
+                    "Executing adaptive query. queryId={}, queryTimeout={}",
+                    queryId,
+                    queryTimeout.getServerQueryTimeout());
 
-            return new AdaptiveQueryStatusListener(queryId, client, timeout, response);
+            return new AdaptiveQueryStatusListener(queryId, client, queryTimeout, response);
         } catch (StatusRuntimeException ex) {
             throw createQueryException(query, ex);
         }
     }
 
     public static RowBasedAdaptiveQueryStatusListener of(
-            String query, HyperGrpcClientExecutor client, Duration timeout, long maxRows, long maxBytes)
+            String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout, long maxRows, long maxBytes)
             throws SQLException {
         try {
-            val response = client.executeQuery(query, maxRows, maxBytes);
+            val response = client.executeQuery(query, queryTimeout, maxRows, maxBytes);
             val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
-            log.info("Executing adaptive query. queryId={}, timeout={}", queryId, timeout);
+            log.info(
+                    "Executing adaptive query. queryId={}, queryTimeout={}",
+                    queryId,
+                    queryTimeout.getServerQueryTimeout());
 
             return new RowBasedAdaptiveQueryStatusListener(queryId, client, response);
         } catch (StatusRuntimeException ex) {
@@ -124,10 +130,12 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
             return Stream.empty();
         }
 
-        val status = client.waitForQueryStatus(queryId, timeout, DataCloudQueryStatus::allResultsProduced);
+        val status = client.waitForQueryStatus(
+                queryId, queryTimeout.getLocalDeadline(), DataCloudQueryStatus::allResultsProduced);
 
         if (!status.allResultsProduced()) {
-            throw new DataCloudJDBCException(BEFORE_READY + ". queryId=" + queryId + ", timeout=" + timeout);
+            throw new DataCloudJDBCException(
+                    BEFORE_READY + ". queryId=" + queryId + ", queryTimeout=" + queryTimeout.getServerQueryTimeout());
         }
 
         if (status.getChunkCount() < 2) {

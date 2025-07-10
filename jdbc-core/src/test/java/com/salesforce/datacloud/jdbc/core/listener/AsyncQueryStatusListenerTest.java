@@ -23,6 +23,7 @@ import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
 import java.time.Duration;
 import java.util.NoSuchElementException;
@@ -121,6 +122,6 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
 
     @SneakyThrows
     QueryStatusListener sut(String query) {
-        return AsyncQueryStatusListener.of(query, hyperGrpcClient, Duration.ofSeconds(5));
+        return AsyncQueryStatusListener.of(query, hyperGrpcClient, QueryTimeout.of(Duration.ZERO, Duration.ZERO));
     }
 }

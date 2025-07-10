@@ -20,13 +20,14 @@ import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Constants;
+import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.time.Duration;
+import java.util.HashMap;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
@@ -45,7 +46,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             "Batch execution is not supported in Data Cloud query";
     protected static final String CHANGE_FETCH_DIRECTION_IS_NOT_SUPPORTED = "Changing fetch direction is not supported";
 
-    private StatementProperties statementProperties;
+    protected StatementProperties statementProperties;
 
     /**
      * The target maximum number of rows for a query. The default means disabled.
@@ -65,9 +66,15 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         this.statementProperties = connection.getConnectionProperties().getStatementProperties();
     }
 
-    protected HyperGrpcClientExecutor getQueryExecutor() throws DataCloudJDBCException {
+    protected HyperGrpcClientExecutor getQueryExecutor(QueryTimeout queryTimeout) throws DataCloudJDBCException {
         val stub = connection.getStub();
-        return HyperGrpcClientExecutor.of(stub, statementProperties.getQuerySettings());
+        val querySettings = new HashMap<>(statementProperties.getQuerySettings());
+        if (!queryTimeout.getServerQueryTimeout().isZero()) {
+            querySettings.put(
+                    "query_timeout",
+                    String.valueOf(queryTimeout.getServerQueryTimeout().toMillis()) + "ms");
+        }
+        return HyperGrpcClientExecutor.of(stub, querySettings);
     }
 
     protected QueryStatusListener listener;
@@ -91,25 +98,24 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     @Override
     public boolean execute(String sql) throws SQLException {
         log.debug("Entering execute");
-        val client = getQueryExecutor();
-        resultSet = executeAdaptiveQuery(sql, client, getEffectiveQueryTimeoutDuration());
+        resultSet = executeAdaptiveQuery(sql);
         return true;
     }
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         log.debug("Entering executeQuery");
-        val client = getQueryExecutor();
-        resultSet = executeAdaptiveQuery(sql, client, getEffectiveQueryTimeoutDuration());
+        resultSet = executeAdaptiveQuery(sql);
         return resultSet;
     }
 
-    protected DataCloudResultSet executeAdaptiveQuery(String sql, HyperGrpcClientExecutor client, Duration timeout)
-            throws SQLException {
+    private DataCloudResultSet executeAdaptiveQuery(String sql) throws SQLException {
+        val queryTimeout = QueryTimeout.of(
+                statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
+        val client = getQueryExecutor(queryTimeout);
         listener = targetMaxRows > 0
-                ? AdaptiveQueryStatusListener.of(
-                        sql, client, getEffectiveQueryTimeoutDuration(), targetMaxRows, targetMaxBytes)
-                : AdaptiveQueryStatusListener.of(sql, client, getEffectiveQueryTimeoutDuration());
+                ? AdaptiveQueryStatusListener.of(sql, client, queryTimeout, targetMaxRows, targetMaxBytes)
+                : AdaptiveQueryStatusListener.of(sql, client, queryTimeout);
 
         resultSet = listener.generateResultSet();
         log.info("executeAdaptiveQuery completed. queryId={}", listener.getQueryId());
@@ -118,12 +124,10 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     public DataCloudStatement executeAsyncQuery(String sql) throws SQLException {
         log.debug("Entering executeAsyncQuery");
-        val client = getQueryExecutor();
-        return executeAsyncQuery(sql, client);
-    }
-
-    protected DataCloudStatement executeAsyncQuery(String sql, HyperGrpcClientExecutor client) throws SQLException {
-        listener = AsyncQueryStatusListener.of(sql, client, getEffectiveQueryTimeoutDuration());
+        val queryTimeout = QueryTimeout.of(
+                statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
+        val client = getQueryExecutor(queryTimeout);
+        listener = AsyncQueryStatusListener.of(sql, client, queryTimeout);
         log.info("executeAsyncQuery completed. queryId={}", listener.getQueryId());
         return this;
     }
@@ -204,21 +208,6 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     public void setEscapeProcessing(boolean enable) {}
 
     /**
-     * This translates the user visible query timeout behavior (zero is infinite) to the internal expectation of the code
-     * (which would interpret zero as literal zero timeout). Thus zero is translated to a practically infinite timeout by using
-     * a large second count.
-     *
-     * Note: This behavior should be fixed in the future by changing the internal code to interpret zero as not setting any timeout at all.
-     * @return The effective query timeout duration.
-     */
-    protected Duration getEffectiveQueryTimeoutDuration() {
-        if (statementProperties.getQueryTimeout() == Duration.ZERO) {
-            return Duration.ofSeconds(Constants.INFINITE_QUERY_TIMEOUT);
-        }
-        return statementProperties.getQueryTimeout();
-    }
-
-    /**
      * @return The query timeout for this statement in seconds.
      */
     @Override
@@ -252,8 +241,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         }
 
         val queryId = getQueryId();
-        val executor = getQueryExecutor();
-        executor.cancel(queryId);
+        HyperGrpcClientExecutor.forSubmittedQuery(connection.getStub()).cancel(queryId);
     }
 
     @Override

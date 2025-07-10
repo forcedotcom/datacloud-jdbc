@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -83,10 +84,12 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
     @Test
     void itCatchesAndMakesSqlExceptionWhenQueryFails() {
         val client = Mockito.mock(HyperGrpcClientExecutor.class);
-        Mockito.when(client.executeQuery(Mockito.anyString())).thenThrow(new StatusRuntimeException(Status.ABORTED));
+        Mockito.when(client.executeQuery(Mockito.anyString(), Mockito.any(QueryTimeout.class)))
+                .thenThrow(new StatusRuntimeException(Status.ABORTED));
 
         val ex = Assertions.assertThrows(
-                DataCloudJDBCException.class, () -> AdaptiveQueryStatusListener.of("any", client, Duration.ZERO));
+                DataCloudJDBCException.class,
+                () -> AdaptiveQueryStatusListener.of("any", client, QueryTimeout.of(Duration.ZERO, Duration.ZERO)));
         AssertionsForClassTypes.assertThat(ex)
                 .hasMessageContaining("Failed to execute query: ")
                 .hasRootCauseInstanceOf(StatusRuntimeException.class);
@@ -94,6 +97,6 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
 
     @SneakyThrows
     QueryStatusListener sut(String query) {
-        return AdaptiveQueryStatusListener.of(query, hyperGrpcClient, Duration.ofMinutes(1));
+        return AdaptiveQueryStatusListener.of(query, hyperGrpcClient, QueryTimeout.of(Duration.ZERO, Duration.ZERO));
     }
 }
