@@ -20,13 +20,13 @@ import lombok.Getter;
 
 @Getter
 public class DataCloudJDBCException extends SQLException {
+    private String fullCustomerMessage;
+
+    private String primaryMessage;
+
     private String customerHint;
 
     private String customerDetail;
-
-    public DataCloudJDBCException() {
-        super();
-    }
 
     public DataCloudJDBCException(String reason) {
         super(reason);
@@ -34,10 +34,6 @@ public class DataCloudJDBCException extends SQLException {
 
     public DataCloudJDBCException(String reason, String SQLState) {
         super(reason, SQLState);
-    }
-
-    public DataCloudJDBCException(String reason, String SQLState, int vendorCode) {
-        super(reason, SQLState, vendorCode);
     }
 
     public DataCloudJDBCException(Throwable cause) {
@@ -52,14 +48,23 @@ public class DataCloudJDBCException extends SQLException {
         super(reason, SQLState, cause);
     }
 
-    public DataCloudJDBCException(String reason, String SQLState, int vendorCode, Throwable cause) {
-        super(reason, SQLState, vendorCode, cause);
+    public DataCloudJDBCException(String reason, String fullCustomerMessage, String SQLState, Throwable cause) {
+        super(reason, SQLState, cause);
+        this.fullCustomerMessage = fullCustomerMessage;
     }
 
     public DataCloudJDBCException(
-            String reason, String SQLState, String customerHint, String customerDetail, Throwable cause) {
-        super(reason, SQLState, 0, cause);
+            String reason,
+            String fullCustomerMessage,
+            String SQLState,
+            String primaryMessage,
+            String customerHint,
+            String customerDetail,
+            Throwable cause) {
+        super(reason, SQLState, cause);
 
+        this.fullCustomerMessage = fullCustomerMessage;
+        this.primaryMessage = primaryMessage;
         this.customerHint = customerHint;
         this.customerDetail = customerDetail;
     }

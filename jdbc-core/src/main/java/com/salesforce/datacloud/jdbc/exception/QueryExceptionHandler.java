@@ -19,8 +19,9 @@ import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.StatusProto;
-import java.sql.SQLException;
 import java.util.List;
+import javax.annotation.Nullable;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import salesforce.cdp.hyperdb.v1.ErrorInfo;
 
@@ -34,14 +35,34 @@ public final class QueryExceptionHandler {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
-    public static DataCloudJDBCException createQueryException(String query, Exception e) {
-        String exceptionQuery = query.length() > MAX_QUERY_LENGTH_IN_EXCEPTION
-                ? query.substring(0, MAX_QUERY_LENGTH_IN_EXCEPTION) + "<truncated>"
-                : query;
-        return QueryExceptionHandler.createException("Failed to execute query: " + exceptionQuery, e);
-    }
+    /**
+     * Creates an exception for a specific query id.
+     *
+     * @param query The query that failed (can be null for scenarios like fetching by query id)
+     * @param queryId The query id that failed (can be null in case execution failed before request reaches the server)
+     * @param includeCustomerDetailInReason Whether to include customer details in the exception message (i.e. fragments of the query that can contain strings provided by the customer)
+     * @param e The exception that occurred.
+     * @return A DataCloudJDBCException with the query id and the exception message.
+     */
+    public static DataCloudJDBCException createException(
+            @Nullable String query,
+            @Nullable String queryId,
+            boolean includeCustomerDetailInReason,
+            @NonNull Exception e) {
+        // Ensure query is truncated if it's too long.
+        if (query != null) {
+            query = query.length() > MAX_QUERY_LENGTH_IN_EXCEPTION
+                    ? query.substring(0, MAX_QUERY_LENGTH_IN_EXCEPTION) + "<truncated>"
+                    : query;
+        }
 
-    public static DataCloudJDBCException createException(String message, Exception e) {
+        // This is a generic error SQL state, we'll use this if we don't have a specific SQL state from the error info
+        String sqlState = "HY000";
+        String grpcMessage = null;
+        String primaryMessage = null;
+        String customerHint = null;
+        String customerDetail = null;
+
         if (e instanceof StatusRuntimeException) {
             StatusRuntimeException ex = (StatusRuntimeException) e;
             com.google.rpc.Status status = StatusProto.fromThrowable(ex);
@@ -57,31 +78,65 @@ public final class QueryExceptionHandler {
                     try {
                         errorInfo = firstError.unpack(ErrorInfo.class);
                     } catch (InvalidProtocolBufferException exc) {
-                        return new DataCloudJDBCException("Invalid error info", e);
+                        return new DataCloudJDBCException("Invalid error info for query " + queryId, e);
                     }
 
-                    String sqlState = errorInfo.getSqlstate();
-                    String customerHint = errorInfo.getCustomerHint();
-                    String customerDetail = errorInfo.getCustomerDetail();
-                    String primaryMessage = String.format(
-                            "%s: %s%nDETAIL:%n%s%nHINT:%n%s",
-                            sqlState, errorInfo.getPrimaryMessage(), customerDetail, customerHint);
-                    return new DataCloudJDBCException(primaryMessage, sqlState, customerHint, customerDetail, ex);
+                    grpcMessage = status.getMessage();
+                    sqlState = errorInfo.getSqlstate();
+                    primaryMessage = errorInfo.getPrimaryMessage();
+                    customerHint = errorInfo.getCustomerHint();
+                    customerDetail = errorInfo.getCustomerDetail();
                 }
             }
         }
-        return new DataCloudJDBCException(message, e);
-    }
 
-    public static SQLException createException(String message, String sqlState, Exception e) {
-        return new SQLException(message, sqlState, e.getCause());
-    }
+        StringBuilder sharedMessageBuilder = new StringBuilder("Failed to execute query");
+        // We use status.getMessage() as in contrast to the primary message this already has the trace id
+        // encoded.
+        if (grpcMessage != null) {
+            sharedMessageBuilder.append(": " + grpcMessage);
+        } else {
+            // If we don't have any information from the server we resort to using the exception message
+            sharedMessageBuilder.append(": " + e.getMessage());
+        }
+        sharedMessageBuilder.append(String.format("%nSQLSTATE: %s", sqlState));
+        if (queryId != null) {
+            sharedMessageBuilder.append(String.format("%nQUERY-ID: %s", queryId));
+        }
 
-    public static SQLException createException(String message, String sqlState) {
-        return new SQLException(message, sqlState);
-    }
+        StringBuilder reasonMessageBuilder = new StringBuilder(sharedMessageBuilder.toString());
+        StringBuilder fullCustomerMessageBuilder = new StringBuilder(sharedMessageBuilder.toString());
 
-    public static SQLException createException(String message) {
-        return new DataCloudJDBCException(message);
+        // Append detail and hint information
+        if (customerDetail != null && !customerDetail.isEmpty()) {
+            fullCustomerMessageBuilder.append(String.format("%nDETAIL: %s", customerDetail));
+            if (includeCustomerDetailInReason) {
+                reasonMessageBuilder.append(String.format("%nDETAIL: %s", customerDetail));
+            }
+        }
+        if (customerHint != null && !customerHint.isEmpty()) {
+            fullCustomerMessageBuilder.append(String.format("%nHINT: %s", customerHint));
+            if (includeCustomerDetailInReason) {
+                reasonMessageBuilder.append(String.format("%nHINT: %s", customerHint));
+            }
+        }
+
+        // Append query information last as it might be large and could make finding the cause more difficult
+        if (query != null) {
+            String queryMessage = String.format("%nQUERY: %s", query);
+            if (includeCustomerDetailInReason) {
+                reasonMessageBuilder.append(queryMessage);
+            }
+            fullCustomerMessageBuilder.append(queryMessage);
+        }
+
+        return new DataCloudJDBCException(
+                reasonMessageBuilder.toString(),
+                fullCustomerMessageBuilder.toString(),
+                sqlState,
+                primaryMessage,
+                customerHint,
+                customerDetail,
+                e);
     }
 }

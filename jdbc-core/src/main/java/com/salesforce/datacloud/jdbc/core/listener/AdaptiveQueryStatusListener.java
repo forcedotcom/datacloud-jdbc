@@ -15,7 +15,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.listener;
 
-import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createQueryException;
+import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
@@ -56,46 +56,60 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     private final Iterator<ExecuteQueryResponse> response;
 
+    private final boolean includeCustomerDetailInReason;
+
     private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
 
     public static AdaptiveQueryStatusListener of(
-            String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout) throws SQLException {
+            String query,
+            HyperGrpcClientExecutor client,
+            QueryTimeout queryTimeout,
+            boolean includeCustomerDetailInReason)
+            throws SQLException {
+        String queryId = null;
         try {
             val response = client.executeQuery(query, queryTimeout);
-            val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
+            queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
             log.info(
                     "Executing adaptive query. queryId={}, queryTimeout={}",
                     queryId,
                     queryTimeout.getServerQueryTimeout());
 
-            return new AdaptiveQueryStatusListener(queryId, client, queryTimeout, response);
+            return new AdaptiveQueryStatusListener(
+                    queryId, client, queryTimeout, response, includeCustomerDetailInReason);
         } catch (StatusRuntimeException ex) {
-            throw createQueryException(query, ex);
+            throw createException(query, queryId, includeCustomerDetailInReason, ex);
         }
     }
 
     public static RowBasedAdaptiveQueryStatusListener of(
-            String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout, long maxRows, long maxBytes)
+            String query,
+            HyperGrpcClientExecutor client,
+            QueryTimeout queryTimeout,
+            long maxRows,
+            long maxBytes,
+            boolean includeCustomerDetailInReason)
             throws SQLException {
+        String queryId = null;
         try {
             val response = client.executeQuery(query, queryTimeout, maxRows, maxBytes);
-            val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
+            queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
 
             log.info(
                     "Executing adaptive query. queryId={}, queryTimeout={}",
                     queryId,
                     queryTimeout.getServerQueryTimeout());
 
-            return new RowBasedAdaptiveQueryStatusListener(queryId, client, response);
+            return new RowBasedAdaptiveQueryStatusListener(queryId, client, response, includeCustomerDetailInReason);
         } catch (StatusRuntimeException ex) {
-            throw createQueryException(query, ex);
+            throw createException(query, queryId, includeCustomerDetailInReason, ex);
         }
     }
 
     @Override
     public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
-        return StreamingResultSet.of(queryId, client, stream().iterator());
+        return StreamingResultSet.of(queryId, client, stream().iterator(), includeCustomerDetailInReason);
     }
 
     @Override
@@ -159,9 +173,11 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
         private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
 
+        private final boolean includeCustomerDetailInReason;
+
         @Override
         public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
-            return StreamingResultSet.of(queryId, client, stream().iterator());
+            return StreamingResultSet.of(queryId, client, stream().iterator(), includeCustomerDetailInReason);
         }
 
         @Override

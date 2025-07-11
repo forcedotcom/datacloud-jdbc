@@ -101,6 +101,8 @@ class PropertiesTest extends HyperGrpcTestBase {
         properties.setProperty("querySetting.B", "B");
         // Cover setting that internally is represented as non string (`Duration`)
         properties.setProperty("queryTimeout", "30");
+        properties.setProperty("queryTimeoutLocalEnforcementDelay", "10");
+        properties.setProperty("errorsIncludeCustomerDetails", "false");
         ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
         Properties roundtripProperties = connectionProperties.toProperties();
         assertThat(roundtripProperties.entrySet()).containsExactlyInAnyOrderElementsOf(properties.entrySet());

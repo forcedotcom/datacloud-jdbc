@@ -122,6 +122,6 @@ class AsyncQueryStatusListenerTest extends HyperGrpcTestBase {
 
     @SneakyThrows
     QueryStatusListener sut(String query) {
-        return AsyncQueryStatusListener.of(query, hyperGrpcClient, QueryTimeout.of(Duration.ZERO, Duration.ZERO));
+        return AsyncQueryStatusListener.of(query, hyperGrpcClient, QueryTimeout.of(Duration.ZERO, Duration.ZERO), true);
     }
 }
