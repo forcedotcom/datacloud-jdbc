@@ -20,6 +20,7 @@ import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryCon
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Properties;
@@ -67,7 +68,7 @@ public class StreamingResultSetTest {
     public void testAsyncPreparedStatement() {
         withPrepared(none, preparedSql, (conn, stmt) -> {
             stmt.executeAsyncQuery();
-            conn.waitForResultsProduced(stmt.getQueryId(), Duration.ofSeconds(30));
+            conn.waitFor(stmt.getQueryId(), Duration.ofSeconds(30), QueryStatus::allResultsProduced);
             val rs = stmt.getResultSet().unwrap(DataCloudResultSet.class);
             assertThatResultSetIsCorrect(conn, rs);
         });
@@ -78,7 +79,7 @@ public class StreamingResultSetTest {
     public void testAsyncStatement() {
         withStatement(none, (conn, stmt) -> {
             stmt.executeAsyncQuery(regularSql);
-            conn.waitForResultsProduced(stmt.getQueryId(), Duration.ofSeconds(30));
+            conn.waitFor(stmt.getQueryId(), Duration.ofSeconds(30), QueryStatus::allResultsProduced);
             val rs = stmt.getResultSet().unwrap(DataCloudResultSet.class);
             assertThatResultSetIsCorrect(conn, rs);
         });
@@ -111,7 +112,7 @@ public class StreamingResultSetTest {
 
         assertThat(rs).isInstanceOf(StreamingResultSet.class);
 
-        val status = conn.waitForResultsProduced(rs.getQueryId(), Duration.ofSeconds(30));
+        val status = conn.waitFor(rs.getQueryId(), Duration.ofSeconds(30), QueryStatus::allResultsProduced);
 
         log.warn("Status: {}", status);
 

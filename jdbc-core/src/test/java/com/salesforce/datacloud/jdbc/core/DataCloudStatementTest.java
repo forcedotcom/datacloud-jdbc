@@ -26,6 +26,7 @@ import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -98,7 +99,7 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
             statement.execute(
                     "SELECT md5(random()::text) AS id, md5(random()::text) AS name, round((random() * 3 + 1)::numeric, 2) AS grade FROM generate_series(1, 3);");
-            connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30));
+            connection.waitFor(statement.getQueryId(), Duration.ofSeconds(30), QueryStatus::allResultsProduced);
             val response = statement.getResultSet();
             assertNotNull(response);
             assertThat(response.getMetaData().getColumnCount()).isEqualTo(3);
