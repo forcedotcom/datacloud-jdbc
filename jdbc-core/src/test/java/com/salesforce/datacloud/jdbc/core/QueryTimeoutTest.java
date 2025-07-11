@@ -99,23 +99,23 @@ class QueryTimeoutTest {
         // This test verifies that they don't interfere with each other. If the local enforcement
         // deadline is set to 10 seconds and the network timeout is set to 100 seconds, the gRPC
         // deadline should not be 100 seconds but rather the 10 seconds.
-        HyperLogScope logScope = new HyperLogScope();
-        Properties props = logScope.getProperties();
-        props.setProperty("queryTimeoutLocalEnforcementDelay", "10");
-        try (Connection connection = HyperTestBase.getHyperQueryConnection(props)) {
-            connection.setNetworkTimeout(null, 100000);
-            try (Statement statement = connection.createStatement()) {
-                statement.setQueryTimeout(10);
-                statement.executeQuery("SHOW query_timeout");
+        try (HyperLogScope logScope = new HyperLogScope()) {
+            Properties props = logScope.getProperties();
+            props.setProperty("queryTimeoutLocalEnforcementDelay", "10");
+            try (Connection connection = HyperTestBase.getHyperQueryConnection(props)) {
+                connection.setNetworkTimeout(null, 100000);
+                try (Statement statement = connection.createStatement()) {
+                    statement.setQueryTimeout(10);
+                    statement.executeQuery("SHOW query_timeout");
+                }
             }
-        }
 
-        // Verify that the gRPC deadline is far below the 100 seconds that the network timeout is set to.
-        ResultSet resultSet = logScope.executeQuery(
-                "select CAST(v->>'requested-timeout' as DOUBLE PRECISION)from hyper_log WHERE k='grpc-query-received'");
-        resultSet.next();
-        assertThat(resultSet.getDouble(1)).isLessThan(20);
-        logScope.close();
+            // Verify that the gRPC deadline is far below the 100 seconds that the network timeout is set to.
+            ResultSet resultSet = logScope.executeQuery(
+                    "select CAST(v->>'requested-timeout' as DOUBLE PRECISION)from hyper_log WHERE k='grpc-query-received'");
+            resultSet.next();
+            assertThat(resultSet.getDouble(1)).isLessThan(20);
+        }
     }
 
     @Test

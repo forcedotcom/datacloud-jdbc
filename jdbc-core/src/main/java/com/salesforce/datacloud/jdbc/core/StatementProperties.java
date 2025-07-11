@@ -36,10 +36,12 @@ public class StatementProperties {
     @With
     @Builder.Default
     private final Duration queryTimeout = Duration.ZERO;
-    // The amount of time that the local driver waits in additional to the query timeout for the server-side
-    // cancellation. This is used to account for network latency and ensure the server has time to produce and transmit
-    // the (more helpful server-side) error message. The 5 seconds were chosen based off a guess to also accommodate
-    // very slow public internet connections. A zero duration is interpreted as zero.
+    /**
+     * The amount of time that the local driver waits in additional to the query timeout for the server-side
+     * cancellation. This is used to account for network latency and ensure the server has time to produce and transmit
+     * the (more helpful server-side) error message. The 5 seconds were chosen based off a guess to also accommodate
+     * very slow public internet connections. A zero duration is interpreted as zero.
+     */
     @With
     @Builder.Default
     private final Duration queryTimeoutLocalEnforcementDelay = Duration.ofSeconds(5);
