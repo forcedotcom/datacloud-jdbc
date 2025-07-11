@@ -21,9 +21,9 @@ import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
-import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
+import com.salesforce.datacloud.query.v3.QueryTimeout;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
 import java.util.stream.Stream;
@@ -68,13 +68,12 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
     @Override
     public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
-        return StreamingResultSet.of(queryId, client, stream().iterator());
+        return StreamingResultSet.of(queryId, stream().iterator());
     }
 
     @Override
     public Stream<QueryResult> stream() throws DataCloudJDBCException {
-        val status = client.waitForQueryStatus(
-                queryId, queryTimeout.getLocalDeadline(), DataCloudQueryStatus::allResultsProduced);
+        val status = client.waitFor(queryId, queryTimeout.getLocalDeadline(), QueryStatus::allResultsProduced);
         val iterator = ChunkBased.of(client, queryId, 0, status.getChunkCount(), false);
 
         return StreamUtilities.toStream(iterator);

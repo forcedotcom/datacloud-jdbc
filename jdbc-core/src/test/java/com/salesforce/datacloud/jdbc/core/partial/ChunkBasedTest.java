@@ -22,12 +22,11 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -61,8 +60,8 @@ class ChunkBasedTest {
         large = getQueryId(largeSize);
 
         try (val client = getHyperQueryConnection()) {
-            client.waitForResultsProduced(small, Duration.ofSeconds(30));
-            client.waitForResultsProduced(large, Duration.ofSeconds(30));
+            client.waitFor(small, Duration.ofSeconds(30), QueryStatus::allResultsProduced);
+            client.waitFor(large, Duration.ofSeconds(30), QueryStatus::allResultsProduced);
         }
     }
 
@@ -86,17 +85,13 @@ class ChunkBasedTest {
     @SneakyThrows
     @Test
     void consecutiveChunksIncludeAllData() {
-        val status = new AtomicReference<DataCloudQueryStatus>();
         val last = new AtomicLong(0);
         try (val connection = getHyperQueryConnection()) {
-            while (connection
-                    .getQueryStatus(large)
-                    .peek(status::set)
-                    .noneMatch(t -> t.isExecutionFinished() || t.isResultProduced())) {
-                log.info("waiting for query to finish. queryId={}", large);
-            }
+            val status = connection.waitFor(large, Duration.ofSeconds(30), QueryStatus::allResultsProduced);
 
-            val rs = connection.getChunkBasedResultSet(large, 0, status.get().getChunkCount());
+            assertThat(status.allResultsProduced()).isTrue();
+
+            val rs = connection.getChunkBasedResultSet(large, 0, status.getChunkCount());
 
             while (rs.next()) {
                 assertThat(rs.getLong(1)).isEqualTo(last.incrementAndGet());

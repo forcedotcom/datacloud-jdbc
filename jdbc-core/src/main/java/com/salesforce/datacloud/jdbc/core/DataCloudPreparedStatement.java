@@ -25,8 +25,8 @@ import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
+import com.salesforce.datacloud.query.v3.QueryTimeout;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -114,8 +114,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     }
 
     public boolean executeAsyncQuery() throws SQLException {
-        val queryTimeout = QueryTimeout.of(
-                statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
+        val queryTimeout = getQueryTimeoutWithDelay();
         val client = getQueryExecutor(queryTimeout);
         listener = AsyncQueryStatusListener.of(sql, client, queryTimeout);
         return true;

@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -46,7 +47,7 @@ public class AsyncStreamingResultSetTest {
             try (val connection = getHyperQueryConnection();
                     val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
                 val rs = statement.executeAsyncQuery("select * from nonsense");
-                connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(5));
+                connection.waitFor(statement.getQueryId(), Duration.ofSeconds(5), QueryStatus::allResultsProduced);
                 rs.getResultSet().next();
             }
         });
@@ -62,7 +63,8 @@ public class AsyncStreamingResultSetTest {
         assertWithStatement(statement -> {
             statement.executeAsyncQuery(sql);
 
-            val status = statement.connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30));
+            val status = statement.connection.waitFor(
+                    statement.getQueryId(), Duration.ofSeconds(30), QueryStatus::allResultsProduced);
 
             val rs = statement.getResultSet();
             assertThat(status.allResultsProduced()).isTrue();
@@ -92,7 +94,7 @@ public class AsyncStreamingResultSetTest {
             assertThat(a).isSameAs(b);
             assertThat(aQueryId).isNotEqualTo(bQueryId);
 
-            connection.waitForResultsProduced(bQueryId, Duration.ofSeconds(30));
+            connection.waitFor(bQueryId, Duration.ofSeconds(30), QueryStatus::allResultsProduced);
 
             val rs = b.getResultSet();
             rs.next();

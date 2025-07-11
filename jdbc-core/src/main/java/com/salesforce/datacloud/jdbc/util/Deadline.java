@@ -38,7 +38,7 @@ public class Deadline {
         // Handle infinite / no timeout case
         if (timeout.isZero()) {
             // We can't use Long.MAX_VALUE here as it results in a remaining time that is too large for netty.
-            // Thus for practical pruposes we say that an infitine deadline is 10 days from now.
+            // Thus, for practical purposes we say that an infinite deadline is 10 days from now.
             timeout = Duration.ofDays(10);
         }
         return Deadline.builder().deadline(currentTime() + timeout.toNanos()).build();

@@ -25,6 +25,7 @@ import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +47,8 @@ public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
 
             verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), times(0));
 
-            assertThatThrownBy(() -> connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(30)))
+            assertThatThrownBy(() -> connection.waitFor(
+                            statement.getQueryId(), Duration.ofSeconds(30), QueryStatus::allResultsProduced))
                     .isInstanceOf(DataCloudJDBCException.class);
 
             verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), times(1));
@@ -72,7 +74,7 @@ public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
             log.warn("waiting for results produced, queryId={}", queryId);
 
             try {
-                connection.waitForResultsProduced(queryId, Duration.ofSeconds(30));
+                connection.waitFor(queryId, Duration.ofSeconds(30), QueryStatus::allResultsProduced);
             } catch (Exception ex) {
                 log.error(
                         "Caught exception when querying for status on a long running query with a short grpc timeout, \n"

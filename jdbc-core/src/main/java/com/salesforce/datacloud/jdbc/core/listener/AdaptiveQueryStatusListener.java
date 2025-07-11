@@ -22,9 +22,9 @@ import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
+import com.salesforce.datacloud.query.v3.QueryTimeout;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -56,7 +56,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     private final Iterator<ExecuteQueryResponse> response;
 
-    private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
+    private final AtomicReference<QueryStatus> lastStatus = new AtomicReference<>();
 
     public static AdaptiveQueryStatusListener of(
             String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout) throws SQLException {
@@ -95,7 +95,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     @Override
     public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
-        return StreamingResultSet.of(queryId, client, stream().iterator());
+        return StreamingResultSet.of(queryId, stream().iterator());
     }
 
     @Override
@@ -113,7 +113,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
     private Optional<QueryResult> mapHead(ExecuteQueryResponse item) {
         Optional.ofNullable(item)
                 .map(ExecuteQueryResponse::getQueryInfo)
-                .flatMap(DataCloudQueryStatus::of)
+                .flatMap(QueryStatus::of)
                 .ifPresent(lastStatus::set);
         return Optional.ofNullable(item).map(ExecuteQueryResponse::getQueryResult);
     }
@@ -130,8 +130,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
             return Stream.empty();
         }
 
-        val status = client.waitForQueryStatus(
-                queryId, queryTimeout.getLocalDeadline(), DataCloudQueryStatus::allResultsProduced);
+        val status = client.waitFor(queryId, queryTimeout.getLocalDeadline(), QueryStatus::allResultsProduced);
 
         if (!status.allResultsProduced()) {
             throw new DataCloudJDBCException(
@@ -157,11 +156,11 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
         private final Iterator<ExecuteQueryResponse> response;
 
-        private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
+        private final AtomicReference<QueryStatus> lastStatus = new AtomicReference<>();
 
         @Override
         public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
-            return StreamingResultSet.of(queryId, client, stream().iterator());
+            return StreamingResultSet.of(queryId, stream().iterator());
         }
 
         @Override
@@ -175,7 +174,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
         private Optional<QueryResult> mapHead(ExecuteQueryResponse item) {
             Optional.ofNullable(item)
                     .map(ExecuteQueryResponse::getQueryInfo)
-                    .flatMap(DataCloudQueryStatus::of)
+                    .flatMap(QueryStatus::of)
                     .ifPresent(lastStatus::set);
             return Optional.ofNullable(item).map(ExecuteQueryResponse::getQueryResult);
         }

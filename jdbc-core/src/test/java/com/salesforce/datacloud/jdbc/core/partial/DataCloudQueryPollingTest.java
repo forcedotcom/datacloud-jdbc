@@ -19,19 +19,17 @@ import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryCon
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * Note that these tests do not use Statement::executeQuery which attempts to iterate immediately,
- * getQueryResult is not resilient to server timeout, only getQueryInfo.
+ * Note that these tests do not use Statement::executeQuery which attempts to iterate immediately.
  */
 @Slf4j
 @ExtendWith(HyperTestBase.class)
@@ -40,41 +38,17 @@ class DataCloudQueryPollingTest {
 
     @SneakyThrows
     @Test
-    void throwsAboutNotEnoughRows_disallowLessThan() {
+    void doesNotThrowWhenPredicateTimesOut() {
         try (val connection = getHyperQueryConnection()) {
             val statement = connection.createStatement().unwrap(DataCloudStatement.class);
 
             statement.execute("select * from generate_series(1, 109)");
+            connection.waitFor(statement.getQueryId(), small, QueryStatus::allResultsProduced);
 
-            assertThat(connection
-                            .waitForResultsProduced(statement.getQueryId(), small)
-                            .allResultsProduced())
-                    .isTrue();
-
-            Assertions.assertThatThrownBy(() -> connection.waitForRowsAvailable(
-                            statement.getQueryId(), 100, 10, Duration.ofSeconds(1), false))
-                    .hasMessageContaining("Timed out waiting for enough items to be available")
-                    .isInstanceOf(DataCloudJDBCException.class);
-        }
-    }
-
-    @SneakyThrows
-    @Test
-    void throwsAboutNoNewRows_allowLessThan() {
-        try (val connection = getHyperQueryConnection()) {
-            val statement = connection.createStatement().unwrap(DataCloudStatement.class);
-
-            statement.execute("select * from generate_series(1, 100)");
-
-            assertThat(connection
-                            .waitForResultsProduced(statement.getQueryId(), small)
-                            .allResultsProduced())
-                    .isTrue();
-
-            Assertions.assertThatThrownBy(() -> connection.waitForRowsAvailable(
-                            statement.getQueryId(), 100, 10, Duration.ofSeconds(1), true))
-                    .hasMessageContaining("Timed out waiting for new items to be available")
-                    .isInstanceOf(DataCloudJDBCException.class);
+            val result = connection.waitFor(
+                    statement.getQueryId(), Duration.ofMillis(100), QueryStatus.Predicates.rowsAvailable(100, 10));
+            assertThat(result.getRowCount()).isEqualTo(109);
+            assertThat(result.allResultsProduced()).isTrue();
         }
     }
 }

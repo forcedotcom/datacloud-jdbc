@@ -23,7 +23,7 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.interceptor.NetworkTimeoutInterceptor;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
@@ -51,7 +51,6 @@ import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
-import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -204,7 +203,8 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     /**
      * Retrieves a collection of rows for the specified query once it is ready.
-     * Use {@link #getQueryStatus(String)} to check if the query has produced results or finished execution before calling this method.
+     * Use {@link #waitFor(String, Duration, Predicate)} to check if the query has produced results or
+     * finished execution before calling this method.
      * You can get the Query Id from the executeQuery `DataCloudResultSet`.
      * <p>
      * When using {@link RowBased.Mode#FULL_RANGE}, this method does not handle pagination near the end of available rows.
@@ -222,7 +222,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         log.info("Get row-based result set. queryId={}, offset={}, limit={}, mode={}", queryId, offset, limit, mode);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = RowBased.of(executor, queryId, offset, limit, mode);
-        return StreamingResultSet.of(queryId, executor, iterator);
+        return StreamingResultSet.of(queryId, iterator);
     }
 
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit)
@@ -230,7 +230,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = ChunkBased.of(executor, queryId, chunkId, limit);
-        return StreamingResultSet.of(queryId, executor, iterator);
+        return StreamingResultSet.of(queryId, iterator);
     }
 
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) throws DataCloudJDBCException {
@@ -238,64 +238,21 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     /**
-     * Checks if a given row range is available for a query.
-     * This method will wait until the row range specified by the other params is available in the given timeout.
-     *
-     * @param queryId The identifier of the query to check
-     * @param offset The starting row offset.
-     * @param limit The quantity of rows relative to the offset to wait for
-     * @param timeout The duration to wait for the engine have results produced.
-     * @param allowLessThan Whether to return early when the available rows is less than {@code offset + limit}
-     * @return The first status where the rows available meet the constraints defined by the parameters or the last status the server replied with.
-     */
-    public DataCloudQueryStatus waitForRowsAvailable(
-            String queryId, long offset, long limit, Duration timeout, boolean allowLessThan)
-            throws DataCloudJDBCException {
-        val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
-        return executor.waitForRowsAvailable(queryId, offset, limit, Deadline.of(timeout), allowLessThan);
-    }
-
-    /**
-     * Checks if a given chunk range is available for a query.
-     * This method will wait until the chunk range specified by the other params is available in the given timeout.
-     *
-     * @param queryId The identifier of the query to check
-     * @param offset The starting chunk offset.
-     * @param limit The quantity of chunks relative to the offset to wait for
-     * @param waitTimeout The duration to wait for the engine have results produced.
-     * @param allowLessThan Whether to return early when the available chunks is less than {@code offset + limit}
-     * @return The first status where the chunks available meet the constraints defined by the parameters or the last status the server replied with.
-     */
-    public DataCloudQueryStatus waitForChunksAvailable(
-            String queryId, long offset, long limit, Duration waitTimeout, boolean allowLessThan)
-            throws DataCloudJDBCException {
-        val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
-        return executor.waitForChunksAvailable(queryId, offset, limit, Deadline.of(waitTimeout), allowLessThan);
-    }
-
-    /**
-     * Checks if all the query's results are ready, the row count and chunk count will be stable.
-     * @param queryId The identifier of the query to check
-     * @param waitTimeout The duration to wait for the engine have results produced.
-     * @return The first status where {@link DataCloudQueryStatus#allResultsProduced()} or the last status the server replied with.
-     */
-    public DataCloudQueryStatus waitForResultsProduced(String queryId, Duration waitTimeout)
-            throws DataCloudJDBCException {
-        return waitForQueryStatus(queryId, waitTimeout, DataCloudQueryStatus::allResultsProduced);
-    }
-
-    /**
-     * Checks if a given predicate is satisfied by the status of the query.
-     * This method will wait until the server responds with a satisfactory status or the timeout is reached.
+     * Checks if a given predicate is satisfied by the status of the specified query.
+     * This method will poll the query status and exit immediately when the predicate is satisfied.
+     * If the predicate is never satisfied, the method will continue trying until the provided timeout is reached.
+     * Note that it is up to the caller to ensure that the returned {@link QueryStatus} meets expectations.
      * @param queryId The identifier of the query to check
      * @param timeout The duration to wait for the engine have results produced.
-     * @return The first satisfactory status or the last {@link DataCloudQueryStatus} the server replied with.
+     * @param predicate The condition to check against the query status,
+     *                  you can use {@link QueryStatus#isExecutionFinished()}, {@link QueryStatus#allResultsProduced()}, and {@link QueryStatus#isResultProduced()},
+     *                  as well as the methods on {@link QueryStatus.Predicates} for more complex predicates involving pages of rows or chunks
+     * @return The first status that satisfies the predicate, or the last {@link QueryStatus} received before timeout.
      */
-    public DataCloudQueryStatus waitForQueryStatus(
-            String queryId, Duration waitTimeout, Predicate<DataCloudQueryStatus> predicate)
+    public QueryStatus waitFor(String queryId, Duration timeout, Predicate<QueryStatus> predicate)
             throws DataCloudJDBCException {
-        return HyperGrpcClientExecutor.forSubmittedQuery(getStub())
-                .waitForQueryStatus(queryId, Deadline.of(waitTimeout), predicate);
+        val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
+        return executor.waitFor(queryId, Deadline.of(timeout), predicate);
     }
 
     /**
@@ -304,13 +261,6 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      */
     public void cancelQuery(String queryId) throws DataCloudJDBCException {
         HyperGrpcClientExecutor.forSubmittedQuery(getStub()).cancel(queryId);
-    }
-
-    /**
-     * Use this to determine when a given query is complete by filtering the responses and a subsequent findFirst()
-     */
-    public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {
-        return HyperGrpcClientExecutor.forSubmittedQuery(getStub()).getQueryStatus(queryId);
     }
 
     @Override

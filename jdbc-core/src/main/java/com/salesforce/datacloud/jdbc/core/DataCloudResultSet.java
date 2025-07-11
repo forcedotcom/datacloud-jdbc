@@ -15,13 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import java.sql.ResultSet;
-import java.util.stream.Stream;
 
 public interface DataCloudResultSet extends ResultSet {
     String getQueryId();
-
-    Stream<DataCloudQueryStatus> getQueryStatus() throws DataCloudJDBCException;
 }

@@ -28,7 +28,7 @@ import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.time.Duration;
 import java.util.Iterator;
@@ -188,11 +188,8 @@ public class RowBasedTest {
 
     @SneakyThrows
     private long getRowCount(DataCloudConnection conn, String queryId) {
-        return conn.getQueryStatus(queryId)
-                .filter(t -> t.isResultProduced() || t.isExecutionFinished())
-                .map(DataCloudQueryStatus::getRowCount)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("boom"));
+        return conn.waitFor(queryId, Duration.ofSeconds(1), QueryStatus::allResultsProduced)
+                .getRowCount();
     }
 
     @SneakyThrows
@@ -211,7 +208,7 @@ public class RowBasedTest {
     @SneakyThrows
     private static void waitForQuery(String queryId) {
         try (val conn = getHyperQueryConnection()) {
-            conn.waitForResultsProduced(queryId, Duration.ofSeconds(30));
+            conn.waitFor(queryId, Duration.ofSeconds(30), QueryStatus::allResultsProduced);
         }
     }
 

@@ -21,7 +21,7 @@ import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -60,12 +60,11 @@ public class ChunkBasedPaginationTest {
         }
 
         int prev = 1;
-        DataCloudQueryStatus status = null;
+        QueryStatus status = null;
         while (true) {
             try (final DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties)) {
                 if (status == null || !status.allResultsProduced()) {
-                    status = conn.waitForChunksAvailable(
-                            queryId, offset.get(), 1, timeout, false); // false because we're waiting for the next chunk
+                    status = conn.waitFor(queryId, timeout, QueryStatus.Predicates.chunksAvailable(offset.get(), 1));
                 }
 
                 if (status.allResultsProduced() && offset.get() >= status.getChunkCount()) {

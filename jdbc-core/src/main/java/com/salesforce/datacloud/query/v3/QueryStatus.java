@@ -17,10 +17,10 @@ package com.salesforce.datacloud.query.v3;
 
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import java.util.Optional;
+import java.util.function.Predicate;
 import lombok.Value;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 /**
  * Represents the status of a query.
@@ -32,8 +32,8 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  * </ul>
  */
 @Value
-@Unstable
-public class DataCloudQueryStatus {
+@Unstable // TODO: it might be time to remove this
+public class QueryStatus {
     public enum CompletionStatus {
         RUNNING,
         RESULTS_PRODUCED,
@@ -77,17 +77,16 @@ public class DataCloudQueryStatus {
         return completionStatus == CompletionStatus.FINISHED;
     }
 
-    public static Optional<DataCloudQueryStatus> of(QueryInfo queryInfo) {
-        return Optional.ofNullable(queryInfo).map(QueryInfo::getQueryStatus).map(DataCloudQueryStatus::of);
+    public static Optional<QueryStatus> of(QueryInfo queryInfo) {
+        return Optional.ofNullable(queryInfo).map(QueryInfo::getQueryStatus).map(QueryStatus::of);
     }
 
-    public static DataCloudQueryStatus of(QueryStatus s) {
+    public static QueryStatus of(salesforce.cdp.hyperdb.v1.QueryStatus s) {
         val completionStatus = of(s.getCompletionStatus());
-        return new DataCloudQueryStatus(
-                s.getQueryId(), s.getChunkCount(), s.getRowCount(), s.getProgress(), completionStatus);
+        return new QueryStatus(s.getQueryId(), s.getChunkCount(), s.getRowCount(), s.getProgress(), completionStatus);
     }
 
-    private static CompletionStatus of(QueryStatus.CompletionStatus completionStatus) {
+    private static CompletionStatus of(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus completionStatus) {
         switch (completionStatus) {
             case RUNNING_OR_UNSPECIFIED:
                 return CompletionStatus.RUNNING;
@@ -97,6 +96,40 @@ public class DataCloudQueryStatus {
                 return CompletionStatus.FINISHED;
             default:
                 throw new IllegalArgumentException("Unknown completion status. status=" + completionStatus);
+        }
+    }
+
+    /**
+     * Provides a set of suggested predicates for determining the status of a query.
+     */
+    public static class Predicates {
+        /**
+         * Simply get the first query status that the server replies with.
+         */
+        public static Predicate<QueryStatus> first() {
+            return status -> true;
+        }
+
+        /**
+         * Checks if a given row range is available for a query.
+         * Especially useful in conjunction with {@link com.salesforce.datacloud.jdbc.core.DataCloudConnection#getRowBasedResultSet}
+         *
+         * @param offset The starting row offset.
+         * @param limit The quantity of rows relative to the offset to wait for
+         */
+        public static Predicate<QueryStatus> rowsAvailable(long offset, long limit) {
+            return status -> status.getRowCount() >= offset + limit;
+        }
+
+        /**
+         * Checks if a given chunk range is available for a query.
+         * Especially useful in conjunction with {@link com.salesforce.datacloud.jdbc.core.DataCloudConnection#getChunkBasedResultSet}
+         *
+         * @param offset The starting chunk offset.
+         * @param limit The quantity of chunks relative to the offset to wait for
+         */
+        public static Predicate<QueryStatus> chunksAvailable(long offset, long limit) {
+            return status -> status.getChunkCount() >= offset + limit;
         }
     }
 }

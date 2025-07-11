@@ -21,11 +21,11 @@ import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.Deadline;
-import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
-import java.sql.SQLException;
+import com.salesforce.datacloud.query.v3.HyperClient;
+import com.salesforce.datacloud.query.v3.QueryStatus;
+import com.salesforce.datacloud.query.v3.QueryTimeout;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -56,7 +56,7 @@ import salesforce.cdp.hyperdb.v1.ResultRange;
 @Builder(access = AccessLevel.PRIVATE)
 @Slf4j
 @Unstable
-public class HyperGrpcClientExecutor {
+public class HyperGrpcClientExecutor implements HyperClient {
     @NonNull private final HyperServiceGrpc.HyperServiceBlockingStub stub;
 
     private final QueryParam settingsQueryParams;
@@ -90,12 +90,13 @@ public class HyperGrpcClientExecutor {
         return this;
     }
 
-    public Iterator<ExecuteQueryResponse> executeQuery(String sql, QueryTimeout queryTimeout) throws SQLException {
+    public Iterator<ExecuteQueryResponse> executeQuery(String sql, QueryTimeout queryTimeout)
+            throws DataCloudJDBCException {
         return execute(sql, queryTimeout, QueryParam.TransferMode.ADAPTIVE, QueryParam.newBuilder());
     }
 
     public Iterator<ExecuteQueryResponse> executeQuery(
-            String sql, QueryTimeout queryTimeout, long maxRows, long maxBytes) throws SQLException {
+            String sql, QueryTimeout queryTimeout, long maxRows, long maxBytes) throws DataCloudJDBCException {
         val builder = QueryParam.newBuilder();
         if (maxRows > 0) {
             log.info("setting row limit query. maxRows={}, maxBytes={}", maxRows, maxBytes);
@@ -106,7 +107,8 @@ public class HyperGrpcClientExecutor {
         return execute(sql, queryTimeout, QueryParam.TransferMode.ADAPTIVE, builder);
     }
 
-    public Iterator<ExecuteQueryResponse> executeAsyncQuery(String sql, QueryTimeout queryTimeout) throws SQLException {
+    public Iterator<ExecuteQueryResponse> executeAsyncQuery(String sql, QueryTimeout queryTimeout)
+            throws DataCloudJDBCException {
         return execute(sql, queryTimeout, QueryParam.TransferMode.ASYNC, QueryParam.newBuilder());
     }
 
@@ -120,31 +122,16 @@ public class HyperGrpcClientExecutor {
                 log);
     }
 
-    public DataCloudQueryStatus waitForRowsAvailable(
-            String queryId, long offset, long limit, Deadline deadline, boolean allowLessThan)
+    public QueryStatus waitFor(String queryId, Deadline deadline, Predicate<QueryStatus> predicate)
             throws DataCloudJDBCException {
         val stub = getStub(queryId);
-        return DataCloudQueryPolling.waitForRowsAvailable(stub, queryId, offset, limit, deadline, allowLessThan);
+        return DataCloudQueryPolling.waitFor(stub, queryId, deadline, predicate);
     }
 
-    public DataCloudQueryStatus waitForChunksAvailable(
-            String queryId, long offset, long limit, Deadline deadline, boolean allowLessThan)
-            throws DataCloudJDBCException {
-        val stub = getStub(queryId);
-        return DataCloudQueryPolling.waitForChunksAvailable(stub, queryId, offset, limit, deadline, allowLessThan);
-    }
-
-    public DataCloudQueryStatus waitForQueryStatus(
-            String queryId, Deadline deadline, Predicate<DataCloudQueryStatus> predicate)
-            throws DataCloudJDBCException {
-        val stub = getStub(queryId);
-        return DataCloudQueryPolling.waitForQueryStatus(stub, queryId, deadline, predicate);
-    }
-
-    public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {
+    public Stream<QueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {
         val iterator = getQueryInfo(queryId);
         return StreamUtilities.toStream(iterator)
-                .map(DataCloudQueryStatus::of)
+                .map(QueryStatus::of)
                 .filter(Optional::isPresent)
                 .map(Optional::get);
     }
@@ -221,7 +208,7 @@ public class HyperGrpcClientExecutor {
 
     private Iterator<ExecuteQueryResponse> execute(
             String sql, QueryTimeout queryTimeout, QueryParam.TransferMode mode, QueryParam.Builder builder)
-            throws SQLException {
+            throws DataCloudJDBCException {
         val message = "executeQuery. mode=" + mode.name();
         builder.setTransferMode(mode);
         return logTimedValue(

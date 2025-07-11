@@ -23,7 +23,7 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.ResultSet;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
@@ -46,7 +46,7 @@ public class DataCloudStatementFunctionalTest {
 
             val queryId = statement.unwrap(DataCloudStatement.class).getQueryId();
             val a = client.getQueryStatus(queryId).findFirst().get();
-            assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
+            assertThat(a.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
 
             statement.cancel();
 
@@ -69,7 +69,7 @@ public class DataCloudStatementFunctionalTest {
 
             val queryId = statement.getQueryId();
             val a = client.getQueryStatus(queryId).findFirst().get();
-            assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
+            assertThat(a.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
 
             statement.cancel();
 
@@ -90,7 +90,7 @@ public class DataCloudStatementFunctionalTest {
             val queryId = statement.getQueryId();
 
             val a = client.getQueryStatus(queryId).findFirst().get();
-            assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
+            assertThat(a.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
 
             connection.cancelQuery(queryId);
 

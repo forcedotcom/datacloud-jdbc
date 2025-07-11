@@ -16,7 +16,7 @@
 package com.salesforce.datacloud.jdbc.core.listener;
 
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
-import com.salesforce.datacloud.jdbc.util.QueryTimeout;
+import com.salesforce.datacloud.query.v3.QueryTimeout;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.stream.Stream;
