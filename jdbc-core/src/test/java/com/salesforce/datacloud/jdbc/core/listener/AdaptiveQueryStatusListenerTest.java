@@ -89,7 +89,8 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
 
         val ex = Assertions.assertThrows(
                 DataCloudJDBCException.class,
-                () -> AdaptiveQueryStatusListener.of("any", client, QueryTimeout.of(Duration.ZERO, Duration.ZERO)));
+                () -> AdaptiveQueryStatusListener.of(
+                        "any", client, QueryTimeout.of(Duration.ZERO, Duration.ZERO), true));
         AssertionsForClassTypes.assertThat(ex)
                 .hasMessageContaining("Failed to execute query: ")
                 .hasRootCauseInstanceOf(StatusRuntimeException.class);
@@ -97,6 +98,7 @@ public class AdaptiveQueryStatusListenerTest extends HyperGrpcTestBase {
 
     @SneakyThrows
     QueryStatusListener sut(String query) {
-        return AdaptiveQueryStatusListener.of(query, hyperGrpcClient, QueryTimeout.of(Duration.ZERO, Duration.ZERO));
+        return AdaptiveQueryStatusListener.of(
+                query, hyperGrpcClient, QueryTimeout.of(Duration.ZERO, Duration.ZERO), true);
     }
 }
