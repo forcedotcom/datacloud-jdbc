@@ -46,12 +46,11 @@ class QueryExceptionHandlerTest {
                         + "line 1, column 38: WITH \"A\" AS (SELECT 1) SELECT * FROM A\n"
                         + "                                                        ^";
                 String customerHint = "Try quoting the identifier: `\"A\"`";
-                String expectedMessage = "Failed to execute query: table \"a\" does not exist\n" + "SQLSTATE: 42P01\n"
-                        + "QUERY-ID: "
-                        + stmt.getQueryId() + "\n" + "DETAIL: "
-                        + customerDetail
-                        + "\n" + "HINT: "
-                        + customerHint;
+                String expectedMessage = "Failed to execute query: table \"a\" does not exist\n"
+                        + "SQLSTATE: 42P01\n"
+                        + "QUERY-ID: " + stmt.getQueryId() + "\n"
+                        + "DETAIL: " + customerDetail + "\n"
+                        + "HINT: " + customerHint;
                 assertEquals(expectedMessage, ex.getMessage());
                 assertEquals(ex.getMessage(), ex.getFullCustomerMessage());
                 assertEquals("42P01", ex.getSQLState());
@@ -81,15 +80,12 @@ class QueryExceptionHandlerTest {
                 String customerHint = "Try quoting the identifier: `\"A\"`";
                 String expectedMessage = "Failed to execute query: table \"a\" does not exist\n"
                         + "SQLSTATE: 42P01\n"
-                        + "QUERY-ID: "
-                        + stmt.getQueryId();
-                String expectedFullCustomerMessage =
-                        "Failed to execute query: table \"a\" does not exist\n" + "SQLSTATE: 42P01\n"
-                                + "QUERY-ID: "
-                                + stmt.getQueryId() + "\n" + "DETAIL: "
-                                + customerDetail
-                                + "\n" + "HINT: "
-                                + customerHint;
+                        + "QUERY-ID: " + stmt.getQueryId();
+                String expectedFullCustomerMessage = "Failed to execute query: table \"a\" does not exist\n"
+                        + "SQLSTATE: 42P01\n"
+                        + "QUERY-ID: " + stmt.getQueryId() + "\n"
+                        + "DETAIL: " + customerDetail + "\n"
+                        + "HINT: " + customerHint;
                 assertEquals(expectedMessage, ex.getMessage());
                 assertEquals(expectedFullCustomerMessage, ex.getFullCustomerMessage());
                 assertEquals("42P01", ex.getSQLState());
@@ -103,7 +99,8 @@ class QueryExceptionHandlerTest {
     @Test
     public void testCreateExceptionWithStatusRuntimeExceptionAndCustomerDetails() {
         StatusRuntimeException fakeException = GrpcUtils.getFakeStatusRuntimeExceptionAsInvalidArgument();
-        String fullMessage = "Failed to execute query: Resource Not Found\n" + "SQLSTATE: 42P01\n"
+        String fullMessage = "Failed to execute query: Resource Not Found\n"
+                + "SQLSTATE: 42P01\n"
                 + "QUERY-ID: 1-2-3-4\n"
                 + "QUERY: SELECT 1";
         String redactedMessage =
@@ -128,7 +125,8 @@ class QueryExceptionHandlerTest {
     @Test
     void testCreateExceptionWithGenericException() {
         Exception mockException = new Exception("Host not found");
-        String fullMessage = "Failed to execute query: Host not found\n" + "SQLSTATE: HY000\n"
+        String fullMessage = "Failed to execute query: Host not found\n"
+                + "SQLSTATE: HY000\n"
                 + "QUERY-ID: 1-2-3-4\n"
                 + "QUERY: SELECT 1";
         String redactedMessage =

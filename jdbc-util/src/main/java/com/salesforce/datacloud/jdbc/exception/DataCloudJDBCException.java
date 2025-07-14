@@ -20,12 +20,27 @@ import lombok.Getter;
 
 @Getter
 public class DataCloudJDBCException extends SQLException {
+    /**
+     * The fully formatted error message including customer detail and hint (while the normal exception message might not contain those based of the
+     * `errorsIncludeCustomerDetails` property).
+     */
     private String fullCustomerMessage;
 
+    /**
+     * The primary (terse) error message (without TraceId addition)
+     */
     private String primaryMessage;
 
+    /**
+     * A suggestion on what what to do about the problem
+     * Differs from customer_detail by offering advise rather than hard facts
+     * Can be returned to the customer but in a cloud scenario where the query is coming from a third party likely shouldn't be logged.
+     */
     private String customerHint;
 
+    /**
+     * Error detail with data that is might be sensitive to the customer and thus shouldn't be logged in cloud services.
+     */
     private String customerDetail;
 
     public DataCloudJDBCException(String reason) {
