@@ -32,9 +32,12 @@ public class DataCloudJDBCException extends SQLException {
     private String primaryMessage;
 
     /**
-     * A suggestion on what what to do about the problem
-     * Differs from customer_detail by offering advise rather than hard facts
+     * A suggestion on what what to do about the problem.
+     * Differs from customer_detail by offering advise rather than hard facts.
      * Can be returned to the customer but in a cloud scenario where the query is coming from a third party likely shouldn't be logged.
+     * Only makes sense to show to the user, if the user can actually change
+     * the SQL query. Otherwise, this hint would probably not be actionable to
+     * the user.
      */
     private String customerHint;
 
