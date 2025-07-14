@@ -103,8 +103,7 @@ class QueryExceptionHandlerTest {
                 + "SQLSTATE: 42P01\n"
                 + "QUERY-ID: 1-2-3-4\n"
                 + "QUERY: SELECT 1";
-        String redactedMessage =
-                "Failed to execute query: Resource Not Found\n" + "SQLSTATE: 42P01\n" + "QUERY-ID: 1-2-3-4";
+        String redactedMessage = "Failed to execute query: Resource Not Found\nSQLSTATE: 42P01\nQUERY-ID: 1-2-3-4";
 
         // Verify with customer details
         DataCloudJDBCException actualException =
@@ -129,8 +128,7 @@ class QueryExceptionHandlerTest {
                 + "SQLSTATE: HY000\n"
                 + "QUERY-ID: 1-2-3-4\n"
                 + "QUERY: SELECT 1";
-        String redactedMessage =
-                "Failed to execute query: Host not found\n" + "SQLSTATE: HY000\n" + "QUERY-ID: 1-2-3-4";
+        String redactedMessage = "Failed to execute query: Host not found\nSQLSTATE: HY000\nQUERY-ID: 1-2-3-4";
 
         // Test with customer details
         DataCloudJDBCException sqlException =
