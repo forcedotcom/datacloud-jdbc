@@ -117,7 +117,8 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
         val queryTimeout = QueryTimeout.of(
                 statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
         val client = getQueryExecutor(queryTimeout);
-        listener = AsyncQueryStatusListener.of(sql, client, queryTimeout);
+        val connectionProperties = connection.getConnectionProperties().toProperties();
+        listener = AsyncQueryStatusListener.of(sql, client, queryTimeout, connectionProperties);
         return true;
     }
 

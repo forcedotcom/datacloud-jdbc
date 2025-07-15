@@ -143,6 +143,9 @@ public final class ArrowUtils {
                             Types.TIME, pb -> FieldType.nullable(new ArrowType.Time(TimeUnit.MICROSECOND, 64))),
                     Maps.immutableEntry(
                             Types.TIMESTAMP,
+                            pb -> FieldType.nullable(new ArrowType.Timestamp(TimeUnit.MICROSECOND, null))),
+                    Maps.immutableEntry(
+                            Types.TIMESTAMP_WITH_TIMEZONE,
                             pb -> FieldType.nullable(new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC"))),
                     Maps.immutableEntry(
                             Types.FLOAT,

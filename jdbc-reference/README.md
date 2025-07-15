@@ -21,6 +21,44 @@ To regenerate the `reference.json` file with the latest PostgreSQL JDBC metadata
 
 That's it! The tool automatically loads test cases from `protocolvalues.json` and generates fresh reference values.
 
+## Session Timezone Configuration
+
+The reference generator supports configurable session timezone for consistent timestamp handling across different environments. This aligns with the DataCloud JDBC driver's session timezone support.
+
+### Configuration Options
+
+You can configure the session timezone using:
+
+1. **System Property** (recommended):
+   ```bash
+   ./gradlew :jdbc-reference:run -Dpostgres.reference.session.timezone=America/New_York
+   ```
+
+2. **Environment Variable**:
+   ```bash
+   export POSTGRES_REFERENCE_SESSION_TIMEZONE=America/New_York
+   ./gradlew :jdbc-reference:run
+   ```
+
+3. **Default**: If no configuration is provided, defaults to `America/Los_Angeles`
+
+### Timezone Examples
+
+Common timezone configurations:
+- `America/Los_Angeles` (default)
+- `America/New_York` 
+- `Europe/London`
+- `Asia/Tokyo`
+- `UTC`
+
+### Session Timezone Usage
+
+The reference generator sets both PostgreSQL and DataCloud JDBC driver timezone properties:
+- `timezone` - PostgreSQL JDBC driver timezone
+- `querySetting.timezone` - DataCloud JDBC driver session timezone
+
+This ensures consistency when comparing reference data between PostgreSQL and DataCloud JDBC drivers.
+
 ## What This Tool Does
 
 The JDBC Reference Generator:
@@ -34,6 +72,7 @@ The generated reference data can be used for:
 - **JDBC driver testing** - validate metadata consistency across driver versions
 - **Regression testing** - ensure metadata doesn't change unexpectedly
 - **Cross-database validation** - compare metadata behavior between databases
+- **Session timezone validation** - verify timestamp handling across different timezones
 
 ## Generated Reference Data Structure
 

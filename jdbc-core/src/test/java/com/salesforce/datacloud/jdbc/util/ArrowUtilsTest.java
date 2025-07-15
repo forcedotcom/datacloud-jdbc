@@ -18,6 +18,7 @@ package com.salesforce.datacloud.jdbc.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.QueryResultSetMetadata;
@@ -203,13 +204,14 @@ class ArrowUtilsTest {
                 new ParameterBinding(Types.DATE, new Date(1)),
                 new ParameterBinding(Types.TIME, new Time(1)),
                 new ParameterBinding(Types.TIMESTAMP, new Timestamp(1)),
+                new ParameterBinding(Types.TIMESTAMP_WITH_TIMEZONE, new Timestamp(1)),
                 new ParameterBinding(Types.DECIMAL, new BigDecimal("123.45")),
                 new ParameterBinding(Types.ARRAY, ImmutableList.of(1, 2, 3)));
 
         Schema schema = ArrowUtils.createSchemaFromParameters(parameterBindings);
 
         Assertions.assertNotNull(schema);
-        assertEquals(11, schema.getFields().size());
+        assertEquals(12, schema.getFields().size());
 
         Field field = schema.getFields().get(0);
         assertEquals("1", field.getName());
@@ -253,15 +255,23 @@ class ArrowUtilsTest {
         assertInstanceOf(ArrowType.Timestamp.class, field.getType());
         ArrowType.Timestamp timestampType = (ArrowType.Timestamp) field.getType();
         assertEquals(TimeUnit.MICROSECOND, timestampType.getUnit());
-        assertEquals("UTC", timestampType.getTimezone());
+        assertNull(timestampType.getTimezone()); // Types.TIMESTAMP should create naive timestamp (null timezone)
 
         field = schema.getFields().get(9);
+        assertInstanceOf(ArrowType.Timestamp.class, field.getType());
+        ArrowType.Timestamp timestampTzType = (ArrowType.Timestamp) field.getType();
+        assertEquals(TimeUnit.MICROSECOND, timestampTzType.getUnit());
+        assertEquals(
+                "UTC",
+                timestampTzType.getTimezone()); // Types.TIMESTAMP_WITH_TIMEZONE should create timezone-aware timestamp
+
+        field = schema.getFields().get(10);
         assertInstanceOf(ArrowType.Decimal.class, field.getType());
         ArrowType.Decimal decimalType = (ArrowType.Decimal) field.getType();
         assertEquals(5, decimalType.getPrecision());
         assertEquals(2, decimalType.getScale());
 
-        field = schema.getFields().get(10);
+        field = schema.getFields().get(11);
         assertInstanceOf(ArrowType.List.class, field.getType());
     }
 }

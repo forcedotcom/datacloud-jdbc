@@ -23,9 +23,9 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -36,18 +36,27 @@ import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.util.AbstractCursor;
 import org.apache.calcite.avatica.util.ArrayImpl;
 
-@RequiredArgsConstructor
 @Slf4j
 class ArrowStreamReaderCursor extends AbstractCursor {
 
     private static final int INIT_ROW_NUMBER = -1;
 
     private final ArrowStreamReader reader;
+    private final Properties connectionProperties;
 
     @lombok.Getter
     private int rowsSeen = 0;
 
     private final AtomicInteger currentIndex = new AtomicInteger(INIT_ROW_NUMBER);
+
+    public ArrowStreamReaderCursor(ArrowStreamReader reader) {
+        this(reader, null);
+    }
+
+    public ArrowStreamReaderCursor(ArrowStreamReader reader, Properties connectionProperties) {
+        this.reader = reader;
+        this.connectionProperties = connectionProperties;
+    }
 
     private void wasNullConsumer(boolean wasNull) {
         this.wasNull[0] = wasNull;
@@ -68,7 +77,8 @@ class ArrowStreamReaderCursor extends AbstractCursor {
     }
 
     private Accessor createAccessor(FieldVector vector) throws SQLException {
-        return QueryJDBCAccessorFactory.createAccessor(vector, currentIndex::get, this::wasNullConsumer);
+        return QueryJDBCAccessorFactory.createAccessor(
+                vector, currentIndex::get, this::wasNullConsumer, connectionProperties);
     }
 
     private boolean loadNextBatch() throws SQLException {
