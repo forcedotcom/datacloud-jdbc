@@ -1,6 +1,6 @@
 plugins {
     id("scala")
-    id("java-conventions")
+    id("scala-conventions")
     id("publishing-conventions")
 }
 
