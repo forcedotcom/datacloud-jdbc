@@ -1,6 +1,7 @@
 plugins {
-    id("java-conventions")
+    id("java-base-conventions")
     id("scala")
+    `java-library`
 }
 
 spotless {    

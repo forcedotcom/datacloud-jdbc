@@ -1,16 +1,7 @@
 plugins {
-    id("base-conventions")
+    id("java-base-conventions")
     `java-library`
 }
-
-repositories {
-    mavenLocal()
-    maven {
-        url = uri("https://repo.maven.apache.org/maven2/")
-    }
-}
-
-group = "com.salesforce.datacloud"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -35,24 +26,6 @@ tasks.withType<Javadoc> {
         addStringOption("Xdoclint:none", "-quiet")
         addBooleanOption("html5", true)
     }
-}
-
-tasks.withType<Test>().configureEach {
-
-    javaLauncher = javaToolchains.launcherFor {
-        languageVersion = JavaLanguageVersion.of(8)
-    }
-
-    useJUnitPlatform()
-
-    testLogging {
-        events("passed", "skipped", "failed")
-        showExceptions = true
-        showStandardStreams = true
-        showStackTraces = true
-    }
-
-    jvmArgs("-Xmx2g", "-Xms512m")
 }
 
 spotless {
