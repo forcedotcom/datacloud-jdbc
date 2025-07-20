@@ -41,6 +41,11 @@ public class PostgresReferenceGenerator {
     public static final String DB_USER = "testuser";
     public static final String DB_PASSWORD = "password";
 
+    // Default session timezone for consistent timestamp handling
+    // Can be overridden by system property: -Dpostgres.reference.session.timezone=America/New_York
+    public static final String DEFAULT_SESSION_TIMEZONE = "America/Los_Angeles";
+    public static final String SESSION_TIMEZONE_PROPERTY = "postgres.reference.session.timezone";
+
     // Path to the Reference output file in resources
     private static final String REFERENCE_FILE = "reference.json";
 
@@ -51,6 +56,52 @@ public class PostgresReferenceGenerator {
 
         PostgresReferenceGenerator generator = new PostgresReferenceGenerator();
         generator.generateReference();
+    }
+
+    /**
+     * Gets the session timezone to use for reference generation.
+     * Can be configured via system property or environment variable.
+     *
+     * @return the session timezone string
+     */
+    public static String getSessionTimezone() {
+        // Check system property first
+        String sessionTimezone = System.getProperty(SESSION_TIMEZONE_PROPERTY);
+        if (sessionTimezone != null && !sessionTimezone.trim().isEmpty()) {
+            log.info("Using session timezone from system property: {}", sessionTimezone);
+            return sessionTimezone.trim();
+        }
+
+        // Check environment variable
+        String envTimezone = System.getenv("POSTGRES_REFERENCE_SESSION_TIMEZONE");
+        if (envTimezone != null && !envTimezone.trim().isEmpty()) {
+            log.info("Using session timezone from environment variable: {}", envTimezone);
+            return envTimezone.trim();
+        }
+
+        // Use default
+        log.info("Using default session timezone: {}", DEFAULT_SESSION_TIMEZONE);
+        return DEFAULT_SESSION_TIMEZONE;
+    }
+
+    /**
+     * Creates PostgreSQL connection properties with session timezone configuration.
+     *
+     * @return Properties configured for PostgreSQL connection
+     */
+    public static Properties createConnectionProperties() {
+        Properties properties = new Properties();
+        properties.setProperty("user", DB_USER);
+        properties.setProperty("password", DB_PASSWORD);
+
+        // Set timezone for consistent timestamp handling
+        String sessionTimezone = getSessionTimezone();
+        properties.setProperty("timezone", sessionTimezone);
+
+        // Add querySetting.timezone for consistency with DataCloud JDBC driver
+        properties.setProperty("querySetting.timezone", sessionTimezone);
+
+        return properties;
     }
 
     /**
@@ -82,11 +133,9 @@ public class PostgresReferenceGenerator {
                     .collect(Collectors.toList());
 
             // Establish connection and generate Reference
-            Properties properties = new Properties();
-            // Set timezone to Los Angeles for consistent timestamp handling
-            properties.setProperty("timezone", "America/Los_Angeles");
-            properties.setProperty("user", DB_USER);
-            properties.setProperty("password", DB_PASSWORD);
+            Properties properties = createConnectionProperties();
+            log.info("Connecting to PostgreSQL with session timezone: {}", getSessionTimezone());
+
             try (Connection connection = DriverManager.getConnection(DB_URL, properties)) {
                 log.info("Connected to PostgreSQL database: {}", DB_URL);
 
@@ -98,12 +147,17 @@ public class PostgresReferenceGenerator {
 
                 // Validate the written reference file against PostgreSQL
                 validateReferenceFile(connection);
+
+                log.info("Reference generation completed successfully");
             } catch (SQLException e) {
-                throw new RuntimeException("Database operation failed", e);
+                log.error("Database operation failed", e);
+                throw new RuntimeException("Failed to generate reference", e);
             }
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Failed to load PostgreSQL JDBC driver", e);
+            log.error("PostgreSQL JDBC driver not found", e);
+            throw new RuntimeException("PostgreSQL JDBC driver not found", e);
         } catch (IOException e) {
+            log.error("File operation failed", e);
             throw new RuntimeException("File operation failed", e);
         }
     }

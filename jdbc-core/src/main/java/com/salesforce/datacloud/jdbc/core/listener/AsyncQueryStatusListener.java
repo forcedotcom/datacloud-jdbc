@@ -26,6 +26,7 @@ import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
+import java.util.Properties;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -45,7 +46,15 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
     private final QueryTimeout queryTimeout;
 
+    private final Properties connectionProperties;
+
     public static AsyncQueryStatusListener of(String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout)
+            throws SQLException {
+        return of(query, client, queryTimeout, null);
+    }
+
+    public static AsyncQueryStatusListener of(
+            String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout, Properties connectionProperties)
             throws SQLException {
         try {
             val result = client.executeAsyncQuery(query, queryTimeout).next();
@@ -60,6 +69,7 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
                     .queryId(queryId)
                     .client(client)
                     .queryTimeout(queryTimeout)
+                    .connectionProperties(connectionProperties)
                     .build();
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createQueryException(query, ex);
@@ -68,7 +78,7 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
     @Override
     public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
-        return StreamingResultSet.of(queryId, client, stream().iterator());
+        return StreamingResultSet.of(queryId, client, stream().iterator(), connectionProperties);
     }
 
     @Override

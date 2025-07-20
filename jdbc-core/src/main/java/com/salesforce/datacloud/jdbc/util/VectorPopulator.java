@@ -42,6 +42,7 @@ import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.SmallIntVector;
 import org.apache.arrow.vector.TimeMicroVector;
 import org.apache.arrow.vector.TimeStampMicroTZVector;
+import org.apache.arrow.vector.TimeStampMicroVector;
 import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarCharVector;
@@ -104,6 +105,7 @@ class VectorValueSetterFactory {
                 Maps.immutableEntry(DateDayVector.class, new DateDayVectorSetter()),
                 Maps.immutableEntry(TimeMicroVector.class, new TimeMicroVectorSetter(calendar)),
                 Maps.immutableEntry(TimeStampMicroTZVector.class, new TimeStampMicroTZVectorSetter(calendar)),
+                Maps.immutableEntry(TimeStampMicroVector.class, new TimeStampMicroVectorSetter(calendar)),
                 Maps.immutableEntry(TinyIntVector.class, new TinyIntVectorSetter()));
     }
 
@@ -337,6 +339,30 @@ class TimeStampMicroTZVectorSetter extends BaseVectorSetter<TimeStampMicroTZVect
 
     @Override
     protected void setNullValue(TimeStampMicroTZVector vector) {
+        vector.setNull(0);
+    }
+}
+
+/** Setter implementation for TimeStampMicroVector. */
+class TimeStampMicroVectorSetter extends BaseVectorSetter<TimeStampMicroVector, Timestamp> {
+    private final Calendar calendar;
+
+    TimeStampMicroVectorSetter(Calendar calendar) {
+        super(Timestamp.class);
+        this.calendar = calendar;
+    }
+
+    @Override
+    protected void setValueInternal(TimeStampMicroVector vector, Timestamp value) {
+        LocalDateTime localDateTime = value.toLocalDateTime();
+        localDateTime = adjustForCalendar(localDateTime, calendar, TimeZone.getTimeZone("UTC"));
+        long microsecondsSinceEpoch = localDateTimeToMicrosecondsSinceEpoch(localDateTime);
+
+        vector.setSafe(0, microsecondsSinceEpoch);
+    }
+
+    @Override
+    protected void setNullValue(TimeStampMicroVector vector) {
         vector.setNull(0);
     }
 }

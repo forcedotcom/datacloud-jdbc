@@ -15,6 +15,7 @@
  */
 package com.salesforce.datacloud.reference;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -30,6 +31,27 @@ import lombok.extern.jackson.Jacksonized;
 @Data
 @Builder
 @Jacksonized
+@JsonPropertyOrder({
+    "columnName",
+    "columnLabel",
+    "columnType",
+    "columnTypeName",
+    "columnDisplaySize",
+    "precision",
+    "scale",
+    "isNullable",
+    "catalogName",
+    "schemaName",
+    "tableName",
+    "autoIncrement",
+    "caseSensitive",
+    "currency",
+    "definitelyWritable",
+    "readOnly",
+    "searchable",
+    "signed",
+    "writable"
+})
 public class ColumnMetadata {
 
     private String columnName;

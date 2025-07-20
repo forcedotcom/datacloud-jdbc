@@ -26,6 +26,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Properties;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -68,17 +69,29 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     @SneakyThrows
     public static StreamingResultSet of(
             String queryId, HyperGrpcClientExecutor client, Iterator<QueryResult> iterator) {
+        return of(queryId, client, iterator, null);
+    }
+
+    @SneakyThrows
+    public static StreamingResultSet of(
+            String queryId,
+            HyperGrpcClientExecutor client,
+            Iterator<QueryResult> iterator,
+            Properties connectionProperties) {
         try {
             val channel = ExecuteQueryResponseChannel.of(StreamUtilities.toStream(iterator));
             val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
             val schemaRoot = reader.getVectorSchemaRoot();
             val columns = toColumnMetaData(schemaRoot.getSchema().getFields());
-            val timezone = TimeZone.getDefault();
+
+            // Use session timezone from connection properties instead of system default
+            val timezone = getSessionTimeZone(connectionProperties);
+
             val state = new QueryState();
             val signature = new Meta.Signature(
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
-            val cursor = new ArrowStreamReaderCursor(reader);
+            val cursor = new ArrowStreamReaderCursor(reader, connectionProperties);
             val result =
                     new StreamingResultSet(client, cursor, queryId, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
@@ -123,5 +136,29 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     @Override
     public int getRow() {
         return cursor.getRowsSeen();
+    }
+
+    /**
+     * Gets the session timezone from connection properties.
+     *
+     * @param connectionProperties Connection properties, may be null
+     * @return Session timezone, falls back to system default if not specified
+     */
+    private static TimeZone getSessionTimeZone(Properties connectionProperties) {
+        if (connectionProperties == null) {
+            return TimeZone.getDefault();
+        }
+
+        String timezoneProp = connectionProperties.getProperty("querySetting.timezone");
+        if (timezoneProp == null || timezoneProp.trim().isEmpty()) {
+            return TimeZone.getDefault();
+        }
+
+        try {
+            return TimeZone.getTimeZone(timezoneProp);
+        } catch (Exception e) {
+            // If timezone parsing fails, fall back to default
+            return TimeZone.getDefault();
+        }
     }
 }

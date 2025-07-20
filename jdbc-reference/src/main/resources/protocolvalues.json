@@ -197,6 +197,15 @@
 		"interestingness": "ProtocolTestOnly"
 	},
 	{
+		"type": [
+			"TimestampTZ",
+			"nullable"
+		],
+		"sql": "select timestamptz '2024-01-01 17:30:00+00:00'",
+		"expectation": "2024-01-01 17:30:00+00:00",
+		"interestingness": "Default"
+	},
+	{
 		"type": {
 			"type": "Array",
 			"nullable": true,
@@ -802,6 +811,15 @@
 		"sql": "select timestamp '1997-09-03 01:23:45'",
 		"expectation": "1997-09-03 01:23:45",
 		"interestingness": "Low"
+	},
+	{
+		"type": [
+			"Timestamp",
+			"nullable"
+		],
+		"sql": "select timestamp '2024-01-01 17:30:00'",
+		"expectation": "2024-01-01 17:30:00",
+		"interestingness": "Default"
 	},
 	{
 		"type": [

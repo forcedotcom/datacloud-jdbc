@@ -113,9 +113,11 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         val queryTimeout = QueryTimeout.of(
                 statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
         val client = getQueryExecutor(queryTimeout);
+        val connectionProperties = connection.getConnectionProperties().toProperties();
         listener = targetMaxRows > 0
-                ? AdaptiveQueryStatusListener.of(sql, client, queryTimeout, targetMaxRows, targetMaxBytes)
-                : AdaptiveQueryStatusListener.of(sql, client, queryTimeout);
+                ? AdaptiveQueryStatusListener.of(
+                        sql, client, queryTimeout, targetMaxRows, targetMaxBytes, connectionProperties)
+                : AdaptiveQueryStatusListener.of(sql, client, queryTimeout, connectionProperties);
 
         resultSet = listener.generateResultSet();
         log.info("executeAdaptiveQuery completed. queryId={}", listener.getQueryId());
@@ -127,7 +129,8 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         val queryTimeout = QueryTimeout.of(
                 statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
         val client = getQueryExecutor(queryTimeout);
-        listener = AsyncQueryStatusListener.of(sql, client, queryTimeout);
+        val connectionProperties = connection.getConnectionProperties().toProperties();
+        listener = AsyncQueryStatusListener.of(sql, client, queryTimeout, connectionProperties);
         log.info("executeAsyncQuery completed. queryId={}", listener.getQueryId());
         return this;
     }

@@ -29,6 +29,7 @@ import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -56,10 +57,18 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     private final Iterator<ExecuteQueryResponse> response;
 
+    private final Properties connectionProperties;
+
     private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
 
     public static AdaptiveQueryStatusListener of(
             String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout) throws SQLException {
+        return of(query, client, queryTimeout, null);
+    }
+
+    public static AdaptiveQueryStatusListener of(
+            String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout, Properties connectionProperties)
+            throws SQLException {
         try {
             val response = client.executeQuery(query, queryTimeout);
             val queryId = response.next().getQueryInfo().getQueryStatus().getQueryId();
@@ -69,7 +78,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
                     queryId,
                     queryTimeout.getServerQueryTimeout());
 
-            return new AdaptiveQueryStatusListener(queryId, client, queryTimeout, response);
+            return new AdaptiveQueryStatusListener(queryId, client, queryTimeout, response, connectionProperties);
         } catch (StatusRuntimeException ex) {
             throw createQueryException(query, ex);
         }
@@ -77,6 +86,17 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     public static RowBasedAdaptiveQueryStatusListener of(
             String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout, long maxRows, long maxBytes)
+            throws SQLException {
+        return of(query, client, queryTimeout, maxRows, maxBytes, null);
+    }
+
+    public static RowBasedAdaptiveQueryStatusListener of(
+            String query,
+            HyperGrpcClientExecutor client,
+            QueryTimeout queryTimeout,
+            long maxRows,
+            long maxBytes,
+            Properties connectionProperties)
             throws SQLException {
         try {
             val response = client.executeQuery(query, queryTimeout, maxRows, maxBytes);
@@ -87,7 +107,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
                     queryId,
                     queryTimeout.getServerQueryTimeout());
 
-            return new RowBasedAdaptiveQueryStatusListener(queryId, client, response);
+            return new RowBasedAdaptiveQueryStatusListener(queryId, client, response, connectionProperties);
         } catch (StatusRuntimeException ex) {
             throw createQueryException(query, ex);
         }
@@ -95,7 +115,7 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
     @Override
     public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
-        return StreamingResultSet.of(queryId, client, stream().iterator());
+        return StreamingResultSet.of(queryId, client, stream().iterator(), connectionProperties);
     }
 
     @Override
@@ -157,11 +177,13 @@ public class AdaptiveQueryStatusListener implements QueryStatusListener {
 
         private final Iterator<ExecuteQueryResponse> response;
 
+        private final Properties connectionProperties;
+
         private final AtomicReference<DataCloudQueryStatus> lastStatus = new AtomicReference<>();
 
         @Override
         public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
-            return StreamingResultSet.of(queryId, client, stream().iterator());
+            return StreamingResultSet.of(queryId, client, stream().iterator(), connectionProperties);
         }
 
         @Override
