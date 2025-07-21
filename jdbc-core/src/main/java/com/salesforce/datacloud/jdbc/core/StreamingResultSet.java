@@ -67,7 +67,10 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
     @SneakyThrows
     public static StreamingResultSet of(
-            String queryId, HyperGrpcClientExecutor client, Iterator<QueryResult> iterator) {
+            String queryId,
+            HyperGrpcClientExecutor client,
+            Iterator<QueryResult> iterator,
+            boolean includeCustomerDetailInReason) {
         try {
             val channel = ExecuteQueryResponseChannel.of(StreamUtilities.toStream(iterator));
             val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
@@ -85,7 +88,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
             return result;
         } catch (Exception ex) {
-            throw createException(QUERY_FAILURE + queryId, ex);
+            throw createException(null, queryId, includeCustomerDetailInReason, ex);
         }
     }
 
@@ -102,8 +105,6 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
         return client.getQueryStatus(queryId);
     }
-
-    private static final String QUERY_FAILURE = "Failed to execute query: ";
 
     @Override
     public int getType() {

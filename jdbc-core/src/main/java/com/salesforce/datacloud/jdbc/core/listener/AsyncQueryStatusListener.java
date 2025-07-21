@@ -45,11 +45,18 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
 
     private final QueryTimeout queryTimeout;
 
-    public static AsyncQueryStatusListener of(String query, HyperGrpcClientExecutor client, QueryTimeout queryTimeout)
+    private final boolean includeCustomerDetailInReason;
+
+    public static AsyncQueryStatusListener of(
+            String query,
+            HyperGrpcClientExecutor client,
+            QueryTimeout queryTimeout,
+            boolean includeCustomerDetailInReason)
             throws SQLException {
+        String queryId = null;
         try {
             val result = client.executeAsyncQuery(query, queryTimeout).next();
-            val queryId = result.getQueryInfo().getQueryStatus().getQueryId();
+            queryId = result.getQueryInfo().getQueryStatus().getQueryId();
 
             log.info(
                     "Executing async query. queryId={}, queryTimeout={}",
@@ -60,15 +67,16 @@ public class AsyncQueryStatusListener implements QueryStatusListener {
                     .queryId(queryId)
                     .client(client)
                     .queryTimeout(queryTimeout)
+                    .includeCustomerDetailInReason(includeCustomerDetailInReason)
                     .build();
         } catch (StatusRuntimeException ex) {
-            throw QueryExceptionHandler.createQueryException(query, ex);
+            throw QueryExceptionHandler.createException(query, queryId, includeCustomerDetailInReason, ex);
         }
     }
 
     @Override
     public DataCloudResultSet generateResultSet() throws DataCloudJDBCException {
-        return StreamingResultSet.of(queryId, client, stream().iterator());
+        return StreamingResultSet.of(queryId, client, stream().iterator(), includeCustomerDetailInReason);
     }
 
     @Override

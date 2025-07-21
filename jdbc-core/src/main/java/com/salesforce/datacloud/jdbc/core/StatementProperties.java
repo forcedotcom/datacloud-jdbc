@@ -53,6 +53,12 @@ public class StatementProperties {
     private final Map<String, String> querySettings = new HashMap<>();
 
     /**
+     * Whether to include query or other fragments that contain details from the query in the reason for the exception.
+     */
+    @Builder.Default
+    private final boolean includeCustomerDetailInReason = true;
+
+    /**
      * Parses statement properties from a Properties object.
      *
      * @param props The properties to parse
@@ -90,6 +96,11 @@ public class StatementProperties {
             }
         }
 
+        String errorsIncludeCustomerDetailsStr = props.getProperty("errorsIncludeCustomerDetails");
+        if (errorsIncludeCustomerDetailsStr != null) {
+            builder.includeCustomerDetailInReason(Boolean.parseBoolean(errorsIncludeCustomerDetailsStr));
+        }
+
         // Parse querySetting.* properties
         Map<String, String> querySettings = new HashMap<>();
         for (String key : props.stringPropertyNames()) {
@@ -120,6 +131,14 @@ public class StatementProperties {
 
         if (!queryTimeout.isZero()) {
             props.setProperty("queryTimeout", String.valueOf(queryTimeout.getSeconds()));
+        }
+        if (!queryTimeoutLocalEnforcementDelay.isZero()) {
+            props.setProperty(
+                    "queryTimeoutLocalEnforcementDelay",
+                    String.valueOf(queryTimeoutLocalEnforcementDelay.getSeconds()));
+        }
+        if (!includeCustomerDetailInReason) {
+            props.setProperty("errorsIncludeCustomerDetails", "false");
         }
         for (Map.Entry<String, String> entry : querySettings.entrySet()) {
             props.setProperty("querySetting." + entry.getKey(), entry.getValue());
