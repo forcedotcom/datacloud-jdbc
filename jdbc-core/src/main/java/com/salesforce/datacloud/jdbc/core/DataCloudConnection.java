@@ -202,29 +202,63 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     /**
-     * Retrieves a collection of rows for the specified query once it is ready.
-     * Use {@link #waitFor(String, Duration, Predicate)} to check if the query has produced results or
-     * finished execution before calling this method.
-     * You can get the Query Id from the executeQuery `DataCloudResultSet`.
+     * Retrieves a collection of rows for the specified query within the specified range.
      * <p>
-     * When using {@link RowBased.Mode#FULL_RANGE}, this method does not handle pagination near the end of available rows.
-     * The caller is responsible for calculating the correct offset and limit to avoid out-of-range errors.
+     * <b>Important:</b> Before calling this method, you must ensure that the requested row range is available on the server.
+     * Use {@link #waitFor(String, Duration, Predicate)} with an appropriate predicate to wait until the desired number of rows
+     * (based on <code>offset</code> and <code>limit</code>) are available for the given <code>queryId</code>.
+     * <p>
+     * For example, to wait until at least <code>offset + limit</code> rows are available, use a predicate like:
+     * <pre>
+     *     status -> status.allResultsProduced() || status.getRowCount() >= offset + limit
+     * </pre>
+     * <p>
+     * If you call this method before the specified range of rows are available (e.g., the query is still running and hasn't produced enough rows),
+     * or if the query completes without ever producing enough rows, this method will throw a {@link DataCloudJDBCException}.
+     * <p>
+     * The <code>queryId</code> can be obtained from {@link DataCloudResultSet#getQueryId()} or {@link DataCloudStatement#getQueryId()}.
+     *
+     * @see #waitFor(String, Duration, Predicate)
      *
      * @param queryId The identifier of the query to fetch results for.
      * @param offset  The starting row offset.
      * @param limit   The maximum number of rows to retrieve.
-     * @param mode    The fetching mode—either {@link RowBased.Mode#SINGLE_RPC} for a single request or
-     *                {@link RowBased.Mode#FULL_RANGE} to iterate through all available rows.
      * @return A {@link DataCloudResultSet} containing the query results.
+     * @throws DataCloudJDBCException if the specified range of rows is not available on the server
      */
-    public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit, RowBased.Mode mode)
+    public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit)
             throws DataCloudJDBCException {
-        log.info("Get row-based result set. queryId={}, offset={}, limit={}, mode={}", queryId, offset, limit, mode);
+        log.info("Get row-based result set. queryId={}, offset={}, limit={}", queryId, offset, limit);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
-        val iterator = RowBased.of(executor, queryId, offset, limit, mode);
+        val iterator = RowBased.of(executor, queryId, offset, limit);
         return StreamingResultSet.of(queryId, iterator);
     }
 
+    /**
+     * Retrieves a collection of chunks for the specified query within the specified range.
+     * <p>
+     * <b>Important:</b> Before calling this method, you must ensure that the requested chunk range is available on the server.
+     * Use {@link #waitFor(String, Duration, Predicate)} with an appropriate predicate to wait until the desired number of chunks
+     * (based on <code>chunkId</code> and <code>limit</code>) are available for the given <code>queryId</code>.
+     * <p>
+     * For example, to wait until at least <code>chunkId + limit</code> chunks are available, use a predicate like:
+     * <pre>
+     *     status -> status.allResultsProduced() || status.getChunkCount() >= chunkId + limit
+     * </pre>
+     * <p>
+     * If you call this method before the specified range of chunks are available (e.g., the query is still running and hasn't produced enough chunks),
+     * or if the query completes without ever producing enough chunks, this method will throw a {@link DataCloudJDBCException}.
+     * <p>
+     * The <code>queryId</code> can be obtained from {@link DataCloudResultSet#getQueryId()} or {@link DataCloudStatement#getQueryId()}.
+     *
+     * @see #waitFor(String, Duration, Predicate)
+     *
+     * @param queryId The identifier of the query to fetch results for.
+     * @param chunkId The starting chunk offset.
+     * @param limit   The maximum number of chunks to retrieve.
+     * @return A {@link DataCloudResultSet} containing the query results.
+     * @throws DataCloudJDBCException if the specified range of chunks is not available on the server
+     */
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit)
             throws DataCloudJDBCException {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
@@ -233,26 +267,57 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return StreamingResultSet.of(queryId, iterator);
     }
 
+    /**
+     * Retrieves a single chunk for the specified query at the specified index.
+     *
+     * @see #getChunkBasedResultSet(String, long, long)
+     */
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) throws DataCloudJDBCException {
         return getChunkBasedResultSet(queryId, chunkId, 1);
     }
 
     /**
-     * Checks if a given predicate is satisfied by the status of the specified query.
-     * This method will poll the query status and exit immediately when the predicate is satisfied.
-     * If the predicate is never satisfied, the method will continue trying until the provided timeout is reached.
-     * Note that it is up to the caller to ensure that the returned {@link QueryStatus} meets expectations.
+     * Waits for the status of the specified query to satisfy the given predicate, polling until the predicate returns true or the timeout is reached.
+     * <p>
+     * This method is the recommended way to wait for a query to reach a desired state (such as producing enough rows or chunks) before attempting to fetch results.
+     * The <code>predicate</code> determines what condition you are waiting for. For example, to wait until at least <code>offset + limit</code> rows are available, use:
+     * <pre>
+     *     status -> status.allResultsProduced() || status.getRowCount() >= offset + limit
+     * </pre>
+     * Or, to wait for enough chunks:
+     * <pre>
+     *     status -> status.allResultsProduced() || status.getChunkCount() >= chunkId + limit
+     * </pre>
+     * If the predicate is never satisfied and the timeout is reached, or if the server reports all results produced but the predicate is still false, a {@link DataCloudJDBCException} is thrown.
+     *
      * @param queryId The identifier of the query to check
-     * @param timeout The duration to wait for the engine have results produced.
-     * @param predicate The condition to check against the query status,
-     *                  you can use {@link QueryStatus#isExecutionFinished()}, {@link QueryStatus#allResultsProduced()}, and {@link QueryStatus#isResultProduced()},
-     *                  as well as the methods on {@link QueryStatus.Predicates} for more complex predicates involving pages of rows or chunks
-     * @return The first status that satisfies the predicate, or the last {@link QueryStatus} received before timeout.
+     * @param timeout The duration to wait for the engine to produce results
+     * @param predicate The condition to check against the query status
+     * @return The first status that satisfies the predicate, or the last status received before timeout
+     * @throws DataCloudJDBCException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
      */
     public QueryStatus waitFor(String queryId, Duration timeout, Predicate<QueryStatus> predicate)
             throws DataCloudJDBCException {
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         return executor.waitFor(queryId, Deadline.of(timeout), predicate);
+    }
+
+    /**
+     * Waits indefinitely for the status of the specified query to satisfy the given predicate.
+     * <p>
+     * This is a convenience overload of {@link #waitFor(String, Duration, Predicate)} that waits without a timeout.
+     * See the documentation for that method for guidance on choosing an appropriate predicate.
+     *
+     * @see #waitFor(String, Duration, Predicate)
+     *
+     * @param queryId The identifier of the query to check
+     * @param predicate The condition to check against the query status
+     * @return The first status that satisfies the predicate
+     * @throws DataCloudJDBCException if the server reports all results produced but the predicate returns false
+     */
+    public QueryStatus waitFor(String queryId, Predicate<QueryStatus> predicate) throws DataCloudJDBCException {
+        val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
+        return executor.waitFor(queryId, Deadline.infinite(), predicate);
     }
 
     /**

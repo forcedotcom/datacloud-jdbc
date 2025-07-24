@@ -17,11 +17,18 @@ package com.salesforce.datacloud.jdbc.core.partial;
 
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.time.Duration;
+
+import io.grpc.StatusRuntimeException;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -38,16 +45,31 @@ class DataCloudQueryPollingTest {
 
     @SneakyThrows
     @Test
-    void doesNotThrowWhenPredicateTimesOut() {
-        try (val connection = getHyperQueryConnection()) {
-            val statement = connection.createStatement().unwrap(DataCloudStatement.class);
+    void throwsWhenPredicateTimesOut() {
+        try (val conn = getHyperQueryConnection();
+             val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
 
-            statement.execute("select * from generate_series(1, 109)");
-            connection.waitFor(statement.getQueryId(), small, QueryStatus::allResultsProduced);
+            stmt.executeAsyncQuery("select * from generate_series(1, 100) where pg_sleep(1);");
 
-            val result = connection.waitFor(
-                    statement.getQueryId(), Duration.ofMillis(100), QueryStatus.Predicates.rowsAvailable(100, 10));
-            assertThat(result.getRowCount()).isEqualTo(109);
+            assertThatThrownBy(() -> conn.waitFor(stmt.getQueryId(), Duration.ofMillis(250), QueryStatus::allResultsProduced))
+                    .isInstanceOf(DataCloudJDBCException.class)
+                    .hasMessage("Failed to get query status response. queryId=%s", stmt.getQueryId())
+                    .hasRootCauseInstanceOf(StatusRuntimeException.class)
+                    .satisfies(e -> assertThat(e.getCause().getMessage()).startsWith("DEADLINE_EXCEEDED: CallOptions deadline exceeded after"));
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void throwsWhenPredicateWillNeverSucceed() {
+        try (val conn = getHyperQueryConnection();
+             val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
+
+            stmt.execute("select * from generate_series(1, 100)");
+            conn.waitFor(stmt.getQueryId(), small, QueryStatus::allResultsProduced);
+
+            val result = conn.waitFor(stmt.getQueryId(), t -> t.getRowCount() >= 110);
+            assertThat(result.getRowCount()).isEqualTo(100);
             assertThat(result.allResultsProduced()).isTrue();
         }
     }

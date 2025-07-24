@@ -64,7 +64,7 @@ public class ChunkBasedPaginationTest {
         while (true) {
             try (final DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties)) {
                 if (status == null || !status.allResultsProduced()) {
-                    status = conn.waitFor(queryId, timeout, QueryStatus.Predicates.chunksAvailable(offset.get(), 1));
+                    status = conn.waitFor(queryId, timeout, s -> s.getChunkCount() > offset.get());
                 }
 
                 if (status.allResultsProduced() && offset.get() >= status.getChunkCount()) {

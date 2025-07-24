@@ -17,7 +17,6 @@ package com.salesforce.datacloud.query.v3;
 
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import java.util.Optional;
-import java.util.function.Predicate;
 import lombok.Value;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
@@ -52,6 +51,12 @@ public class QueryStatus {
 
     /**
      * Checks if all the query's results are ready, the row count and chunk count are stable.
+     * Should be composed to craft predicates in conjunction with waitFor, e.g.: waiting for a number of rows: <br />
+     * {@code s -> s.allResultsProduced() || s.getRowCount() >= offset + limit}<br />
+     * or waiting for a number of chunks: <br />
+     * {@code s -> s.allResultsProduced() || s.getChunkCount() >= offset + limit}<br />
+     * or getting the current status: <br />
+     * {@code s -> true}
      *
      * @return {@code true} if the query's results are ready, otherwise {@code false}.
      */
@@ -99,37 +104,39 @@ public class QueryStatus {
         }
     }
 
-    /**
-     * Provides a set of suggested predicates for determining the status of a query.
-     */
-    public static class Predicates {
-        /**
-         * Simply get the first query status that the server replies with.
-         */
-        public static Predicate<QueryStatus> first() {
-            return status -> true;
-        }
-
-        /**
-         * Checks if a given row range is available for a query.
-         * Especially useful in conjunction with {@link com.salesforce.datacloud.jdbc.core.DataCloudConnection#getRowBasedResultSet}
-         *
-         * @param offset The starting row offset.
-         * @param limit The quantity of rows relative to the offset to wait for
-         */
-        public static Predicate<QueryStatus> rowsAvailable(long offset, long limit) {
-            return status -> status.getRowCount() >= offset + limit;
-        }
-
-        /**
-         * Checks if a given chunk range is available for a query.
-         * Especially useful in conjunction with {@link com.salesforce.datacloud.jdbc.core.DataCloudConnection#getChunkBasedResultSet}
-         *
-         * @param offset The starting chunk offset.
-         * @param limit The quantity of chunks relative to the offset to wait for
-         */
-        public static Predicate<QueryStatus> chunksAvailable(long offset, long limit) {
-            return status -> status.getChunkCount() >= offset + limit;
-        }
-    }
+    //    /**
+    //     * Provides a set of suggested predicates for determining the status of a query.
+    //     */
+    //    public static class Predicates {
+    //        /**
+    //         * Simply get the first query status that the server replies with.
+    //         */
+    //        public static Predicate<QueryStatus> first() {
+    //            return status -> true;
+    //        }
+    //
+    //        /**
+    //         * Checks if a given row range is available for a query.
+    //         * Especially useful in conjunction with {@link
+    // com.salesforce.datacloud.jdbc.core.DataCloudConnection#getRowBasedResultSet}
+    //         *
+    //         * @param offset The starting row offset.
+    //         * @param limit The quantity of rows relative to the offset to wait for
+    //         */
+    //        public static Predicate<QueryStatus> rowsAvailable(long offset, long limit) {
+    //            return status -> status.getRowCount() >= offset + limit;
+    //        }
+    //
+    //        /**
+    //         * Checks if a given chunk range is available for a query.
+    //         * Especially useful in conjunction with {@link
+    // com.salesforce.datacloud.jdbc.core.DataCloudConnection#getChunkBasedResultSet}
+    //         *
+    //         * @param offset The starting chunk offset.
+    //         * @param limit The quantity of chunks relative to the offset to wait for
+    //         */
+    //        public static Predicate<QueryStatus> chunksAvailable(long offset, long limit) {
+    //            return status -> status.getChunkCount() >= offset + limit;
+    //        }
+    //    }
 }

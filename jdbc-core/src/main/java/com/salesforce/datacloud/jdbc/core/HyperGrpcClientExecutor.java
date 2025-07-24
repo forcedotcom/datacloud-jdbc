@@ -23,7 +23,6 @@ import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
-import com.salesforce.datacloud.query.v3.HyperClient;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import com.salesforce.datacloud.query.v3.QueryTimeout;
 import java.util.HashMap;
@@ -56,7 +55,7 @@ import salesforce.cdp.hyperdb.v1.ResultRange;
 @Builder(access = AccessLevel.PRIVATE)
 @Slf4j
 @Unstable
-public class HyperGrpcClientExecutor implements HyperClient {
+public class HyperGrpcClientExecutor {
     @NonNull private final HyperServiceGrpc.HyperServiceBlockingStub stub;
 
     private final QueryParam settingsQueryParams;

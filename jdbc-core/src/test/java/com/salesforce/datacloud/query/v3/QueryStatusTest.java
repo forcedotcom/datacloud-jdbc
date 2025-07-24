@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import lombok.Value;
 import lombok.val;
@@ -35,7 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
 
 class QueryStatusTest {
-    private static QueryInfo random(Consumer<salesforce.cdp.hyperdb.v1.QueryStatus.Builder> update) {
+    private static QueryInfo setup(Consumer<salesforce.cdp.hyperdb.v1.QueryStatus.Builder> update) {
         val queryStatus = salesforce.cdp.hyperdb.v1.QueryStatus.newBuilder()
                 .setChunkCount(1)
                 .setRowCount(100)
@@ -47,7 +48,7 @@ class QueryStatusTest {
 
     @Test
     void testRunningOrUnspecified() {
-        val actual = QueryStatus.of(random(s -> {}));
+        val actual = QueryStatus.of(setup(s -> {}));
 
         assertThat(actual).isPresent().get().satisfies(t -> {
             assertThat(t.allResultsProduced()).isFalse();
@@ -59,7 +60,7 @@ class QueryStatusTest {
     @Test
     void testExecutionFinished() {
         val actual = QueryStatus.of(
-                random(s -> s.setCompletionStatus(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED)));
+                setup(s -> s.setCompletionStatus(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED)));
 
         assertThat(actual).isPresent().get().satisfies(t -> {
             assertThat(t.allResultsProduced()).isTrue();
@@ -70,7 +71,7 @@ class QueryStatusTest {
 
     @Test
     void testResultsProduced() {
-        val actual = QueryStatus.of(random(
+        val actual = QueryStatus.of(setup(
                 s -> s.setCompletionStatus(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RESULTS_PRODUCED)));
 
         assertThat(actual).isPresent().get().satisfies(t -> {
@@ -83,7 +84,7 @@ class QueryStatusTest {
     @Test
     void testQueryId() {
         val queryId = UUID.randomUUID().toString();
-        val queryInfo = random(s -> s.setQueryId(queryId));
+        val queryInfo = setup(s -> s.setQueryId(queryId));
         val actual = QueryStatus.of(queryInfo);
 
         assertThat(actual).isPresent().map(QueryStatus::getQueryId).get().isEqualTo(queryId);
@@ -92,7 +93,7 @@ class QueryStatusTest {
     @Test
     void testProgress() {
         val progress = 0.35;
-        val queryInfo = random(s -> s.setProgress(progress));
+        val queryInfo = setup(s -> s.setProgress(progress));
         val actual = QueryStatus.of(queryInfo);
 
         assertThat(actual).isPresent().map(QueryStatus::getProgress).get().isEqualTo(progress);
@@ -101,7 +102,7 @@ class QueryStatusTest {
     @Test
     void testChunkCount() {
         val chunks = 5678L;
-        val queryInfo = random(s -> s.setChunkCount(chunks));
+        val queryInfo = setup(s -> s.setChunkCount(chunks));
         val actual = QueryStatus.of(queryInfo);
 
         assertThat(actual).isPresent().map(QueryStatus::getChunkCount).get().isEqualTo(chunks);
@@ -110,16 +111,16 @@ class QueryStatusTest {
     @Test
     void testRowCount() {
         val rows = 1234L;
-        val queryInfo = random(s -> s.setRowCount(rows));
+        val queryInfo = setup(s -> s.setRowCount(rows));
         val actual = QueryStatus.of(queryInfo);
 
         assertThat(actual).isPresent().map(QueryStatus::getRowCount).get().isEqualTo(rows);
     }
 
     @Test
-    @DisplayName("QueryStatus.Predicates.first() returns true for any status")
+    @DisplayName("'first' style predicate returns true for any status")
     void shouldAlwaysReturnTrue() {
-        val sut = QueryStatus.Predicates.first();
+        final Predicate<QueryStatus> sut = s -> true;
         val status = mock(QueryStatus.class);
 
         Assertions.assertThat(sut.test(status)).isTrue();
@@ -143,7 +144,8 @@ class QueryStatusTest {
     @MethodSource("cases")
     @DisplayName("QueryStatus.Predicates.rowsAvailable")
     void testRowsAvailable(Constraints args) {
-        val sut = QueryStatus.Predicates.rowsAvailable(args.offset, args.limit);
+        final Predicate<QueryStatus> sut = s -> s.allResultsProduced() || s.getRowCount() >= args.offset + args.limit;
+
         val status = mock(QueryStatus.class);
         when(status.getRowCount()).thenReturn(args.actual);
 
@@ -154,7 +156,8 @@ class QueryStatusTest {
     @MethodSource("cases")
     @DisplayName("QueryStatus.Predicates.chunksAvailable")
     void testChunksAvailable(Constraints args) {
-        val sut = QueryStatus.Predicates.chunksAvailable(args.offset, args.limit);
+        final Predicate<QueryStatus> sut = s -> s.allResultsProduced() || s.getChunkCount() >= args.offset + args.limit;
+
         val status = mock(QueryStatus.class);
         when(status.getChunkCount()).thenReturn(args.actual);
 

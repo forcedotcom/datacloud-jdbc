@@ -27,45 +27,12 @@ import lombok.SneakyThrows;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 
-@Builder
-class RowBasedContext {
-    @NonNull private final HyperGrpcClientExecutor client;
-
-    @NonNull private final String queryId;
-
-    private final long offset;
-
-    @Getter
-    private final long limit;
-
-    @Getter
-    private final AtomicLong seen = new AtomicLong(0);
-
-    public Iterator<QueryResult> getQueryResult(boolean omitSchema) throws DataCloudJDBCException {
-        val currentOffset = offset + seen.get();
-        val currentLimit = limit - seen.get();
-        return client.getQueryResult(
-                queryId, currentOffset, currentLimit, RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE, omitSchema);
-    }
-}
-
 /**
- * Row based results can be acquired with a QueryId and a row range, the behavior of getting more rows is determined by the {@link RowBased.Mode}:
- * {@link RowBased.Mode#SINGLE_RPC} execute a single GetQueryResult calls, we will return whatever data is on this response if any is available
- * {@link RowBased.Mode#FULL_RANGE} execute as many GetQueryResult calls until all available rows are exhausted
+ * execute as many GetQueryResult calls until all available rows are exhausted
  */
-public interface RowBased extends Iterator<QueryResult> {
-    enum Mode {
-        SINGLE_RPC,
-        FULL_RANGE
-    }
-
-    static RowBased of(
-            @NonNull HyperGrpcClientExecutor client,
-            @NonNull String queryId,
-            long offset,
-            long limit,
-            @NonNull Mode mode)
+@Builder
+public class RowBased implements Iterator<QueryResult> {
+    public static RowBased of(@NonNull HyperGrpcClientExecutor client, @NonNull String queryId, long offset, long limit)
             throws DataCloudJDBCException {
         val context = RowBasedContext.builder()
                 .client(client)
@@ -73,44 +40,19 @@ public interface RowBased extends Iterator<QueryResult> {
                 .offset(offset)
                 .limit(limit)
                 .build();
-        switch (mode) {
-            case SINGLE_RPC:
-                return RowBasedSingleRpc.builder()
-                        .iterator(context.getQueryResult(false))
-                        .build();
-            case FULL_RANGE:
-                return RowBasedFullRange.builder().context(context).build();
-        }
-        throw new IllegalArgumentException("Unknown mode not supported. mode=" + mode);
+
+        return RowBased.builder().context(context).build();
     }
 
     // The maximum byte size limit for a row based RPC response. While the server enforces a max as well, also having
     // the constant available on the client side allows to set appropriate default values and also to provide immediate
     // feedback on the
     // ``setResultSetConstraints`` method.
-    int HYPER_MAX_ROW_LIMIT_BYTE_SIZE = 20971520;
+    public static final int HYPER_MAX_ROW_LIMIT_BYTE_SIZE = 20971520;
     // The minimal byte size limit for a row based RPC response. The driver enforces this to guard against code that
     // accidentally provides the limit in megabytes.
-    int HYPER_MIN_ROW_LIMIT_BYTE_SIZE = 1024;
-}
+    public static final int HYPER_MIN_ROW_LIMIT_BYTE_SIZE = 1024;
 
-@Builder
-class RowBasedSingleRpc implements RowBased {
-    private final Iterator<QueryResult> iterator;
-
-    @Override
-    public boolean hasNext() {
-        return iterator.hasNext();
-    }
-
-    @Override
-    public QueryResult next() {
-        return iterator.next();
-    }
-}
-
-@Builder
-class RowBasedFullRange implements RowBased {
     private final RowBasedContext context;
 
     private Iterator<QueryResult> iterator;
@@ -143,5 +85,27 @@ class RowBasedFullRange implements RowBased {
         val next = iterator.next();
         context.getSeen().addAndGet(next.getResultPartRowCount());
         return next;
+    }
+
+    @Builder
+    private static class RowBasedContext {
+        @NonNull private final HyperGrpcClientExecutor client;
+
+        @NonNull private final String queryId;
+
+        private final long offset;
+
+        @Getter
+        private final long limit;
+
+        @Getter
+        private final AtomicLong seen = new AtomicLong(0);
+
+        public Iterator<QueryResult> getQueryResult(boolean omitSchema) throws DataCloudJDBCException {
+            val currentOffset = offset + seen.get();
+            val currentLimit = limit - seen.get();
+            return client.getQueryResult(
+                    queryId, currentOffset, currentLimit, RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE, omitSchema);
+        }
     }
 }
