@@ -19,7 +19,7 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import dev.failsafe.Failsafe;
 import dev.failsafe.FailsafeException;
 import dev.failsafe.RetryPolicy;
@@ -28,9 +28,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.function.Predicate;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
@@ -43,71 +41,14 @@ public final class DataCloudQueryPolling {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
-    public static DataCloudQueryStatus waitForChunksAvailable(
-            HyperServiceGrpc.HyperServiceBlockingStub stub,
-            String queryId,
-            long offset,
-            long limit,
-            Deadline deadline,
-            boolean allowLessThan)
-            throws DataCloudJDBCException {
-        return waitForCountAvailabile(
-                stub, queryId, offset, limit, deadline, allowLessThan, DataCloudQueryStatus::getChunkCount);
-    }
-
-    public static DataCloudQueryStatus waitForRowsAvailable(
-            HyperServiceGrpc.HyperServiceBlockingStub stub,
-            String queryId,
-            long offset,
-            long limit,
-            Deadline deadline,
-            boolean allowLessThan)
-            throws DataCloudJDBCException {
-        return waitForCountAvailabile(
-                stub, queryId, offset, limit, deadline, allowLessThan, DataCloudQueryStatus::getRowCount);
-    }
-
-    private static DataCloudQueryStatus waitForCountAvailabile(
-            HyperServiceGrpc.HyperServiceBlockingStub stub,
-            String queryId,
-            long offset,
-            long limit,
-            Deadline deadline,
-            boolean allowLessThan,
-            Function<DataCloudQueryStatus, Long> countSelector)
-            throws DataCloudJDBCException {
-        Predicate<DataCloudQueryStatus> predicate = status -> {
-            val count = countSelector.apply(status);
-            if (allowLessThan) {
-                return count > offset;
-            } else {
-                return count >= offset + limit;
-            }
-        };
-
-        val result = waitForQueryStatus(stub, queryId, deadline, predicate);
-
-        if (predicate.test(result)) {
-            return result;
-        } else {
-            if (allowLessThan) {
-                throw new DataCloudJDBCException(
-                        "Timed out waiting for new items to be available. queryId=" + queryId + ", status=" + result);
-            } else {
-                throw new DataCloudJDBCException("Timed out waiting for enough items to be available. queryId="
-                        + queryId + ", status=" + result);
-            }
-        }
-    }
-
-    public static DataCloudQueryStatus waitForQueryStatus(
+    public static QueryStatus waitFor(
             HyperServiceGrpc.HyperServiceBlockingStub stub,
             String queryId,
             Deadline deadline,
-            Predicate<DataCloudQueryStatus> predicate)
+            Predicate<QueryStatus> predicate)
             throws DataCloudJDBCException {
-        val last = new AtomicReference<DataCloudQueryStatus>();
-        val attempts = new AtomicInteger(0);
+        val last = new AtomicReference<QueryStatus>();
+        val retryAttempts = new AtomicInteger(0);
 
         // RetryPolicy fails if remainingDuration is zero or negative
         val remainingDuration = deadline.getRemaining();
@@ -116,7 +57,7 @@ public final class DataCloudQueryPolling {
                     "Query status polling timed out. queryId=" + queryId + ", lastStatus=" + last.get());
         }
 
-        val retryPolicy = RetryPolicy.<DataCloudQueryStatus>builder()
+        val retryPolicy = RetryPolicy.<QueryStatus>builder()
                 .withMaxDuration(remainingDuration)
                 .handleIf(e -> {
                     if (!(e instanceof StatusRuntimeException)) {
@@ -126,38 +67,53 @@ public final class DataCloudQueryPolling {
 
                     if (last.get() == null) {
                         log.error(
-                                "Failed to get query status response, will not try again. queryId={}, attempts={}",
+                                "Failed to get query status response, will not try again. queryId={}, retryAttempts={}",
                                 queryId,
-                                attempts.get(),
+                                retryAttempts.get(),
                                 e);
                         return false;
                     }
 
                     if (deadline.hasPassed()) {
                         log.error(
-                                "Reached deadline for polling query status, will not try again. queryId={}, attempts={}, lastStatus={}",
+                                "Reached deadline for polling query status, will not try again. queryId={}, retryAttempts={}, lastStatus={}",
                                 queryId,
-                                attempts.get(),
+                                retryAttempts.get(),
                                 last.get(),
                                 e);
                         return false;
                     }
 
                     log.warn(
-                            "We think this error was a server timeout, will try again. queryId={}, attempts={}, lastStatus={}",
+                            "We think this error was a server timeout, will try again. queryId={}, retryAttempts={}, lastStatus={}",
                             queryId,
-                            attempts.get(),
+                            retryAttempts.get(),
                             last.get());
                     return true;
                 })
                 .build();
 
         try {
-            return Failsafe.with(retryPolicy)
-                    .get(() -> waitForQueryStatusWithoutRetry(stub, queryId, deadline, last, attempts, predicate));
+            AtomicInteger attempts = new AtomicInteger(0);
+            QueryStatus result = null;
+
+            do {
+                if (attempts.getAndIncrement() > 0) {
+                    log.info(
+                            "The predicate was not satisfied after an iteration through the stream. queryId={}, attempts={}, lastStatus={}",
+                            queryId,
+                            attempts.get(),
+                            result);
+                }
+
+                result = Failsafe.with(retryPolicy)
+                        .get(() -> waitForWithoutRetry(stub, queryId, deadline, last, attempts, predicate));
+            } while (!predicate.test(result));
+
+            return result;
         } catch (FailsafeException ex) {
             throw new DataCloudJDBCException(
-                    "Failed to get query status response. queryId=" + queryId + ", attempts=" + attempts.get()
+                    "Failed to get query status response. queryId=" + queryId + ", attempts=" + retryAttempts.get()
                             + ", lastStatus=" + last.get(),
                     ex.getCause());
         } catch (StatusRuntimeException ex) {
@@ -165,14 +121,14 @@ public final class DataCloudQueryPolling {
         }
     }
 
-    @SneakyThrows
-    static DataCloudQueryStatus waitForQueryStatusWithoutRetry(
+    static QueryStatus waitForWithoutRetry(
             HyperServiceGrpc.HyperServiceBlockingStub stub,
             String queryId,
             Deadline deadline,
-            AtomicReference<DataCloudQueryStatus> last,
+            AtomicReference<QueryStatus> last,
             AtomicInteger times,
-            Predicate<DataCloudQueryStatus> predicate) {
+            Predicate<QueryStatus> predicate)
+            throws DataCloudJDBCException {
         times.getAndIncrement();
         val param = QueryInfoParam.newBuilder()
                 .setQueryId(queryId)
@@ -182,23 +138,24 @@ public final class DataCloudQueryPolling {
         while (!remaining.isZero() && !remaining.isNegative()) {
             val info = stub.withDeadlineAfter(remaining.toMillis(), TimeUnit.MILLISECONDS)
                     .getQueryInfo(param);
-            val matched = StreamUtilities.toStream(info)
-                    .map(DataCloudQueryStatus::of)
+
+            val mapped = StreamUtilities.toStream(info)
+                    .map(QueryStatus::of)
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .peek(last::set)
-                    .filter(predicate)
-                    .findFirst();
+                    .iterator();
 
-            if (matched.isPresent()) {
-                return matched.get();
-            }
+            while (mapped.hasNext()) {
+                val status = mapped.next();
+                if (predicate.test(status)) {
+                    return status;
+                }
 
-            if (Optional.ofNullable(last.get())
-                    .map(DataCloudQueryStatus::allResultsProduced)
-                    .orElse(false)) {
-                log.warn("predicate did not match but all results were produced. last={}", last.get());
-                return last.get();
+                if (status.allResultsProduced()) {
+                    throw new DataCloudJDBCException("query completed but predicate was not satisfied. queryId="
+                            + queryId + ", finalStatus=" + status);
+                }
             }
 
             log.info(

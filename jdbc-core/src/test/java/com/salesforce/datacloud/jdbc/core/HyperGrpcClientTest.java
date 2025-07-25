@@ -18,7 +18,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.google.protobuf.ByteString;
-import com.salesforce.datacloud.jdbc.util.QueryTimeout;
+import com.salesforce.datacloud.query.v3.QueryTimeout;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Iterator;

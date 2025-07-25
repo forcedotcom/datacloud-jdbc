@@ -20,7 +20,6 @@ import java.util.Optional;
 import lombok.Value;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 /**
  * Represents the status of a query.
@@ -32,8 +31,8 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  * </ul>
  */
 @Value
-@Unstable
-public class DataCloudQueryStatus {
+@Unstable // TODO: it might be time to remove this
+public class QueryStatus {
     public enum CompletionStatus {
         RUNNING,
         RESULTS_PRODUCED,
@@ -52,6 +51,12 @@ public class DataCloudQueryStatus {
 
     /**
      * Checks if all the query's results are ready, the row count and chunk count are stable.
+     * Should be composed to craft predicates in conjunction with waitFor, e.g.: waiting for a number of rows: <br />
+     * {@code s -> s.allResultsProduced() || s.getRowCount() >= offset + limit}<br />
+     * or waiting for a number of chunks: <br />
+     * {@code s -> s.allResultsProduced() || s.getChunkCount() >= offset + limit}<br />
+     * or getting the current status: <br />
+     * {@code s -> true}
      *
      * @return {@code true} if the query's results are ready, otherwise {@code false}.
      */
@@ -64,7 +69,7 @@ public class DataCloudQueryStatus {
      *
      * @return {@code true} if the query's results are available for retrieval, otherwise {@code false}.
      */
-    public boolean isResultProduced() {
+    private boolean isResultProduced() {
         return completionStatus == CompletionStatus.RESULTS_PRODUCED;
     }
 
@@ -77,17 +82,16 @@ public class DataCloudQueryStatus {
         return completionStatus == CompletionStatus.FINISHED;
     }
 
-    public static Optional<DataCloudQueryStatus> of(QueryInfo queryInfo) {
-        return Optional.ofNullable(queryInfo).map(QueryInfo::getQueryStatus).map(DataCloudQueryStatus::of);
+    public static Optional<QueryStatus> of(QueryInfo queryInfo) {
+        return Optional.ofNullable(queryInfo).map(QueryInfo::getQueryStatus).map(QueryStatus::of);
     }
 
-    public static DataCloudQueryStatus of(QueryStatus s) {
+    public static QueryStatus of(salesforce.cdp.hyperdb.v1.QueryStatus s) {
         val completionStatus = of(s.getCompletionStatus());
-        return new DataCloudQueryStatus(
-                s.getQueryId(), s.getChunkCount(), s.getRowCount(), s.getProgress(), completionStatus);
+        return new QueryStatus(s.getQueryId(), s.getChunkCount(), s.getRowCount(), s.getProgress(), completionStatus);
     }
 
-    private static CompletionStatus of(QueryStatus.CompletionStatus completionStatus) {
+    private static CompletionStatus of(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus completionStatus) {
         switch (completionStatus) {
             case RUNNING_OR_UNSPECIFIED:
                 return CompletionStatus.RUNNING;

@@ -37,6 +37,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import lombok.SneakyThrows;
@@ -50,7 +52,10 @@ public class HyperServerProcess implements AutoCloseable {
 
     private final Process hyperProcess;
     private final ExecutorService hyperMonitors;
+    private final ConcurrentLinkedQueue<AutoCloseable> managedResources = new ConcurrentLinkedQueue<>();
+    private final Thread shutdownHook;
     private Integer port;
+    private final AtomicBoolean closed = new AtomicBoolean(false);
 
     public HyperServerProcess() {
         this(HyperServerConfig.builder());
@@ -84,7 +89,6 @@ public class HyperServerProcess implements AutoCloseable {
         log.warn("hyper command: {}", builder.command());
         hyperProcess = builder.start();
 
-        // Wait until process is listening and extract port on which it is listening
         val latch = new CountDownLatch(1);
         hyperMonitors = Executors.newFixedThreadPool(2);
         hyperMonitors.execute(() -> logStream(hyperProcess.getErrorStream(), log::error));
@@ -101,6 +105,9 @@ public class HyperServerProcess implements AutoCloseable {
             throw new IllegalStateException(
                 "failed to start instance of hyper within 30 seconds");
         }
+
+        shutdownHook = new Thread(this::forceCleanup, "HyperServerProcess-ShutdownHook");
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
 
     public int getPort() {
@@ -108,7 +115,7 @@ public class HyperServerProcess implements AutoCloseable {
     }
 
     public boolean isHealthy() {
-        return hyperProcess != null && hyperProcess.isAlive();
+        return hyperProcess != null && hyperProcess.isAlive() && !closed.get();
     }
 
     private static void logStream(InputStream inputStream, Consumer<String> consumer) {
@@ -126,14 +133,60 @@ public class HyperServerProcess implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
+        if (!closed.compareAndSet(false, true)) {
+            return;
+        }
+
+        try {
+            Runtime.getRuntime().removeShutdownHook(shutdownHook);
+        } catch (IllegalStateException e) {
+            // JVM is already shutting down, hook cannot be removed
+        }
+
+        performCleanup();
+    }
+
+    private void forceCleanup() {
+        try {
+            performCleanup();
+        } catch (Exception e) {
+            log.error("Error during shutdown hook cleanup", e);
+        }
+    }
+
+    private void performCleanup() throws Exception {
+        log.warn("Cleaning up HyperServerProcess resources");
+
+        AutoCloseable resource;
+        while ((resource = managedResources.poll()) != null) {
+            try {
+                resource.close();
+            } catch (Exception e) {
+                log.warn("Failed to close managed resource", e);
+            }
+        }
+
         if (hyperProcess != null && hyperProcess.isAlive()) {
             log.warn("destroy hyper process");
             hyperProcess.destroy();
-            hyperProcess.waitFor();
+            if (!hyperProcess.waitFor(5, TimeUnit.SECONDS)) {
+                log.warn("hyper process did not terminate gracefully, force killing");
+                hyperProcess.destroyForcibly();
+                hyperProcess.waitFor(2, TimeUnit.SECONDS);
+            }
         }
 
-        log.warn("shutdown hyper monitors");
-        hyperMonitors.shutdown();
+        if (hyperMonitors != null) {
+            log.warn("shutdown hyper monitors");
+            hyperMonitors.shutdown();
+            if (!hyperMonitors.awaitTermination(5, TimeUnit.SECONDS)) {
+                log.warn("hyper monitors did not terminate gracefully, force shutdown");
+                hyperMonitors.shutdownNow();
+                if (!hyperMonitors.awaitTermination(2, TimeUnit.SECONDS)) {
+                    log.error("hyper monitors failed to terminate even after force shutdown");
+                }
+            }
+        }
     }
 
     public DataCloudConnection getConnection() {
@@ -142,18 +195,30 @@ public class HyperServerProcess implements AutoCloseable {
 
     @SneakyThrows
     public HyperGrpcClientExecutor getRawClient() {
+        if (closed.get()) {
+            throw new IllegalStateException("HyperServerProcess is already closed");
+        }
+
         val channel = DataCloudJdbcManagedChannel.of(
                 ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext());
+        managedResources.add(channel);
+        
         val stub = HyperServiceGrpc.newBlockingStub(channel.getChannel());
         return HyperGrpcClientExecutor.of(stub, new HashMap<String, String>());
     }
 
     @SneakyThrows
     public DataCloudConnection getConnection(Map<String, String> connectionSettings) {
+        if (closed.get()) {
+            throw new IllegalStateException("HyperServerProcess is already closed");
+        }
+
         val properties = new Properties();
         properties.put(DirectDataCloudConnection.DIRECT, "true");
         properties.putAll(connectionSettings);
         val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getPort();
-        return DirectDataCloudConnection.of(url, properties);
+        val connection = DirectDataCloudConnection.of(url, properties);
+        managedResources.add(connection);
+        return connection;
     }
 }

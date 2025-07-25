@@ -21,15 +21,15 @@ import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
-import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import lombok.extern.slf4j.Slf4j;
@@ -61,7 +61,7 @@ public class RowBasedPaginationTest {
         // Step 1: Execute the query and retrieve the first page of results
         final List<Long> allResults = new ArrayList<>();
         final String queryId;
-        long currentOffset = 0;
+        final AtomicLong currentOffset = new AtomicLong(0);
 
         try (final DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties);
                 final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
@@ -78,7 +78,7 @@ public class RowBasedPaginationTest {
             }
 
             // Update offset for next page
-            currentOffset += rs.getRow();
+            currentOffset.getAndAdd(rs.getRow());
         }
 
         // Verify we got the first page
@@ -86,21 +86,25 @@ public class RowBasedPaginationTest {
 
         // Step 2: Retrieve remaining pages
         try (final DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties)) {
-            DataCloudQueryStatus status = conn.waitForRowsAvailable(queryId, currentOffset, pageSize, timeout, true);
+            QueryStatus status = conn.waitFor(
+                    queryId, timeout, t -> t.allResultsProduced() || t.getRowCount() >= currentOffset.get() + pageSize);
 
             while (true) {
-                final boolean shouldCheck = !status.allResultsProduced() && currentOffset >= status.getRowCount();
+
+                final boolean shouldCheck = !status.allResultsProduced() && currentOffset.get() >= status.getRowCount();
                 if (shouldCheck) {
-                    status = conn.waitForRowsAvailable(queryId, currentOffset, pageSize, timeout, true);
+                    status = conn.waitFor(
+                            queryId,
+                            timeout,
+                            t -> t.allResultsProduced() || t.getRowCount() >= currentOffset.get() + pageSize);
                 }
 
-                final boolean readAllRows = status.allResultsProduced() && currentOffset >= status.getRowCount();
+                final boolean readAllRows = status.allResultsProduced() && currentOffset.get() == status.getRowCount();
                 if (readAllRows) {
                     break;
                 }
 
-                final DataCloudResultSet rs =
-                        conn.getRowBasedResultSet(queryId, currentOffset, pageSize, RowBased.Mode.SINGLE_RPC);
+                final DataCloudResultSet rs = conn.getRowBasedResultSet(queryId, currentOffset.get(), pageSize);
 
                 final List<Long> pageResults = new ArrayList<>();
                 while (rs.next()) {
@@ -109,9 +113,9 @@ public class RowBasedPaginationTest {
                 allResults.addAll(pageResults);
 
                 // Update offset for next page
-                currentOffset += rs.getRow();
+                currentOffset.getAndAdd(rs.getRow());
 
-                log.warn("Retrieved page. offset={}, values={}", currentOffset - rs.getRow(), pageResults);
+                log.warn("Retrieved page. offset={}, values={}", currentOffset.get() - rs.getRow(), pageResults);
             }
         }
 

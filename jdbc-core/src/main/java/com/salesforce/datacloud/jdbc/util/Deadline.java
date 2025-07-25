@@ -26,6 +26,12 @@ import lombok.Builder;
  */
 @Builder(access = AccessLevel.PRIVATE)
 public class Deadline {
+    /**
+     * We can't use Long.MAX_VALUE here as it results in a remaining time that is too large for netty.
+     * Thus for practical pruposes we say that an infitine deadline is 10 days from now.
+     */
+    private static final Duration INFINITE = Duration.ofDays(10);
+
     // The deadline in nanoseconds.
     private final long deadline;
 
@@ -35,13 +41,19 @@ public class Deadline {
      * @return The deadline.
      */
     public static Deadline of(Duration timeout) {
-        // Handle infinite / no timeout case
         if (timeout.isZero()) {
-            // We can't use Long.MAX_VALUE here as it results in a remaining time that is too large for netty.
-            // Thus for practical pruposes we say that an infitine deadline is 10 days from now.
-            timeout = Duration.ofDays(10);
+            timeout = INFINITE;
         }
         return Deadline.builder().deadline(currentTime() + timeout.toNanos()).build();
+    }
+
+
+    /**
+     * Create a Deadline instance with practically no timeout.
+     * @return An "infinite" deadline.
+     */
+    public static Deadline infinite() {
+        return of(Duration.ZERO);
     }
 
     /**
