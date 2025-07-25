@@ -69,7 +69,7 @@ public class QueryStatus {
      *
      * @return {@code true} if the query's results are available for retrieval, otherwise {@code false}.
      */
-    public boolean isResultProduced() {
+    private boolean isResultProduced() {
         return completionStatus == CompletionStatus.RESULTS_PRODUCED;
     }
 
@@ -103,40 +103,4 @@ public class QueryStatus {
                 throw new IllegalArgumentException("Unknown completion status. status=" + completionStatus);
         }
     }
-
-    //    /**
-    //     * Provides a set of suggested predicates for determining the status of a query.
-    //     */
-    //    public static class Predicates {
-    //        /**
-    //         * Simply get the first query status that the server replies with.
-    //         */
-    //        public static Predicate<QueryStatus> first() {
-    //            return status -> true;
-    //        }
-    //
-    //        /**
-    //         * Checks if a given row range is available for a query.
-    //         * Especially useful in conjunction with {@link
-    // com.salesforce.datacloud.jdbc.core.DataCloudConnection#getRowBasedResultSet}
-    //         *
-    //         * @param offset The starting row offset.
-    //         * @param limit The quantity of rows relative to the offset to wait for
-    //         */
-    //        public static Predicate<QueryStatus> rowsAvailable(long offset, long limit) {
-    //            return status -> status.getRowCount() >= offset + limit;
-    //        }
-    //
-    //        /**
-    //         * Checks if a given chunk range is available for a query.
-    //         * Especially useful in conjunction with {@link
-    // com.salesforce.datacloud.jdbc.core.DataCloudConnection#getChunkBasedResultSet}
-    //         *
-    //         * @param offset The starting chunk offset.
-    //         * @param limit The quantity of chunks relative to the offset to wait for
-    //         */
-    //        public static Predicate<QueryStatus> chunksAvailable(long offset, long limit) {
-    //            return status -> status.getChunkCount() >= offset + limit;
-    //        }
-    //    }
 }

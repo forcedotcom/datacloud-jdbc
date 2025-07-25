@@ -99,7 +99,7 @@ public class RowBasedPaginationTest {
                             t -> t.allResultsProduced() || t.getRowCount() >= currentOffset.get() + pageSize);
                 }
 
-                final boolean readAllRows = status.allResultsProduced() && currentOffset.get() >= status.getRowCount();
+                final boolean readAllRows = status.allResultsProduced() && currentOffset.get() == status.getRowCount();
                 if (readAllRows) {
                     break;
                 }
