@@ -1,17 +1,15 @@
 package com.salesforce.datacloud.spark
 
-import com.salesforce.datacloud.jdbc.core.DataCloudConnection
-import java.util.Properties
-import io.grpc.ManagedChannelBuilder
 import org.apache.spark.sql.connector.catalog.TableProvider
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.connector.catalog.Table
 import org.apache.spark.sql.connector.expressions.Transform
-import org.apache.spark.sql.types.StructType
-import java.sql.ResultSetMetaData
-import org.apache.spark.sql.types.StructField
-import com.salesforce.datacloud.spark.TypeMapping.getSparkType
+import com.salesforce.datacloud.spark.core.{
+  HyperConnectionOptions,
+  HyperResultTable,
+  TypeMapping
+}
 
 /** A Spark Datasource for reading a Hyper result.
   *

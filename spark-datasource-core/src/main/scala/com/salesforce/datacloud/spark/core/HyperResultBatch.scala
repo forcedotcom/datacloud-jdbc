@@ -1,4 +1,4 @@
-package com.salesforce.datacloud.spark
+package com.salesforce.datacloud.spark.core
 
 import java.sql.ResultSet
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection
@@ -26,14 +26,14 @@ import org.apache.spark.sql.connector.read.InputPartition
 import org.apache.spark.sql.connector.read.PartitionReaderFactory
 import org.apache.spark.sql.connector.read.PartitionReader
 import org.apache.spark.sql.catalyst.InternalRow
-import com.salesforce.datacloud.spark.TypeMapping.JDBCValueGetter
-import com.salesforce.datacloud.spark.TypeMapping.makeGetters
+import com.salesforce.datacloud.spark.core.TypeMapping.JDBCValueGetter
+import com.salesforce.datacloud.spark.core.TypeMapping.makeGetters
 
 /** A partition of a Hyper result.
   *
   * Each partition is one or multiple chunks of a Hyper result.
   */
-private case class HyperResultInputPartition(
+case class HyperResultInputPartition(
     resultSetId: String,
     chunkIndex: Long,
     chunkCount: Long
@@ -41,7 +41,7 @@ private case class HyperResultInputPartition(
 
 /** A batch is a collection of partitions.
   */
-private case class HyperResultBatch(
+case class HyperResultBatch(
     connectionOptions: HyperConnectionOptions,
     resultSetId: String,
     schema: StructType,
@@ -79,7 +79,7 @@ private case class HyperResultBatch(
   }
 }
 
-private class HyperResultPartitionReader extends PartitionReader[InternalRow] {
+class HyperResultPartitionReader extends PartitionReader[InternalRow] {
   private var getters: Array[JDBCValueGetter] = null;
   private var connection: DataCloudConnection = null;
   private var resultSet: ResultSet = null;

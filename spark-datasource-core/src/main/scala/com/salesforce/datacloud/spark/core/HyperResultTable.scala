@@ -1,4 +1,4 @@
-package com.salesforce.datacloud.spark
+package com.salesforce.datacloud.spark.core
 
 import org.apache.spark.sql.connector.catalog.SupportsRead
 import org.apache.spark.sql.types.StructType
@@ -14,8 +14,9 @@ import org.apache.spark.sql.connector.read.Statistics
 import scala.util.Using
 import org.apache.spark.sql.connector.metric.CustomMetric
 import org.apache.spark.sql.connector.metric.CustomTaskMetric
+import com.salesforce.datacloud.query.v3.DataCloudQueryStatus
 
-private case class HyperResultTable(
+case class HyperResultTable(
     connectionOptions: HyperConnectionOptions,
     resultSetId: String,
     schema: StructType
@@ -52,7 +53,7 @@ private case class HyperResultTable(
   }
 }
 
-private case class HyperResultScan(
+case class HyperResultScan(
     connectionOptions: HyperConnectionOptions,
     resultSetId: String,
     schema: StructType,
