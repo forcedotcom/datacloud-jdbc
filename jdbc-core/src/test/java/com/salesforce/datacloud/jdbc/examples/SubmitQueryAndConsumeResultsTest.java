@@ -52,9 +52,11 @@ public class SubmitQueryAndConsumeResultsTest {
         // Use the JDBC Driver interface
         try (DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties)) {
             try (Statement stmt = conn.createStatement()) {
-                ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(1,10) s");
+                ResultSet rs = stmt.executeQuery("SELECT s, lpad('A', 1024*1024, 'X') FROM generate_series(1, 2048) s");
                 while (rs.next()) {
-                    System.out.println("Retrieved value:" + rs.getLong(1));
+                    if ((rs.getRow() & (rs.getRow() - 1)) == 0) {
+                        log.warn("value={}, memory={}", rs.getLong(1), Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+                    }
                 }
             }
         }
