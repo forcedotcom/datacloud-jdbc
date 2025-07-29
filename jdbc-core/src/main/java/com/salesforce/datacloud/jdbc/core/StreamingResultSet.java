@@ -29,6 +29,7 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.TimeZone;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.arrow.memory.RootAllocator;
@@ -44,14 +45,15 @@ import salesforce.cdp.hyperdb.v1.QueryResult;
 public class StreamingResultSet extends AvaticaResultSet implements DataCloudResultSet {
     private static final int ROOT_ALLOCATOR_MB_FROM_V2 = 100 * 1024 * 1024;
 
+    @Getter
+    private final String queryId;
+
     private final ArrowStreamReaderCursor cursor;
-    private final ThrowingJdbcSupplier<String> getQueryId;
     ThrowingJdbcSupplier<DataCloudQueryStatus> getQueryStatus;
 
     private StreamingResultSet(
             ArrowStreamReaderCursor cursor,
-            ThrowingJdbcSupplier<String> getQueryId,
-            ThrowingJdbcSupplier<DataCloudQueryStatus> getQueryStatus,
+            String queryId,
             AvaticaStatement statement,
             QueryState state,
             Meta.Signature signature,
@@ -61,19 +63,14 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
             throws SQLException {
         super(statement, state, signature, resultSetMetaData, timeZone, firstFrame);
         this.cursor = cursor;
-        this.getQueryId = getQueryId;
-        this.getQueryStatus = getQueryStatus;
+        this.queryId = queryId;
     }
 
     public static StreamingResultSet of(QueryResultIterator iterator) throws DataCloudJDBCException {
-        return of(iterator, iterator::getQueryId, iterator::getQueryStatus);
+        return of(iterator, iterator.getQueryId());
     }
 
-    public static StreamingResultSet of(
-            Iterator<QueryResult> iterator,
-            ThrowingJdbcSupplier<String> getQueryId,
-            ThrowingJdbcSupplier<DataCloudQueryStatus> getQueryStatus)
-            throws DataCloudJDBCException {
+    public static StreamingResultSet of(Iterator<QueryResult> iterator, String queryId) throws DataCloudJDBCException {
         try {
             val channel = ExecuteQueryResponseChannel.of(StreamUtilities.toStream(iterator));
             val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
@@ -85,24 +82,13 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
             val cursor = new ArrowStreamReaderCursor(reader);
-            val result = new StreamingResultSet(
-                    cursor, getQueryId, getQueryStatus, null, state, signature, metadata, timezone, null);
+            val result = new StreamingResultSet(cursor, queryId, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
 
             return result;
         } catch (Exception ex) {
-            throw createException(QUERY_FAILURE + getQueryId.get(), ex);
+            throw createException(QUERY_FAILURE + queryId, ex);
         }
-    }
-
-    @Override
-    public String getQueryId() throws DataCloudJDBCException {
-        return getQueryId.get();
-    }
-
-    @Override
-    public DataCloudQueryStatus getQueryStatus() throws DataCloudJDBCException {
-        return getQueryStatus.get();
     }
 
     private static final String QUERY_FAILURE = "Failed to execute query: ";

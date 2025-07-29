@@ -23,7 +23,6 @@ import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
-import io.grpc.StatusRuntimeException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -78,9 +77,7 @@ class ChunkBasedTest {
     void failsOnChunkOverrun() {
         assertThatThrownBy(() -> sut(small, 0, 2))
                 .isInstanceOf(DataCloudJDBCException.class)
-                .hasMessageContaining("Failed to load next batch")
-                .hasCauseInstanceOf(StatusRuntimeException.class)
-                .hasRootCauseMessage("INVALID_ARGUMENT: The requested chunk id '1' is out of range");
+                .hasMessageContaining("The requested chunk id '1' is out of range");
     }
 
     @SneakyThrows

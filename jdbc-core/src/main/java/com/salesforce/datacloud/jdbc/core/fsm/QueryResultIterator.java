@@ -20,8 +20,6 @@ import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import java.util.Iterator;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 
-public interface QueryResultIterator extends Iterator<QueryResult> {
-    String getQueryId() throws DataCloudJDBCException;
-
+public interface QueryResultIterator extends Iterator<QueryResult>, QueryResultHandle {
     DataCloudQueryStatus getQueryStatus() throws DataCloudJDBCException;
 }

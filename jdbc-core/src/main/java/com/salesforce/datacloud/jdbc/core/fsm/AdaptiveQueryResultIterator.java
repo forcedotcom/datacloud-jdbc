@@ -15,6 +15,8 @@
  */
 package com.salesforce.datacloud.jdbc.core.fsm;
 
+import static com.salesforce.datacloud.jdbc.core.fsm.InitialQueryInfoUtility.getInitialQueryInfo;
+
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Deadline;
@@ -28,10 +30,8 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-
-import lombok.AllArgsConstructor;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
@@ -56,10 +56,8 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
 
     public static AdaptiveQueryResultIterator of(String sql, HyperGrpcClientExecutor client, QueryTimeout timeout)
             throws SQLException {
-        val executeStream = client.executeQuery(sql, timeout);
-        val context = new Context(timeout.getLocalDeadline(), executeStream);
-        val first = executeStream.next();
-        context.updateQueryContext(first.getQueryInfo());
+        val response = client.executeQuery(sql, timeout);
+        val context = Context.of(sql, response, timeout.getLocalDeadline());
 
         return new AdaptiveQueryResultIterator(client, context);
     }
@@ -67,10 +65,8 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
     public static AdaptiveQueryResultIterator of(
             String sql, HyperGrpcClientExecutor client, QueryTimeout timeout, long maxRows, long maxBytes)
             throws SQLException {
-        val executeStream = client.executeQuery(sql, timeout, maxRows, maxBytes);
-        val context = new Context(timeout.getLocalDeadline(), executeStream);
-        val first = executeStream.next();
-        context.updateQueryContext(first.getQueryInfo());
+        val response = client.executeQuery(sql, timeout, maxRows, maxBytes);
+        val context = Context.of(sql, response, timeout.getLocalDeadline());
 
         return new AdaptiveQueryResultIterator(client, context);
     }
@@ -86,15 +82,16 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
     }
 
     @Override
-    @SneakyThrows
     public boolean hasNext() {
-
         while (!context.hasQueryResult() && state != State.COMPLETED) {
             try {
                 processCurrentState();
-            } catch (StatusRuntimeException | DataCloudJDBCException ex) {
+            } catch (StatusRuntimeException ex) {
                 log.error("Failed to process current state, state={}, queryId={}", state, getQueryId(), ex);
                 throw ex;
+            } catch (DataCloudJDBCException ex) {
+                log.error("Failed to process current state, state={}, queryId={}", state, getQueryId(), ex);
+                throw new RuntimeException("Query processing failed: " + ex.getMessage(), ex);
             }
         }
         return context.hasQueryResult();
@@ -121,10 +118,14 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
 
                     if (response.hasQueryInfo()) {
                         context.updateQueryContext(response.getQueryInfo());
-                    }
-
-                    if (response.hasQueryResult()) {
+                    } else if (response.hasQueryResult()) {
                         context.setQueryResult(response.getQueryResult());
+                    } else {
+                        if (!response.getOptional()) {
+                            throw new DataCloudJDBCException(
+                                    "Got unexpected empty message from executeQuery response stream, queryId="
+                                            + context.getQueryId());
+                        }
                     }
                 } else {
                     transitionTo(State.CHECK_FOR_MORE_DATA);
@@ -141,7 +142,7 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
                         throw new DataCloudJDBCException(
                                 "Unexpected null chunk id from getNextChunkId when hasMoreChunks reported true");
                     }
-                } else if (!context.isQueryComplete()) {
+                } else if (!context.allResultsProduced()) {
                     context.queryInfos = client.getQueryInfo(context.getQueryId());
                     transitionTo(State.PROCESS_QUERY_INFO_STREAM);
                 } else {
@@ -189,8 +190,16 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
         return Optional.empty();
     }
 
-    @RequiredArgsConstructor
+    @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     static class Context {
+        static Context of(String sql, Iterator<ExecuteQueryResponse> response, Deadline deadline)
+                throws DataCloudJDBCException {
+            val queryInfo = getInitialQueryInfo(sql, response);
+            val context = new Context(deadline, response);
+            context.updateQueryContext(queryInfo);
+            return context;
+        }
+
         QueryResult queryResult;
         final Deadline deadline;
         final AtomicReference<DataCloudQueryStatus> status = new AtomicReference<>();
@@ -216,7 +225,7 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
             return current != null ? current.getQueryId() : null;
         }
 
-        boolean isQueryComplete() {
+        boolean allResultsProduced() {
             val current = status.get();
             return current != null && current.allResultsProduced();
         }

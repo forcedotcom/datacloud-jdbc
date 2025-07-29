@@ -222,9 +222,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         log.info("Get row-based result set. queryId={}, offset={}, limit={}, mode={}", queryId, offset, limit, mode);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = RowBased.of(executor, queryId, offset, limit, mode);
-        return StreamingResultSet.of(iterator, () -> queryId, () -> executor.getQueryStatus(queryId)
-                .findFirst()
-                .orElse(null));
+        return StreamingResultSet.of(iterator, queryId);
     }
 
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit)
@@ -232,9 +230,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = ChunkBased.of(executor, queryId, chunkId, limit, false);
-        return StreamingResultSet.of(iterator, () -> queryId, () -> executor.getQueryStatus(queryId)
-                .findFirst()
-                .orElse(null));
+        return StreamingResultSet.of(iterator, queryId);
     }
 
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) throws DataCloudJDBCException {

@@ -24,14 +24,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import io.grpc.StatusRuntimeException;
+import java.sql.ResultSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+@Slf4j
 @ExtendWith(HyperTestBase.class)
 public class JDBCLimitsTest {
     @Test
@@ -54,9 +57,7 @@ public class JDBCLimitsTest {
         String query = "SELECT 'a', /*" + repeat('x', 65 * 1024 * 1024) + "*/ 'b'";
         assertWithStatement(statement -> {
             assertThatExceptionOfType(DataCloudJDBCException.class)
-                    .isThrownBy(() -> {
-                        statement.executeQuery(query);
-                    })
+                    .isThrownBy(() -> statement.executeQuery(query))
                     // Also verify that we don't explode exception sizes by keeping the full query
                     .withMessageEndingWith("<truncated>")
                     .satisfies(t -> assertThat(t.getMessage()).hasSizeLessThan(16500));
@@ -85,9 +86,11 @@ public class JDBCLimitsTest {
         assertWithStatement(statement -> assertThatThrownBy(
                         () -> statement.executeQuery(query).next())
                 .isInstanceOf(DataCloudJDBCException.class)
-                .hasMessageContaining("Failed to load next batch, rowsSeen=0")
-                .hasRootCauseExactlyInstanceOf(StatusRuntimeException.class)
-                .hasRootCauseMessage("RESOURCE_EXHAUSTED: tuple size limit exceeded"));
+                .hasMessageContaining("tuple size limit exceeded")
+                .satisfies(t -> {
+                    val m = t.getMessage();
+                    assertThat(m).isNotBlank();
+                }));
     }
 
     @Test
@@ -164,8 +167,72 @@ public class JDBCLimitsTest {
                 settings);
     }
 
+    @Test
+    public void testOutOfMemoryRegression() {
+        assertWithStatement(stmt -> {
+            logMemoryUsage("After statement creation", 0);
+
+            ResultSet rs = stmt.executeQuery("SELECT s, lpad('A', 1024*1024, 'X') FROM generate_series(1, 2048) s");
+
+            logMemoryUsage("After query execution", 0);
+
+            long maxUsedMemory = 0;
+            long previousLogRow = 0;
+
+            while (rs.next()) {
+                AssertionsForClassTypes.assertThat(rs.getLong(1)).isEqualTo(rs.getRow());
+
+                long currentRow = rs.getRow();
+                Runtime runtime = Runtime.getRuntime();
+                long currentUsedMemory = runtime.totalMemory() - runtime.freeMemory();
+                maxUsedMemory = Math.max(maxUsedMemory, currentUsedMemory);
+
+                if ((currentRow & (currentRow - 1)) == 0) {
+                    logMemoryUsage("Processing rows", currentRow);
+                    previousLogRow = currentRow;
+                }
+
+                if (currentRow % 100000 == 0 && currentRow != previousLogRow) {
+                    logMemoryUsage("Checkpoint", currentRow);
+                    System.gc();
+                    Thread.sleep(100);
+                    logMemoryUsage("After GC", currentRow);
+                }
+            }
+
+            logMemoryUsage("After ResultSet consumption", rs.getRow());
+            log.warn("Peak memory usage during test: {}", formatMemory(maxUsedMemory));
+        });
+    }
+
     private static String repeat(char c, int length) {
         val str = String.format("%c", c);
         return Stream.generate(() -> str).limit(length).collect(Collectors.joining());
+    }
+
+    private static String formatMemory(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
+        if (bytes < 1024 * 1024 * 1024) return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
+        return String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+    }
+
+    private static void logMemoryUsage(String context, long rowNumber) {
+        Runtime runtime = Runtime.getRuntime();
+        long totalMemory = runtime.totalMemory();
+        long freeMemory = runtime.freeMemory();
+        long usedMemory = totalMemory - freeMemory;
+        long maxMemory = runtime.maxMemory();
+        double usagePercent = (usedMemory * 100.0) / maxMemory;
+
+        log.warn(
+                "context={}, row={}, used={}, free={}, total={}, max={}, usage={}%",
+                context,
+                rowNumber,
+                formatMemory(usedMemory),
+                formatMemory(freeMemory),
+                formatMemory(totalMemory),
+                formatMemory(maxMemory),
+                String.format("%.1f", usagePercent));
     }
 }

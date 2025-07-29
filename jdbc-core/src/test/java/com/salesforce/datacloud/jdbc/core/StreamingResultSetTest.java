@@ -40,7 +40,7 @@ public class StreamingResultSetTest {
     }
 
     private static final Properties none = new Properties();
-    private static final int large = 64;
+    private static final int large = 1024 * 1024 * 10;
     private static final String regularSql = query(Integer.toString(large));
     private static final String preparedSql = query("?");
 

@@ -221,6 +221,9 @@ public class HyperGrpcClientExecutor {
 
     public Iterator<ExecuteQueryResponse> execute(QueryParam request, QueryTimeout timeout)
             throws DataCloudJDBCException {
+        // We set the deadline based off the query timeout here as the server-side doesn't properly enforce
+        // the query timeout during the initial compilation phase. By setting the deadline, we can ensure
+        // that the query timeout is enforced also when the server hangs during compilation.
         val remainingDuration = timeout.getLocalDeadline().getRemaining();
         val message = "executeQuery. mode=" + request.getTransferMode() + ", remaining=" + remainingDuration;
         return logTimedValue(

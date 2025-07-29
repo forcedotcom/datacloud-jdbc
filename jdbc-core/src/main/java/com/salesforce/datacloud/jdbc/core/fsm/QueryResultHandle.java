@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.salesforce.datacloud.jdbc.core;
+package com.salesforce.datacloud.jdbc.core.fsm;
 
-import java.sql.ResultSet;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 
-public interface DataCloudResultSet extends ResultSet {
-    String getQueryId();
+public interface QueryResultHandle {
+    String getQueryId() throws DataCloudJDBCException;
 }

@@ -9,8 +9,3 @@ experimental_pg_sleep: true
 result_scan_enabled: true
 experimental_hyper_introspection_functions: true
 log_full_context_level: trace
-# We want to have multiple chunks in the result set.
-# The combination of result_target_chunk_size and arrow_write_buffer_initial_tuple_limit
-# will give us chunks with 4 tuples each.
-#result_target_chunk_size: 1
-#arrow_write_buffer_initial_tuple_limit: 4
