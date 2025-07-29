@@ -18,10 +18,15 @@ package com.salesforce.datacloud.jdbc.core;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import java.sql.ResultSet;
-import java.util.stream.Stream;
+import java.time.Duration;
+import java.util.function.Predicate;
 
 public interface DataCloudResultSet extends ResultSet {
-    String getQueryId();
+    String getQueryId() throws DataCloudJDBCException;
 
-    Stream<DataCloudQueryStatus> getQueryStatus() throws DataCloudJDBCException;
+    /**
+     * Provides a view into the status of the current query in progress,
+     * it is preferred that you use {@link DataCloudConnection#waitForQueryStatus(String, Duration, Predicate)}
+     */
+    DataCloudQueryStatus getQueryStatus() throws DataCloudJDBCException;
 }

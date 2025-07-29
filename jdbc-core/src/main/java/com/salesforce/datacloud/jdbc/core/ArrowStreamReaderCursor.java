@@ -96,7 +96,7 @@ class ArrowStreamReaderCursor extends AbstractCursor {
             }
             return next;
         } catch (Exception e) {
-            throw new DataCloudJDBCException("Failed to load next batch", e);
+            throw new DataCloudJDBCException("Failed to load next batch, rowsSeen=" + rowsSeen, e);
         }
     }
 

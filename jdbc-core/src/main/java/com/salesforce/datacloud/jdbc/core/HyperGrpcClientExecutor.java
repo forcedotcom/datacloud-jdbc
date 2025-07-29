@@ -188,8 +188,8 @@ public class HyperGrpcClientExecutor {
         return getStub(queryId).getQueryResult(param);
     }
 
-    private QueryParam getQueryParams(String sql, QueryParam.Builder builder) {
-        builder.setQuery(sql).setOutputFormat(OutputFormat.ARROW_IPC);
+    private QueryParam getQueryParams(String sql, QueryParam.Builder builder, QueryParam.TransferMode mode) {
+        builder.setQuery(sql).setOutputFormat(OutputFormat.ARROW_IPC).setTransferMode(mode);
 
         if (additionalQueryParams != null) {
             builder.mergeFrom(additionalQueryParams);
@@ -219,23 +219,22 @@ public class HyperGrpcClientExecutor {
                 .build();
     }
 
+    public Iterator<ExecuteQueryResponse> execute(QueryParam request, QueryTimeout timeout)
+            throws DataCloudJDBCException {
+        val remainingDuration = timeout.getLocalDeadline().getRemaining();
+        val message = "executeQuery. mode=" + request.getTransferMode() + ", remaining=" + remainingDuration;
+        return logTimedValue(
+                () -> stub.withDeadlineAfter(remainingDuration.toMillis(), TimeUnit.MILLISECONDS)
+                        .executeQuery(request),
+                message,
+                log);
+    }
+
     private Iterator<ExecuteQueryResponse> execute(
             String sql, QueryTimeout queryTimeout, QueryParam.TransferMode mode, QueryParam.Builder builder)
             throws SQLException {
-        val message = "executeQuery. mode=" + mode.name();
-        builder.setTransferMode(mode);
-        return logTimedValue(
-                () -> {
-                    val request = getQueryParams(sql, builder);
-                    // We set the deadline based off the query timeout here as the server-side doesn't properly enforce
-                    // the query timeout during the initial compilation phase. By setting the deadline, we can ensure
-                    // that the query timeout is enforced also when the server hangs during compilation.
-                    val remainingDuration = queryTimeout.getLocalDeadline().getRemaining();
-                    return stub.withDeadlineAfter(remainingDuration.toMillis(), TimeUnit.MILLISECONDS)
-                            .executeQuery(request);
-                },
-                message,
-                log);
+        val request = getQueryParams(sql, builder, mode);
+        return execute(request, queryTimeout);
     }
 
     private HyperServiceGrpc.HyperServiceBlockingStub getStub(@NonNull String queryId) {

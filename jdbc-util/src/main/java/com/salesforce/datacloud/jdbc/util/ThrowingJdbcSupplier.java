@@ -15,9 +15,9 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
-import java.sql.SQLException;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 
 @FunctionalInterface
 public interface ThrowingJdbcSupplier<T> {
-    T get() throws SQLException;
+    T get() throws DataCloudJDBCException;
 }

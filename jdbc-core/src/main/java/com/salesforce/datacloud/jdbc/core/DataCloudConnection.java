@@ -222,15 +222,19 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         log.info("Get row-based result set. queryId={}, offset={}, limit={}, mode={}", queryId, offset, limit, mode);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = RowBased.of(executor, queryId, offset, limit, mode);
-        return StreamingResultSet.of(queryId, executor, iterator);
+        return StreamingResultSet.of(iterator, () -> queryId, () -> executor.getQueryStatus(queryId)
+                .findFirst()
+                .orElse(null));
     }
 
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit)
             throws DataCloudJDBCException {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
-        val iterator = ChunkBased.of(executor, queryId, chunkId, limit);
-        return StreamingResultSet.of(queryId, executor, iterator);
+        val iterator = ChunkBased.of(executor, queryId, chunkId, limit, false);
+        return StreamingResultSet.of(iterator, () -> queryId, () -> executor.getQueryStatus(queryId)
+                .findFirst()
+                .orElse(null));
     }
 
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) throws DataCloudJDBCException {
@@ -288,7 +292,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      * Checks if a given predicate is satisfied by the status of the query.
      * This method will wait until the server responds with a satisfactory status or the timeout is reached.
      * @param queryId The identifier of the query to check
-     * @param timeout The duration to wait for the engine have results produced.
+     * @param waitTimeout The duration to wait for the engine have results produced.
      * @return The first satisfactory status or the last {@link DataCloudQueryStatus} the server replied with.
      */
     public DataCloudQueryStatus waitForQueryStatus(

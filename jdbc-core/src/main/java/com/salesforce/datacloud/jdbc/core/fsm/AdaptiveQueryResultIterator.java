@@ -1,0 +1,267 @@
+/*
+ * Copyright (c) 2024, Salesforce, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.salesforce.datacloud.jdbc.core.fsm;
+
+import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.Deadline;
+import com.salesforce.datacloud.jdbc.util.QueryTimeout;
+import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import io.grpc.StatusRuntimeException;
+import java.sql.SQLException;
+import java.time.Duration;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
+import salesforce.cdp.hyperdb.v1.QueryResult;
+
+@Slf4j
+@RequiredArgsConstructor
+public class AdaptiveQueryResultIterator implements QueryResultIterator {
+
+    enum State {
+        PROCESS_EXECUTE_QUERY_STREAM,
+        CHECK_FOR_MORE_DATA,
+        PROCESS_QUERY_RESULT_STREAM,
+        PROCESS_QUERY_INFO_STREAM,
+        COMPLETED
+    }
+
+    private final HyperGrpcClientExecutor client;
+    private final Context context;
+    private State state = State.PROCESS_EXECUTE_QUERY_STREAM;
+
+    public static AdaptiveQueryResultIterator of(String sql, HyperGrpcClientExecutor client, QueryTimeout timeout)
+            throws SQLException {
+        val executeStream = client.executeQuery(sql, timeout);
+        val context = new Context(timeout.getLocalDeadline(), executeStream);
+        val first = executeStream.next();
+        context.updateQueryContext(first.getQueryInfo());
+
+        return new AdaptiveQueryResultIterator(client, context);
+    }
+
+    public static AdaptiveQueryResultIterator of(
+            String sql, HyperGrpcClientExecutor client, QueryTimeout timeout, long maxRows, long maxBytes)
+            throws SQLException {
+        val executeStream = client.executeQuery(sql, timeout, maxRows, maxBytes);
+        val context = new Context(timeout.getLocalDeadline(), executeStream);
+        val first = executeStream.next();
+        context.updateQueryContext(first.getQueryInfo());
+
+        return new AdaptiveQueryResultIterator(client, context);
+    }
+
+    @Override
+    public String getQueryId() {
+        return context.getQueryId();
+    }
+
+    @Override
+    public DataCloudQueryStatus getQueryStatus() {
+        return context.status.get();
+    }
+
+    @Override
+    @SneakyThrows
+    public boolean hasNext() {
+
+        while (!context.hasQueryResult() && state != State.COMPLETED) {
+            try {
+                processCurrentState();
+            } catch (StatusRuntimeException | DataCloudJDBCException ex) {
+                log.error("Failed to process current state, state={}, queryId={}", state, getQueryId(), ex);
+                throw ex;
+            }
+        }
+        return context.hasQueryResult();
+    }
+
+    @Override
+    public QueryResult next() {
+        if (!hasNext()) {
+            throw new NoSuchElementException();
+        }
+        return context.popQueryResult();
+    }
+
+    private void processCurrentState() throws DataCloudJDBCException {
+        if (context.deadline.hasPassed()) {
+            throw new DataCloudJDBCException(String.format(
+                    "deadline has passed, state=%s, queryId=%s, status=%s", state, getQueryId(), getQueryStatus()));
+        }
+
+        switch (state) {
+            case PROCESS_EXECUTE_QUERY_STREAM:
+                if (context.executeQueryResponses != null && context.executeQueryResponses.hasNext()) {
+                    val response = context.executeQueryResponses.next();
+
+                    if (response.hasQueryInfo()) {
+                        context.updateQueryContext(response.getQueryInfo());
+                    }
+
+                    if (response.hasQueryResult()) {
+                        context.setQueryResult(response.getQueryResult());
+                    }
+                } else {
+                    transitionTo(State.CHECK_FOR_MORE_DATA);
+                }
+                break;
+
+            case CHECK_FOR_MORE_DATA:
+                if (context.hasMoreChunks()) {
+                    val chunkId = context.getNextChunkId();
+                    if (chunkId != null) {
+                        context.queryResults = client.getQueryResult(context.getQueryId(), chunkId, true);
+                        transitionTo(State.PROCESS_QUERY_RESULT_STREAM);
+                    } else {
+                        throw new DataCloudJDBCException(
+                                "Unexpected null chunk id from getNextChunkId when hasMoreChunks reported true");
+                    }
+                } else if (!context.isQueryComplete()) {
+                    context.queryInfos = client.getQueryInfo(context.getQueryId());
+                    transitionTo(State.PROCESS_QUERY_INFO_STREAM);
+                } else {
+                    transitionTo(State.COMPLETED);
+                }
+                break;
+
+            case PROCESS_QUERY_RESULT_STREAM:
+                val nextResult = safelyGetNext(context.queryResults);
+                if (nextResult.isPresent()) {
+                    context.setQueryResult(nextResult.get());
+                } else {
+                    transitionTo(State.CHECK_FOR_MORE_DATA);
+                }
+                break;
+
+            case PROCESS_QUERY_INFO_STREAM:
+                while (!context.deadline.hasPassed() && !context.hasMoreChunks()) {
+                    val nextInfo = safelyGetNext(context.queryInfos);
+                    if (nextInfo.isPresent()) {
+                        context.updateQueryContext(nextInfo.get());
+                    } else {
+                        transitionTo(State.CHECK_FOR_MORE_DATA);
+                        return;
+                    }
+                }
+                transitionTo(State.CHECK_FOR_MORE_DATA);
+                break;
+
+            case COMPLETED:
+                throw new NoSuchElementException("No valid transition after state=" + state);
+        }
+    }
+
+    private void transitionTo(State newState) {
+        val elapsed = context.getTimeInStateAndReset();
+        log.trace("state transition from={}, to={}, elapsed={}", state, newState, elapsed);
+        state = newState;
+    }
+
+    private static <T> Optional<T> safelyGetNext(Iterator<T> iterator) {
+        if (iterator != null && iterator.hasNext()) {
+            return Optional.ofNullable(iterator.next());
+        }
+        return Optional.empty();
+    }
+
+    @RequiredArgsConstructor
+    static class Context {
+        QueryResult queryResult;
+        final Deadline deadline;
+        final AtomicReference<DataCloudQueryStatus> status = new AtomicReference<>();
+        final AtomicLong highWater = new AtomicLong(1);
+
+        final Iterator<ExecuteQueryResponse> executeQueryResponses;
+        Iterator<QueryInfo> queryInfos = null;
+        Iterator<QueryResult> queryResults = null;
+        long timeInState = System.currentTimeMillis();
+
+        Duration getTimeInStateAndReset() {
+            val result = Duration.ofMillis(System.currentTimeMillis() - timeInState);
+            timeInState = System.currentTimeMillis();
+            return result;
+        }
+
+        void updateQueryContext(QueryInfo info) {
+            DataCloudQueryStatus.of(info).ifPresent(status::set);
+        }
+
+        String getQueryId() {
+            val current = status.get();
+            return current != null ? current.getQueryId() : null;
+        }
+
+        boolean isQueryComplete() {
+            val current = status.get();
+            return current != null && current.allResultsProduced();
+        }
+
+        boolean hasMoreChunks() {
+            val current = status.get();
+            return current != null && highWater.get() < current.getChunkCount();
+        }
+
+        Long getNextChunkId() {
+            val currentStatus = status.get();
+            if (currentStatus == null) return null;
+
+            val nextChunk = highWater.get();
+            val availableChunks = currentStatus.getChunkCount();
+
+            if (nextChunk < availableChunks && highWater.compareAndSet(nextChunk, nextChunk + 1)) {
+                log.trace(
+                        "chunk available nextChunk={}, availableChunks={}, status={}",
+                        nextChunk,
+                        availableChunks,
+                        currentStatus.getCompletionStatus());
+                return nextChunk;
+            }
+
+            log.trace(
+                    "chunk not available, returning null nextChunk={}, availableChunks={}, status={}",
+                    nextChunk,
+                    availableChunks,
+                    currentStatus.getCompletionStatus());
+            return null;
+        }
+
+        void setQueryResult(QueryResult result) {
+            this.queryResult = result;
+        }
+
+        QueryResult popQueryResult() {
+            val result = this.queryResult;
+            this.queryResult = null;
+            return result;
+        }
+
+        boolean hasQueryResult() {
+            return this.queryResult != null;
+        }
+    }
+}

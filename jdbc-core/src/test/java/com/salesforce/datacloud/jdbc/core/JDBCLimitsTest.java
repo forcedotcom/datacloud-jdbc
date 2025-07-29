@@ -19,10 +19,12 @@ import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithConnec
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import io.grpc.StatusRuntimeException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -80,13 +82,12 @@ public class JDBCLimitsTest {
     public void testTooLargeRowResponse() {
         // 31 MB is the expected max row size configured in Hyper, thus 33 MB should be too large
         String query = "SELECT rpad('', 33*1024*1024, 'x')";
-        assertWithStatement(statement -> {
-            assertThatExceptionOfType(DataCloudJDBCException.class)
-                    .isThrownBy(() -> {
-                        statement.executeQuery(query);
-                    })
-                    .withMessageContaining("tuple size limit exceeded");
-        });
+        assertWithStatement(statement -> assertThatThrownBy(
+                        () -> statement.executeQuery(query).next())
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessageContaining("Failed to load next batch, rowsSeen=0")
+                .hasRootCauseExactlyInstanceOf(StatusRuntimeException.class)
+                .hasRootCauseMessage("RESOURCE_EXHAUSTED: tuple size limit exceeded"));
     }
 
     @Test

@@ -78,7 +78,7 @@ class ChunkBasedTest {
     void failsOnChunkOverrun() {
         assertThatThrownBy(() -> sut(small, 0, 2))
                 .isInstanceOf(DataCloudJDBCException.class)
-                .hasMessage("Failed to load next batch")
+                .hasMessageContaining("Failed to load next batch")
                 .hasCauseInstanceOf(StatusRuntimeException.class)
                 .hasRootCauseMessage("INVALID_ARGUMENT: The requested chunk id '1' is out of range");
     }

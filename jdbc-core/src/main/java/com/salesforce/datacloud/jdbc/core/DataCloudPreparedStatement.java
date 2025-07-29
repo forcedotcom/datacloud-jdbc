@@ -23,7 +23,7 @@ import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimestampFr
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
-import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
+import com.salesforce.datacloud.jdbc.core.fsm.AsyncQueryResultIterator;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
@@ -95,7 +95,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     }
 
     @Override
-    protected HyperGrpcClientExecutor getQueryExecutor(QueryTimeout queryTimeout) throws DataCloudJDBCException {
+    protected HyperGrpcClientExecutor getQueryClient(QueryTimeout queryTimeout) throws DataCloudJDBCException {
         final byte[] encodedRow;
         try {
             encodedRow = toArrowByteArray(parameterManager.getParameters(), calendar);
@@ -110,14 +110,14 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
                         .build())
                 .build();
 
-        return super.getQueryExecutor(queryTimeout).withQueryParams(preparedQueryParams);
+        return super.getQueryClient(queryTimeout).withQueryParams(preparedQueryParams);
     }
 
     public boolean executeAsyncQuery() throws SQLException {
         val queryTimeout = QueryTimeout.of(
                 statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
-        val client = getQueryExecutor(queryTimeout);
-        listener = AsyncQueryStatusListener.of(sql, client, queryTimeout);
+        val client = getQueryClient(queryTimeout);
+        iterator = AsyncQueryResultIterator.of(sql, client, queryTimeout);
         return true;
     }
 

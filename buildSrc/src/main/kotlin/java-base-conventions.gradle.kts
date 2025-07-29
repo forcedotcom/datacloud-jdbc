@@ -26,5 +26,5 @@ tasks.withType<Test>().configureEach {
         showStackTraces = true
     }
 
-    jvmArgs("-Xmx2g", "-Xms512m")
+    jvmArgs("-Xmx1g", "-Xms512m")
 }

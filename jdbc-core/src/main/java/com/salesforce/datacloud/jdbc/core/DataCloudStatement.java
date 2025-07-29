@@ -15,9 +15,9 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.core.listener.AdaptiveQueryStatusListener;
-import com.salesforce.datacloud.jdbc.core.listener.AsyncQueryStatusListener;
-import com.salesforce.datacloud.jdbc.core.listener.QueryStatusListener;
+import com.salesforce.datacloud.jdbc.core.fsm.AdaptiveQueryResultIterator;
+import com.salesforce.datacloud.jdbc.core.fsm.AsyncQueryResultIterator;
+import com.salesforce.datacloud.jdbc.core.fsm.QueryResultIterator;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
@@ -66,21 +66,21 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         this.statementProperties = connection.getConnectionProperties().getStatementProperties();
     }
 
-    protected HyperGrpcClientExecutor getQueryExecutor(QueryTimeout queryTimeout) throws DataCloudJDBCException {
+    protected HyperGrpcClientExecutor getQueryClient(QueryTimeout queryTimeout) throws DataCloudJDBCException {
         val stub = connection.getStub();
         val querySettings = new HashMap<>(statementProperties.getQuerySettings());
         if (!queryTimeout.getServerQueryTimeout().isZero()) {
             querySettings.put(
-                    "query_timeout",
-                    String.valueOf(queryTimeout.getServerQueryTimeout().toMillis()) + "ms");
+                    "query_timeout", queryTimeout.getServerQueryTimeout().toMillis() + "ms");
         }
         return HyperGrpcClientExecutor.of(stub, querySettings);
     }
 
-    protected QueryStatusListener listener;
+    @Getter
+    protected QueryResultIterator iterator;
 
     private void assertQueryExecuted() throws DataCloudJDBCException {
-        if (listener == null) {
+        if (iterator == null) {
             throw new DataCloudJDBCException("a query was not executed before attempting to access results");
         }
     }
@@ -91,8 +91,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
      */
     public String getQueryId() throws DataCloudJDBCException {
         assertQueryExecuted();
-
-        return listener.getQueryId();
+        return iterator.getQueryId();
     }
 
     @Override
@@ -112,13 +111,14 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     private DataCloudResultSet executeAdaptiveQuery(String sql) throws SQLException {
         val queryTimeout = QueryTimeout.of(
                 statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
-        val client = getQueryExecutor(queryTimeout);
-        listener = targetMaxRows > 0
-                ? AdaptiveQueryStatusListener.of(sql, client, queryTimeout, targetMaxRows, targetMaxBytes)
-                : AdaptiveQueryStatusListener.of(sql, client, queryTimeout);
+        val client = getQueryClient(queryTimeout);
 
-        resultSet = listener.generateResultSet();
-        log.info("executeAdaptiveQuery completed. queryId={}", listener.getQueryId());
+        iterator = targetMaxRows > 0
+                ? AdaptiveQueryResultIterator.of(sql, client, queryTimeout, targetMaxRows, targetMaxBytes)
+                : AdaptiveQueryResultIterator.of(sql, client, queryTimeout);
+
+        resultSet = StreamingResultSet.of(iterator);
+        log.info("executeAdaptiveQuery completed. queryId={}", iterator.getQueryId());
         return (DataCloudResultSet) resultSet;
     }
 
@@ -126,9 +126,9 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         log.debug("Entering executeAsyncQuery");
         val queryTimeout = QueryTimeout.of(
                 statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
-        val client = getQueryExecutor(queryTimeout);
-        listener = AsyncQueryStatusListener.of(sql, client, queryTimeout);
-        log.info("executeAsyncQuery completed. queryId={}", listener.getQueryId());
+        val client = getQueryClient(queryTimeout);
+        iterator = AsyncQueryResultIterator.of(sql, client, queryTimeout);
+        log.info("executeAsyncQuery completed. queryId={}", iterator.getQueryId());
         return this;
     }
 
@@ -235,7 +235,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
      */
     @Override
     public void cancel() throws DataCloudJDBCException {
-        if (listener == null) {
+        if (iterator == null) {
             log.warn("There was no in-progress query registered with this statement to cancel");
             return;
         }
@@ -261,9 +261,18 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         assertQueryExecuted();
 
         if (resultSet == null) {
-            resultSet = listener.generateResultSet();
+            if (iterator instanceof AsyncQueryResultIterator) {
+                val status = iterator.getQueryStatus();
+                log.warn(
+                        "Prefer acquiring async result sets from the helper methods on DataCloudConnection, will use chunk based result set from status={}",
+                        status);
+                resultSet = connection.getChunkBasedResultSet(status.getQueryId(), 0, status.getChunkCount());
+            } else {
+                resultSet = StreamingResultSet.of(iterator);
+            }
         }
-        log.info("getResultSet completed. queryId={}", listener.getQueryId());
+
+        log.info("getResultSet completed. queryId={}", iterator.getQueryId());
         return resultSet;
     }
 

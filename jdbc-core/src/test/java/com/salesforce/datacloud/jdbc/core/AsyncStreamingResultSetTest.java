@@ -19,16 +19,15 @@ import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsT
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import io.grpc.StatusRuntimeException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import lombok.val;
-import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,18 +41,18 @@ public class AsyncStreamingResultSetTest {
     @Test
     @SneakyThrows
     public void testThrowsOnNonsenseQueryAsync() {
-        val ex = Assertions.assertThrows(DataCloudJDBCException.class, () -> {
-            try (val connection = getHyperQueryConnection();
-                    val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
-                val rs = statement.executeAsyncQuery("select * from nonsense");
-                connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(5));
-                rs.getResultSet().next();
-            }
-        });
-
-        AssertionsForClassTypes.assertThat(ex).hasCauseInstanceOf(StatusRuntimeException.class);
-        val rootCausePattern = Pattern.compile("^[A-Z]+(_[A-Z]+)*: table \"nonsense\" does not exist.*");
-        AssertionsForClassTypes.assertThat(ex.getCause().getMessage()).containsPattern(rootCausePattern);
+        assertThatThrownBy(() -> {
+                    try (val connection = getHyperQueryConnection();
+                            val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
+                        val rs = statement.executeAsyncQuery("select * from nonsense");
+                        connection.waitForResultsProduced(statement.getQueryId(), Duration.ofSeconds(5));
+                        rs.getResultSet().next();
+                    }
+                })
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessageContaining("Failed to get query status response. queryId=")
+                .hasCauseInstanceOf(StatusRuntimeException.class)
+                .hasRootCauseMessage("FAILED_PRECONDITION: table \"nonsense\" does not exist");
     }
 
     @Test

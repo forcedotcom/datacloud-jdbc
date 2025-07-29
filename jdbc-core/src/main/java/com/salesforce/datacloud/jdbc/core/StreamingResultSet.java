@@ -18,8 +18,10 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
 
+import com.salesforce.datacloud.jdbc.core.fsm.QueryResultIterator;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
+import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -27,8 +29,6 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.TimeZone;
-import java.util.stream.Stream;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.arrow.memory.RootAllocator;
@@ -44,14 +44,14 @@ import salesforce.cdp.hyperdb.v1.QueryResult;
 public class StreamingResultSet extends AvaticaResultSet implements DataCloudResultSet {
     private static final int ROOT_ALLOCATOR_MB_FROM_V2 = 100 * 1024 * 1024;
 
-    private final HyperGrpcClientExecutor client;
     private final ArrowStreamReaderCursor cursor;
-    private final String queryId;
+    private final ThrowingJdbcSupplier<String> getQueryId;
+    ThrowingJdbcSupplier<DataCloudQueryStatus> getQueryStatus;
 
     private StreamingResultSet(
-            HyperGrpcClientExecutor client,
             ArrowStreamReaderCursor cursor,
-            String queryId,
+            ThrowingJdbcSupplier<String> getQueryId,
+            ThrowingJdbcSupplier<DataCloudQueryStatus> getQueryStatus,
             AvaticaStatement statement,
             QueryState state,
             Meta.Signature signature,
@@ -60,14 +60,20 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
             Meta.Frame firstFrame)
             throws SQLException {
         super(statement, state, signature, resultSetMetaData, timeZone, firstFrame);
-        this.client = client;
         this.cursor = cursor;
-        this.queryId = queryId;
+        this.getQueryId = getQueryId;
+        this.getQueryStatus = getQueryStatus;
     }
 
-    @SneakyThrows
+    public static StreamingResultSet of(QueryResultIterator iterator) throws DataCloudJDBCException {
+        return of(iterator, iterator::getQueryId, iterator::getQueryStatus);
+    }
+
     public static StreamingResultSet of(
-            String queryId, HyperGrpcClientExecutor client, Iterator<QueryResult> iterator) {
+            Iterator<QueryResult> iterator,
+            ThrowingJdbcSupplier<String> getQueryId,
+            ThrowingJdbcSupplier<DataCloudQueryStatus> getQueryStatus)
+            throws DataCloudJDBCException {
         try {
             val channel = ExecuteQueryResponseChannel.of(StreamUtilities.toStream(iterator));
             val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
@@ -79,28 +85,24 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
             val cursor = new ArrowStreamReaderCursor(reader);
-            val result =
-                    new StreamingResultSet(client, cursor, queryId, null, state, signature, metadata, timezone, null);
+            val result = new StreamingResultSet(
+                    cursor, getQueryId, getQueryStatus, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
 
             return result;
         } catch (Exception ex) {
-            throw createException(QUERY_FAILURE + queryId, ex);
+            throw createException(QUERY_FAILURE + getQueryId.get(), ex);
         }
     }
 
     @Override
-    public String getQueryId() {
-        return queryId;
+    public String getQueryId() throws DataCloudJDBCException {
+        return getQueryId.get();
     }
 
     @Override
-    public Stream<DataCloudQueryStatus> getQueryStatus() throws DataCloudJDBCException {
-        if (client == null) {
-            return Stream.empty();
-        }
-
-        return client.getQueryStatus(queryId);
+    public DataCloudQueryStatus getQueryStatus() throws DataCloudJDBCException {
+        return getQueryStatus.get();
     }
 
     private static final String QUERY_FAILURE = "Failed to execute query: ";

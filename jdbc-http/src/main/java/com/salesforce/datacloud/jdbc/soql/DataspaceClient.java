@@ -50,11 +50,11 @@ public class DataspaceClient implements ThrowingJdbcSupplier<List<String>> {
     private final OkHttpClient client;
 
     @Override
-    public List<String> get() throws SQLException {
+    public List<String> get() throws DataCloudJDBCException {
         return logTimedValue(this::getWithoutLogging, "getDataspaces", log);
     }
 
-    private List<String> getWithoutLogging() throws SQLException {
+    private List<String> getWithoutLogging() throws DataCloudJDBCException {
         try {
 
             val dataspaceResponse = getDataSpaceResponse();
