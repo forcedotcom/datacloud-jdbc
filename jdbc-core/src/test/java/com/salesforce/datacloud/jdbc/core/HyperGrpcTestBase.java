@@ -266,6 +266,10 @@ public class HyperGrpcTestBase {
         GrpcMock.verifyThat(GrpcMock.calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), GrpcMock.times(times));
     }
 
+    protected void verifyGetQueryResult(int times) {
+        GrpcMock.verifyThat(GrpcMock.calledMethod(HyperServiceGrpc.getGetQueryResultMethod()), GrpcMock.times(times));
+    }
+
     public void setupGetQueryResult(
             String queryId, int chunkId, int parts, List<RealisticArrowGenerator.Student> students) {
         val results = IntStream.range(0, parts)

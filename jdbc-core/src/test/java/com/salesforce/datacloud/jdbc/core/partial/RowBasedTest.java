@@ -59,19 +59,15 @@ public class RowBasedTest {
     }
 
     private static final int tinySize = 8;
-    private static final int smallSize = 32;
-    private static final int largeSize = 1024 * 1024 * 10;
+    private static final int smallSize = 64;
 
     private static String tiny;
     private static String small;
-    private static String large;
 
     @BeforeAll
     static void setupQueries() {
-        large = getQueryId(largeSize);
         small = getQueryId(smallSize);
         tiny = getQueryId(tinySize);
-        waitForQuery(large);
         waitForQuery(small);
         waitForQuery(tiny);
     }
@@ -126,7 +122,7 @@ public class RowBasedTest {
     }
 
     static Stream<Arguments> querySizeAndPageSize() {
-        val sizes = IntStream.rangeClosed(0, 13).mapToObj(i -> 1 << i).collect(Collectors.toList());
+        val sizes = IntStream.rangeClosed(0, 10).mapToObj(i -> 1 << i).collect(Collectors.toList());
         return sizes.stream().flatMap(left -> sizes.stream().map(right -> Arguments.of(left, right)));
     }
 

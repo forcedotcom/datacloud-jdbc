@@ -69,8 +69,8 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
             ThrowingConsumer<DataCloudStatement> assertion, Map.Entry<String, String>... settings) {
         try (val connection = getHyperQueryConnection(
                         settings == null ? ImmutableMap.of() : ImmutableMap.ofEntries(settings));
-                val result = connection.createStatement().unwrap(DataCloudStatement.class)) {
-            assertion.accept(result);
+                val result = connection.createStatement()) {
+            assertion.accept(result.unwrap(DataCloudStatement.class));
         }
     }
 

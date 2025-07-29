@@ -225,6 +225,9 @@ public class JDBCLimitsTest {
         long maxMemory = runtime.maxMemory();
         double usagePercent = (usedMemory * 100.0) / maxMemory;
 
+        assertThat(usedMemory / (1024.0 * 1024.0 * 1024.0))
+                .isLessThan(128); // TODO: we can probably do some work to get a tighter number for this
+
         log.warn(
                 "context={}, row={}, used={}, free={}, total={}, max={}, usage={}%",
                 context,

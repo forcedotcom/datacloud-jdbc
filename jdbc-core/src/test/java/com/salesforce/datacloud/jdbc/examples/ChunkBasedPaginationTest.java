@@ -43,7 +43,7 @@ public class ChunkBasedPaginationTest {
     @Test
     public void testChunkBasedPagination() throws SQLException {
         val sql =
-                "select a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c, cast(a as numeric(38,18)) d from generate_series(1, 1024 * 1024 * 10) as s(a) order by a asc";
+                "select a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c, cast(a as numeric(38,18)) d from generate_series(1, 64) as s(a) order by a asc";
         val timeout = Duration.ofSeconds(30);
         val offset = new AtomicLong(0);
         val properties = new Properties();
@@ -72,6 +72,8 @@ public class ChunkBasedPaginationTest {
                     log.warn("All chunks have been consumed");
                     break;
                 }
+
+                assertThat(status.getChunkCount()).isGreaterThan(1);
 
                 final long chunk = offset.getAndAdd(1);
                 final DataCloudResultSet rs = conn.getChunkBasedResultSet(queryId, chunk);

@@ -90,7 +90,7 @@ public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
     void noFinalGetQueryInfoOnSmallData() {
         try (val connection = getInterceptedClientConnection();
                 val statement = connection.createStatement()) {
-            val rs = statement.executeQuery("SELECT s FROM generate_series(1,10) s");
+            val rs = statement.executeQuery("SELECT 1, 2, 3");
 
             while (rs.next()) {
                 System.out.println("Retrieved value:" + rs.getLong(1));

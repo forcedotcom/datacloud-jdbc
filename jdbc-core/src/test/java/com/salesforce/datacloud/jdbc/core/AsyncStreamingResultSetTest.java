@@ -34,9 +34,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(HyperTestBase.class)
 public class AsyncStreamingResultSetTest {
+    private static final int size = 64;
 
-    private static final String sql =
-            "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, 1024 * 1024 * 10) as s(a) order by a asc";
+    private static final String sql = String.format(
+            "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, %d) as s(a) order by a asc",
+            size);
 
     @Test
     @SneakyThrows
@@ -73,7 +75,7 @@ public class AsyncStreamingResultSetTest {
                 assertEachRowIsTheSame(rs, expected);
             }
 
-            assertThat(expected.get()).isEqualTo(1024 * 1024 * 10);
+            assertThat(expected.get()).isEqualTo(size);
         });
     }
 

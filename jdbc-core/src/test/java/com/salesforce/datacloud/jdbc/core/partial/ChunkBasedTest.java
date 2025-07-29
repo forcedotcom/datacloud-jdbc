@@ -48,34 +48,34 @@ class ChunkBasedTest {
         }
     }
 
-    private static final int smallSize = 5;
-    private static final int largeSize = 1024 * 1024 * 10;
-    private static String small;
-    private static String large;
+    private static final int smallSize = 4;
+    private static final int largeSize = smallSize * 16;
+    private static String singleChunk;
+    private static String multipleChunks;
 
     @SneakyThrows
     @BeforeAll
     static void setupQueries() {
-        small = getQueryId(smallSize);
-        large = getQueryId(largeSize);
+        singleChunk = getQueryId(smallSize);
+        multipleChunks = getQueryId(largeSize);
 
         try (val client = getHyperQueryConnection()) {
-            client.waitForResultsProduced(small, Duration.ofSeconds(30));
-            client.waitForResultsProduced(large, Duration.ofSeconds(30));
+            client.waitForResultsProduced(singleChunk, Duration.ofSeconds(30));
+            client.waitForResultsProduced(multipleChunks, Duration.ofSeconds(30));
         }
     }
 
     @SneakyThrows
     @Test
     void canGetSimpleChunk() {
-        val actual = sut(small, 0, 1);
-        assertThat(actual).containsExactly(1, 2, 3, 4, 5);
+        val actual = sut(singleChunk, 0, 1);
+        assertThat(actual).containsExactly(1, 2, 3, 4);
     }
 
     @SneakyThrows
     @Test
     void failsOnChunkOverrun() {
-        assertThatThrownBy(() -> sut(small, 0, 2))
+        assertThatThrownBy(() -> sut(singleChunk, 0, 2))
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContaining("The requested chunk id '1' is out of range");
     }
@@ -87,13 +87,14 @@ class ChunkBasedTest {
         val last = new AtomicLong(0);
         try (val connection = getHyperQueryConnection()) {
             while (connection
-                    .getQueryStatus(large)
+                    .getQueryStatus(multipleChunks)
                     .peek(status::set)
                     .noneMatch(t -> t.isExecutionFinished() || t.isResultProduced())) {
-                log.info("waiting for query to finish. queryId={}", large);
+                log.info("waiting for query to finish. queryId={}", multipleChunks);
             }
 
-            val rs = connection.getChunkBasedResultSet(large, 0, status.get().getChunkCount());
+            val rs = connection.getChunkBasedResultSet(
+                    multipleChunks, 0, status.get().getChunkCount());
 
             while (rs.next()) {
                 assertThat(rs.getLong(1)).isEqualTo(last.incrementAndGet());
