@@ -40,15 +40,18 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelStatementQuery() {
         try (val server = configWithSleep.start();
-                val statement = server.getConnection().createStatement().unwrap(DataCloudStatement.class)) {
-            statement.executeAsyncQuery("select pg_sleep(5000000);");
-            val client = server.getRawClient();
+                val conn = server.getConnection();
+                val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
 
-            val queryId = statement.unwrap(DataCloudStatement.class).getQueryId();
+            val client = HyperGrpcClientExecutor.forSubmittedQuery(conn.getStub());
+
+            stmt.executeAsyncQuery("select pg_sleep(5000000);");
+
+            val queryId = stmt.unwrap(DataCloudStatement.class).getQueryId();
             val a = client.getQueryStatus(queryId).findFirst().get();
             assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
 
-            statement.cancel();
+            stmt.cancel();
 
             assertThatThrownBy(() -> client.getQueryStatus(queryId).collect(Collectors.toList()))
                     .hasMessageStartingWith("FAILED_PRECONDITION: canceled");
@@ -59,19 +62,19 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelPreparedStatementQuery() {
         try (val server = configWithSleep.start();
-                val connection = server.getConnection();
-                val statement =
-                        connection.prepareStatement("select pg_sleep(?)").unwrap(DataCloudPreparedStatement.class)) {
+                val conn = server.getConnection();
+                val stmt = conn.prepareStatement("select pg_sleep(?)").unwrap(DataCloudPreparedStatement.class)) {
 
-            val client = server.getRawClient();
-            statement.setInt(1, 5000000);
-            statement.executeAsyncQuery();
+            val client = HyperGrpcClientExecutor.forSubmittedQuery(conn.getStub());
 
-            val queryId = statement.getQueryId();
+            stmt.setInt(1, 5000000);
+            stmt.executeAsyncQuery();
+
+            val queryId = stmt.getQueryId();
             val a = client.getQueryStatus(queryId).findFirst().get();
             assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
 
-            statement.cancel();
+            stmt.cancel();
 
             assertThatThrownBy(() -> client.getQueryStatus(queryId).collect(Collectors.toList()))
                     .hasMessageStartingWith("FAILED_PRECONDITION: canceled");
@@ -82,17 +85,18 @@ public class DataCloudStatementFunctionalTest {
     @SneakyThrows
     public void canCancelAnotherQueryById() {
         try (val server = configWithSleep.start();
-                val connection = server.getConnection().unwrap(DataCloudConnection.class);
-                val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
+                val conn = server.getConnection().unwrap(DataCloudConnection.class);
+                val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
 
-            val client = server.getRawClient();
-            statement.executeAsyncQuery("select pg_sleep(5000000);");
-            val queryId = statement.getQueryId();
+            val client = HyperGrpcClientExecutor.forSubmittedQuery(conn.getStub());
+
+            stmt.executeAsyncQuery("select pg_sleep(5000000);");
+            val queryId = stmt.getQueryId();
 
             val a = client.getQueryStatus(queryId).findFirst().get();
             assertThat(a.getCompletionStatus()).isEqualTo(DataCloudQueryStatus.CompletionStatus.RUNNING);
 
-            connection.cancelQuery(queryId);
+            conn.cancelQuery(queryId);
 
             assertThatThrownBy(() -> client.getQueryStatus(queryId).collect(Collectors.toList()))
                     .hasMessageStartingWith("FAILED_PRECONDITION: canceled");

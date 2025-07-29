@@ -141,14 +141,6 @@ public class HyperServerProcess implements AutoCloseable {
     }
 
     @SneakyThrows
-    public HyperGrpcClientExecutor getRawClient() {
-        val channel = DataCloudJdbcManagedChannel.of(
-                ManagedChannelBuilder.forAddress("127.0.0.1", getPort()).usePlaintext());
-        val stub = HyperServiceGrpc.newBlockingStub(channel.getChannel());
-        return HyperGrpcClientExecutor.of(stub, new HashMap<String, String>());
-    }
-
-    @SneakyThrows
     public DataCloudConnection getConnection(Map<String, String> connectionSettings) {
         val properties = new Properties();
         properties.put(DirectDataCloudConnection.DIRECT, "true");
