@@ -96,7 +96,7 @@ jobs:
         id: build-and-test
         run: |
           echo "build and test with version='${{ inputs.version }}'"
-          gradle clean build --no-build-cache --rerun-tasks -x test
+          gradle clean build --no-build-cache --rerun-tasks
         env:
           RELEASE_VERSION: ${{ inputs.version }}
       - name: Look at files in verification
@@ -138,7 +138,7 @@ jobs:
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Double check jars
-        run: gradle :verification:check -x :jdbc:test -x :jdbc-core:test -x :jdbc-http:test -x :jdbc-util:test --no-build-cache --scan
+        run: gradle :verification:check -x :jdbc:test -x :jdbc-core:test -x :jdbc-http:test -x :jdbc-util:test -x :spark-datasource:test --no-build-cache --scan
       - name: Get version for jreleaser
         id: resolve_version
         run: |
