@@ -40,8 +40,8 @@ public class StreamingResultSetTest {
     }
 
     private static final Properties none = new Properties();
-    private static final int size = 64;
-    private static final String regularSql = query(Integer.toString(size));
+    private static final int rows = 64;
+    private static final String regularSql = query(Integer.toString(rows));
     private static final String preparedSql = query("?");
 
     @SneakyThrows
@@ -100,7 +100,7 @@ public class StreamingResultSetTest {
             ThrowingBiConsumer<DataCloudConnection, DataCloudPreparedStatement> func) {
         try (val conn = getHyperQueryConnection(properties).unwrap(DataCloudConnection.class);
                 val stmt = conn.prepareStatement(sql).unwrap(DataCloudPreparedStatement.class)) {
-            stmt.setInt(1, size);
+            stmt.setInt(1, rows);
             func.accept(conn, stmt);
         }
     }
@@ -117,7 +117,7 @@ public class StreamingResultSetTest {
 
         assertThat(status).as("Status: " + status).satisfies(s -> {
             assertThat(s.allResultsProduced()).isTrue();
-            assertThat(s.getRowCount()).isEqualTo(size);
+            assertThat(s.getRowCount()).isEqualTo(rows);
         });
 
         while (rs.next()) {
@@ -127,7 +127,7 @@ public class StreamingResultSetTest {
 
         assertThat(witnessed.get())
                 .as("last value seen from query: " + status.getQueryId())
-                .isEqualTo(size);
+                .isEqualTo(rows);
     }
 
     @FunctionalInterface
