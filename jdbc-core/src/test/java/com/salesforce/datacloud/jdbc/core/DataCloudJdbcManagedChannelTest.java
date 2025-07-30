@@ -20,10 +20,10 @@ import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyLong;
 import static org.mockito.Mockito.anyMap;
+import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,7 +31,6 @@ import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
-import io.grpc.inprocess.InProcessChannelBuilder;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -50,10 +49,22 @@ class DataCloudJdbcManagedChannelTest {
     private Properties properties;
     private final Random random = ThreadLocalRandom.current();
 
+    @SuppressWarnings({"unchecked", "rawtypes"})
     @BeforeEach
     void setUp() {
         Mockito.reset();
-        channelBuilder = spy(InProcessChannelBuilder.forName("test-channel"));
+        ManagedChannelBuilder mockBuilder = mock(ManagedChannelBuilder.class);
+        channelBuilder = mockBuilder;
+        when(mockBuilder.maxInboundMessageSize(anyInt())).thenReturn(mockBuilder);
+        when(mockBuilder.userAgent(anyString())).thenReturn(mockBuilder);
+        when(mockBuilder.keepAliveTime(anyLong(), any(TimeUnit.class))).thenReturn(mockBuilder);
+        when(mockBuilder.keepAliveTimeout(anyLong(), any(TimeUnit.class))).thenReturn(mockBuilder);
+        when(mockBuilder.idleTimeout(anyLong(), any(TimeUnit.class))).thenReturn(mockBuilder);
+        when(mockBuilder.keepAliveWithoutCalls(anyBoolean())).thenReturn(mockBuilder);
+        when(mockBuilder.enableRetry()).thenReturn(mockBuilder);
+        when(mockBuilder.maxRetryAttempts(anyInt())).thenReturn(mockBuilder);
+        when(mockBuilder.defaultServiceConfig(anyMap())).thenReturn(mockBuilder);
+        when(mockBuilder.build()).thenReturn(mock(ManagedChannel.class));
         properties = new Properties();
     }
 
@@ -69,32 +80,32 @@ class DataCloudJdbcManagedChannelTest {
         val expectedMaxInboundMessageSize = 64 * 1024 * 1024;
         val expectedUserAgent = DriverVersion.formatDriverInfo();
 
-        DataCloudJdbcManagedChannel.of(channelBuilder, properties);
-
-        verify(channelBuilder).maxInboundMessageSize(expectedMaxInboundMessageSize);
-        verify(channelBuilder).userAgent(expectedUserAgent);
+        try (val unused = DataCloudJdbcManagedChannel.of(channelBuilder, properties)) {
+            verify(channelBuilder).maxInboundMessageSize(expectedMaxInboundMessageSize);
+            verify(channelBuilder).userAgent(expectedUserAgent);
+        }
     }
 
     @Test
     void shouldNotEnableKeepAliveByDefault() {
-        DataCloudJdbcManagedChannel.of(channelBuilder, properties);
-
-        verify(channelBuilder, never()).keepAliveTime(anyLong(), any(TimeUnit.class));
-        verify(channelBuilder, never()).keepAliveTimeout(anyLong(), any(TimeUnit.class));
-        verify(channelBuilder, never()).idleTimeout(anyLong(), any(TimeUnit.class));
-        verify(channelBuilder, never()).keepAliveWithoutCalls(anyBoolean());
+        try (val unused = DataCloudJdbcManagedChannel.of(channelBuilder, properties)) {
+            verify(channelBuilder, never()).keepAliveTime(anyLong(), any(TimeUnit.class));
+            verify(channelBuilder, never()).keepAliveTimeout(anyLong(), any(TimeUnit.class));
+            verify(channelBuilder, never()).idleTimeout(anyLong(), any(TimeUnit.class));
+            verify(channelBuilder, never()).keepAliveWithoutCalls(anyBoolean());
+        }
     }
 
     @Test
     void shouldEnableKeepAliveWhenConfiguredWithDefaults() {
         properties.setProperty(DataCloudJdbcManagedChannel.GRPC_KEEP_ALIVE_ENABLED, "true");
 
-        DataCloudJdbcManagedChannel.of(channelBuilder, properties);
-
-        verify(channelBuilder).keepAliveTime(60, TimeUnit.SECONDS);
-        verify(channelBuilder).keepAliveTimeout(10, TimeUnit.SECONDS);
-        verify(channelBuilder).idleTimeout(300, TimeUnit.SECONDS);
-        verify(channelBuilder).keepAliveWithoutCalls(false);
+        try (val unused = DataCloudJdbcManagedChannel.of(channelBuilder, properties)) {
+            verify(channelBuilder).keepAliveTime(60, TimeUnit.SECONDS);
+            verify(channelBuilder).keepAliveTimeout(10, TimeUnit.SECONDS);
+            verify(channelBuilder).idleTimeout(300, TimeUnit.SECONDS);
+            verify(channelBuilder).keepAliveWithoutCalls(false);
+        }
     }
 
     @Test
@@ -112,21 +123,21 @@ class DataCloudJdbcManagedChannelTest {
                 DataCloudJdbcManagedChannel.GRPC_KEEP_ALIVE_WITHOUT_CALLS, String.valueOf(keepAliveWithoutCalls));
         properties.setProperty(DataCloudJdbcManagedChannel.GRPC_IDLE_TIMEOUT_SECONDS, String.valueOf(idleTimeout));
 
-        DataCloudJdbcManagedChannel.of(channelBuilder, properties);
-
-        verify(channelBuilder).keepAliveTime(keepAliveTime, TimeUnit.SECONDS);
-        verify(channelBuilder).keepAliveTimeout(keepAliveTimeout, TimeUnit.SECONDS);
-        verify(channelBuilder).idleTimeout(idleTimeout, TimeUnit.SECONDS);
-        verify(channelBuilder).keepAliveWithoutCalls(keepAliveWithoutCalls);
+        try (val unused = DataCloudJdbcManagedChannel.of(channelBuilder, properties)) {
+            verify(channelBuilder).keepAliveTime(keepAliveTime, TimeUnit.SECONDS);
+            verify(channelBuilder).keepAliveTimeout(keepAliveTimeout, TimeUnit.SECONDS);
+            verify(channelBuilder).idleTimeout(idleTimeout, TimeUnit.SECONDS);
+            verify(channelBuilder).keepAliveWithoutCalls(keepAliveWithoutCalls);
+        }
     }
 
     @Test
     void shouldEnableRetriesByDefaultWithDefaults() {
-        DataCloudJdbcManagedChannel.of(channelBuilder, properties);
-
-        verify(channelBuilder).enableRetry();
-        verify(channelBuilder).maxRetryAttempts(5);
-        verify(channelBuilder).defaultServiceConfig(anyMap());
+        try (val unused = DataCloudJdbcManagedChannel.of(channelBuilder, properties)) {
+            verify(channelBuilder).enableRetry();
+            verify(channelBuilder).maxRetryAttempts(5);
+            verify(channelBuilder).defaultServiceConfig(anyMap());
+        }
     }
 
     @Test
@@ -149,40 +160,38 @@ class DataCloudJdbcManagedChannelTest {
         properties.setProperty(
                 DataCloudJdbcManagedChannel.GRPC_RETRY_POLICY_RETRYABLE_STATUS_CODES, retryableStatusCodes);
 
-        DataCloudJdbcManagedChannel.of(channelBuilder, properties);
+        try (val unused = DataCloudJdbcManagedChannel.of(channelBuilder, properties)) {
+            verify(channelBuilder).enableRetry();
+            verify(channelBuilder).maxRetryAttempts(maxRetryAttempts);
 
-        verify(channelBuilder).enableRetry();
-        verify(channelBuilder).maxRetryAttempts(maxRetryAttempts);
-
-        verify(channelBuilder).defaultServiceConfig(argThat(config -> {
-            String configStr = config.toString();
-            return configStr.contains("maxAttempts=" + maxRetryAttempts)
-                    && configStr.contains("initialBackoff=" + initialBackoff + "s")
-                    && configStr.contains("maxBackoff=" + maxBackoff + "s")
-                    && configStr.contains("backoffMultiplier=" + backoffMultiplier)
-                    && configStr.contains(statusCode1)
-                    && configStr.contains(statusCode2);
-        }));
+            verify(channelBuilder).defaultServiceConfig(argThat(config -> {
+                String configStr = config.toString();
+                return configStr.contains("maxAttempts=" + maxRetryAttempts)
+                        && configStr.contains("initialBackoff=" + initialBackoff + "s")
+                        && configStr.contains("maxBackoff=" + maxBackoff + "s")
+                        && configStr.contains("backoffMultiplier=" + backoffMultiplier)
+                        && configStr.contains(statusCode1)
+                        && configStr.contains(statusCode2);
+            }));
+        }
     }
 
     @Test
     void shouldNotEnableRetriesWhenDisabled() {
         properties.setProperty(DataCloudJdbcManagedChannel.GRPC_RETRY_ENABLED, "false");
 
-        DataCloudJdbcManagedChannel.of(channelBuilder, properties);
-
-        verify(channelBuilder, never()).enableRetry();
-        verify(channelBuilder, never()).maxRetryAttempts(anyInt());
-        verify(channelBuilder, never()).defaultServiceConfig(anyMap());
+        try (val unused = DataCloudJdbcManagedChannel.of(channelBuilder, properties)) {
+            verify(channelBuilder, never()).enableRetry();
+            verify(channelBuilder, never()).maxRetryAttempts(anyInt());
+            verify(channelBuilder, never()).defaultServiceConfig(anyMap());
+        }
     }
 
     @SneakyThrows
     @Test
     void callsManagedChannelCleanup() {
         val mocked = mock(ManagedChannel.class);
-
         when(channelBuilder.build()).thenReturn(mocked);
-
         when(mocked.isTerminated()).thenReturn(false, true);
 
         val actual = DataCloudJdbcManagedChannel.of(channelBuilder, properties);
@@ -197,9 +206,7 @@ class DataCloudJdbcManagedChannelTest {
     @Test
     void callsManagedChannelShutdownNow() {
         val mocked = mock(ManagedChannel.class);
-
         when(channelBuilder.build()).thenReturn(mocked);
-
         when(mocked.isTerminated()).thenReturn(false);
 
         val actual = DataCloudJdbcManagedChannel.of(channelBuilder, properties);

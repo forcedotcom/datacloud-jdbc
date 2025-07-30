@@ -30,5 +30,5 @@ public interface HyperGrpcStubProvider extends AutoCloseable {
      *
      * @return the stub
      */
-    public HyperServiceGrpc.HyperServiceBlockingStub getStub();
+    HyperServiceGrpc.HyperServiceBlockingStub getStub();
 }

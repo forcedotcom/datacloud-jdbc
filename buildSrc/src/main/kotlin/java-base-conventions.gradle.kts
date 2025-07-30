@@ -25,4 +25,6 @@ tasks.withType<Test>().configureEach {
         showStandardStreams = true
         showStackTraces = true
     }
+
+//    jvmArgs("-Xmx1g", "-Xms512m")
 }

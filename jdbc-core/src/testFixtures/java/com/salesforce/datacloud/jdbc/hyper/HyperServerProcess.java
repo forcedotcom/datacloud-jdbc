@@ -42,7 +42,6 @@ import java.util.regex.Pattern;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 @Slf4j
 public class HyperServerProcess implements AutoCloseable {
@@ -56,13 +55,21 @@ public class HyperServerProcess implements AutoCloseable {
         this(HyperServerConfig.builder());
     }
 
-    @SneakyThrows
+    public HyperServerProcess(String yamlName) {
+        this(HyperServerConfig.builder(), yamlName);
+    }
+
     public HyperServerProcess(HyperServerConfig.HyperServerConfigBuilder config) {
+        this(config, "hyper.yaml");
+    }
+
+    @SneakyThrows
+    public HyperServerProcess(HyperServerConfig.HyperServerConfigBuilder config, String yamlName) {
         log.info("starting hyperd, this might take a few seconds");
 
         val isWindows = System.getProperty("os.name").toLowerCase().contains("win");
         val executable = new File("../.hyperd/hyperd" + (isWindows ? ".exe" : ""));
-        val yaml = Paths.get(requireNonNull(HyperServerProcess.class.getResource("/hyper.yaml"))
+        val yaml = Paths.get(requireNonNull(HyperServerProcess.class.getResource("/" + yamlName))
                         .toURI())
                 .toFile();
 

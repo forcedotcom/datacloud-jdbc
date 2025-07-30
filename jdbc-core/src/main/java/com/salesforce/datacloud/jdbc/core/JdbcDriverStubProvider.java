@@ -18,10 +18,10 @@ package com.salesforce.datacloud.jdbc.core;
 import lombok.extern.slf4j.Slf4j;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
-@Slf4j
 /**
  * This class is used to provide a stub for the Hyper gRPC client used by the JDBC Connection.
  */
+@Slf4j
 public class JdbcDriverStubProvider implements HyperGrpcStubProvider {
 
     private final DataCloudJdbcManagedChannel channel;
