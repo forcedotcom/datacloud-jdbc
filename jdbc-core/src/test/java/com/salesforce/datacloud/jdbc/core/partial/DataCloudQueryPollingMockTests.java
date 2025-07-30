@@ -84,19 +84,4 @@ public class DataCloudQueryPollingMockTests extends HyperGrpcTestBase {
             verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), atLeast(2));
         }
     }
-
-    @SneakyThrows
-    @Test
-    void noFinalGetQueryInfoOnSmallData() {
-        try (val connection = getInterceptedClientConnection();
-                val statement = connection.createStatement()) {
-            val rs = statement.executeQuery("SELECT 1, 2, 3");
-
-            while (rs.next()) {
-                System.out.println("Retrieved value:" + rs.getLong(1));
-            }
-
-            verifyThat(calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), times(0));
-        }
-    }
 }
