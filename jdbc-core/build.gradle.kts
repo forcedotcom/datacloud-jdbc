@@ -24,11 +24,13 @@ dependencies {
     implementation(libs.apache.commons.lang3)
 
     testFixturesImplementation(project(":jdbc-grpc"))
+    testFixturesImplementation(platform(libs.junit.bom))
     testFixturesImplementation(libs.slf4j.api)
     testFixturesImplementation(libs.guava)
     testFixturesImplementation(libs.jackson.databind)
     testFixturesImplementation(libs.grpc.stub)
     testFixturesImplementation(libs.grpc.protobuf)
+    testFixturesImplementation(libs.junit.platform.launcher)
 
     testImplementation(project(":jdbc-grpc"))
     testImplementation(project(":jdbc-reference"))

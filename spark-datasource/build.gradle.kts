@@ -4,20 +4,26 @@ plugins {
     id("publishing-conventions")
 }
 
+description = "Spark Datasource for Salesforce Data Cloud JDBC"
+val mavenName: String by extra("Spark Datasource for Salesforce Data Cloud JDBC")
+val mavenDescription: String by extra("${project.description}")
+
 dependencies {
     implementation(project(":jdbc"))
     implementation(project(":jdbc-grpc"))
     implementation(project(":jdbc-core"))
     implementation(project(":jdbc-util"))
     implementation(libs.bundles.grpc.impl)
-    implementation("org.apache.spark:spark-sql_2.13:3.5.5")
-    implementation("org.apache.spark:spark-core_2.13:3.5.5")
+    implementation(libs.bundles.spark)
+    
+    // Override transitive Jackson Scala module from Spark with newer version
+    implementation(libs.jackson.module.scala)
 
+    testImplementation(platform(libs.junit.bom))
     testImplementation(testFixtures(project(":jdbc-core")))
-    testImplementation("org.scalatest:scalatest_3:3.2.19")
-    testRuntimeOnly("org.junit.platform:junit-platform-engine:1.12.0")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.0")
-    testRuntimeOnly("org.scalatestplus:junit-5-12_3:3.2.19.0")
+    testImplementation(libs.scalatest.base)
+    testImplementation(libs.bundles.testing)
+    testRuntimeOnly(libs.scalatest.junit)
 }
 
 tasks {

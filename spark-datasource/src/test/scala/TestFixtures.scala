@@ -2,7 +2,10 @@ import org.scalatest.BeforeAndAfterAll
 import org.apache.spark.sql.SparkSession
 import org.apache.log4j.{Level, Logger}
 import org.scalatest.Suite
-import com.salesforce.datacloud.jdbc.hyper.HyperServerProcess
+import com.salesforce.datacloud.jdbc.hyper.{
+  HyperServerManager,
+  HyperServerProcess
+}
 
 trait WithSparkSession extends BeforeAndAfterAll { self: Suite =>
   protected var spark: SparkSession = _
@@ -34,13 +37,6 @@ trait WithHyperServer extends BeforeAndAfterAll { self: Suite =>
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    this.hyperServerProcess = new HyperServerProcess()
-  }
-
-  override def afterAll(): Unit = {
-    super.afterAll();
-    if (this.hyperServerProcess != null) {
-      this.hyperServerProcess.close()
-    }
+    this.hyperServerProcess = HyperServerManager.withSmallChunks()
   }
 }

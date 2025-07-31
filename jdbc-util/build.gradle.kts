@@ -10,7 +10,6 @@ val mavenDescription: String by extra("${project.description}")
 
 dependencies {
     implementation(libs.slf4j.api)
-
     implementation(libs.guava)
 
     testImplementation(platform(libs.junit.bom))

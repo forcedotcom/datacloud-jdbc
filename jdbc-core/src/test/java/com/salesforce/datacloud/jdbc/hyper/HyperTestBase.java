@@ -28,22 +28,16 @@ import java.sql.ResultSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
-import lombok.AccessLevel;
-import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.assertj.core.api.ThrowingConsumer;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 @Slf4j
-public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.CloseableResource {
-    @Getter(lazy = true, value = AccessLevel.PRIVATE)
-    private static final HyperServerProcess instance = new HyperServerProcess();
-
+public class HyperTestBase implements BeforeAllCallback {
     private static boolean isRegistered = false;
 
     @SneakyThrows
@@ -102,7 +96,7 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
     }
 
     public static int getInstancePort() {
-        val hyper = getInstance();
+        val hyper = HyperServerManager.withSmallChunks();
         Assertions.assertTrue((hyper != null) && hyper.isHealthy(), "Hyper wasn't started, failing test");
         return hyper.getPort();
     }
@@ -115,15 +109,6 @@ public class HyperTestBase implements BeforeAllCallback, ExtensionContext.Store.
                 isRegistered = true;
                 System.out.println("Registered database shutdown hook");
             }
-        }
-    }
-
-    @Override
-    @Timeout(5_000)
-    public void close() throws Throwable {
-        val instance = getInstance();
-        if (instance != null) {
-            instance.close();
         }
     }
 }
