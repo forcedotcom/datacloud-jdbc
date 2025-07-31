@@ -73,8 +73,6 @@ public class ChunkBasedPaginationTest {
                     break;
                 }
 
-                assertThat(status.getChunkCount()).isGreaterThan(1);
-
                 final long chunk = offset.getAndAdd(1);
                 final DataCloudResultSet rs = conn.getChunkBasedResultSet(queryId, chunk);
 
@@ -83,5 +81,9 @@ public class ChunkBasedPaginationTest {
                 }
             }
         }
+
+        assertThat(status.getChunkCount())
+                .as("we should have seen more than one chunk, last=" + status)
+                .isGreaterThan(1);
     }
 }
