@@ -83,6 +83,8 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
 
     @Override
     public boolean hasNext() {
+        // NOTE: this context.hasQueryResult() is why there's no State for "CONSUME_QUERY_RESULT" and is implicit
+        // based on the result of that method.
         while (!context.hasQueryResult() && state != State.COMPLETED) {
             try {
                 processCurrentState();
@@ -123,7 +125,7 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
                     } else {
                         if (!response.getOptional()) {
                             throw new DataCloudJDBCException(
-                                    "Got unexpected empty message from executeQuery response stream, queryId="
+                                    "Got unexpected non-optional message from executeQuery response stream, queryId="
                                             + context.getQueryId());
                         }
                     }
@@ -174,6 +176,9 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
 
             case COMPLETED:
                 throw new NoSuchElementException("No valid transition after state=" + state);
+
+            default:
+                throw new IllegalArgumentException("Cannot calculate transition from unknown state, state=" + state);
         }
     }
 
