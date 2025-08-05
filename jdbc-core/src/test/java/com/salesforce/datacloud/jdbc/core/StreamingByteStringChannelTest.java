@@ -35,21 +35,9 @@ import salesforce.cdp.hyperdb.v1.QueryResultPartBinary;
 @Slf4j
 class StreamingByteStringChannelTest {
     @Test
-    void isNotEmptyDetectsEmpty() {
-        val empty = ByteString.empty();
-        assertThat(StreamingByteStringChannel.isNotEmpty(empty)).isFalse();
-    }
-
-    @Test
-    void isNotEmptyDetectsNotEmpty() {
-        val notEmpty = ByteString.copyFromUtf8("not empty");
-        assertThat(StreamingByteStringChannel.isNotEmpty(notEmpty)).isTrue();
-    }
-
-    @Test
     @SneakyThrows
     void isOpenFollowsNioSemantics() {
-        try (val channel = StreamingByteStringChannel.of(empty())) {
+        try (val channel = new StreamingByteStringChannel(empty())) {
             assertThat(channel.isOpen()).isTrue(); // Channel starts open regardless of data availability
             // Even with no data, channel remains open until explicitly closed
             assertThat(channel.read(ByteBuffer.allocate(1))).isEqualTo(-1); // End-of-stream
@@ -63,7 +51,7 @@ class StreamingByteStringChannelTest {
     @Test
     @SneakyThrows
     void isOpenDetectsIfIteratorHasRemaining() {
-        try (val channel = StreamingByteStringChannel.of(some())) {
+        try (val channel = new StreamingByteStringChannel(some())) {
             assertThat(channel.isOpen()).isTrue();
         }
     }
@@ -71,7 +59,7 @@ class StreamingByteStringChannelTest {
     @Test
     @SneakyThrows
     void readThrowsClosedChannelExceptionWhenClosed() {
-        val channel = StreamingByteStringChannel.of(some());
+        val channel = new StreamingByteStringChannel(some());
         channel.close();
         assertThat(channel.isOpen()).isFalse();
 
@@ -82,7 +70,7 @@ class StreamingByteStringChannelTest {
     @Test
     @SneakyThrows
     void readReturnsNegativeOneOnIteratorExhaustion() {
-        try (val channel = StreamingByteStringChannel.of(empty())) {
+        try (val channel = new StreamingByteStringChannel(empty())) {
             assertThat(channel.read(ByteBuffer.allocateDirect(2))).isEqualTo(-1);
         }
     }
@@ -96,7 +84,7 @@ class StreamingByteStringChannelTest {
 
         val iterator = infiniteStream().peek(seen::add).iterator();
 
-        try (val channel = new ReadChannel(StreamingByteStringChannel.of(iterator))) {
+        try (val channel = new ReadChannel(new StreamingByteStringChannel(iterator))) {
             channel.readFully(first);
             assertThat(seen).hasSize(5);
             channel.readFully(second);

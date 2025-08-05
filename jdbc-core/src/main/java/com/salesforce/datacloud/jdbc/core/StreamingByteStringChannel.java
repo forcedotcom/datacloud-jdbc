@@ -15,44 +15,21 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.google.common.collect.FluentIterable;
 import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Iterator;
-import java.util.Optional;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryResult;
-import salesforce.cdp.hyperdb.v1.QueryResultPartBinary;
 
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class StreamingByteStringChannel implements ReadableByteChannel {
-    private final Iterator<ByteBuffer> iterator;
-    private boolean open;
-    private ByteBuffer currentBuffer;
-
-    public static StreamingByteStringChannel of(Iterator<QueryResult> iterator) {
-        val byteBuffers = FluentIterable.from(() -> iterator)
-                .transform(StreamingByteStringChannel::fromQueryResult)
-                .filter(StreamingByteStringChannel::isNotEmpty)
-                .transform(ByteString::asReadOnlyByteBuffer) // Zero-copy!
-                .iterator();
-
-        return new StreamingByteStringChannel(
-                byteBuffers,
-                true,
-                byteBuffers.hasNext() ? byteBuffers.next() : ByteString.EMPTY.asReadOnlyByteBuffer());
-    }
-
-    static ByteString fromQueryResult(QueryResult queryResult) {
-        return Optional.ofNullable(queryResult)
-                .map(QueryResult::getBinaryPart)
-                .map(QueryResultPartBinary::getData)
-                .orElse(ByteString.EMPTY);
-    }
+    private final Iterator<QueryResult> iterator;
+    private boolean open = true;
+    private ByteBuffer currentBuffer = null;
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
@@ -63,9 +40,20 @@ public class StreamingByteStringChannel implements ReadableByteChannel {
         int totalBytesRead = 0;
 
         // Continue reading while destination has space AND we have data available
-        while (dst.hasRemaining() && (currentBuffer.hasRemaining() || iterator.hasNext())) {
-            if (!currentBuffer.hasRemaining()) {
-                currentBuffer = iterator.next();
+        while (dst.hasRemaining() && (iterator.hasNext() || (currentBuffer != null && currentBuffer.hasRemaining()))) {
+            if (currentBuffer == null || !currentBuffer.hasRemaining()) {
+                val queryResult = iterator.next();
+                if (queryResult.hasBinaryPart()) {
+                    val data = queryResult.getBinaryPart().getData();
+                    if (!data.isEmpty()) {
+                        currentBuffer = data.asReadOnlyByteBuffer();
+                    }
+                } else {
+                    // This was a non result data query result message like a query info message.
+                    // We ignore that message here and will just try to fetch the next message in
+                    // the next loop iteration.
+                    continue;
+                }
             }
 
             val bytesTransferred = transferToDestination(currentBuffer, dst);
@@ -104,9 +92,5 @@ public class StreamingByteStringChannel implements ReadableByteChannel {
             source.position(source.position() + transfer);
         }
         return transfer;
-    }
-
-    static boolean isNotEmpty(ByteString buffer) {
-        return !buffer.isEmpty();
     }
 }
