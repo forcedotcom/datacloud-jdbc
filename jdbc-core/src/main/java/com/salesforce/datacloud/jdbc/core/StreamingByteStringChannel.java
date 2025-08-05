@@ -15,7 +15,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.google.protobuf.ByteString;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;

@@ -206,8 +206,10 @@ public class HyperGrpcTestBase {
     private Stream<ExecuteQueryResponse> queryStatusResponse(String queryId) {
         return Stream.of(ExecuteQueryResponse.newBuilder()
                 .setQueryInfo(QueryInfo.newBuilder()
-                        .setQueryStatus(
-                                QueryStatus.newBuilder().setQueryId(queryId).build())
+                        .setQueryStatus(QueryStatus.newBuilder()
+                                .setCompletionStatus(QueryStatus.CompletionStatus.FINISHED)
+                                .setQueryId(queryId)
+                                .build())
                         .build())
                 .build());
     }
