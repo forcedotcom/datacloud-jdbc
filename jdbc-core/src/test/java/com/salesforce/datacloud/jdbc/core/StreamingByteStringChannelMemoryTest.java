@@ -18,12 +18,13 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.protobuf.ByteString;
+import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.junit.jupiter.api.Test;
@@ -35,21 +36,17 @@ class StreamingByteStringChannelMemoryTest {
 
     @Test
     void testMemoryAllocationPattern() throws Exception {
-        int dataSize = 1024 * 1024; // 1MB per chunk
-        int numChunks = 50;
+        val dataSize = 1024 * 1024; // 1MB per chunk
+        val numChunks = 50;
 
-        // Create test data
-        List<QueryResult> testData = createTestData(numChunks, dataSize);
+        val testData = createTestData(numChunks, dataSize);
         log.warn("Created {} chunks of {} bytes each", numChunks, dataSize);
 
-        // Warm up JVM and force GC
-        warmupAndGC();
+        warmupAndForceGC();
 
-        // Measure allocation before
-        MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
-        long allocatedBefore = memoryBean.getHeapMemoryUsage().getUsed();
+        val memoryBean = ManagementFactory.getMemoryMXBean();
+        val allocatedBefore = memoryBean.getHeapMemoryUsage().getUsed();
 
-        // Test the channel
         long totalBytesRead;
         try (val channel = new StreamingByteStringChannel(testData.iterator())) {
             totalBytesRead = 0;
@@ -63,13 +60,10 @@ class StreamingByteStringChannelMemoryTest {
             }
         }
 
-        // Force GC to clean up any temporary objects
-        System.gc();
-        Thread.sleep(100);
-        System.gc();
+        forceGC();
 
-        long allocatedAfter = memoryBean.getHeapMemoryUsage().getUsed();
-        long memoryDelta = allocatedAfter - allocatedBefore;
+        val allocatedAfter = memoryBean.getHeapMemoryUsage().getUsed();
+        val memoryDelta = allocatedAfter - allocatedBefore;
 
         log.warn("Total bytes read: {}", totalBytesRead);
         log.warn("Memory before: {} MB", allocatedBefore / (1024.0 * 1024.0));
@@ -77,10 +71,10 @@ class StreamingByteStringChannelMemoryTest {
         log.warn("Memory delta: {} MB", memoryDelta / (1024.0 * 1024.0));
 
         // Verify we read all the data
-        long expectedTotal = (long) numChunks * dataSize;
+        val expectedTotal = (long) numChunks * dataSize;
         assertThat(totalBytesRead).isEqualTo(expectedTotal);
 
-        double memoryEfficiencyRatio = (double) memoryDelta / expectedTotal;
+        val memoryEfficiencyRatio = (double) memoryDelta / expectedTotal;
         log.warn("Memory efficiency ratio: {}", memoryEfficiencyRatio);
 
         // For zero-copy: ratio should be < 0.1 (10% overhead)
@@ -94,12 +88,14 @@ class StreamingByteStringChannelMemoryTest {
         int numChunks = 100;
 
         val gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
-        long gcCountBefore =
-                gcBeans.stream().mapToLong(bean -> bean.getCollectionCount()).sum();
-        long gcTimeBefore =
-                gcBeans.stream().mapToLong(bean -> bean.getCollectionTime()).sum();
+        val gcCountBefore = gcBeans.stream()
+                .mapToLong(GarbageCollectorMXBean::getCollectionCount)
+                .sum();
+        val gcTimeBefore = gcBeans.stream()
+                .mapToLong(GarbageCollectorMXBean::getCollectionTime)
+                .sum();
 
-        warmupAndGC();
+        warmupAndForceGC();
 
         val testData = createTestData(numChunks, dataSize);
         long totalRead;
@@ -119,13 +115,15 @@ class StreamingByteStringChannelMemoryTest {
             }
         }
 
-        long gcCountAfter =
-                gcBeans.stream().mapToLong(bean -> bean.getCollectionCount()).sum();
-        long gcTimeAfter =
-                gcBeans.stream().mapToLong(bean -> bean.getCollectionTime()).sum();
+        val gcCountAfter = gcBeans.stream()
+                .mapToLong(GarbageCollectorMXBean::getCollectionCount)
+                .sum();
+        val gcTimeAfter = gcBeans.stream()
+                .mapToLong(GarbageCollectorMXBean::getCollectionTime)
+                .sum();
 
-        long gcCount = gcCountAfter - gcCountBefore;
-        long gcTime = gcTimeAfter - gcTimeBefore;
+        val gcCount = gcCountAfter - gcCountBefore;
+        val gcTime = gcTimeAfter - gcTimeBefore;
 
         log.warn("Total data processed: {} MB", totalRead / (1024.0 * 1024.0));
         log.warn("GC collections: {}", gcCount);
@@ -140,9 +138,9 @@ class StreamingByteStringChannelMemoryTest {
 
     @Test
     void testVariableChunkSizeMemoryPattern() throws Exception {
-        warmupAndGC();
+        warmupAndForceGC();
 
-        List<QueryResult> variableData = IntStream.rangeClosed(1, 10)
+        val variableData = IntStream.rangeClosed(1, 10)
                 .mapToObj(i -> {
                     int size = 1024 * i * i;
                     return createTestData(5, size);
@@ -152,8 +150,8 @@ class StreamingByteStringChannelMemoryTest {
 
         log.warn("Created {} chunks with variable sizes", variableData.size());
 
-        MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
-        long before = memoryBean.getHeapMemoryUsage().getUsed();
+        val memoryBean = ManagementFactory.getMemoryMXBean();
+        val before = memoryBean.getHeapMemoryUsage().getUsed();
 
         long totalRead;
         try (val channel = new StreamingByteStringChannel(variableData.iterator())) {
@@ -167,9 +165,8 @@ class StreamingByteStringChannelMemoryTest {
             }
         }
 
-        System.gc();
-        Thread.sleep(50);
-        long after = memoryBean.getHeapMemoryUsage().getUsed();
+        forceGC();
+        val after = memoryBean.getHeapMemoryUsage().getUsed();
 
         log.warn("Variable chunk test - Total read: {} KB", totalRead / 1024);
         log.warn("Memory delta: {} KB", (after - before) / 1024);
@@ -184,16 +181,15 @@ class StreamingByteStringChannelMemoryTest {
     }
 
     private QueryResult createQueryResult(int chunkIndex, int chunkSize) {
-        byte[] data = new byte[chunkSize];
+        val data = new byte[chunkSize];
         IntStream.range(0, chunkSize).forEach(i -> data[i] = (byte) ((chunkIndex + i) % 256));
 
-        ByteString byteString = ByteString.copyFrom(data);
-        QueryResultPartBinary binaryPart =
-                QueryResultPartBinary.newBuilder().setData(byteString).build();
+        val byteString = ByteString.copyFrom(data);
+        val binaryPart = QueryResultPartBinary.newBuilder().setData(byteString).build();
         return QueryResult.newBuilder().setBinaryPart(binaryPart).build();
     }
 
-    private void warmupAndGC() throws InterruptedException {
+    private void warmupAndForceGC() {
         IntStream.range(0, 3).forEach(i -> {
             System.gc();
             try {
@@ -207,7 +203,13 @@ class StreamingByteStringChannelMemoryTest {
         // Create and discard some objects to stabilize memory
         IntStream.range(0, 100).mapToObj(i -> new byte[1024]).collect(Collectors.toList());
 
+        forceGC();
+    }
+
+    @SneakyThrows
+    private void forceGC() {
         System.gc();
         Thread.sleep(100);
+        System.gc();
     }
 }
