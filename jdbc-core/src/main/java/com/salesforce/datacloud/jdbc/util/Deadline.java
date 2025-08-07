@@ -30,6 +30,15 @@ public class Deadline {
     private final long deadline;
 
     /**
+     * Creates a practically infinite deadline for operations that should not timeout.
+     * Returns a deadline set to 10 days from the current time.
+     * @return A deadline that effectively never expires for practical purposes.
+     */
+    public static Deadline infinite() {
+        return of(Duration.ZERO);
+    }
+
+    /**
      * Initialize a deadline with the given timeout.
      * @param timeout The timeout to enforce. A duration of zero means an infinite deadline and no timeout.
      * @return The deadline.
