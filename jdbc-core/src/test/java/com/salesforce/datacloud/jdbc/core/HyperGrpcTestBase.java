@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerProcess;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
@@ -90,16 +91,14 @@ public class HyperGrpcTestBase {
         });
     }
 
-    protected DataCloudConnection getInterceptedClientConnection() {
-        return getInterceptedClientConnection(HyperServerConfig.builder().build());
+    protected DataCloudConnection getInterceptedClientConnection(
+            HyperServerConfig config, HyperServerManager.ConfigFile configFile) {
+        val server = HyperServerManager.get(config.toBuilder(), configFile);
+        return getInterceptedClientConnection(server);
     }
 
     @SneakyThrows
-    protected DataCloudConnection getInterceptedClientConnection(HyperServerConfig config) {
-
-        val server = config.start();
-        servers.add(server);
-
+    protected DataCloudConnection getInterceptedClientConnection(HyperServerProcess server) {
         val channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.getPort())
                 .usePlaintext()
                 .maxInboundMessageSize(64 * 1024 * 1024)
@@ -130,6 +129,19 @@ public class HyperGrpcTestBase {
         val conn = DataCloudConnection.of(mocked, new Properties());
         connections.add(conn);
         return conn;
+    }
+
+    protected DataCloudConnection getInterceptedClientConnection() {
+        return getInterceptedClientConnection(
+                HyperServerConfig.builder().build(), HyperServerManager.ConfigFile.SMALL_CHUNKS);
+    }
+
+    @SneakyThrows
+    protected DataCloudConnection getInterceptedClientConnection(HyperServerConfig config) {
+        val server = config.start();
+        servers.add(server);
+
+        return getInterceptedClientConnection(server);
     }
 
     public static <ReqT, RespT> void proxyStreamingMethod(
