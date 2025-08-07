@@ -22,6 +22,7 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -115,22 +116,26 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
 
         switch (state) {
             case PROCESS_EXECUTE_QUERY_STREAM:
-                if (context.executeQueryResponses != null && context.executeQueryResponses.hasNext()) {
-                    val response = context.executeQueryResponses.next();
-
-                    if (response.hasQueryInfo()) {
-                        context.updateQueryContext(response.getQueryInfo());
-                    } else if (response.hasQueryResult()) {
-                        context.setQueryResult(response.getQueryResult());
-                    } else {
-                        if (!response.getOptional()) {
-                            throw new DataCloudJDBCException(
-                                    "Got unexpected non-optional message from executeQuery response stream, queryId="
-                                            + context.getQueryId());
+                try {
+                    if (context.executeQueryResponses != null && context.executeQueryResponses.hasNext()) {
+                        val response = context.executeQueryResponses.next();
+                        if (response.hasQueryInfo()) {
+                            context.updateQueryContext(response.getQueryInfo());
+                        } else if (response.hasQueryResult()) {
+                            context.setQueryResult(response.getQueryResult());
+                        } else {
+                            if (!response.getOptional()) {
+                                throw new DataCloudJDBCException(
+                                        "Got unexpected non-optional message from executeQuery response stream, queryId="
+                                                + context.getQueryId());
+                            }
                         }
+
+                    } else {
+                        transitionTo(State.CHECK_FOR_MORE_DATA);
                     }
-                } else {
-                    transitionTo(State.CHECK_FOR_MORE_DATA);
+                } catch (StatusRuntimeException ex) {
+                    potentiallyTransitionToCheckForMoreData(ex);
                 }
                 break;
 
@@ -163,12 +168,16 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
 
             case PROCESS_QUERY_INFO_STREAM:
                 while (!context.deadline.hasPassed() && !context.hasMoreChunks()) {
-                    val nextInfo = safelyGetNext(context.queryInfos);
-                    if (nextInfo.isPresent()) {
-                        context.updateQueryContext(nextInfo.get());
-                    } else {
-                        transitionTo(State.CHECK_FOR_MORE_DATA);
-                        return;
+                    try {
+                        val nextInfo = safelyGetNext(context.queryInfos);
+                        if (nextInfo.isPresent()) {
+                            context.updateQueryContext(nextInfo.get());
+                        } else {
+                            transitionTo(State.CHECK_FOR_MORE_DATA);
+                            return;
+                        }
+                    } catch (StatusRuntimeException ex) {
+                        potentiallyTransitionToCheckForMoreData(ex);
                     }
                 }
                 transitionTo(State.CHECK_FOR_MORE_DATA);
@@ -179,6 +188,32 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
 
             default:
                 throw new IllegalArgumentException("Cannot calculate transition from unknown state, state=" + state);
+        }
+    }
+
+    /**
+     * For both executeQueryResponse and getQueryInfo response streams, if we get a CANCELLED message then it means
+     * that hyper decided the status of the query hadn't updated in time so we need to retry getting query status.
+     * If we get a CANCELLED exception then we will remove the (now broken) stream and transition to CHECK_FOR_MORE_DATA
+     */
+    private void potentiallyTransitionToCheckForMoreData(StatusRuntimeException ex) throws StatusRuntimeException {
+        if (ex.getStatus().getCode() == Status.Code.CANCELLED) {
+            log.warn(
+                    "Caught retryable exception, state={}, queryId={}, status={}",
+                    state,
+                    getQueryId(),
+                    context.status,
+                    ex);
+            context.queryInfos = null;
+            transitionTo(State.CHECK_FOR_MORE_DATA);
+        } else {
+            log.error(
+                    "Caught non-retryable exception, state={}, queryId={}, status={}",
+                    state,
+                    getQueryId(),
+                    context.status,
+                    ex);
+            throw ex;
         }
     }
 

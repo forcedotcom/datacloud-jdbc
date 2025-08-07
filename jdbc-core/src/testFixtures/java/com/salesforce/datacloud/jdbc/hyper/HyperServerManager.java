@@ -1,5 +1,6 @@
 package com.salesforce.datacloud.jdbc.hyper;
 
+import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -10,6 +11,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public final class HyperServerManager {
+    @AllArgsConstructor
+    public enum ConfigFile {
+        DEFAULT("default.yaml"),
+        SMALL_CHUNKS("hyper.yaml"),
+        TIMEOUT("timeout.yaml");
+
+        final String filename;
+    }
+
     private static final Map<HyperProcessHandle, HyperServerProcess> instances = new ConcurrentHashMap<>();
 
     private static final AtomicBoolean installed = new AtomicBoolean(false);
@@ -51,12 +61,18 @@ public final class HyperServerManager {
         });
     }
 
+    public static HyperServerProcess get(HyperServerConfig.HyperServerConfigBuilder builder, ConfigFile yaml) {
+        return get(builder, yaml.filename);
+    }
+
+    @Deprecated
     public static HyperServerProcess closeToDefault() {
         val config = HyperServerConfig.builder();
         val name = "default.yaml";
         return get(config, name);
     }
 
+    @Deprecated
     public static HyperServerProcess withSmallChunks() {
         val config = HyperServerConfig.builder();
         val name = "hyper.yaml";

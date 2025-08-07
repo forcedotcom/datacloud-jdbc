@@ -16,18 +16,24 @@
 package com.salesforce.datacloud.jdbc.core.fsm;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import io.grpc.Status;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.stream.Stream;
 import lombok.val;
+import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
@@ -246,5 +252,75 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
                         QueryStatus.CompletionStatus.RESULTS_PRODUCED,
                         DataCloudQueryStatus.CompletionStatus.RESULTS_PRODUCED),
                 Arguments.of(QueryStatus.CompletionStatus.FINISHED, DataCloudQueryStatus.CompletionStatus.FINISHED));
+    }
+
+    @Test
+    public void whenExecuteQueryStreamThrowsCancelled_shouldRetryWithGetQueryInfo() throws Exception {
+        val queryInfoResponse =
+                executeQueryResponse(TEST_QUERY_ID, QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED, 1);
+
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
+                .withRequest(req ->
+                        req.getQuery().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
+                .willReturn(GrpcMock.stream(GrpcMock.response(queryInfoResponse))
+                        .and(GrpcMock.statusException(Status.CANCELLED))));
+
+        setupGetQueryInfo(TEST_QUERY_ID, QueryStatus.CompletionStatus.FINISHED, 1);
+
+        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+
+        assertThat(iterator.hasNext()).isFalse();
+        verifyGetQueryInfo(1);
+        verifyGetQueryResult(0);
+    }
+
+    @Test
+    public void whenGetQueryInfoStreamThrowsCancelled_shouldRetryWithGetQueryInfo() throws Exception {
+        setupExecuteQuery(
+                TEST_QUERY_ID,
+                TEST_QUERY,
+                QueryParam.TransferMode.ADAPTIVE,
+                executeQueryResponse(TEST_QUERY_ID, QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED, 1));
+
+        val status = QueryStatus.newBuilder()
+                .setQueryId(TEST_QUERY_ID)
+                .setCompletionStatus(QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED)
+                .setChunkCount(1)
+                .build();
+
+        val running = QueryInfo.newBuilder().setQueryStatus(status).build();
+        val finished = QueryInfo.newBuilder()
+                .setQueryStatus(status.toBuilder()
+                        .setCompletionStatus(QueryStatus.CompletionStatus.FINISHED)
+                        .build())
+                .build();
+
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getGetQueryInfoMethod())
+                .withRequest(req -> req.getQueryId().equals(TEST_QUERY_ID))
+                .willReturn(GrpcMock.statusException(Status.CANCELLED))
+                .nextWillReturn(running)
+                .nextWillReturn(GrpcMock.statusException(Status.CANCELLED))
+                .nextWillReturn(finished));
+
+        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+
+        assertThat(iterator.hasNext()).isFalse();
+        verifyGetQueryInfo(4);
+        verifyGetQueryResult(0);
+    }
+
+    @Test
+    public void whenExecuteQueryThrowsCancelledWithoutQueryId_shouldFailQuery() {
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
+                .withRequest(req ->
+                        req.getQuery().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
+                .willReturn(GrpcMock.statusException(Status.CANCELLED)));
+
+        assertThatThrownBy(() -> AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessage("Failed to execute query: " + TEST_QUERY);
+
+        verifyGetQueryInfo(0);
+        verifyGetQueryResult(0);
     }
 }
