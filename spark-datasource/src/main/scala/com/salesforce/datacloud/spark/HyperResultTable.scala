@@ -1,7 +1,9 @@
 package com.salesforce.datacloud.spark
 
+import com.salesforce.datacloud.query.v3.QueryStatus
 import org.apache.spark.sql.connector.catalog.SupportsRead
 import org.apache.spark.sql.types.StructType
+
 import java.{util => ju}
 import java.time.Duration
 import org.apache.spark.sql.connector.catalog.TableCapability
@@ -11,6 +13,7 @@ import org.apache.spark.sql.connector.read.Scan
 import org.apache.spark.sql.connector.read.SupportsReportStatistics
 import org.apache.spark.sql.connector.read.Batch
 import org.apache.spark.sql.connector.read.Statistics
+
 import scala.util.Using
 import org.apache.spark.sql.connector.metric.CustomMetric
 import org.apache.spark.sql.connector.metric.CustomTaskMetric
@@ -35,8 +38,7 @@ private case class HyperResultTable(
       Using(connectionOptions.createConnection()) { conn =>
         // We don't have any separate query timeouts here, as Spark already has a global job timeout, anyway.
         // TODO (W-18851398): Set the timeout to infinite, as soon as `waitForQueryStatus` accepts it.abstract
-        val queryStatus =
-          conn.waitForResultsProduced(resultSetId, Duration.ofDays(1))
+        val queryStatus = conn.waitFor(resultSetId, _.allResultsProduced())
         (queryStatus.getChunkCount(), queryStatus.getRowCount())
       }.get
 

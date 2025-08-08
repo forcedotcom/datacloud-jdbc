@@ -15,17 +15,17 @@
  */
 package com.salesforce.datacloud.jdbc.core.partial;
 
+import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
+
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.Unstable;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.time.Duration;
 import java.util.Iterator;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -49,10 +49,10 @@ public final class DataCloudQueryPolling {
     private final HyperServiceGrpc.HyperServiceBlockingStub stub;
     private final String queryId;
     private final Deadline deadline;
-    private final Predicate<DataCloudQueryStatus> predicate;
+    private final Predicate<QueryStatus> predicate;
 
     private State state = State.RESET_QUERY_INFO_STREAM;
-    private DataCloudQueryStatus lastStatus = null;
+    private QueryStatus lastStatus = null;
     private Iterator<QueryInfo> queryInfos = null;
     private long timeInState = System.currentTimeMillis();
 
@@ -69,7 +69,7 @@ public final class DataCloudQueryPolling {
             HyperServiceGrpc.HyperServiceBlockingStub stub,
             String queryId,
             Deadline deadline,
-            Predicate<DataCloudQueryStatus> predicate) {
+            Predicate<QueryStatus> predicate) {
         return new DataCloudQueryPolling(stub, queryId, deadline, predicate);
     }
 
@@ -87,27 +87,34 @@ public final class DataCloudQueryPolling {
      * @return The first status that satisfies the predicate, or the last status received before timeout
      * @throws DataCloudJDBCException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
      */
-    public DataCloudQueryStatus waitFor() throws DataCloudJDBCException {
-
+    public QueryStatus waitFor() throws DataCloudJDBCException {
+        Exception lastException = null;
         while (!deadline.hasPassed() && state != State.COMPLETED) {
             try {
                 processCurrentState();
+            } catch (StatusRuntimeException ex) {
+                log.error("Caught unexpected exception from server. {}", this, ex);
+                if (ex.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED) {
+                    throw new DataCloudJDBCException("Predicate was not satisfied before timeout. " + this, ex);
+                } else {
+                    throw createException("Failed when getting query status. " + this, ex);
+                }
+
             } catch (DataCloudJDBCException ex) {
-                log.error("Failed to process current state, state={}, queryId={}", state, queryId, ex);
+                log.error("Failed to process current state. {}", this, ex);
                 throw ex;
             }
         }
 
-        val finalStatus = lastStatus.get();
-
-        if (predicate.test(finalStatus)) {
-            return finalStatus;
+        if (lastStatus == null) {
+            throw new DataCloudJDBCException("Failed to get query status response. " + this, lastException);
+        } else if (predicate.test(lastStatus)) {
+            return lastStatus;
         } else if (deadline.hasPassed()) {
-            throw new DataCloudJDBCException(
-                "Query status polling timed out. queryId=" + queryId + ", lastStatus=" + finalStatus);
+            throw new DataCloudJDBCException("Predicate was not satisfied before timeout. " + this, lastException);
         } else {
-            throw new DataCloudJDBCException("Predicate was not satisfied when execution finished. queryId=" + queryId
-                    + ", lastStatus=" + finalStatus);
+            throw new DataCloudJDBCException(
+                    "Predicate was not satisfied when execution finished. " + this, lastException);
         }
     }
 
@@ -125,48 +132,38 @@ public final class DataCloudQueryPolling {
                 }
 
                 try {
-                    if (queryInfos.hasNext()) {
-                        val nextInfo = queryInfos.next();
-                        val mapped = DataCloudQueryStatus.of(nextInfo);
-
-                        if (!mapped.isPresent()) {
-                            throw new DataCloudJDBCException(
-                                    "Query info could not be mapped to DataCloudQueryStatus. queryId=" + queryId
-                                            + ", queryInfo=" + nextInfo);
-                        }
-
-                        lastStatus = mapped.get();
-                    } else {
+                    if (!queryInfos.hasNext()) {
                         transitionTo(State.RESET_QUERY_INFO_STREAM);
+                        break;
                     }
 
-                    val statusOpt = safelyGetNext(queryInfos).flatMap(DataCloudQueryStatus::of);
-                    if (statusOpt.isPresent()) {
-                        val currentStatus = statusOpt.get();
-                        lastStatus.set(currentStatus);
-
-                        if (predicate.test(currentStatus)) {
-                            transitionTo(State.PREDICATE_SATISFIED);
-                        } else if (currentStatus.isExecutionFinished()) {
-                            transitionTo(State.EXECUTION_FINISHED_WITH_UNSATISFIED_PREDICATE);
-                        }
-                    } else {
-                        throw new DataCloudJDBCException("Query info stream ended unexpectedly. queryId=" + queryId);
-                        transitionTo(State.RESET_QUERY_INFO_STREAM);
+                    val info = queryInfos.next();
+                    if (info.getOptional()) {
+                        log.trace("Unexpected optional message, message={} {}", info, this);
+                        break; // Per hyper_service.proto: clients must ignore optional messages which they do not know
                     }
+
+                    val mapped = QueryStatus.of(info);
+
+                    if (!mapped.isPresent()) {
+                        throw new DataCloudJDBCException(
+                                "Query info could not be mapped to DataCloudQueryStatus. queryId=" + queryId
+                                        + ", queryInfo=" + info + ". " + this);
+                    }
+
+                    lastStatus = mapped.get();
+
+                    if (predicate.test(lastStatus)) {
+                        transitionTo(State.COMPLETED);
+                    } else if (lastStatus.isExecutionFinished()) {
+                        transitionTo(State.COMPLETED);
+                    }
+
                 } catch (StatusRuntimeException ex) {
                     handleStatusRuntimeException(ex);
                     queryInfos = null;
                     transitionTo(State.RESET_QUERY_INFO_STREAM);
                 }
-                break;
-
-
-
-            case PREDICATE_SATISFIED:
-            case EXECUTION_FINISHED_WITH_UNSATISFIED_PREDICATE:
-            case TIMEOUT_EXCEEDED:
-                transitionTo(State.COMPLETED);
                 break;
 
             default:
@@ -188,9 +185,9 @@ public final class DataCloudQueryPolling {
 
     private void handleStatusRuntimeException(StatusRuntimeException ex) throws StatusRuntimeException {
         if (ex.getStatus().getCode() == Status.Code.CANCELLED) {
-            log.warn("Caught retryable CANCELLED exception, queryId={}, status={}", queryId, lastStatus.get(), ex);
+            log.warn("Caught retryable CANCELLED exception, {}", this, ex);
         } else {
-            log.error("Caught non-retryable exception, queryId={}, status={}", queryId, lastStatus.get(), ex);
+            log.error("Caught non-retryable exception, {}", this, ex);
             throw ex;
         }
     }
@@ -206,10 +203,9 @@ public final class DataCloudQueryPolling {
                 .getQueryInfo(param);
     }
 
-    private static <T> Optional<T> safelyGetNext(Iterator<T> iterator) {
-        if (iterator != null && iterator.hasNext()) {
-            return Optional.ofNullable(iterator.next());
-        }
-        return Optional.empty();
+    @Override
+    public String toString() {
+        return String.format(
+                "queryId=%s, state=%s, deadline=%s, status=%s", queryId, state.name(), deadline, lastStatus);
     }
 }

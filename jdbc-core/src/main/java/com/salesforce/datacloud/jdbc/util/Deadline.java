@@ -78,4 +78,9 @@ public class Deadline {
     private static long currentTime() {
         return System.nanoTime();
     }
+
+    @Override
+    public String toString() {
+        return String.format("deadline=%d, remaining=%s", deadline, getRemaining());
+    }
 }
