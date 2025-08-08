@@ -20,15 +20,12 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicLong;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.SneakyThrows;
-import lombok.val;
+import lombok.*;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 
 @Builder
 class RowBasedContext {
+
     @NonNull private final HyperGrpcClientExecutor client;
 
     @NonNull private final String queryId;
@@ -49,23 +46,18 @@ class RowBasedContext {
     }
 }
 
-/**
- * Row based results can be acquired with a QueryId and a row range, the behavior of getting more rows is determined by the {@link RowBased.Mode}:
- * {@link RowBased.Mode#SINGLE_RPC} execute a single GetQueryResult calls, we will return whatever data is on this response if any is available
- * {@link RowBased.Mode#FULL_RANGE} execute as many GetQueryResult calls until all available rows are exhausted
- */
-public interface RowBased extends Iterator<QueryResult> {
-    enum Mode {
-        SINGLE_RPC,
-        FULL_RANGE
-    }
+@Builder(access = AccessLevel.PRIVATE)
+public class RowBased implements Iterator<QueryResult> {
+    // The maximum byte size limit for a row based RPC response. While the server enforces a max as well, also having
+    // the constant available on the client side allows to set appropriate default values and also to provide immediate
+    // feedback on the
+    // ``setResultSetConstraints`` method.
+    public static final int HYPER_MAX_ROW_LIMIT_BYTE_SIZE = 20971520;
+    // The minimal byte size limit for a row based RPC response. The driver enforces this to guard against code that
+    // accidentally provides the limit in megabytes.
+    public static final int HYPER_MIN_ROW_LIMIT_BYTE_SIZE = 1024;
 
-    static RowBased of(
-            @NonNull HyperGrpcClientExecutor client,
-            @NonNull String queryId,
-            long offset,
-            long limit,
-            @NonNull Mode mode)
+    public static RowBased of(@NonNull HyperGrpcClientExecutor client, @NonNull String queryId, long offset, long limit)
             throws DataCloudJDBCException {
         val context = RowBasedContext.builder()
                 .client(client)
@@ -73,44 +65,9 @@ public interface RowBased extends Iterator<QueryResult> {
                 .offset(offset)
                 .limit(limit)
                 .build();
-        switch (mode) {
-            case SINGLE_RPC:
-                return RowBasedSingleRpc.builder()
-                        .iterator(context.getQueryResult(false))
-                        .build();
-            case FULL_RANGE:
-                return RowBasedFullRange.builder().context(context).build();
-        }
-        throw new IllegalArgumentException("Unknown mode not supported. mode=" + mode);
+        return RowBased.builder().context(context).build();
     }
 
-    // The maximum byte size limit for a row based RPC response. While the server enforces a max as well, also having
-    // the constant available on the client side allows to set appropriate default values and also to provide immediate
-    // feedback on the
-    // ``setResultSetConstraints`` method.
-    int HYPER_MAX_ROW_LIMIT_BYTE_SIZE = 20971520;
-    // The minimal byte size limit for a row based RPC response. The driver enforces this to guard against code that
-    // accidentally provides the limit in megabytes.
-    int HYPER_MIN_ROW_LIMIT_BYTE_SIZE = 1024;
-}
-
-@Builder
-class RowBasedSingleRpc implements RowBased {
-    private final Iterator<QueryResult> iterator;
-
-    @Override
-    public boolean hasNext() {
-        return iterator.hasNext();
-    }
-
-    @Override
-    public QueryResult next() {
-        return iterator.next();
-    }
-}
-
-@Builder
-class RowBasedFullRange implements RowBased {
     private final RowBasedContext context;
 
     private Iterator<QueryResult> iterator;

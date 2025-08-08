@@ -25,7 +25,7 @@ import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
@@ -269,10 +269,8 @@ public class DataCloudStatement implements Statement, AutoCloseable {
                     } else if (resultSet == null) {
                         log.warn(
                                 "Prefer acquiring async result sets from helper methods DataCloudConnection::getChunkBasedResultSet and DataCloudConnection::getRowBasedResultSet. We will wait for the query's results to be produced in their entirety before returning a result set.");
-                        val status = connection.waitForQueryStatus(
-                                queryHandle.getQueryId(),
-                                Duration.ofDays(10),
-                                DataCloudQueryStatus::allResultsProduced);
+                        val status = connection.waitFor(
+                                queryHandle.getQueryId(), Duration.ofDays(10), QueryStatus::allResultsProduced);
                         resultSet =
                                 connection.getChunkBasedResultSet(queryHandle.getQueryId(), 0, status.getChunkCount());
                     }
