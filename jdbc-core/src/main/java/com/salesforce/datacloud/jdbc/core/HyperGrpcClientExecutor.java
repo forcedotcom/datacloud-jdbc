@@ -24,7 +24,7 @@ import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.jdbc.util.Unstable;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -120,31 +120,10 @@ public class HyperGrpcClientExecutor {
                 log);
     }
 
-    public DataCloudQueryStatus waitForRowsAvailable(
-            String queryId, long offset, long limit, Deadline deadline, boolean allowLessThan)
-            throws DataCloudJDBCException {
-        val stub = getStub(queryId);
-        return DataCloudQueryPolling.waitForRowsAvailable(stub, queryId, offset, limit, deadline, allowLessThan);
-    }
-
-    public DataCloudQueryStatus waitForChunksAvailable(
-            String queryId, long offset, long limit, Deadline deadline, boolean allowLessThan)
-            throws DataCloudJDBCException {
-        val stub = getStub(queryId);
-        return DataCloudQueryPolling.waitForChunksAvailable(stub, queryId, offset, limit, deadline, allowLessThan);
-    }
-
-    public DataCloudQueryStatus waitForQueryStatus(
-            String queryId, Deadline deadline, Predicate<DataCloudQueryStatus> predicate)
-            throws DataCloudJDBCException {
-        val stub = getStub(queryId);
-        return DataCloudQueryPolling.waitForQueryStatus(stub, queryId, deadline, predicate);
-    }
-
-    public Stream<DataCloudQueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {
+    public Stream<QueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {
         val iterator = getQueryInfo(queryId);
         return StreamUtilities.toStream(iterator)
-                .map(DataCloudQueryStatus::of)
+                .map(QueryStatus::of)
                 .filter(Optional::isPresent)
                 .map(Optional::get);
     }
@@ -160,6 +139,29 @@ public class HyperGrpcClientExecutor {
                 },
                 "cancel queryId=" + queryId,
                 log);
+    }
+
+    /**
+     * Waits for the status of the specified query to satisfy the given predicate, polling until the predicate returns true or the timeout is reached.
+     * The predicate determines what condition you are waiting for. For example, to wait until at least a certain number of rows are available, use:
+     * <pre>
+     *     status -> status.allResultsProduced() || status.getRowCount() >= targetRows
+     * </pre>
+     * Or, to wait for enough chunks:
+     * <pre>
+     *     status -> status.allResultsProduced() || status.getChunkCount() >= targetChunks
+     * </pre>
+     *
+     * @param queryId The identifier of the query to check
+     * @param deadline The deadline for waiting for the engine to produce results.
+     * @param predicate The condition to check against the query status
+     * @return The first status that satisfies the predicate, or the last status received before timeout
+     * @throws DataCloudJDBCException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
+     */
+    public QueryStatus waitFor(String queryId, Deadline deadline, Predicate<QueryStatus> predicate)
+            throws DataCloudJDBCException {
+        val stub = getStub(queryId);
+        return DataCloudQueryPolling.of(stub, queryId, deadline, predicate).waitFor();
     }
 
     public Iterator<QueryResult> getQueryResult(

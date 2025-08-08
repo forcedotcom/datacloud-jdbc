@@ -21,7 +21,7 @@ import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
@@ -78,7 +78,7 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
     }
 
     @Override
-    public DataCloudQueryStatus getQueryStatus() {
+    public QueryStatus getQueryStatus() {
         return context.status.get();
     }
 
@@ -242,7 +242,7 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
 
         QueryResult queryResult;
         final Deadline deadline;
-        final AtomicReference<DataCloudQueryStatus> status = new AtomicReference<>();
+        final AtomicReference<QueryStatus> status = new AtomicReference<>();
         final AtomicLong highWater = new AtomicLong(1);
 
         final Iterator<ExecuteQueryResponse> executeQueryResponses;
@@ -257,7 +257,11 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
         }
 
         void updateQueryContext(QueryInfo info) {
-            DataCloudQueryStatus.of(info).ifPresent(status::set);
+            if (info.getOptional()) {
+                return; // Per hyper_service.proto: clients must ignore optional messages which they do not know
+            }
+
+            QueryStatus.of(info).ifPresent(status::set);
         }
 
         String getQueryId() {

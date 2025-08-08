@@ -18,19 +18,16 @@ package com.salesforce.datacloud.jdbc.core.partial;
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
-import static org.mockito.Mockito.mock;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudPreparedStatement;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
-import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.StatusRuntimeException;
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -44,16 +41,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 @Slf4j
 @ExtendWith(HyperTestBase.class)
 public class RowBasedTest {
     @SneakyThrows
-    private List<Integer> sut(String queryId, long offset, long limit, RowBased.Mode mode) {
+    private List<Integer> sut(String queryId, long offset, long limit) {
         try (val connection = getHyperQueryConnection()) {
-            val resultSet = connection.getRowBasedResultSet(queryId, offset, limit, mode);
+            val resultSet = connection.getRowBasedResultSet(queryId, offset, limit);
             return toList(resultSet);
         }
     }
@@ -64,48 +60,26 @@ public class RowBasedTest {
     private static String tiny;
     private static String small;
 
+    @SneakyThrows
     @BeforeAll
     static void setupQueries() {
         small = getQueryId(smallSize);
         tiny = getQueryId(tinySize);
-        waitForQuery(small);
-        waitForQuery(tiny);
+        try (val conn = getHyperQueryConnection()) {
+            conn.waitFor(small, QueryStatus::allResultsProduced);
+            conn.waitFor(tiny, QueryStatus::allResultsProduced);
+        }
     }
 
     @SneakyThrows
     @Test
-    void singleRpcReturnsIteratorButNotRowBasedFullRange() {
-        val client = mock(HyperGrpcClientExecutor.class);
-        val single = RowBased.of(client, "select 1", 0, 1, RowBased.Mode.SINGLE_RPC);
-
-        assertThat(single).isInstanceOf(RowBasedSingleRpc.class).isNotInstanceOf(RowBasedFullRange.class);
-    }
-
-    @SneakyThrows
-    @Test
-    void fullRangeReturnsRowBasedFullRange() {
-        val client = mock(HyperGrpcClientExecutor.class);
-        val single = RowBased.of(client, "select 1", 0, 1, RowBased.Mode.FULL_RANGE);
-
-        assertThat(single).isInstanceOf(RowBasedFullRange.class).isNotInstanceOf(RowBasedSingleRpc.class);
-    }
-
-    @SneakyThrows
-    @ParameterizedTest
-    @EnumSource(RowBased.Mode.class)
-    void fetchWhereActualLessThanPageSize(RowBased.Mode mode) {
+    void fetchWhereActualLessThanPageSize() {
         val limit = 10;
 
-        assertThat(sut(small, 0, limit, mode)).containsExactlyElementsOf(rangeClosed(1, 10));
-        assertThat(sut(small, 10, limit, mode)).containsExactlyElementsOf(rangeClosed(11, 20));
-        assertThat(sut(small, 20, limit, mode)).containsExactlyElementsOf(rangeClosed(21, 30));
-        assertThat(sut(small, 30, 2, mode)).containsExactlyElementsOf(rangeClosed(31, 32));
-    }
-
-    @Test
-    void fetchWhereActualMoreThanPageSize_SINGLE_RPC() {
-        val actual = sut(small, 0, smallSize * 2, RowBased.Mode.SINGLE_RPC);
-        assertThat(actual).isNotEmpty().isSubsetOf(rangeClosed(1, smallSize));
+        assertThat(sut(small, 0, limit)).containsExactlyElementsOf(rangeClosed(1, 10));
+        assertThat(sut(small, 10, limit)).containsExactlyElementsOf(rangeClosed(11, 20));
+        assertThat(sut(small, 20, limit)).containsExactlyElementsOf(rangeClosed(21, 30));
+        assertThat(sut(small, 30, 2)).containsExactlyElementsOf(rangeClosed(31, 32));
     }
 
     /**
@@ -114,7 +88,7 @@ public class RowBasedTest {
     @SneakyThrows
     @Test
     void throwsWhenFullRangeOverrunsAvailableRows() {
-        assertThatThrownBy(() -> sut(tiny, 0, tinySize * 3, RowBased.Mode.FULL_RANGE))
+        assertThatThrownBy(() -> sut(tiny, 0, tinySize * 3))
                 .hasRootCauseInstanceOf(StatusRuntimeException.class)
                 .hasRootCauseMessage(String.format(
                         "INVALID_ARGUMENT: Request out of range: The specified offset is %d, but only %d tuples are available",
@@ -149,8 +123,7 @@ public class RowBasedTest {
             val actual = pages.parallelStream()
                     .map(page -> {
                         try {
-                            return conn.getRowBasedResultSet(
-                                    queryId, page.getOffset(), page.getLimit(), RowBased.Mode.FULL_RANGE);
+                            return conn.getRowBasedResultSet(queryId, page.getOffset(), page.getLimit());
                         } catch (DataCloudJDBCException e) {
                             throw new RuntimeException(e);
                         }
@@ -170,8 +143,7 @@ public class RowBasedTest {
                     .parallel()
                     .map(page -> {
                         try {
-                            return conn.getRowBasedResultSet(
-                                    small, page.getOffset(), page.getLimit(), RowBased.Mode.FULL_RANGE);
+                            return conn.getRowBasedResultSet(small, page.getOffset(), page.getLimit());
                         } catch (DataCloudJDBCException e) {
                             throw new RuntimeException(e);
                         }
@@ -184,11 +156,7 @@ public class RowBasedTest {
 
     @SneakyThrows
     private long getRowCount(DataCloudConnection conn, String queryId) {
-        return conn.getQueryStatus(queryId)
-                .filter(t -> t.isResultProduced() || t.isExecutionFinished())
-                .map(DataCloudQueryStatus::getRowCount)
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("boom"));
+        return conn.waitFor(queryId, QueryStatus::allResultsProduced).getRowCount();
     }
 
     @SneakyThrows
@@ -201,13 +169,6 @@ public class RowBasedTest {
                 val statement = client.createStatement().unwrap(DataCloudStatement.class)) {
             statement.executeAsyncQuery(query);
             return statement.getQueryId();
-        }
-    }
-
-    @SneakyThrows
-    private static void waitForQuery(String queryId) {
-        try (val conn = getHyperQueryConnection()) {
-            conn.waitForResultsProduced(queryId, Duration.ofSeconds(30));
         }
     }
 

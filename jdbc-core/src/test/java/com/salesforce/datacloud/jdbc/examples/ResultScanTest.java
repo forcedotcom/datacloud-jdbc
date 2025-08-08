@@ -20,7 +20,7 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudPreparedStatement;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.ManagedChannelBuilder;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -61,7 +61,7 @@ public class ResultScanTest {
                 val stmt = conn.createStatement()) {
             // We don't have any separate query timeouts here, as Spark already has a global job timeout, anyway.
             // TODO (W-18851398): Set the timeout to infinite, as soon as `waitForQueryStatus` accepts it.abstract
-            conn.waitForQueryStatus(queryId, Duration.ofDays(1), DataCloudQueryStatus::isExecutionFinished);
+            conn.waitFor(queryId, Duration.ofDays(1), QueryStatus::isExecutionFinished);
 
             val rs = stmt.executeQuery(String.format("SELECT * from result_scan('%s')", queryId));
 

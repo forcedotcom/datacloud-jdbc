@@ -280,6 +280,10 @@ public class HyperGrpcTestBase {
         GrpcMock.verifyThat(GrpcMock.calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), GrpcMock.times(times));
     }
 
+    protected void verifyGetQueryInfoAtLeast(int times) {
+        GrpcMock.verifyThat(GrpcMock.calledMethod(HyperServiceGrpc.getGetQueryInfoMethod()), GrpcMock.atLeast(times));
+    }
+
     protected void verifyGetQueryResult(int times) {
         GrpcMock.verifyThat(GrpcMock.calledMethod(HyperServiceGrpc.getGetQueryResultMethod()), GrpcMock.times(times));
     }

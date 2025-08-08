@@ -20,7 +20,6 @@ import java.util.Optional;
 import lombok.Value;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 /**
  * Represents the status of a query.
@@ -33,7 +32,7 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  */
 @Value
 @Unstable
-public class DataCloudQueryStatus {
+public class QueryStatus {
     public enum CompletionStatus {
         RUNNING,
         RESULTS_PRODUCED,
@@ -56,16 +55,7 @@ public class DataCloudQueryStatus {
      * @return {@code true} if the query's results are ready, otherwise {@code false}.
      */
     public boolean allResultsProduced() {
-        return isResultProduced() || isExecutionFinished();
-    }
-
-    /**
-     * Checks if the query's results have been produced.
-     *
-     * @return {@code true} if the query's results are available for retrieval, otherwise {@code false}.
-     */
-    public boolean isResultProduced() {
-        return completionStatus == CompletionStatus.RESULTS_PRODUCED;
+        return completionStatus == CompletionStatus.RESULTS_PRODUCED || isExecutionFinished();
     }
 
     /**
@@ -77,17 +67,16 @@ public class DataCloudQueryStatus {
         return completionStatus == CompletionStatus.FINISHED;
     }
 
-    public static Optional<DataCloudQueryStatus> of(QueryInfo queryInfo) {
-        return Optional.ofNullable(queryInfo).map(QueryInfo::getQueryStatus).map(DataCloudQueryStatus::of);
+    public static Optional<QueryStatus> of(QueryInfo queryInfo) {
+        return Optional.ofNullable(queryInfo).map(QueryInfo::getQueryStatus).map(QueryStatus::of);
     }
 
-    public static DataCloudQueryStatus of(QueryStatus s) {
+    public static QueryStatus of(salesforce.cdp.hyperdb.v1.QueryStatus s) {
         val completionStatus = of(s.getCompletionStatus());
-        return new DataCloudQueryStatus(
-                s.getQueryId(), s.getChunkCount(), s.getRowCount(), s.getProgress(), completionStatus);
+        return new QueryStatus(s.getQueryId(), s.getChunkCount(), s.getRowCount(), s.getProgress(), completionStatus);
     }
 
-    private static CompletionStatus of(QueryStatus.CompletionStatus completionStatus) {
+    private static CompletionStatus of(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus completionStatus) {
         switch (completionStatus) {
             case RUNNING_OR_UNSPECIFIED:
                 return CompletionStatus.RUNNING;

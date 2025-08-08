@@ -21,7 +21,7 @@ import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
 import com.salesforce.datacloud.jdbc.core.fsm.QueryResultIterator;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -48,7 +48,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     private final String queryId;
 
     private final ArrowStreamReaderCursor cursor;
-    ThrowingJdbcSupplier<DataCloudQueryStatus> getQueryStatus;
+    ThrowingJdbcSupplier<QueryStatus> getQueryStatus;
 
     private StreamingResultSet(
             ArrowStreamReaderCursor cursor,

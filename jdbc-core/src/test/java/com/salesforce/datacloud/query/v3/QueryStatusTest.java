@@ -22,102 +22,83 @@ import java.util.function.Consumer;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
 
-class DataCloudQueryStatusTest {
-    private static QueryInfo random(Consumer<QueryStatus.Builder> update) {
-        val queryStatus = QueryStatus.newBuilder()
+class QueryStatusTest {
+    private static QueryInfo queryInfoWith(Consumer<salesforce.cdp.hyperdb.v1.QueryStatus.Builder> update) {
+        val queryStatus = salesforce.cdp.hyperdb.v1.QueryStatus.newBuilder()
                 .setChunkCount(1)
                 .setRowCount(100)
                 .setProgress(0.5)
-                .setCompletionStatus(QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
+                .setCompletionStatus(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
         update.accept(queryStatus);
         return QueryInfo.newBuilder().setQueryStatus(queryStatus).build();
     }
 
     @Test
     void testRunningOrUnspecified() {
-        val actual = DataCloudQueryStatus.of(random(s -> {}));
+        val actual = QueryStatus.of(queryInfoWith(s -> {}));
 
         assertThat(actual).isPresent().get().satisfies(t -> {
             assertThat(t.allResultsProduced()).isFalse();
             assertThat(t.isExecutionFinished()).isFalse();
-            assertThat(t.isResultProduced()).isFalse();
         });
     }
 
     @Test
     void testExecutionFinished() {
-        val actual = DataCloudQueryStatus.of(random(s -> s.setCompletionStatus(QueryStatus.CompletionStatus.FINISHED)));
+        val actual = QueryStatus.of(queryInfoWith(
+                s -> s.setCompletionStatus(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED)));
 
         assertThat(actual).isPresent().get().satisfies(t -> {
             assertThat(t.allResultsProduced()).isTrue();
             assertThat(t.isExecutionFinished()).isTrue();
-            assertThat(t.isResultProduced()).isFalse();
         });
     }
 
     @Test
     void testResultsProduced() {
-        val actual = DataCloudQueryStatus.of(
-                random(s -> s.setCompletionStatus(QueryStatus.CompletionStatus.RESULTS_PRODUCED)));
+        val actual = QueryStatus.of(queryInfoWith(
+                s -> s.setCompletionStatus(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RESULTS_PRODUCED)));
 
         assertThat(actual).isPresent().get().satisfies(t -> {
             assertThat(t.allResultsProduced()).isTrue();
             assertThat(t.isExecutionFinished()).isFalse();
-            assertThat(t.isResultProduced()).isTrue();
         });
     }
 
     @Test
     void testQueryId() {
         val queryId = UUID.randomUUID().toString();
-        val queryInfo = random(s -> s.setQueryId(queryId));
-        val actual = DataCloudQueryStatus.of(queryInfo);
+        val queryInfo = queryInfoWith(s -> s.setQueryId(queryId));
+        val actual = QueryStatus.of(queryInfo);
 
-        assertThat(actual)
-                .isPresent()
-                .map(DataCloudQueryStatus::getQueryId)
-                .get()
-                .isEqualTo(queryId);
+        assertThat(actual).isPresent().map(QueryStatus::getQueryId).get().isEqualTo(queryId);
     }
 
     @Test
     void testProgress() {
         val progress = 0.35;
-        val queryInfo = random(s -> s.setProgress(progress));
-        val actual = DataCloudQueryStatus.of(queryInfo);
+        val queryInfo = queryInfoWith(s -> s.setProgress(progress));
+        val actual = QueryStatus.of(queryInfo);
 
-        assertThat(actual)
-                .isPresent()
-                .map(DataCloudQueryStatus::getProgress)
-                .get()
-                .isEqualTo(progress);
+        assertThat(actual).isPresent().map(QueryStatus::getProgress).get().isEqualTo(progress);
     }
 
     @Test
     void testChunkCount() {
         val chunks = 5678L;
-        val queryInfo = random(s -> s.setChunkCount(chunks));
-        val actual = DataCloudQueryStatus.of(queryInfo);
+        val queryInfo = queryInfoWith(s -> s.setChunkCount(chunks));
+        val actual = QueryStatus.of(queryInfo);
 
-        assertThat(actual)
-                .isPresent()
-                .map(DataCloudQueryStatus::getChunkCount)
-                .get()
-                .isEqualTo(chunks);
+        assertThat(actual).isPresent().map(QueryStatus::getChunkCount).get().isEqualTo(chunks);
     }
 
     @Test
     void testRowCount() {
         val rows = 1234L;
-        val queryInfo = random(s -> s.setRowCount(rows));
-        val actual = DataCloudQueryStatus.of(queryInfo);
+        val queryInfo = queryInfoWith(s -> s.setRowCount(rows));
+        val actual = QueryStatus.of(queryInfo);
 
-        assertThat(actual)
-                .isPresent()
-                .map(DataCloudQueryStatus::getRowCount)
-                .get()
-                .isEqualTo(rows);
+        assertThat(actual).isPresent().map(QueryStatus::getRowCount).get().isEqualTo(rows);
     }
 }
