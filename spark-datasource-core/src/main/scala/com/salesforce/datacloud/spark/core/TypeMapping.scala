@@ -1,4 +1,4 @@
-package com.salesforce.datacloud.spark
+package com.salesforce.datacloud.spark.core
 
 import org.apache.spark.sql.types.{
   StructType,

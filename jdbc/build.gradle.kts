@@ -13,14 +13,19 @@ dependencies {
     implementation(project(":jdbc-core"))
     implementation(project(":jdbc-util"))
     implementation(project(":jdbc-http"))
-    implementation(project(":jdbc-grpc"))
-
-    implementation(libs.bundles.grpc.impl)
+    
+    // Use compileOnly for compilation + runtimeOnly for shading (not exposed to consumers)
+    compileOnly(project(":jdbc-grpc"))
+    compileOnly(libs.bundles.grpc.impl)
+    runtimeOnly(project(":jdbc-grpc"))
+    runtimeOnly(libs.bundles.grpc.impl)
+    
     implementation(libs.slf4j.api)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.bundles.testing)
     testImplementation(libs.bundles.mocking)
+    testImplementation(libs.guava)                      // Guava collections in tests
 }
 
 // Common shading configuration to be reused
@@ -110,6 +115,14 @@ afterEvaluate {
            named<MavenPublication>("mavenJava") {
                artifact(shadedJar.get()) {
                    classifier = "shaded"
+               }
+               
+               // For shaded JAR, remove all dependencies from POM since everything is included
+               pom.withXml {
+                   val dependenciesNode = asNode().get("dependencies")
+                   if (dependenciesNode is groovy.util.NodeList && dependenciesNode.isNotEmpty()) {
+                       asNode().remove(dependenciesNode[0] as groovy.util.Node)
+                   }
                }
            }
        }
