@@ -1,4 +1,4 @@
-package com.salesforce.datacloud.spark
+package com.salesforce.datacloud.spark.core
 
 import java.sql.ResultSet
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection
@@ -26,8 +26,8 @@ import org.apache.spark.sql.connector.read.InputPartition
 import org.apache.spark.sql.connector.read.PartitionReaderFactory
 import org.apache.spark.sql.connector.read.PartitionReader
 import org.apache.spark.sql.catalyst.InternalRow
-import com.salesforce.datacloud.spark.TypeMapping.JDBCValueGetter
-import com.salesforce.datacloud.spark.TypeMapping.makeGetters
+import com.salesforce.datacloud.spark.core.TypeMapping.JDBCValueGetter
+import com.salesforce.datacloud.spark.core.TypeMapping.makeGetters
 
 /** A partition of a Hyper result.
   *
@@ -41,7 +41,7 @@ private case class HyperResultInputPartition(
 
 /** A batch is a collection of partitions.
   */
-private case class HyperResultBatch(
+case class HyperResultBatch(
     connectionOptions: HyperConnectionOptions,
     resultSetId: String,
     schema: StructType,

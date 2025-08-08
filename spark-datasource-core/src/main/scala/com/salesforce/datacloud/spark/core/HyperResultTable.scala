@@ -1,4 +1,4 @@
-package com.salesforce.datacloud.spark
+package com.salesforce.datacloud.spark.core
 
 import org.apache.spark.sql.connector.catalog.SupportsRead
 import org.apache.spark.sql.types.StructType
@@ -14,8 +14,9 @@ import org.apache.spark.sql.connector.read.Statistics
 import scala.util.Using
 import org.apache.spark.sql.connector.metric.CustomMetric
 import org.apache.spark.sql.connector.metric.CustomTaskMetric
+import com.salesforce.datacloud.query.v3.DataCloudQueryStatus
 
-private case class HyperResultTable(
+case class HyperResultTable(
     connectionOptions: HyperConnectionOptions,
     resultSetId: String,
     schema: StructType
@@ -86,7 +87,7 @@ private case class HyperResultScan(
   )
 }
 
-class ChunkCountMetric extends CustomMetric {
+private class ChunkCountMetric extends CustomMetric {
   override def name(): String = "hyper_result_chunk_count"
   override def description(): String =
     "number of chunks in the result set from Hyper"
@@ -95,7 +96,7 @@ class ChunkCountMetric extends CustomMetric {
   }
 }
 
-class ChunkCountTaskMetric(value: Long) extends CustomTaskMetric {
+private class ChunkCountTaskMetric(value: Long) extends CustomTaskMetric {
   override def name(): String = "hyper_result_chunk_count"
   override def value(): Long = value
 }
