@@ -271,8 +271,20 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     /**
-     * Checks if a given predicate is satisfied by the status of the query.
-     * This method will wait until the server responds with a satisfactory status or the query is finished.
+     * Waits for the status of the specified query to satisfy the given predicate, polling until the predicate returns true or the timeout is reached.
+     * The predicate determines what condition you are waiting for. For example, to wait until at least a certain number of rows are available, use:
+     * <pre>
+     *     status -> status.allResultsProduced() || status.getRowCount() >= targetRows
+     * </pre>
+     * Or, to wait for enough chunks:
+     * <pre>
+     *     status -> status.allResultsProduced() || status.getChunkCount() >= targetChunks
+     * </pre>
+     *
+     * @param queryId The identifier of the query to check
+     * @param predicate The condition to check against the query status
+     * @return The first status that satisfies the predicate, or the last status received before timeout
+     * @throws DataCloudJDBCException if the server reports all results produced but the predicate returns false, if the query fails, or if the timeout is exceeded
      * @see #waitFor(String, Duration, Predicate)
      */
     public QueryStatus waitFor(String queryId, Predicate<QueryStatus> predicate) throws DataCloudJDBCException {
@@ -280,11 +292,22 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     /**
-     * Checks if a given predicate is satisfied by the status of the query.
-     * This method will wait until the server responds with a satisfactory status, the query is finished, or the timeout is reached.
+     * Waits for the status of the specified query to satisfy the given predicate, polling until the predicate returns true or the timeout is reached.
+     * The predicate determines what condition you are waiting for. For example, to wait until at least a certain number of rows are available, use:
+     * <pre>
+     *     status -> status.allResultsProduced() || status.getRowCount() >= targetRows
+     * </pre>
+     * Or, to wait for enough chunks:
+     * <pre>
+     *     status -> status.allResultsProduced() || status.getChunkCount() >= targetChunks
+     * </pre>
+     *
      * @param queryId The identifier of the query to check
-     * @param waitTimeout The duration to wait for the engine have results produced.
-     * @return The first satisfactory status or the last {@link QueryStatus} the server replied with.
+     * @param waitTimeout the maximum time to wait for the predicate to be satisfied before timing out
+     * @param predicate The condition to check against the query status
+     * @return The first status that satisfies the predicate, or the last status received before timeout
+     * @throws DataCloudJDBCException if the server reports all results produced but the predicate returns false, if the query fails, or if the timeout is exceeded
+     * @see #waitFor(String, Duration, Predicate)
      */
     public QueryStatus waitFor(String queryId, Duration waitTimeout, Predicate<QueryStatus> predicate)
             throws DataCloudJDBCException {
