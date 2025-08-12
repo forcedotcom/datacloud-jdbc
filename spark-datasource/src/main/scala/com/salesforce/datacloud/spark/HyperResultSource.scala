@@ -1,17 +1,11 @@
 package com.salesforce.datacloud.spark
 
-import com.salesforce.datacloud.jdbc.core.DataCloudConnection
-import java.util.Properties
-import io.grpc.ManagedChannelBuilder
 import org.apache.spark.sql.connector.catalog.TableProvider
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.util.CaseInsensitiveStringMap
 import org.apache.spark.sql.connector.catalog.Table
 import org.apache.spark.sql.connector.expressions.Transform
-import org.apache.spark.sql.types.StructType
-import java.sql.ResultSetMetaData
-import org.apache.spark.sql.types.StructField
-import com.salesforce.datacloud.spark.TypeMapping.getSparkType
+import scala.util.Using
 
 /** A Spark Datasource for reading a Hyper result.
   *
@@ -42,10 +36,11 @@ class HyperResultSource extends TableProvider {
     val connectionOptions =
       HyperConnectionOptions.fromOptions(options.asCaseSensitiveMap())
 
-    val conn = connectionOptions.createConnection()
-    // TODO XXX: use `getResultSet` instead of `getChunkBasedResultSet`, as soon as it was added to the JDBC driver
-    val rs = conn.getChunkBasedResultSet(queryId, 0, 0);
-    TypeMapping.getSparkFields(rs.getMetaData())
+    Using.resource(connectionOptions.createConnection()) { conn =>
+      // TODO XXX: use `getResultSet` instead of `getChunkBasedResultSet`, as soon as it was added to the JDBC driver
+      val rs = conn.getChunkBasedResultSet(queryId, 0, 0);
+      TypeMapping.getSparkFields(rs.getMetaData())
+    }
   }
 
   override def getTable(
