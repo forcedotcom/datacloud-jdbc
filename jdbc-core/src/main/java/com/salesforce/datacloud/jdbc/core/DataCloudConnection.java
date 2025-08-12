@@ -271,7 +271,8 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     /**
-     * Waits for the status of the specified query to satisfy the given predicate, polling until the predicate returns true or the timeout is reached.
+     * Waits indefinitely (see {@link Deadline#infinite()}) for the status of the specified query to satisfy the given predicate,
+     * polling until the predicate returns true or the timeout is reached.
      * The predicate determines what condition you are waiting for. For example, to wait until at least a certain number of rows are available, use:
      * <pre>
      *     status -> status.allResultsProduced() || status.getRowCount() >= targetRows
