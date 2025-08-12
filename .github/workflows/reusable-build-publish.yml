@@ -39,6 +39,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
       - name: Get hyperd version and resolved version
         id: get_version
         run: |
@@ -124,6 +125,7 @@ jobs:
           java-version: |
             8
             17
+      - uses: gradle/actions/setup-gradle@v4
       - name: Double check jars
         run: ./gradlew :verification:check -x :jdbc:test -x :jdbc-core:test -x :jdbc-http:test -x :jdbc-util:test -x :spark-datasource:test --no-build-cache --scan
       - name: Get version for jreleaser
