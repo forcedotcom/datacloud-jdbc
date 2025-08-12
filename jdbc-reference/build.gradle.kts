@@ -16,6 +16,4 @@ dependencies {
     testImplementation(libs.bundles.mocking)
 }
 
-application {
-    mainClass = "com.salesforce.datacloud.reference.PostgresReferenceGenerator"
-}
+application { mainClass = "com.salesforce.datacloud.reference.PostgresReferenceGenerator" }

@@ -44,7 +44,6 @@ fun MavenPublication.configurePom(nameProvider: Provider<String>, descProvider: 
     }
 }
 
-
 publishing {
     publications {
         val nameProvider = provider { mavenName }

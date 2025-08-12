@@ -10,8 +10,6 @@ tasks.withType<AbstractArchiveTask>().configureEach {
 }
 
 spotless {
-//    ratchetFrom("origin/main")
-
     format("misc") {
         target(".gitattributes", ".gitignore")
         trimTrailingWhitespace()

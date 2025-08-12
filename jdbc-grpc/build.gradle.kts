@@ -8,6 +8,7 @@ plugins {
 }
 
 description = "Salesforce Data Cloud Query v3 API gRPC stubs"
+
 val mavenName: String by extra("Salesforce Data Cloud JDBC gRPC")
 val mavenDescription: String by extra("${project.description}")
 
@@ -17,43 +18,30 @@ dependencies {
 }
 
 // Based on: https://github.com/google/protobuf-gradle-plugin/blob/master/examples/exampleKotlinDslProject
-sourceSets {
-    main {
-        proto {
-            srcDir(project(":jdbc-proto").projectDir.resolve("src/main/proto"))
-        }
-    }
-}
+sourceSets { main { proto { srcDir(project(":jdbc-proto").projectDir.resolve("src/main/proto")) } } }
 
 protobuf {
-    protoc {
-        artifact = libs.protoc.get().toString()
-    }
-    plugins {
-        create("grpc") {
-            artifact = libs.grpc.protoc.get().toString()
-        }
-    }
+    protoc { artifact = libs.protoc.get().toString() }
+    plugins { create("grpc") { artifact = libs.grpc.protoc.get().toString() } }
     generateProtoTasks {
         ofSourceSet("main").forEach {
-            it.plugins {
-                id("grpc") { }
-            }
+            it.plugins { id("grpc") {} }
             it.generateDescriptorSet = true
         }
     }
 }
 
-tasks.withType<JavaCompile> {
-    dependsOn("generateProto")
-}
+tasks.withType<JavaCompile> { dependsOn("generateProto") }
 
 tasks.jar {
     archiveBaseName.set("jdbc-grpc")
-    val tasks = sourceSets.map { sourceSet ->
-        from(sourceSet.output)
-        sourceSet.getCompileTaskName("java")
-    }.toTypedArray()
+    val tasks =
+        sourceSets
+            .map { sourceSet ->
+                from(sourceSet.output)
+                sourceSet.getCompileTaskName("java")
+            }
+            .toTypedArray()
 
     dependsOn(*tasks)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

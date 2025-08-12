@@ -11,9 +11,7 @@ java {
 }
 
 tasks.withType<JavaCompile> {
-    javaCompiler = javaToolchains.compilerFor {
-        languageVersion = JavaLanguageVersion.of(8)
-    }
+    javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(8) }
     options.encoding = "UTF-8"
     options.setIncremental(true)
     // This only works if we're on a newer toolchain, but java 8 is faster to build while we use lombok for "val"

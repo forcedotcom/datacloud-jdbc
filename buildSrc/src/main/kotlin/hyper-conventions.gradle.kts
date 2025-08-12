@@ -12,16 +12,18 @@ tasks.register<de.undercouch.gradle.tasks.download.Download>("downloadHyper") {
 
     val os = "os=${osdetector.os}, arch=${osdetector.arch}, classifier=${osdetector.classifier}"
 
-    val osPart = when (osdetector.os) {
-        "windows" -> "windows-x86_64-release-main"
-        "linux" -> "linux-x86_64-release-main"
-        "osx" -> when (osdetector.arch) {
-            "aarch_64" -> "macos-arm64-release-main"
-            else -> "macos-x86_64-release-main"
-        }
+    val osPart =
+        when (osdetector.os) {
+            "windows" -> "windows-x86_64-release-main"
+            "linux" -> "linux-x86_64-release-main"
+            "osx" ->
+                when (osdetector.arch) {
+                    "aarch_64" -> "macos-arm64-release-main"
+                    else -> "macos-x86_64-release-main"
+                }
 
-        else -> throw GradleException("Unsupported os settings. $os")
-    }
+            else -> throw GradleException("Unsupported os settings. $os")
+        }
 
     val url = "https://downloads.tableau.com/tssoftware/tableauhyperapi-cxx-$osPart.$hyperApiVersion.zip"
     val zip = project.layout.projectDirectory.file(hyperZipPath)
@@ -58,13 +60,9 @@ tasks.register<Copy>("extractHyper") {
 
     into(project.layout.projectDirectory.dir(hyperDir))
 
-    eachFile {
-        relativePath = RelativePath(true, name)
-    }
+    eachFile { relativePath = RelativePath(true, name) }
 
-    filePermissions {
-        unix("rwx------")
-    }
+    filePermissions { unix("rwx------") }
 
     val hyperdDir = project.layout.projectDirectory.dir(hyperDir).asFileTree
 
@@ -72,12 +70,15 @@ tasks.register<Copy>("extractHyper") {
     outputs.files(hyperdDir.files)
 
     doLast {
+        val exe =
+            hyperdDir.firstOrNull { it.name.contains("hyperd") }
+                ?: throw GradleException(
+                    "zip missing hyperd executable. $os, files=${hyperdDir.map { it.absolutePath }}"
+                )
 
-        val exe = hyperdDir.firstOrNull { it.name.contains("hyperd") }
-            ?: throw GradleException("zip missing hyperd executable. $os, files=${hyperdDir.map { it.absolutePath }}")
-
-        val lib = hyperdDir.firstOrNull { it.name.contains("tableauhyperapi") }
-            ?: throw GradleException("zip missing hyperd library, $os, files=${hyperdDir.map { it.absolutePath }}")
+        val lib =
+            hyperdDir.firstOrNull { it.name.contains("tableauhyperapi") }
+                ?: throw GradleException("zip missing hyperd library, $os, files=${hyperdDir.map { it.absolutePath }}")
 
         if (!exe.exists() || !lib.exists()) {
             throw GradleException("extractHyper failed validation. hyperd=${exe.exists()}, lib=${lib.exists()}, $os")
@@ -89,10 +90,11 @@ tasks.register<Exec>("hyperd") {
     dependsOn("extractHyper")
     group = "hyper"
 
-    val name = when (osdetector.os) {
-        "windows" -> "hyperd.exe"
-        else -> "hyperd"
-    }
+    val name =
+        when (osdetector.os) {
+            "windows" -> "hyperd.exe"
+            else -> "hyperd"
+        }
 
     val executable = project.layout.projectDirectory.dir(hyperDir).file(name).asFile.absolutePath
     val config = project.project(":jdbc-core").file("src/test/resources/hyper.yaml")

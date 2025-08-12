@@ -6,6 +6,7 @@ plugins {
 }
 
 description = "Salesforce Data Cloud JDBC driver"
+
 val mavenName: String by extra("Salesforce Data Cloud JDBC Driver")
 val mavenDescription: String by extra("${project.description}")
 
@@ -26,7 +27,7 @@ dependencies {
 // Common shading configuration to be reused
 fun com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar.configureShading() {
     val shadeBase = "com.salesforce.datacloud.shaded"
-    
+
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
     relocate("com.google", "$shadeBase.com.google")
@@ -45,10 +46,8 @@ fun com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar.configureShading(
     relocate("org.apache.commons", "$shadeBase.org.apache.commons")
     relocate("org.apache.hc", "$shadeBase.org.apache.hc")
 
-    mergeServiceFiles {
-        exclude("META-INF/services/java.sql.Driver")
-    }
-    
+    mergeServiceFiles { exclude("META-INF/services/java.sql.Driver") }
+
     exclude("org.slf4j")
 
     exclude("org.apache.calcite.avatica.remote.Driver")
@@ -80,23 +79,21 @@ tasks.shadowJar {
 }
 
 // Create an additional shadowJar with "shaded" classifier
-val shadedJar = tasks.register<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadedJar") {
-    from(sourceSets.main.get().output)
-    configurations = listOf(project.configurations.runtimeClasspath.get())
-    archiveBaseName = "jdbc"
-    archiveClassifier = "shaded"
-    configureShading()
-    shouldRunAfter(tasks.jar)
-}
+val shadedJar =
+    tasks.register<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar>("shadedJar") {
+        from(sourceSets.main.get().output)
+        configurations = listOf(project.configurations.runtimeClasspath.get())
+        archiveBaseName = "jdbc"
+        archiveClassifier = "shaded"
+        configureShading()
+        shouldRunAfter(tasks.jar)
+    }
 
-// This is the base JAR with an "original" classifier, it's not shaded and should become the default JAR after making DBeaver use the shaded classifier
-tasks.jar {
-    archiveClassifier = "original"
-}
+// This is the base JAR with an "original" classifier, it's not shaded and should become the default JAR after making
+// DBeaver use the shaded classifier
+tasks.jar { archiveClassifier = "original" }
 
-tasks.named("compileJava") {
-    dependsOn(":jdbc-core:build")
-}
+tasks.named("compileJava") { dependsOn(":jdbc-core:build") }
 
 tasks.assemble {
     dependsOn(tasks.shadowJar)
@@ -105,13 +102,7 @@ tasks.assemble {
 
 // Configure publishing to include the shaded JAR after evaluation
 afterEvaluate {
-   publishing {
-       publications {
-           named<MavenPublication>("mavenJava") {
-               artifact(shadedJar.get()) {
-                   classifier = "shaded"
-               }
-           }
-       }
-   }
+    publishing {
+        publications { named<MavenPublication>("mavenJava") { artifact(shadedJar.get()) { classifier = "shaded" } } }
+    }
 }

@@ -5,6 +5,7 @@ plugins {
 }
 
 description = "Utilities for Java's Stream, Properties, String, etc. for Salesforce Data Cloud JDBC driver"
+
 val mavenName: String by extra("Salesforce Data Cloud JDBC Utilities")
 val mavenDescription: String by extra("${project.description}")
 
@@ -30,6 +31,4 @@ tasks.register("generateVersionProperties") {
     }
 }
 
-tasks.named("compileJava") {
-    dependsOn("generateVersionProperties")
-}
+tasks.named("compileJava") { dependsOn("generateVersionProperties") }

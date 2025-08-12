@@ -6,6 +6,7 @@ plugins {
 }
 
 description = "Salesforce Data Cloud JDBC core implementation"
+
 val mavenName: String by extra("Salesforce Data Cloud JDBC Core")
 val mavenDescription: String by extra("${project.description}")
 
@@ -41,6 +42,4 @@ dependencies {
     testImplementation(libs.bundles.grpc.testing)
 }
 
-tasks.named("compileJava") {
-    dependsOn(":jdbc-grpc:compileJava")
-}
+tasks.named("compileJava") { dependsOn(":jdbc-grpc:compileJava") }

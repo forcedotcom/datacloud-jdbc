@@ -7,13 +7,7 @@ plugins {
 }
 
 tasks.withType<ScalaCompile> {
-    javaLauncher = javaToolchains.launcherFor {
-        languageVersion = JavaLanguageVersion.of(8)
-    }
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(8) }
 }
 
-spotless {    
-    scala {
-        scalafmt()
-    }
-}
+spotless { scala { scalafmt() } }
