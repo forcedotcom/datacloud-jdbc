@@ -34,4 +34,4 @@ dependencies {
 tasks.named("compileScala") {
     dependsOn(":jdbc-grpc:compileJava")
     dependsOn(":jdbc-core:compileJava")
-} 
+}
