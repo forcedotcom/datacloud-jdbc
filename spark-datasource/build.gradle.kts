@@ -13,18 +13,16 @@ dependencies {
     // Core spark datasource implementation
     implementation(project(":spark-datasource-core"))
     
-    // JDBC core dependencies needed for compilation
-    implementation(project(":jdbc-core"))
-    implementation(project(":jdbc-util"))
+    // JDBC dependencies: implementation because we need them at runtime AND in shaded JAR
+    implementation(project(":jdbc-core"))  // Provides DataCloudConnection at runtime
+    implementation(project(":jdbc-util"))  // Provides utility functions at runtime
     
-    // Spark dependencies (provided by user at runtime, but needed for compilation)
-    implementation(libs.bundles.spark)
+    // Spark dependencies: compileOnly because user provides Spark at runtime
+    compileOnly(libs.bundles.spark)  // Compile against Spark APIs only, don't include in JAR
     
-    // Use compileOnly for compilation + runtimeOnly for shading (not exposed to consumers)
-    compileOnly(project(":jdbc-grpc"))
-    compileOnly(libs.bundles.grpc.impl)
-    runtimeOnly(project(":jdbc-grpc"))
-    runtimeOnly(libs.bundles.grpc.impl)
+    // gRPC dependencies: implementation because we want them included in shaded JAR
+    implementation(project(":jdbc-grpc"))    // Include gRPC implementations for runtime
+    implementation(libs.bundles.grpc.impl)   // Include all gRPC libraries in shaded JAR
     
     // Override transitive Jackson Scala module from Spark with newer version
     implementation(libs.jackson.module.scala)
@@ -36,8 +34,10 @@ dependencies {
     testRuntimeOnly(libs.scalatestplus.junit5)
 }
 
-// Common shading configuration to be reused
-fun com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar.configureShading() {
+// TODO: Extract shading configuration to shared buildSrc extension to avoid duplication with jdbc module
+// This configuration is intentionally duplicated from jdbc/build.gradle.kts for now to ensure both modules work
+// Future improvement: Create buildSrc/src/main/kotlin/ShadingExtensions.kt with shared functions
+fun com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar.configureSparkShading() {
     val shadeBase = "com.salesforce.datacloud.shaded"
     
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -84,7 +84,7 @@ fun com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar.configureShading(
     exclude("**/*.proto")
     exclude("arrow-git.properties")
     
-    // Exclude Spark and Scala from shading (user provides these)
+    // Spark-specific exclusions (user provides Spark and Scala)
     exclude("org/apache/spark/**")
     exclude("scala/**")
     exclude("org/scala-lang/**")
@@ -94,7 +94,7 @@ fun com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar.configureShading(
 tasks.shadowJar {
     archiveBaseName = "spark-datasource"
     archiveClassifier = ""
-    configureShading()
+    configureSparkShading()
     shouldRunAfter(tasks.jar)
 }
 
@@ -104,7 +104,7 @@ val shadedJar = tasks.register<com.github.jengelman.gradle.plugins.shadow.tasks.
     configurations = listOf(project.configurations.runtimeClasspath.get())
     archiveBaseName = "spark-datasource"
     archiveClassifier = "shaded"
-    configureShading()
+    configureSparkShading()
     shouldRunAfter(tasks.jar)
 }
 
