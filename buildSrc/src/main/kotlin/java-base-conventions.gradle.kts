@@ -28,15 +28,16 @@ tasks.withType<Test>().configureEach {
     }
 
     jvmArgs("-Xmx1g", "-Xms512m")
-
-    jacoco { exclude("salesforce/**") }
 }
 
 fun JacocoReportBase.excludeGrpc() {
     classDirectories.setFrom(
         files(
             classDirectories.files.map {
-                fileTree(it).exclude("salesforce/cdp/hyperdb/v1/**", "com/salesforce/datacloud/reference/**")
+                fileTree(it).exclude(
+                    "salesforce/cdp/hyperdb/v1/**", // excludes gRPC gen-code from coverage
+                    "com/salesforce/datacloud/reference/**", // excludes test harness code from coverage
+                )
             }
         )
     )

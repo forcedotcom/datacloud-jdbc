@@ -55,9 +55,6 @@ jobs:
         os: [ ubuntu-latest, windows-latest ]
       fail-fast: false
     runs-on: ${{ matrix.os }}
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -91,28 +88,15 @@ jobs:
         id: build-and-test
         run: |
           echo "build and test with version='${{ inputs.version }}'"
-          ./gradlew clean build --no-build-cache --rerun-tasks
+          ./gradlew clean build testCodeCoverageReport --no-build-cache --rerun-tasks
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-      - name: Generate coverage report
-        run: gradle testCodeCoverageReport
-        env:
-          RELEASE_VERSION: ${{ inputs.version }}
-      - name: Generate JaCoCo Badge (Linux only)
-        if: matrix.os == 'ubuntu-latest'
-        uses: cicirello/jacoco-badge-generator@v2
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
         with:
-          jacoco-csv-file: build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.csv
-          badges-directory: .github/badges
-          generate-coverage-badge: true
-          generate-branches-badge: true
-          generate-summary: true
-          generate-coverage-endpoint: true
-          generate-branches-endpoint: true
-          fail-if-coverage-less-than: 60
-          fail-on-coverage-decrease: true
-          coverage-decrease-limit: 5
-          generate-workflow-summary: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          files: ./build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
       - name: Look at files in verification
         if: ${{ failure() }}
         uses: jaywcjlove/github-action-folder-tree@main

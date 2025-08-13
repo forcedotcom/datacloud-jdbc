@@ -58,7 +58,10 @@ reporting {
                 .setFrom(
                     reportTask.get().classDirectories.map {
                         fileTree(it).matching {
-                            exclude("salesforce/cdp/hyperdb/v1/**", "com/salesforce/datacloud/reference/**")
+                            exclude(
+                                "salesforce/cdp/hyperdb/v1/**", // excludes gRPC gen-code from coverage
+                                "com/salesforce/datacloud/reference/**", // excludes test harness code from coverage
+                            )
                         }
                     }
                 )
