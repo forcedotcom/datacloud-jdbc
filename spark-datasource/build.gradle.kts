@@ -27,6 +27,9 @@ dependencies {
     // Override transitive Jackson Scala module from Spark with newer version
     implementation(libs.jackson.module.scala)
 
+    // Test dependencies: Need Spark for test compilation since main uses compileOnly
+    testImplementation(libs.bundles.spark)  // compileOnly dependencies aren't available at test time
+    
     testImplementation(platform(libs.junit.bom))
     testImplementation(testFixtures(project(":jdbc-core")))
     testImplementation(libs.scalatest)
