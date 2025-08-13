@@ -1,7 +1,8 @@
 ## Coverage
 
-Run `./gradlew clean build testCodeCoverageReport` to build the [coverage report here](build/reports/jacoco/testCodeCoverageReport/html/index.html).
-There will also be accompanying [csv](build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.csv) and [xml](build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml) files to be consumed by other tools.
+Run `./gradlew clean build testCodeCoverageReport` to build the coverage report in `build/reports/jacoco/testCodeCoverageReport/html/index.html`.
+
+There will also be an accompanying CSV in `build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.csv` and a xml file in `build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml` to be consumed by other tools.
 
 ## Module Graph
 
