@@ -11,6 +11,7 @@ jobs:
     with:
       publish: true
     secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       signing_key: ${{ secrets.GPG_SIGNING_KEY }}
       signing_pub: ${{ secrets.GPG_SIGNING_PUBLIC_KEY }}
       signing_pass: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}

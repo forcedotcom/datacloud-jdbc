@@ -10,3 +10,5 @@ jobs:
     uses: './.github/workflows/reusable-build-publish.yml'
     with:
       publish: false
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

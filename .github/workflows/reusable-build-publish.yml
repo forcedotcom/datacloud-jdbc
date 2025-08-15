@@ -13,6 +13,8 @@ on:
         description: 'Version to publish (tag name or snapshot)'
         default: ''
     secrets:
+      CODECOV_TOKEN:
+        required: true
       signing_pass:
         required: false
       signing_key:
@@ -114,7 +116,7 @@ jobs:
             build/hyperd/*.log
           retention-days: 5
 
-  codecov:
+  publish-codecov:
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -130,7 +132,7 @@ jobs:
           fail_ci_if_error: true
           files: ./coverage/testCodeCoverageReport.xml
 
-  publish:
+  publish-jreleaser:
     needs: [ prepare, build ]
     if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
