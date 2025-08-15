@@ -91,12 +91,13 @@ jobs:
           ./gradlew clean build testCodeCoverageReport --no-build-cache --rerun-tasks
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Upload coverage report artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
-          files: ./build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
+          name: coverage-report
+          path: ./build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml
+          retention-days: 1
       - name: Look at files in verification
         if: ${{ failure() }}
         uses: jaywcjlove/github-action-folder-tree@main
@@ -112,6 +113,22 @@ jobs:
           path: |
             build/hyperd/*.log
           retention-days: 5
+
+  codecov:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: ./coverage
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+          files: ./coverage/testCodeCoverageReport.xml
 
   publish:
     needs: [ prepare, build ]
