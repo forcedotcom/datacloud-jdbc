@@ -21,9 +21,8 @@ import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
-import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerProcess;
-import com.salesforce.datacloud.query.v3.DataCloudQueryStatus;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -86,12 +85,13 @@ public class RowBasedPaginationTest {
 
         // Step 2: Retrieve remaining pages
         try (final DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties)) {
-            DataCloudQueryStatus status = conn.waitForRowsAvailable(queryId, currentOffset, pageSize, timeout, true);
+            final long range = currentOffset + pageSize;
+            QueryStatus status = conn.waitFor(queryId, timeout, t -> t.getRowCount() >= range);
 
             while (true) {
                 final boolean shouldCheck = !status.allResultsProduced() && currentOffset >= status.getRowCount();
                 if (shouldCheck) {
-                    status = conn.waitForRowsAvailable(queryId, currentOffset, pageSize, timeout, true);
+                    status = conn.waitFor(queryId, timeout, t -> t.getRowCount() >= range);
                 }
 
                 final boolean readAllRows = status.allResultsProduced() && currentOffset >= status.getRowCount();
@@ -99,8 +99,7 @@ public class RowBasedPaginationTest {
                     break;
                 }
 
-                final DataCloudResultSet rs =
-                        conn.getRowBasedResultSet(queryId, currentOffset, pageSize, RowBased.Mode.SINGLE_RPC);
+                final DataCloudResultSet rs = conn.getRowBasedResultSet(queryId, currentOffset, pageSize);
 
                 final List<Long> pageResults = new ArrayList<>();
                 while (rs.next()) {

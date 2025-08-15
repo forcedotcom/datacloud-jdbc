@@ -21,6 +21,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
  */
 @Slf4j
 @ExtendWith(HyperTestBase.class)
-class DataCloudQueryPollingTest {
+class DataCloudQueryPollingFunctionalTest {
     Duration small = Duration.ofSeconds(5);
 
     @SneakyThrows
@@ -47,33 +48,13 @@ class DataCloudQueryPollingTest {
             statement.execute("select * from generate_series(1, 109)");
 
             assertThat(connection
-                            .waitForResultsProduced(statement.getQueryId(), small)
+                            .waitFor(statement.getQueryId(), small, QueryStatus::allResultsProduced)
                             .allResultsProduced())
                     .isTrue();
 
-            Assertions.assertThatThrownBy(() -> connection.waitForRowsAvailable(
-                            statement.getQueryId(), 100, 10, Duration.ofSeconds(1), false))
-                    .hasMessageContaining("Timed out waiting for enough items to be available")
-                    .isInstanceOf(DataCloudJDBCException.class);
-        }
-    }
-
-    @SneakyThrows
-    @Test
-    void throwsAboutNoNewRows_allowLessThan() {
-        try (val connection = getHyperQueryConnection()) {
-            val statement = connection.createStatement().unwrap(DataCloudStatement.class);
-
-            statement.execute("select * from generate_series(1, 100)");
-
-            assertThat(connection
-                            .waitForResultsProduced(statement.getQueryId(), small)
-                            .allResultsProduced())
-                    .isTrue();
-
-            Assertions.assertThatThrownBy(() -> connection.waitForRowsAvailable(
-                            statement.getQueryId(), 100, 10, Duration.ofSeconds(1), true))
-                    .hasMessageContaining("Timed out waiting for new items to be available")
+            Assertions.assertThatThrownBy(() -> connection.waitFor(
+                            statement.getQueryId(), Duration.ofSeconds(1), t -> t.getRowCount() >= 110))
+                    .hasMessageContaining("Predicate was not satisfied when execution finished.")
                     .isInstanceOf(DataCloudJDBCException.class);
         }
     }
