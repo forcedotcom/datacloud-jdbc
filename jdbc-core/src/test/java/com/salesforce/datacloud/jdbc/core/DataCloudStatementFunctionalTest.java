@@ -26,7 +26,6 @@ import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.ResultSet;
-import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.Test;
@@ -54,8 +53,10 @@ public class DataCloudStatementFunctionalTest {
 
             stmt.cancel();
 
-            // we wait for all results produced, because this will throw waitFor's predicate failed but query finished flow
-            // but on subsequent invocations of waitFor we will see the canceled status we are expecting to see to test stmt::cancel
+            // we wait for all results produced, because this will throw waitFor's predicate failed but query finished
+            // flow
+            // but on subsequent invocations of waitFor we will see the canceled status we are expecting to see to test
+            // stmt::cancel
             client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced);
             assertThatThrownBy(() -> client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced))
                     .hasMessageContaining("57014: canceled by user");
@@ -80,8 +81,10 @@ public class DataCloudStatementFunctionalTest {
 
             stmt.cancel();
 
-            // we wait for all results produced, because this will throw waitFor's predicate failed but query finished flow
-            // but on subsequent invocations of waitFor we will see the canceled status we are expecting to see to test stmt::cancel
+            // we wait for all results produced, because this will throw waitFor's predicate failed but query finished
+            // flow
+            // but on subsequent invocations of waitFor we will see the canceled status we are expecting to see to test
+            // stmt::cancel
             client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced);
             assertThatThrownBy(() -> client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced))
                     .hasMessageContaining("57014: canceled by user");
@@ -105,8 +108,10 @@ public class DataCloudStatementFunctionalTest {
 
             conn.cancelQuery(queryId);
 
-            // we wait for all results produced, because this will throw waitFor's predicate failed but query finished flow
-            // but on subsequent invocations of waitFor we will see the canceled status we are expecting to see to test stmt::cancel
+            // we wait for all results produced, because this will throw waitFor's predicate failed but query finished
+            // flow
+            // but on subsequent invocations of waitFor we will see the canceled status we are expecting to see to test
+            // stmt::cancel
             client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced);
             assertThatThrownBy(() -> client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced))
                     .hasMessageStartingWith("57014: canceled by user");
