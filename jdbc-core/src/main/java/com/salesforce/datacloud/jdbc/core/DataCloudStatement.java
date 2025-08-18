@@ -269,8 +269,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
                     } else if (resultSet == null) {
                         log.warn(
                                 "Prefer acquiring async result sets from helper methods DataCloudConnection::getChunkBasedResultSet and DataCloudConnection::getRowBasedResultSet. We will wait for the query's results to be produced in their entirety before returning a result set.");
-                        val status = connection.waitFor(
-                                queryHandle.getQueryId(), Duration.ofDays(10), QueryStatus::allResultsProduced);
+                        val status = connection.waitFor(queryHandle.getQueryId(), QueryStatus::allResultsProduced);
                         resultSet =
                                 connection.getChunkBasedResultSet(queryHandle.getQueryId(), 0, status.getChunkCount());
                     }
