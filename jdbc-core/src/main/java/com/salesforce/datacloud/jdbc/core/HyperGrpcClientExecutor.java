@@ -120,14 +120,6 @@ public class HyperGrpcClientExecutor {
                 log);
     }
 
-    public Stream<QueryStatus> getQueryStatus(String queryId) throws DataCloudJDBCException {
-        val iterator = getQueryInfo(queryId);
-        return StreamUtilities.toStream(iterator)
-                .map(QueryStatus::of)
-                .filter(Optional::isPresent)
-                .map(Optional::get);
-    }
-
     public void cancel(String queryId) throws DataCloudJDBCException {
         logTimedValue(
                 () -> {
