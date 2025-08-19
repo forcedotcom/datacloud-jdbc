@@ -3,7 +3,7 @@ plugins {
     id("base-conventions")
     id("version-conventions")
     id("com.diffplug.spotless")
-    id("dev.iurysouza.modulegraph") version "0.12.0"
+    id("dev.iurysouza.modulegraph") version "0.12.1"
     id("jacoco-report-aggregation")
 }
 
