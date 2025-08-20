@@ -1,57 +1,11 @@
 coverage:
   status:
-    project:
-      default:
-        target: 80%
-        threshold: 2%
-        base: auto
-        if_ci_failed: error
-      jdbc:
-        target: 35%
-        threshold: 2%
-        paths:
-          - "jdbc/"
-        base: auto
-      jdbc-core:
-        target: 85%
-        threshold: 2%
-        paths:
-          - "jdbc-core/"
-        base: auto
-      jdbc-grpc:
-        target: 75%
-        threshold: 2%
-        paths:
-          - "jdbc-grpc/"
-        base: auto
-      jdbc-http:
-        target: 85%
-        threshold: 2%
-        paths:
-          - "jdbc-http/"
-        base: auto
-      jdbc-util:
-        target: 75%
-        threshold: 2%
-        paths:
-          - "jdbc-util/"
-        base: auto
-      spark-datasource:
-        target: 45%
-        threshold: 2%
-        paths:
-          - "spark-datasource/"
-        base: auto
     patch:
       default:
-        target: 80%
-        threshold: 5%
+        target: 90%
+        threshold: 2%
         base: auto
         if_ci_failed: error
-
-  precision: 2
-  round: down
-  range: "60...90"
 
 comment:
   layout: "reach,diff,flags,tree,reach"
@@ -78,11 +32,11 @@ ignore:
   - "**/build.gradle.kts"
   - "**/settings.gradle.kts"
 
+
+
 flag_management:
   default_rules:
     carryforward: true
     statuses:
-      - type: project
-        target: 80%
       - type: patch
-        target: 80%
+        target: 90%
