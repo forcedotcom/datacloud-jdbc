@@ -28,6 +28,8 @@ tasks.withType<Test>().configureEach {
     }
 
     jvmArgs("-Xmx1g", "-Xms512m")
+
+    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).takeIf { it > 0 } ?: 1
 }
 
 fun JacocoReportBase.excludeGrpc() {
