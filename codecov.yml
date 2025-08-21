@@ -8,7 +8,7 @@ coverage:
         if_ci_failed: error
 
 comment:
-  layout: "reach,diff,flags,tree,reach"
+  layout: "header,diff,flags,components,tree,reach"
   behavior: default
   require_changes: false
   require_base: no
@@ -20,6 +20,34 @@ comment:
 # Leaving this checked in for visibility about the extension since the github_checks.annotations is deprecated 
 # github_checks:
 #   annotations: true
+
+component_management:
+  default_rules:
+    statuses:
+      - type: patch
+        target: 90%
+        threshold: 2%
+  individual_components:
+    - component_id: jdbc_core
+      name: "JDBC Core"
+      paths:
+        - "jdbc-core/**"
+    - component_id: jdbc_main
+      name: "JDBC Main"
+      paths:
+        - "jdbc/**"
+    - component_id: jdbc_http
+      name: "JDBC HTTP"
+      paths:
+        - "jdbc-http/**"
+    - component_id: jdbc_util
+      name: "JDBC Utilities"
+      paths:
+        - "jdbc-util/**"
+    - component_id: spark_datasource
+      name: "Spark Datasource"
+      paths:
+        - "spark-datasource/**"
 
 ignore:
   - "**/*Test.java"
