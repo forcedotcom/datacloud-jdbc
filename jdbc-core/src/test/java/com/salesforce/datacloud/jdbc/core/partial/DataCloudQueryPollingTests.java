@@ -328,7 +328,9 @@ public class DataCloudQueryPollingTests extends HyperGrpcTestBase {
                     String msg = ex.getMessage();
                     boolean ok = msg.contains("Predicate was not satisfied before timeout.")
                             || msg.contains("Failed to get query status response.");
-                    assertThat(ok).as("message contains timeout or failed-to-get").isTrue();
+                    assertThat(ok)
+                            .as("message contains timeout or failed-to-get")
+                            .isTrue();
                 });
 
         verifyGetQueryInfoAtLeast(2);
