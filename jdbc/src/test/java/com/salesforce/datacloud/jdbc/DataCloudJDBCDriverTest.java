@@ -138,7 +138,7 @@ public class DataCloudJDBCDriverTest {
     }
 
     @Test
-    public void testUnknownTopLevelPropertyRaisesUserErrorOnConnect() {
+    public void testUnknownPropertyRaisesUserError() {
         final Driver driver = new DataCloudJDBCDriver();
         Properties properties = new Properties();
         properties.setProperty("FOO", "BAR");
