@@ -20,6 +20,7 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.experimental.UtilityClass;
 
 /**
  * Validates incoming JDBC properties and raises user errors for unknown properties.
@@ -28,10 +29,8 @@ import java.util.stream.Collectors;
  * deliberately allows any subkey under the {@code querySetting.} namespace to
  * defer detailed validation to the server.
  */
-public final class PropertyValidator {
-    private PropertyValidator() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
-    }
+@UtilityClass
+public class PropertyValidator {
 
     private static final Set<String> KNOWN_KEYS = ImmutableSet.<String>builder()
             // Auth and basics
