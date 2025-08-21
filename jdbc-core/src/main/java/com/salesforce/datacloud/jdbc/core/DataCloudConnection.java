@@ -96,10 +96,13 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public static DataCloudConnection of(@NonNull HyperGrpcStubProvider stubProvider, @NonNull Properties properties)
             throws DataCloudJDBCException {
         return logTimedValue(
-                () -> DataCloudConnection.builder()
-                        .stubProvider(stubProvider)
-                        .connectionProperties(ConnectionProperties.of(validate(properties)))
-                        .build(),
+                () -> {
+                    validateProperties(properties);
+                    return DataCloudConnection.builder()
+                            .stubProvider(stubProvider)
+                            .connectionProperties(ConnectionProperties.of(properties))
+                            .build();
+                },
                 "DataCloudConnection::of with provided stub provider",
                 log);
     }
@@ -114,9 +117,9 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      */
     public static DataCloudConnection of(@NonNull ManagedChannelBuilder<?> builder, @NonNull Properties properties)
             throws DataCloudJDBCException {
-        val validated = validate(properties);
-        val stubProvider = new JdbcDriverStubProvider(DataCloudJdbcManagedChannel.of(builder, validated), true);
-        return of(stubProvider, validated);
+        validateProperties(properties);
+        val stubProvider = new JdbcDriverStubProvider(DataCloudJdbcManagedChannel.of(builder, properties), true);
+        return of(stubProvider, properties);
     }
 
     /**
@@ -138,23 +141,24 @@ public class DataCloudConnection implements Connection, AutoCloseable {
             @NonNull DataCloudConnectionString connectionString)
             throws DataCloudJDBCException {
         return logTimedValue(
-                () -> DataCloudConnection.builder()
-                        .stubProvider(new JdbcDriverStubProvider(
-                                DataCloudJdbcManagedChannel.of(
-                                        builder.intercept(authInterceptor), validate(properties)),
-                                true))
-                        .connectionProperties(ConnectionProperties.of(validate(properties)))
-                        .lakehouseSupplier(lakehouseSupplier)
-                        .dataspacesSupplier(dataspacesSupplier)
-                        .connectionString(connectionString)
-                        .build(),
+                () -> {
+                    validateProperties(properties);
+                    return DataCloudConnection.builder()
+                            .stubProvider(new JdbcDriverStubProvider(
+                                    DataCloudJdbcManagedChannel.of(builder.intercept(authInterceptor), properties),
+                                    true))
+                            .connectionProperties(ConnectionProperties.of(properties))
+                            .lakehouseSupplier(lakehouseSupplier)
+                            .dataspacesSupplier(dataspacesSupplier)
+                            .connectionString(connectionString)
+                            .build();
+                },
                 "DataCloudConnection::of with oauth enabled suppliers",
                 log);
     }
 
-    private static Properties validate(Properties properties) throws DataCloudJDBCException {
+    private static void validateProperties(Properties properties) throws DataCloudJDBCException {
         PropertyValidator.validate(properties);
-        return properties;
     }
 
     /**
