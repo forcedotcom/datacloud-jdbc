@@ -62,6 +62,24 @@ public class StatementProperties {
     public static StatementProperties of(Properties props) throws DataCloudJDBCException {
         StatementPropertiesBuilder builder = StatementProperties.builder();
 
+        // Validate that session settings are not provided without the required `querySetting.` prefix
+        // We proactively raise a user error to avoid silently ignoring incorrect parameters like `TIMEZONE`.
+        for (String rawKey : props.stringPropertyNames()) {
+            if (rawKey.startsWith("querySetting.")) {
+                continue;
+            }
+            String normalized = rawKey.toLowerCase();
+            // Common session setting synonyms users might try to pass without prefix
+            if ("time_zone".equals(normalized) || "timezone".equals(normalized)) {
+                throw new DataCloudJDBCException("Invalid property '" + rawKey
+                        + "'. Use 'querySetting.time_zone' to set the session time zone.");
+            }
+            if ("lc_time".equals(normalized)) {
+                throw new DataCloudJDBCException(
+                        "Invalid property '" + rawKey + "'. Use 'querySetting.lc_time' to set the session locale.");
+            }
+        }
+
         // The query timeout property, zero or negative values are interpreted as infinite timeout.
         // Positive values are interpreted as the number of seconds for the timeout
         String queryTimeoutStr = props.getProperty("queryTimeout");

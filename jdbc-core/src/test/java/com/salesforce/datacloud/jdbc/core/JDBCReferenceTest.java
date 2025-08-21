@@ -182,7 +182,7 @@ public class JDBCReferenceTest {
     @SneakyThrows
     public void testMetadataAgainstBaseline(ReferenceEntry referenceEntry) {
         Properties properties = new Properties();
-        properties.setProperty("timezone", "America/Los_Angeles");
+        properties.setProperty("querySetting.time_zone", "America/Los_Angeles");
         try (DataCloudConnection conn = getHyperQueryConnection(properties)) {
 
             val stmt = conn.createStatement();

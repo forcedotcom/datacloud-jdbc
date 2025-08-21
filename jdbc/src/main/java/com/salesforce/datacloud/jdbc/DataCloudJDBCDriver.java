@@ -30,6 +30,7 @@ import com.salesforce.datacloud.jdbc.interceptor.TokenProcessorSupplier;
 import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
 import com.salesforce.datacloud.jdbc.soql.DataspaceClient;
 import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
+import com.salesforce.datacloud.jdbc.util.PropertyValidator;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.Connection;
 import java.sql.Driver;
@@ -85,6 +86,8 @@ public class DataCloudJDBCDriver implements Driver {
         }
 
         try {
+            // Validate properties to raise user errors on unknown keys
+            PropertyValidator.validate(info);
             if (DirectDataCloudConnection.isDirect(info)) {
                 log.info("Using direct connection");
                 return DirectDataCloudConnection.of(url, info);

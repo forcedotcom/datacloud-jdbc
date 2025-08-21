@@ -22,6 +22,7 @@ import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.interceptor.NetworkTimeoutInterceptor;
 import com.salesforce.datacloud.jdbc.util.Deadline;
+import com.salesforce.datacloud.jdbc.util.PropertyValidator;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.ClientInterceptor;
@@ -97,7 +98,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return logTimedValue(
                 () -> DataCloudConnection.builder()
                         .stubProvider(stubProvider)
-                        .connectionProperties(ConnectionProperties.of(properties))
+                        .connectionProperties(ConnectionProperties.of(validate(properties)))
                         .build(),
                 "DataCloudConnection::of with provided stub provider",
                 log);
@@ -113,8 +114,9 @@ public class DataCloudConnection implements Connection, AutoCloseable {
      */
     public static DataCloudConnection of(@NonNull ManagedChannelBuilder<?> builder, @NonNull Properties properties)
             throws DataCloudJDBCException {
-        val stubProvider = new JdbcDriverStubProvider(DataCloudJdbcManagedChannel.of(builder, properties), true);
-        return of(stubProvider, properties);
+        val validated = validate(properties);
+        val stubProvider = new JdbcDriverStubProvider(DataCloudJdbcManagedChannel.of(builder, validated), true);
+        return of(stubProvider, validated);
     }
 
     /**
@@ -138,14 +140,21 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return logTimedValue(
                 () -> DataCloudConnection.builder()
                         .stubProvider(new JdbcDriverStubProvider(
-                                DataCloudJdbcManagedChannel.of(builder.intercept(authInterceptor), properties), true))
-                        .connectionProperties(ConnectionProperties.of(properties))
+                                DataCloudJdbcManagedChannel.of(
+                                        builder.intercept(authInterceptor), validate(properties)),
+                                true))
+                        .connectionProperties(ConnectionProperties.of(validate(properties)))
                         .lakehouseSupplier(lakehouseSupplier)
                         .dataspacesSupplier(dataspacesSupplier)
                         .connectionString(connectionString)
                         .build(),
                 "DataCloudConnection::of with oauth enabled suppliers",
                 log);
+    }
+
+    private static Properties validate(Properties properties) throws DataCloudJDBCException {
+        PropertyValidator.validate(properties);
+        return properties;
     }
 
     /**

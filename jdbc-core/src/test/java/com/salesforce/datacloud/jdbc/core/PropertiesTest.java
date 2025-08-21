@@ -78,14 +78,12 @@ class PropertiesTest extends HyperGrpcTestBase {
     void testQuerySettingsParsing() throws DataCloudJDBCException {
         Properties properties = new Properties();
         properties.setProperty("querySetting.lc_time", "en_us");
-        // This is not prefixed and thus should not land in query settings
-        properties.setProperty("lc_time", "de_de");
         // This is a normal interpreted setting and should not land in query settings
         properties.setProperty("userName", "alice");
         ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
         // Verify that user name is an interpeted property
         assertThat(connectionProperties.getUserName()).isEqualTo("alice");
-        // Verify that query settings contains `en_us` and not `de_de`
+        // Verify that query settings contains `en_us`
         assertThat(connectionProperties.getStatementProperties().getQuerySettings())
                 .containsExactlyInAnyOrderEntriesOf(ImmutableMap.of("lc_time", "en_us"));
     }
@@ -127,5 +125,33 @@ class PropertiesTest extends HyperGrpcTestBase {
         val exception = assertThrows(DataCloudJDBCException.class, () -> ConnectionProperties.of(properties));
         assertThat(exception.getMessage())
                 .contains("Failed to parse `queryTimeout` property: For input string: \"invalid\"");
+    }
+
+    @Test
+    void testUnprefixedTimezoneRaisesUserError() {
+        // Users sometimes set TIMEZONE/time_zone directly without the required querySetting. prefix
+        for (String key : ImmutableList.of("TIMEZONE", "time_zone")) {
+            Properties properties = new Properties();
+            properties.setProperty(key, "Asia/Tokyo");
+            val exception = assertThrows(DataCloudJDBCException.class, () -> ConnectionProperties.of(properties));
+            assertThat(exception.getMessage()).contains("Use 'querySetting.time_zone'");
+        }
+    }
+
+    @Test
+    void testUnprefixedLcTimeRaisesUserError() {
+        Properties properties = new Properties();
+        properties.setProperty("lc_time", "en_us");
+        val exception = assertThrows(DataCloudJDBCException.class, () -> ConnectionProperties.of(properties));
+        assertThat(exception.getMessage()).contains("Use 'querySetting.lc_time'");
+    }
+
+    @Test
+    void testUnknownTopLevelPropertyRaisesUserError() {
+        Properties properties = new Properties();
+        properties.setProperty("TIMEZONE", "UTC");
+        // This will be caught by StatementProperties but also ensure a random key errors at connect-time
+        val exception = assertThrows(DataCloudJDBCException.class, () -> getHyperQueryConnection(properties));
+        assertThat(exception.getMessage()).contains("Unknown JDBC properties");
     }
 }
