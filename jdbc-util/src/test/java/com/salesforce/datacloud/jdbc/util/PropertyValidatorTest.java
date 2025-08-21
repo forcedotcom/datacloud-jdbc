@@ -65,5 +65,3 @@ class PropertyValidatorTest {
         assertThatCode(() -> PropertyValidator.validate(empty)).doesNotThrowAnyException();
     }
 }
-
-
