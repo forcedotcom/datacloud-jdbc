@@ -136,4 +136,15 @@ public class DataCloudJDBCDriverTest {
         assertThat(url).isEqualTo(DataCloudConnectionString.CONNECTION_PROTOCOL + "//login.salesforce.com");
         assertThat(driver).isInstanceOf(DataCloudJDBCDriver.class);
     }
+
+    @Test
+    public void testUnknownTopLevelPropertyRaisesUserErrorOnConnect() {
+        final Driver driver = new DataCloudJDBCDriver();
+        Properties properties = new Properties();
+        properties.setProperty("FOO", "BAR");
+
+        assertThatExceptionOfType(DataCloudJDBCException.class)
+                .isThrownBy(() -> driver.connect(VALID_URL, properties))
+                .withMessageContaining("Unknown JDBC properties");
+    }
 }
