@@ -76,7 +76,7 @@ public class PropertyValidator {
             return;
         }
 
-        validateQuerySettings(properties);
+        validateCommonHyperSettings(properties);
 
         final Set<String> unknown = properties.stringPropertyNames().stream()
                 .filter(key -> !KNOWN_KEYS.contains(key))
@@ -91,12 +91,13 @@ public class PropertyValidator {
 
     /**
      * Validates unprefixed Hyper session settings and enforces the use of the {@code querySetting.} prefix.
+     *
+     * This method only checks for common Hyper settings that frequently appear without the required prefix.
      */
-    public static void validateQuerySettings(Properties properties) throws DataCloudJDBCException {
+    public static void validateCommonHyperSettings(Properties properties) throws DataCloudJDBCException {
         if (properties == null || properties.isEmpty()) {
             return;
         }
-        // Validate that known Hyper session settings are not passed without the required prefix
         for (String rawKey : properties.stringPropertyNames()) {
             if (rawKey.startsWith("querySetting.")) {
                 continue;
@@ -108,4 +109,6 @@ public class PropertyValidator {
             }
         }
     }
+
+    
 }

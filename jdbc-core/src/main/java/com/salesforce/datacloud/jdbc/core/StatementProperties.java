@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.PropertyValidator;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -61,6 +62,9 @@ public class StatementProperties {
      */
     public static StatementProperties of(Properties props) throws DataCloudJDBCException {
         StatementPropertiesBuilder builder = StatementProperties.builder();
+
+        // Validate common Hyper settings to ensure they use the required 'querySetting.' prefix
+        PropertyValidator.validateCommonHyperSettings(props);
 
         // The query timeout property, zero or negative values are interpreted as infinite timeout.
         // Positive values are interpreted as the number of seconds for the timeout

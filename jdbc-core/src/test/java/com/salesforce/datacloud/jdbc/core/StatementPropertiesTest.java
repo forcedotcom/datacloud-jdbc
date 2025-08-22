@@ -41,7 +41,7 @@ class StatementPropertiesTest {
     void unprefixed_time_zone_raisesUserError() {
         Properties props = new Properties();
         props.setProperty("time_zone", "UTC");
-        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
+        assertThatThrownBy(() -> PropertyValidator.validateCommonHyperSettings(props))
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContaining("Use 'querySetting.time_zone'");
     }
@@ -50,7 +50,7 @@ class StatementPropertiesTest {
     void unprefixed_lc_time_raisesUserError() {
         Properties props = new Properties();
         props.setProperty("lc_time", "en_us");
-        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
+        assertThatThrownBy(() -> PropertyValidator.validateCommonHyperSettings(props))
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContaining("Use 'querySetting.lc_time'");
     }

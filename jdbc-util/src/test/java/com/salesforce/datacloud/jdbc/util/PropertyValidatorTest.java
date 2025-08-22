@@ -70,7 +70,7 @@ class PropertyValidatorTest {
         Properties props = new Properties();
         props.setProperty("time_zone", "UTC");
 
-        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
+        assertThatThrownBy(() -> PropertyValidator.validateCommonHyperSettings(props))
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContaining("Use 'querySetting.time_zone'");
     }
@@ -80,7 +80,7 @@ class PropertyValidatorTest {
         Properties props = new Properties();
         props.setProperty("timezone", "UTC");
 
-        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
+        assertThatThrownBy(() -> PropertyValidator.validateCommonHyperSettings(props))
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContaining("Use 'querySetting.time_zone'");
     }
@@ -90,7 +90,7 @@ class PropertyValidatorTest {
         Properties props = new Properties();
         props.setProperty("time-zone", "UTC");
 
-        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
+        assertThatThrownBy(() -> PropertyValidator.validateCommonHyperSettings(props))
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContaining("Use 'querySetting.time_zone'");
     }
@@ -100,7 +100,7 @@ class PropertyValidatorTest {
         Properties props = new Properties();
         props.setProperty("lc_time", "en_us");
 
-        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
+        assertThatThrownBy(() -> PropertyValidator.validateCommonHyperSettings(props))
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContaining("Use 'querySetting.lc_time'");
     }
@@ -111,7 +111,7 @@ class PropertyValidatorTest {
         props.setProperty("querySetting.time_zone", "UTC");
         props.setProperty("querySetting.lc_time", "en_us");
 
-        assertThatCode(() -> PropertyValidator.validateQuerySettings(props)).doesNotThrowAnyException();
+        assertThatCode(() -> PropertyValidator.validateCommonHyperSettings(props)).doesNotThrowAnyException();
     }
 
     @Test
