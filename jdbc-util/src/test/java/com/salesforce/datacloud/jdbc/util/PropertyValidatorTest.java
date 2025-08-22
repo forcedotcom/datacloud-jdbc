@@ -64,4 +64,72 @@ class PropertyValidatorTest {
         Properties empty = new Properties();
         assertThatCode(() -> PropertyValidator.validate(empty)).doesNotThrowAnyException();
     }
+
+    @Test
+    void validateQuerySettings_unprefixed_time_zone_raises() {
+        Properties props = new Properties();
+        props.setProperty("time_zone", "UTC");
+
+        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessageContaining("Use 'querySetting.time_zone'");
+    }
+
+    @Test
+    void validateQuerySettings_unprefixed_timezone_alias_raises() {
+        Properties props = new Properties();
+        props.setProperty("timezone", "UTC");
+
+        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessageContaining("Use 'querySetting.time_zone'");
+    }
+
+    @Test
+    void validateQuerySettings_unprefixed_time_dash_zone_raises() {
+        Properties props = new Properties();
+        props.setProperty("time-zone", "UTC");
+
+        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessageContaining("Use 'querySetting.time_zone'");
+    }
+
+    @Test
+    void validateQuerySettings_unprefixed_lc_time_raises() {
+        Properties props = new Properties();
+        props.setProperty("lc_time", "en_us");
+
+        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessageContaining("Use 'querySetting.lc_time'");
+    }
+
+    @Test
+    void validateQuerySettings_prefixed_ok() {
+        Properties props = new Properties();
+        props.setProperty("querySetting.time_zone", "UTC");
+        props.setProperty("querySetting.lc_time", "en_us");
+
+        assertThatCode(() -> PropertyValidator.validateQuerySettings(props)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void validate_propagates_unprefixed_time_zone_error() {
+        Properties props = new Properties();
+        props.setProperty("time_zone", "UTC");
+
+        assertThatThrownBy(() -> PropertyValidator.validate(props))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessageContaining("Use 'querySetting.time_zone'");
+    }
+
+    @Test
+    void canonicalize_null_returnsEmptyString() throws Exception {
+        // Use reflection to cover the null branch in canonicalizeSettingName
+        java.lang.reflect.Method m = PropertyValidator.class.getDeclaredMethod("canonicalizeSettingName", String.class);
+        m.setAccessible(true);
+        String result = (String) m.invoke(null, new Object[] { null });
+        org.assertj.core.api.Assertions.assertThat(result).isEqualTo("");
+    }
 }
