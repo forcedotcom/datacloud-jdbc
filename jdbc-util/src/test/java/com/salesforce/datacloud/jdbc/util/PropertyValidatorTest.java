@@ -111,7 +111,8 @@ class PropertyValidatorTest {
         props.setProperty("querySetting.time_zone", "UTC");
         props.setProperty("querySetting.lc_time", "en_us");
 
-        assertThatCode(() -> PropertyValidator.validateCommonHyperSettings(props)).doesNotThrowAnyException();
+        assertThatCode(() -> PropertyValidator.validateCommonHyperSettings(props))
+                .doesNotThrowAnyException();
     }
 
     @Test
