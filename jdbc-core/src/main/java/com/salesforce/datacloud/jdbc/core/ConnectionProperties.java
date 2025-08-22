@@ -16,6 +16,7 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.PropertyValidator;
 import java.util.Properties;
 import lombok.Builder;
 import lombok.Getter;
@@ -66,6 +67,8 @@ public class ConnectionProperties {
      */
     public static ConnectionProperties of(Properties props) throws DataCloudJDBCException {
         ConnectionPropertiesBuilder builder = ConnectionProperties.builder();
+        // Validate Hyper query settings early to provide targeted errors for unprefixed settings
+        PropertyValidator.validateQuerySettings(props);
 
         String dataspaceValue = props.getProperty("dataspace");
         if (dataspaceValue != null) {

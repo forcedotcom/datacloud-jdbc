@@ -152,6 +152,7 @@ class PropertiesTest extends HyperGrpcTestBase {
         properties.setProperty("TIMEZONE", "UTC");
         // This will be caught by StatementProperties but also ensure a random key errors at connect-time
         val exception = assertThrows(DataCloudJDBCException.class, () -> getHyperQueryConnection(properties));
-        assertThat(exception.getMessage()).contains("Unknown JDBC properties");
+        // We now proactively validate common Hyper settings at the top level and provide a targeted hint
+        assertThat(exception.getMessage()).contains("Use 'querySetting.time_zone'");
     }
 }

@@ -54,10 +54,29 @@ public class PropertyValidator {
             // gRPC channel configuration
             "grpc.");
 
+    /**
+     * A set of common Hyper session settings that users sometimes try to pass without the required
+     * "querySetting." prefix. We proactively validate these to provide a helpful error message.
+     */
+    private static final Set<String> COMMON_HYPER_SETTINGS = ImmutableSet.of("time_zone", "lc_time");
+
+    private static String canonicalizeSettingName(String rawKey) {
+        if (rawKey == null) {
+            return "";
+        }
+        String normalized = rawKey.trim().toLowerCase().replace('-', '_');
+        if ("timezone".equals(normalized)) {
+            return "time_zone";
+        }
+        return normalized;
+    }
+
     public static void validate(Properties properties) throws DataCloudJDBCException {
         if (properties == null || properties.isEmpty()) {
             return;
         }
+
+        validateQuerySettings(properties);
 
         final Set<String> unknown = properties.stringPropertyNames().stream()
                 .filter(key -> !KNOWN_KEYS.contains(key))
@@ -67,6 +86,26 @@ public class PropertyValidator {
         if (!unknown.isEmpty()) {
             throw new DataCloudJDBCException("Unknown JDBC properties: " + String.join(", ", unknown)
                     + ". Review documentation and use 'querySetting.<name>' for session settings if applicable.");
+        }
+    }
+
+    /**
+     * Validates unprefixed Hyper session settings and enforces the use of the {@code querySetting.} prefix.
+     */
+    public static void validateQuerySettings(Properties properties) throws DataCloudJDBCException {
+        if (properties == null || properties.isEmpty()) {
+            return;
+        }
+        // Validate that known Hyper session settings are not passed without the required prefix
+        for (String rawKey : properties.stringPropertyNames()) {
+            if (rawKey.startsWith("querySetting.")) {
+                continue;
+            }
+            String canonical = canonicalizeSettingName(rawKey);
+            if (COMMON_HYPER_SETTINGS.contains(canonical)) {
+                throw new DataCloudJDBCException("Invalid property '" + rawKey + "'. Use 'querySetting." + canonical
+                        + "' to set the query setting.");
+            }
         }
     }
 }
