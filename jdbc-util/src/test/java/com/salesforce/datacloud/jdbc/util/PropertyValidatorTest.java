@@ -129,7 +129,7 @@ class PropertyValidatorTest {
         // Use reflection to cover the null branch in canonicalizeSettingName
         java.lang.reflect.Method m = PropertyValidator.class.getDeclaredMethod("canonicalizeSettingName", String.class);
         m.setAccessible(true);
-        String result = (String) m.invoke(null, new Object[] { null });
+        String result = (String) m.invoke(null, new Object[] {null});
         org.assertj.core.api.Assertions.assertThat(result).isEqualTo("");
     }
 }
