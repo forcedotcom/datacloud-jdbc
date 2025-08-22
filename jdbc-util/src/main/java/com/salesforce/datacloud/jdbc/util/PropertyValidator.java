@@ -65,9 +65,6 @@ public class PropertyValidator {
             return "";
         }
         String normalized = rawKey.trim().toLowerCase().replace('-', '_');
-        if ("timezone".equals(normalized)) {
-            return "time_zone";
-        }
         return normalized;
     }
 

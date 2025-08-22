@@ -129,13 +129,12 @@ class PropertiesTest extends HyperGrpcTestBase {
 
     @Test
     void testUnprefixedTimezoneRaisesUserError() {
-        // Users sometimes set TIMEZONE/time_zone directly without the required querySetting. prefix
-        for (String key : ImmutableList.of("TIMEZONE", "time_zone")) {
-            Properties properties = new Properties();
-            properties.setProperty(key, "Asia/Tokyo");
-            val exception = assertThrows(DataCloudJDBCException.class, () -> ConnectionProperties.of(properties));
-            assertThat(exception.getMessage()).contains("Use 'querySetting.time_zone'");
-        }
+        // Users sometimes set time_zone directly without the required querySetting. prefix
+        // Only time_zone should trigger the targeted hint here.
+        Properties properties = new Properties();
+        properties.setProperty("time_zone", "Asia/Tokyo");
+        val exception = assertThrows(DataCloudJDBCException.class, () -> ConnectionProperties.of(properties));
+        assertThat(exception.getMessage()).contains("Use 'querySetting.time_zone'");
     }
 
     @Test
@@ -152,7 +151,7 @@ class PropertiesTest extends HyperGrpcTestBase {
         properties.setProperty("TIMEZONE", "UTC");
         // This will be caught by StatementProperties but also ensure a random key errors at connect-time
         val exception = assertThrows(DataCloudJDBCException.class, () -> getHyperQueryConnection(properties));
-        // We now proactively validate common Hyper settings at the top level and provide a targeted hint
-        assertThat(exception.getMessage()).contains("Use 'querySetting.time_zone'");
+        // With no aliasing for TIMEZONE, this is treated as an unknown property
+        assertThat(exception.getMessage()).contains("Unknown JDBC properties: TIMEZONE");
     }
 }

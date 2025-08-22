@@ -76,13 +76,11 @@ class PropertyValidatorTest {
     }
 
     @Test
-    void validateQuerySettings_unprefixed_timezone_alias_raises() {
+    void validateQuerySettings_unprefixed_timezone_alias_noLongerRaises() {
         Properties props = new Properties();
         props.setProperty("timezone", "UTC");
-
-        assertThatThrownBy(() -> PropertyValidator.validateCommonHyperSettings(props))
-                .isInstanceOf(DataCloudJDBCException.class)
-                .hasMessageContaining("Use 'querySetting.time_zone'");
+        assertThatCode(() -> PropertyValidator.validateCommonHyperSettings(props))
+                .doesNotThrowAnyException();
     }
 
     @Test
