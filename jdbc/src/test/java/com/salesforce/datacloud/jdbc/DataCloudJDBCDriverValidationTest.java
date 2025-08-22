@@ -47,4 +47,29 @@ class DataCloudJDBCDriverValidationTest {
         // Because acceptsURL will return false, connect must return null rather than throwing validation error
         driver.connect("jdbc:mysql://localhost:3306", props);
     }
+
+    @Test
+    void connect_withDirectAndUnknownProperty_stillRaisesValidationError() {
+        Driver driver = new DataCloudJDBCDriver();
+        Properties props = new Properties();
+        props.setProperty("direct", "true");
+        props.setProperty("FOO", "BAR");
+
+        assertThatExceptionOfType(DataCloudJDBCException.class)
+                .isThrownBy(() -> driver.connect(VALID_URL, props))
+                .withMessageContaining("Unknown JDBC properties");
+    }
+
+    @Test
+    void connect_withKnownPropertiesButNoAuth_throwsNoAuthMessage() {
+        Driver driver = new DataCloudJDBCDriver();
+        Properties props = new Properties();
+        // Known keys/prefixes should pass validation
+        props.setProperty("user", "alice");
+        props.setProperty("querySetting.lc_time", "en_us");
+
+        assertThatExceptionOfType(DataCloudJDBCException.class)
+                .isThrownBy(() -> driver.connect(VALID_URL, props))
+                .withMessageContaining("No authentication settings provided");
+    }
 }
