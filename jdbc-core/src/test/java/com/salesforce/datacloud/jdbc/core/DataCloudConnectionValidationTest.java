@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import io.grpc.inprocess.InProcessChannelBuilder;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
@@ -55,5 +56,25 @@ class DataCloudConnectionValidationTest {
         ConnectionProperties cp = conn.getConnectionProperties();
         assertThat(cp.getStatementProperties().getQuerySettings()).containsEntry("lc_time", "en_us");
         assertThat(cp.getWorkload()).isEqualTo("jdbcv3");
+    }
+
+    @Test
+    void of_withBuilder_andUnknownProperty_raisesUserError() {
+        Properties props = new Properties();
+        props.setProperty("FOO", "BAR");
+
+        assertThatThrownBy(() -> DataCloudConnection.of(InProcessChannelBuilder.forName("test"), props))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessageContaining("Unknown JDBC properties");
+    }
+
+    @Test
+    void of_withBuilder_andValidProperties_succeeds() throws DataCloudJDBCException {
+        Properties props = new Properties();
+        props.setProperty("querySetting.lc_time", "en_us");
+
+        DataCloudConnection conn = DataCloudConnection.of(InProcessChannelBuilder.forName("ok"), props);
+        ConnectionProperties cp = conn.getConnectionProperties();
+        assertThat(cp.getStatementProperties().getQuerySettings()).containsEntry("lc_time", "en_us");
     }
 }
