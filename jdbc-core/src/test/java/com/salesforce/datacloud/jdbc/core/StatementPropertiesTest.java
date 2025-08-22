@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.PropertyValidator;
 import java.time.Duration;
 import java.util.Properties;
 import lombok.val;
@@ -40,7 +41,7 @@ class StatementPropertiesTest {
     void unprefixed_time_zone_raisesUserError() {
         Properties props = new Properties();
         props.setProperty("time_zone", "UTC");
-        assertThatThrownBy(() -> StatementProperties.of(props))
+        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContaining("Use 'querySetting.time_zone'");
     }
@@ -49,7 +50,7 @@ class StatementPropertiesTest {
     void unprefixed_lc_time_raisesUserError() {
         Properties props = new Properties();
         props.setProperty("lc_time", "en_us");
-        assertThatThrownBy(() -> StatementProperties.of(props))
+        assertThatThrownBy(() -> PropertyValidator.validateQuerySettings(props))
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContaining("Use 'querySetting.lc_time'");
     }
