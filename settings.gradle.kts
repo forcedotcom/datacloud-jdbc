@@ -2,6 +2,7 @@ rootProject.name = "jdbc-build"
 
 include(":jdbc")
 include(":spark-datasource")
+include(":spark-datasource-core")
 include(":jdbc-core")
 include(":jdbc-grpc")
 include(":jdbc-http")
