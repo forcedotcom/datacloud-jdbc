@@ -13,6 +13,7 @@ dependencies {
     compileOnly(project(":jdbc-grpc"))
     compileOnly(libs.grpc.stub)
     compileOnly(libs.grpc.protobuf)
+    compileOnly(libs.grpc.netty)  // For DirectDataCloudConnection SSL support
 
     implementation(project(":jdbc-util"))
     implementation(libs.slf4j.api)

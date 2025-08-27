@@ -85,6 +85,8 @@ public class HyperTestBase implements BeforeAllCallback {
     @SneakyThrows
     public static DataCloudConnection getHyperQueryConnection(Properties properties) {
         properties.put(DirectDataCloudConnection.DIRECT, "true");
+        // Disable SSL for local test connections - test servers run without SSL
+        properties.put("ssl_disabled", "true");
         val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getInstancePort();
         return DirectDataCloudConnection.of(url, properties);
     }

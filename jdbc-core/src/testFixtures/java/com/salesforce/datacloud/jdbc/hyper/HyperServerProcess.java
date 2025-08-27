@@ -147,6 +147,8 @@ public class HyperServerProcess implements AutoCloseable {
     public DataCloudConnection getConnection(Map<String, String> connectionSettings) {
         val properties = new Properties();
         properties.put(DirectDataCloudConnection.DIRECT, "true");
+        // Disable SSL for local test connections - test servers run without SSL
+        properties.put("ssl_disabled", "true");
         properties.putAll(connectionSettings);
         val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getPort();
         return DirectDataCloudConnection.of(url, properties);
