@@ -272,6 +272,12 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return getChunkBasedResultSet(queryId, chunkId, 1);
     }
 
+    public DataCloudResultSet getSchemaForQueryId(String queryId) throws DataCloudJDBCException {
+        val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
+        val infos = executor.getQuerySchema(queryId);
+        return StreamingResultSet.ofSchema(infos, queryId);
+    }
+
     /**
      * Waits indefinitely (see {@link Deadline#infinite()}) for the status of the specified query to satisfy the given predicate,
      * polling until the predicate returns true or the query completes.
