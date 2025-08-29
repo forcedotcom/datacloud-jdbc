@@ -117,6 +117,19 @@ public class HyperGrpcClientExecutor {
                 log);
     }
 
+    public Iterator<QueryInfo> getQuerySchema(String queryId) throws DataCloudJDBCException {
+        return logTimedValue(
+                () -> {
+                    val param = QueryInfoParam.newBuilder()
+                            .setQueryId(queryId)
+                            .setSchemaOutputFormat(OutputFormat.ARROW_IPC)
+                            .build();
+                    return getStub(queryId).getQueryInfo(param);
+                },
+                "getQuerySchema queryId=" + queryId,
+                log);
+    }
+
     public void cancel(String queryId) throws DataCloudJDBCException {
         logTimedValue(
                 () -> {

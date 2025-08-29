@@ -38,6 +38,7 @@ import org.apache.calcite.avatica.AvaticaResultSetMetaData;
 import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.QueryState;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 
 @Slf4j
@@ -69,9 +70,20 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
         return of(iterator, iterator.getQueryId());
     }
 
+    public static StreamingResultSet ofSchema(Iterator<QueryInfo> iterator, String queryId)
+            throws DataCloudJDBCException {
+        val channel = StreamingByteStringChannel.ofSchema(iterator);
+        return of(channel, queryId);
+    }
+
     public static StreamingResultSet of(Iterator<QueryResult> iterator, String queryId) throws DataCloudJDBCException {
+        val channel = StreamingByteStringChannel.ofResults(iterator);
+        return of(channel, queryId);
+    }
+
+    private static StreamingResultSet of(StreamingByteStringChannel channel, String queryId)
+            throws DataCloudJDBCException {
         try {
-            val channel = new StreamingByteStringChannel(iterator);
             val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
             val schemaRoot = reader.getVectorSchemaRoot();
             val columns = toColumnMetaData(schemaRoot.getSchema().getFields());

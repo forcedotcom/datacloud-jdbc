@@ -37,7 +37,7 @@ class StreamingByteStringChannelTest {
     @Test
     @SneakyThrows
     void isOpenFollowsNioSemantics() {
-        try (val channel = new StreamingByteStringChannel(empty())) {
+        try (val channel = StreamingByteStringChannel.ofResults(empty())) {
             assertThat(channel.isOpen()).isTrue(); // Channel starts open regardless of data availability
             // Even with no data, channel remains open until explicitly closed
             assertThat(channel.read(ByteBuffer.allocate(1))).isEqualTo(-1); // End-of-stream
@@ -51,7 +51,7 @@ class StreamingByteStringChannelTest {
     @Test
     @SneakyThrows
     void isOpenDetectsIfIteratorHasRemaining() {
-        try (val channel = new StreamingByteStringChannel(some())) {
+        try (val channel = StreamingByteStringChannel.ofResults(some())) {
             assertThat(channel.isOpen()).isTrue();
         }
     }
@@ -59,7 +59,7 @@ class StreamingByteStringChannelTest {
     @Test
     @SneakyThrows
     void readThrowsClosedChannelExceptionWhenClosed() {
-        val channel = new StreamingByteStringChannel(some());
+        val channel = StreamingByteStringChannel.ofResults(some());
         channel.close();
         assertThat(channel.isOpen()).isFalse();
 
@@ -70,7 +70,7 @@ class StreamingByteStringChannelTest {
     @Test
     @SneakyThrows
     void readReturnsNegativeOneOnIteratorExhaustion() {
-        try (val channel = new StreamingByteStringChannel(empty())) {
+        try (val channel = StreamingByteStringChannel.ofResults(empty())) {
             assertThat(channel.read(ByteBuffer.allocateDirect(2))).isEqualTo(-1);
         }
     }
@@ -84,7 +84,7 @@ class StreamingByteStringChannelTest {
 
         val iterator = infiniteStream().peek(seen::add).iterator();
 
-        try (val channel = new ReadChannel(new StreamingByteStringChannel(iterator))) {
+        try (val channel = new ReadChannel(StreamingByteStringChannel.ofResults(iterator))) {
             channel.readFully(first);
             assertThat(seen).hasSize(5);
             channel.readFully(second);

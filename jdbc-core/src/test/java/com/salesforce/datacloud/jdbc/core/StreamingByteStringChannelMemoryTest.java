@@ -48,7 +48,7 @@ class StreamingByteStringChannelMemoryTest {
         val allocatedBefore = memoryBean.getHeapMemoryUsage().getUsed();
 
         long totalBytesRead;
-        try (val channel = new StreamingByteStringChannel(testData.iterator())) {
+        try (val channel = StreamingByteStringChannel.ofResults(testData.iterator())) {
             totalBytesRead = 0;
 
             // Read all data in small chunks to simulate realistic usage
@@ -99,7 +99,7 @@ class StreamingByteStringChannelMemoryTest {
 
         val testData = createTestData(numChunks, dataSize);
         long totalRead;
-        try (val channel = new StreamingByteStringChannel(testData.iterator())) {
+        try (val channel = StreamingByteStringChannel.ofResults(testData.iterator())) {
 
             ByteBuffer buffer = ByteBuffer.allocate(4096);
             totalRead = 0;
@@ -154,7 +154,7 @@ class StreamingByteStringChannelMemoryTest {
         val before = memoryBean.getHeapMemoryUsage().getUsed();
 
         long totalRead;
-        try (val channel = new StreamingByteStringChannel(variableData.iterator())) {
+        try (val channel = StreamingByteStringChannel.ofResults(variableData.iterator())) {
             ByteBuffer buffer = ByteBuffer.allocate(1024); // Small buffer
 
             totalRead = 0;
