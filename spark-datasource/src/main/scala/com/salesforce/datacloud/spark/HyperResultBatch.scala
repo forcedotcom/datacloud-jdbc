@@ -42,7 +42,7 @@ private case class HyperResultInputPartition(
 /** A batch is a collection of partitions.
   */
 private case class HyperResultBatch(
-    connectionOptions: HyperConnectionOptions,
+    connectionOptions: HyperResultSourceOptions,
     resultSetId: String,
     schema: StructType,
     chunkCount: Long
@@ -87,7 +87,7 @@ private class HyperResultPartitionReader extends PartitionReader[InternalRow] {
 
   def this(
       schema: StructType,
-      connectionOptions: HyperConnectionOptions,
+      connectionOptions: HyperResultSourceOptions,
       resultSetId: String,
       chunkIndex: Long,
       chunkCount: Long

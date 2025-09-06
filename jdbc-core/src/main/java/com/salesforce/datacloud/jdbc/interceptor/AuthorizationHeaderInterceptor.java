@@ -17,11 +17,11 @@ import lombok.val;
 
 @Slf4j
 @ToString
-@AllArgsConstructor(access = AccessLevel.PACKAGE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class AuthorizationHeaderInterceptor implements HeaderMutatingClientInterceptor {
 
     @FunctionalInterface
-    public interface TokenSupplier {
+    public interface TokenProvider {
         String getToken() throws SQLException;
 
         default String getAudience() {
@@ -29,8 +29,8 @@ public class AuthorizationHeaderInterceptor implements HeaderMutatingClientInter
         }
     }
 
-    public static AuthorizationHeaderInterceptor of(TokenSupplier supplier) {
-        return new AuthorizationHeaderInterceptor(supplier, "custom");
+    public static AuthorizationHeaderInterceptor of(TokenProvider supplier) {
+        return new AuthorizationHeaderInterceptor(supplier);
     }
 
     private static final String AUTH = "Authorization";
@@ -40,9 +40,7 @@ public class AuthorizationHeaderInterceptor implements HeaderMutatingClientInter
     private static final Metadata.Key<String> AUD_KEY = keyOf(AUD);
 
     @ToString.Exclude
-    private final TokenSupplier tokenSupplier;
-
-    private final String name;
+    private final TokenProvider tokenSupplier;
 
     @SneakyThrows
     @Override

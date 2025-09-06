@@ -11,7 +11,7 @@ import static org.grpcmock.GrpcMock.calledMethod;
 import static org.grpcmock.GrpcMock.verifyThat;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudPreparedStatement;
-import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
+import com.salesforce.datacloud.jdbc.core.InterceptedHyperTestBase;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
-public class AdaptiveQueryResultIteratorFunctionalTest extends HyperGrpcTestBase {
+public class AdaptiveQueryResultIteratorFunctionalTest extends InterceptedHyperTestBase {
     @SneakyThrows
     @Test
     @Disabled("Disabled until we can tune grpc-request-timeout and pg_sleep to reliably cause a query info CANCELLED")

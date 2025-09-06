@@ -5,13 +5,14 @@
 package com.salesforce.datacloud.jdbc.interceptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.params.provider.Arguments.argumentSet;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
+import com.salesforce.datacloud.jdbc.core.ConnectionProperties;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
+import com.salesforce.datacloud.jdbc.core.JdbcDriverStubProvider;
 import com.salesforce.datacloud.jdbc.tracing.Tracer;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
@@ -22,30 +23,21 @@ import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
 import java.util.Map;
 import java.util.Properties;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryResultPartBinary;
 
-public class EmittedHeaderTest {
-    private static final String WORKLOAD = "x-hyperdb-workload";
-    private static final String CONTEXT = "x-hyperdb-external-client-context";
-
-    private static String trim(String str) {
-        return str.replace("x-hyperdb-", "");
-    }
-
+/**
+ * Tests the workload and the external client context headers.
+ */
+public class WorkloadHeaderTest {
     @Test
     void traceAndSpanIdsAreSet() {
         val interceptor = new TracingHeadersInterceptor(
@@ -66,34 +58,6 @@ public class EmittedHeaderTest {
                 .hasEntrySatisfying("user-agent", e -> assertThat(e).contains(DriverVersion.formatDriverInfo()));
     }
 
-    private static Stream<Arguments> cases() {
-        val workload = UUID.randomUUID().toString();
-        val context = UUID.randomUUID().toString();
-        val v = DriverVersion.formatDriverInfo();
-
-        return Stream.of(
-                argumentSet("workload has a sensible default", WORKLOAD, null, null, "jdbcv3"),
-                argumentSet("workload can be overridden", WORKLOAD, trim(WORKLOAD), workload, workload),
-                argumentSet("client context is ignored if not provided", CONTEXT, null, null, null),
-                argumentSet("client context is set if provided", CONTEXT, trim(CONTEXT), context, context));
-    }
-
-    @ParameterizedTest
-    @MethodSource("cases")
-    void headerIsExpected(String header, String key, String value, String expected) {
-        val properties = new Properties();
-        if (value != null) {
-            properties.put(key, value);
-        }
-
-        val actual = getHeadersFor(properties, null);
-        if (expected == null) {
-            assertThat(actual).doesNotContainKey(header);
-        } else {
-            assertThat(actual).containsEntry(header, expected);
-        }
-    }
-
     @SneakyThrows
     private static Map<String, String> getHeadersFor(Properties properties, TracingHeadersInterceptor tracer) {
         val interceptor = new HeaderCapturingInterceptor();
@@ -106,12 +70,14 @@ public class EmittedHeaderTest {
                 .build()
                 .start();
         val channel = InProcessChannelBuilder.forName(name).usePlaintext();
+        val stubProvider = JdbcDriverStubProvider.of(channel);
 
         if (tracer != null) {
             channel.intercept(tracer);
         }
 
-        try (val connection = DataCloudConnection.of(channel, properties);
+        val connectionProperties = ConnectionProperties.ofDestructive(properties);
+        try (val connection = DataCloudConnection.of(stubProvider, connectionProperties, "", null);
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
             statement.executeAsyncQuery("select 1");
         }

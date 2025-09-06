@@ -6,14 +6,11 @@ package com.salesforce.datacloud.jdbc.examples;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
-import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudPreparedStatement;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
-import io.grpc.ManagedChannelBuilder;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.SneakyThrows;
@@ -23,20 +20,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @Slf4j
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class ResultScanTest {
     @SneakyThrows
     @Test
     void testResultScanWithWait() {
         int size = 10;
-        Properties properties = new Properties();
-        ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
-                        "127.0.0.1", HyperTestBase.getInstancePort())
-                .usePlaintext();
-
         final String queryId;
 
-        try (val conn = DataCloudConnection.of(channelBuilder, properties);
+        try (val conn = LocalHyperTestBase.getHyperQueryConnection();
                 val stmt = conn.prepareStatement("SELECT a from generate_series(1,?) a")
                         .unwrap(DataCloudPreparedStatement.class)) {
             stmt.setInt(1, size);
@@ -46,10 +38,8 @@ public class ResultScanTest {
 
         val results = new ArrayList<Integer>();
 
-        try (val conn = DataCloudConnection.of(channelBuilder, properties);
+        try (val conn = LocalHyperTestBase.getHyperQueryConnection();
                 val stmt = conn.createStatement()) {
-            // We don't have any separate query timeouts here, as Spark already has a global job timeout, anyway.
-            // TODO (W-18851398): Set the timeout to infinite, as soon as `waitForQueryStatus` accepts it.abstract
             conn.waitFor(queryId, Duration.ofDays(1), QueryStatus::isExecutionFinished);
 
             val rs = stmt.executeQuery(String.format("SELECT * from result_scan('%s')", queryId));

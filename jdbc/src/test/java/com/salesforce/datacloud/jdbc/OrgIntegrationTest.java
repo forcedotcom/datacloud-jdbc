@@ -4,17 +4,12 @@
  */
 package com.salesforce.datacloud.jdbc;
 
-import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertThrows;
 
-import com.google.common.collect.ImmutableSet;
-import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -23,12 +18,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Properties;
-import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -40,66 +32,49 @@ import org.junit.jupiter.api.condition.EnabledIf;
 
 /**
  * To run this test, set the environment variables for the various AuthenticationSettings strategies. Right-click the
- * play button and click "modify run configuration" and paste the following in "Environment Variables" Then you can
- * click the little icon on the right side of the field to update the values appropriately.
- * loginURL=login.salesforce.com/;userName=xyz@salesforce.com;password=...;clientId=...;clientSecret=...;query=SELECT
- * "Description__c" FROM Account_Home__dll LIMIT 100
+ * play button and click "modify run configuration" and paste the following in "Environment Variables".
+ * Then you can click the little icon on the right side of the field to update the values appropriately.
+ * JDBC_URL=jdbc:salesforce-datacloud://login.salesforce.com?userName=xyz@salesforce.com&password=...&clientId=...&clientSecret=...;
  */
 @Slf4j
 @Value
-@EnabledIf("validateProperties")
+@EnabledIf("hasJdbcUrl")
 class OrgIntegrationTest {
-    public static String query(String arg) {
-        return String.format(
-                "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, %s) as s(a) order by a asc",
-                arg);
+    static boolean hasJdbcUrl() {
+        return System.getenv().containsKey("JDBC_URL");
     }
 
-    static Properties getPropertiesFromEnvironment() {
-        val properties = new Properties();
-        System.getenv().entrySet().stream()
-                .filter(e -> SETTINGS.contains(e.getKey()))
-                .forEach(e -> properties.setProperty(e.getKey(), e.getValue()));
-        return properties;
-    }
-
-    static AuthenticationSettings getSettingsFromEnvironment() {
-        try {
-            return AuthenticationSettings.of(getPropertiesFromEnvironment());
-        } catch (Exception e) {
-            return null;
+    static String getJdbcUrlFromEnvironment() {
+        String url = System.getenv().get("JDBC_URL");
+        if (url == null) {
+            throw new IllegalStateException("JDBC_URL environment variable is not set");
         }
+        return url;
     }
 
-    @Getter(lazy = true)
-    Properties properties = getPropertiesFromEnvironment();
-
-    @Getter(lazy = true)
-    AuthenticationSettings settings = getSettingsFromEnvironment();
+    String jdbcUrl = getJdbcUrlFromEnvironment();
 
     private static final int NUM_THREADS = 100;
+
+    @SneakyThrows
+    private DataCloudConnection getConnection() {
+        Class.forName("com.salesforce.datacloud.jdbc.DataCloudJDBCDriver");
+        val connection = DriverManager.getConnection(jdbcUrl, null);
+        return (DataCloudConnection) connection;
+    }
 
     @Test
     @SneakyThrows
     @Disabled
     void testDatasource() {
         val query = "SELECT * FROM Account_Home__dll LIMIT 100";
-        val connectionUrl = CONNECTION_PROTOCOL + getSettings().getLoginUrl();
         Class.forName("com.salesforce.datacloud.jdbc.DataCloudJDBCDriver");
-        DataCloudDatasource datasource = new DataCloudDatasource();
-        datasource.setConnectionUrl(connectionUrl);
-        datasource.setUserName(getProperties().getProperty("userName"));
-        datasource.setPassword(getProperties().getProperty("password"));
-        datasource.setClientId(getProperties().getProperty("clientId"));
-        datasource.setClientSecret(getProperties().getProperty("clientSecret"));
 
-        try (val connection = datasource.getConnection();
+        try (val connection = DriverManager.getConnection(jdbcUrl, null);
                 val statement = connection.createStatement()) {
             val resultSet = statement.executeQuery(query);
             assertThat(resultSet.next()).isTrue();
         }
-
-        assertThrows(SQLException.class, () -> datasource.getConnection("foo", "bar"));
     }
 
     @Test
@@ -107,7 +82,11 @@ class OrgIntegrationTest {
     @Disabled
     void testMetadata() {
         try (val connection = getConnection()) {
-            val tableName = getProperties().getProperty("tableName", "Account_Home__dll");
+            String tableName = System.getenv().get("TABLE_NAME");
+            if (tableName == null) {
+                tableName = "Account_Home__dll";
+            }
+
             ResultSet columnResultSet = connection.getMetaData().getColumns("", "public", tableName, null);
             ResultSet tableResultSet = connection.getMetaData().getTables(null, null, "%", null);
             ResultSet schemaResultSetWithCatalogAndSchemaPattern =
@@ -139,16 +118,6 @@ class OrgIntegrationTest {
                     .as("Query ResultSet was closed unexpectedly.")
                     .isFalse();
         }
-    }
-
-    @SneakyThrows
-    private DataCloudConnection getConnection() {
-        val connectionUrl = CONNECTION_PROTOCOL + getSettings().getLoginUrl();
-        log.info("Connection URL: {}", connectionUrl);
-
-        Class.forName("com.salesforce.datacloud.jdbc.DataCloudJDBCDriver");
-        val connection = DriverManager.getConnection(connectionUrl, getProperties());
-        return (DataCloudConnection) connection;
     }
 
     @SneakyThrows
@@ -307,7 +276,8 @@ class OrgIntegrationTest {
     @SneakyThrows
     void testMainQuery() {
         int max = 100;
-        val query = query("100");
+        val query =
+                "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, 100) as s(a) order by a asc";
 
         try (val connection = getConnection();
                 val statement = connection.createStatement().unwrap(DataCloudStatement.class)) {
@@ -329,21 +299,4 @@ class OrgIntegrationTest {
                     .isFalse();
         }
     }
-
-    static boolean validateProperties() {
-        AuthenticationSettings getSettings = getSettingsFromEnvironment();
-        return getSettings != null;
-    }
-
-    private static final Set<String> SETTINGS = ImmutableSet.of(
-            "loginURL",
-            "userName",
-            "password",
-            "privateKey",
-            "clientSecret",
-            "clientId",
-            "dataspace",
-            "maxRetries",
-            "User-Agent",
-            "refreshToken");
 }

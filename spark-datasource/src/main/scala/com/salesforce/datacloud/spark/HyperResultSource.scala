@@ -14,27 +14,19 @@ import scala.util.Using
   * ```
   * spark.read
   *   .format("com.salesforce.datacloud.spark.HyperResultSource")
-  *   .option("query_id", queryId)
-  *   .option("port", hyperServerProcess.getPort())
+  *   .option("jdbcUrl", s"jdbc:salesforce-hyper://...")
+  *   .option("queryId", queryId)
   *   .load()
   * ```
   *
-  * The `query_id` option indicates a query id acquired, e.g., via
+  * The `queryId` option indicates a query id acquired, e.g., via
   * `DataCloudStatement.getQueryId()`. All other options are identical to the
   * JDBC connection options.
-  *
-  * TODO: actually forward the options to the JDBC connection.
   */
 class HyperResultSource extends TableProvider {
   override def inferSchema(options: CaseInsensitiveStringMap): StructType = {
-    val queryId = options.get("query_id")
-    if (queryId == null) {
-      throw new IllegalArgumentException(
-        s"Missing `query_id` property"
-      )
-    }
     val connectionOptions =
-      HyperConnectionOptions.fromOptions(options.asCaseSensitiveMap())
+      HyperResultSourceOptions.fromOptions(options)
 
     Using.resource(connectionOptions.createConnection()) { conn =>
       // TODO XXX: use `getResultSet` instead of `getChunkBasedResultSet`, as soon as it was added to the JDBC driver
@@ -48,13 +40,8 @@ class HyperResultSource extends TableProvider {
       partitioning: Array[Transform],
       properties: java.util.Map[String, String]
   ): Table = {
-    val queryId = properties.get("query_id")
-    if (queryId == null) {
-      throw new IllegalArgumentException(
-        s"Missing `query_id` property"
-      )
-    }
-    val connectionOptions = HyperConnectionOptions.fromOptions(properties)
+    val connectionOptions =
+      HyperResultSourceOptions.fromOptions(propertiesClone)
     HyperResultTable(connectionOptions, queryId, schema)
   }
 }

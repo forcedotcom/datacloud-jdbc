@@ -5,8 +5,7 @@
 package com.salesforce.datacloud.jdbc.examples;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
-import io.grpc.ManagedChannelBuilder;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -16,18 +15,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @Slf4j
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class TimeZoneQuerySettingTest {
     @Test
     public void testTimezoneSetting() throws SQLException {
         Properties properties = new Properties();
         properties.setProperty("querySetting.time_zone", "Asia/Tokyo");
 
-        ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
-                        "127.0.0.1", HyperTestBase.getInstancePort())
-                .usePlaintext();
-
-        try (DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties)) {
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
             try (Statement stmt = conn.createStatement()) {
                 ResultSet rs = stmt.executeQuery("show timezone;");
                 while (rs.next()) {

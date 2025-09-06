@@ -19,7 +19,7 @@ import org.apache.spark.sql.connector.metric.CustomMetric
 import org.apache.spark.sql.connector.metric.CustomTaskMetric
 
 private case class HyperResultTable(
-    connectionOptions: HyperConnectionOptions,
+    connectionOptions: HyperResultSourceOptions,
     resultSetId: String,
     schema: StructType
 ) extends SupportsRead {
@@ -37,7 +37,6 @@ private case class HyperResultTable(
     val (chunkCount, rowCount) =
       Using(connectionOptions.createConnection()) { conn =>
         // We don't have any separate query timeouts here, as Spark already has a global job timeout, anyway.
-        // TODO (W-18851398): Set the timeout to infinite, as soon as `waitForQueryStatus` accepts it.abstract
         val queryStatus = conn.waitFor(resultSetId, _.allResultsProduced())
         (queryStatus.getChunkCount(), queryStatus.getRowCount())
       }.get
@@ -55,7 +54,7 @@ private case class HyperResultTable(
 }
 
 private case class HyperResultScan(
-    connectionOptions: HyperConnectionOptions,
+    connectionOptions: HyperResultSourceOptions,
     resultSetId: String,
     schema: StructType,
     chunkCount: Long,
