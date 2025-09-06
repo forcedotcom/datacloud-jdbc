@@ -4,9 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.http;
 
-import static com.salesforce.datacloud.jdbc.http.Constants.CONTENT_TYPE_JSON;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.salesforce.datacloud.jdbc.auth.errors.AuthorizationException;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import java.io.IOException;
@@ -30,9 +29,6 @@ import okhttp3.Response;
 @Value
 @Builder(builderClassName = "Builder")
 public class FormCommand {
-    private static final String ACCEPT_HEADER_NAME = "Accept";
-    public static final String CONTENT_TYPE_HEADER_NAME = "Content-Type";
-    private static final String URL_ENCODED_CONTENT = "application/x-www-form-urlencoded";
     private static ObjectMapper mapper = new ObjectMapper();
 
     @NonNull URI url;
@@ -49,7 +45,7 @@ public class FormCommand {
     Map<String, String> queryParameters;
 
     public static <T> T get(@NonNull OkHttpClient client, @NonNull FormCommand command, Class<T> type)
-            throws SQLException {
+            throws SQLException, AuthorizationException {
         val url = getUrl(command);
         val headers = asHeaders(command);
         val request = new Request.Builder().url(url).headers(headers).get().build();
@@ -58,7 +54,7 @@ public class FormCommand {
     }
 
     public static <T> T post(@NonNull OkHttpClient client, @NonNull FormCommand command, Class<T> type)
-            throws SQLException {
+            throws SQLException, AuthorizationException {
         val url = getUrl(command);
         val headers = asHeaders(command);
         val payload = asFormBody(command);
@@ -78,9 +74,18 @@ public class FormCommand {
     }
 
     private static <T> T executeRequest(@NonNull OkHttpClient client, Request request, Class<T> type)
-            throws SQLException {
+            throws SQLException, AuthorizationException {
         try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+            if (!response.isSuccessful()) {
+                if (response.code() >= 400 && response.code() < 500) {
+                    throw AuthorizationException.builder()
+                            .message(response.message())
+                            .errorCode(String.valueOf(response.code()))
+                            .errorDescription(response.body().string())
+                            .build();
+                }
+                throw new IOException("Unexpected code " + response);
+            }
             val body = response.body();
             if (body == null || StringCompatibility.isNullOrEmpty(body.toString())) {
                 throw new IOException("Response Body was null " + response);
@@ -101,8 +106,8 @@ public class FormCommand {
     private static Headers asHeaders(FormCommand command) {
         val headers = new HashMap<>(command.getHeaders());
 
-        headers.putIfAbsent(ACCEPT_HEADER_NAME, CONTENT_TYPE_JSON);
-        headers.putIfAbsent(CONTENT_TYPE_HEADER_NAME, URL_ENCODED_CONTENT);
+        headers.putIfAbsent("Accept", "application/json");
+        headers.putIfAbsent("Content-Type", "application/x-www-form-urlencoded");
 
         return Headers.of(headers);
     }

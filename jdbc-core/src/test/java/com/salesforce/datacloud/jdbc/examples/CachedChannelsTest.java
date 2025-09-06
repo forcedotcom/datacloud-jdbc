@@ -6,11 +6,12 @@ package com.salesforce.datacloud.jdbc.examples;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.salesforce.datacloud.jdbc.core.ConnectionProperties;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
-import com.salesforce.datacloud.jdbc.core.DataCloudJdbcManagedChannel;
 import com.salesforce.datacloud.jdbc.core.HyperGrpcStubProvider;
-import com.salesforce.datacloud.jdbc.core.JdbcDriverStubProvider;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -27,47 +28,8 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc.HyperServiceBlockingStub;
 
 @Slf4j
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class CachedChannelsTest {
-    /**
-     * This example shows how you can use the stub provider to reuse a channel across multiple JDBC Connections.
-     */
-    @Test
-    public void reuseChannelAcrossConnections() throws SQLException {
-        // The connection properties
-        Properties properties = new Properties();
-
-        // You can bring your own gRPC channels that are set up in the way you like (mTLS / Plaintext / ...) and your
-        // own interceptors as well as executors.
-        ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
-                        "127.0.0.1", HyperTestBase.getInstancePort())
-                .usePlaintext();
-        try (DataCloudJdbcManagedChannel jdbcManagedChannel =
-                DataCloudJdbcManagedChannel.of(channelBuilder, properties)) {
-            // This is the first connection that uses this channel
-            try (DataCloudConnection conn =
-                    DataCloudConnection.of(new JdbcDriverStubProvider(jdbcManagedChannel, false), properties)) {
-                try (Statement stmt = conn.createStatement()) {
-                    ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(1,10) s");
-                    while (rs.next()) {
-                        System.out.println("Retrieved value for first query:" + rs.getLong(1));
-                    }
-                }
-            }
-
-            // This is the second connection that uses the same channel
-            try (DataCloudConnection conn =
-                    DataCloudConnection.of(new JdbcDriverStubProvider(jdbcManagedChannel, false), properties)) {
-                try (Statement stmt = conn.createStatement()) {
-                    ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(20,30) s");
-                    while (rs.next()) {
-                        System.out.println("Retrieved value for second query:" + rs.getLong(1));
-                    }
-                }
-            }
-        }
-    }
-
     /**
      * This example shows how you can use the stub provider to reuse a channel while having different interceptors per JDBC Connection.
      */
@@ -79,17 +41,21 @@ public class CachedChannelsTest {
         // You can bring your own gRPC channels that are set up in the way you like (mTLS / Plaintext / ...) and your
         // own channel-level interceptors as well as executors.
         ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
-                        "127.0.0.1", HyperTestBase.getInstancePort())
+                        "127.0.0.1",
+                        HyperServerManager.get(ConfigFile.SMALL_CHUNKS).getPort())
                 .usePlaintext();
         ManagedChannel managedChannel = channelBuilder.build();
         try {
             // This is the first connection that uses this channel and it has a custom interceptor that sets the
-            // external-client-context to "123"
+            // externalClientContext to "123"
             Metadata metadata = new Metadata();
             metadata.put(Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER), "123");
             ClientInterceptor interceptor = MetadataUtils.newAttachHeadersInterceptor(metadata);
-            try (DataCloudConnection conn =
-                    DataCloudConnection.of(new InterceptorStubProvider(managedChannel, interceptor), properties)) {
+            try (DataCloudConnection conn = DataCloudConnection.of(
+                    new InterceptorStubProvider(managedChannel, interceptor),
+                    ConnectionProperties.ofDestructive(properties),
+                    "",
+                    null)) {
                 try (Statement stmt = conn.createStatement()) {
                     ResultSet rs = stmt.executeQuery("SHOW external_client_context");
                     rs.next();
@@ -99,13 +65,16 @@ public class CachedChannelsTest {
             }
 
             // This is the second connection that uses this channel and it has a custom interceptor that sets the
-            // external-client-context to "456"
+            // externalClientContext to "456"
             Metadata metadata2 = new Metadata();
             metadata2.put(
                     Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER), "456");
             ClientInterceptor interceptor2 = MetadataUtils.newAttachHeadersInterceptor(metadata2);
-            try (DataCloudConnection conn =
-                    DataCloudConnection.of(new InterceptorStubProvider(managedChannel, interceptor2), properties)) {
+            try (DataCloudConnection conn = DataCloudConnection.of(
+                    new InterceptorStubProvider(managedChannel, interceptor2),
+                    ConnectionProperties.ofDestructive(properties),
+                    "",
+                    null)) {
                 try (Statement stmt = conn.createStatement()) {
                     ResultSet rs = stmt.executeQuery("SHOW external_client_context");
                     rs.next();

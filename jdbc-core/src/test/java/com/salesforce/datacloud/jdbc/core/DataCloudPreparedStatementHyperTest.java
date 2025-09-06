@@ -4,10 +4,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @Slf4j
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class DataCloudPreparedStatementHyperTest {
     @Test
     @SneakyThrows

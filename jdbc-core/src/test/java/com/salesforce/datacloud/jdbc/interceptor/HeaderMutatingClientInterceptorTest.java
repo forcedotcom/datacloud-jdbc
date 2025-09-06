@@ -4,7 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.interceptor;
 
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -12,7 +12,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import io.grpc.Metadata;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -25,15 +27,16 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 class HeaderMutatingClientInterceptorTest {
     @Test
     @SneakyThrows
     void interceptCallAlwaysCallsMutate() {
+        val server = HyperServerManager.get(ConfigFile.DEFAULT);
         Consumer<Metadata> mockConsumer = mock(Consumer.class);
         val sut = new Sut(mockConsumer);
 
-        try (val conn = getHyperQueryConnection(sut);
+        try (val conn = getHyperQueryConnection(server, sut);
                 val stmt = conn.createStatement()) {
             stmt.executeQuery("SELECT 1");
         }
@@ -44,6 +47,7 @@ class HeaderMutatingClientInterceptorTest {
 
     @Test
     void interceptCallCatchesMutateAndWrapsException() {
+        val server = HyperServerManager.get(ConfigFile.DEFAULT);
         val message = UUID.randomUUID().toString();
         Consumer<Metadata> mockConsumer = mock(Consumer.class);
 
@@ -56,7 +60,7 @@ class HeaderMutatingClientInterceptorTest {
         val sut = new Sut(mockConsumer);
 
         assertThatThrownBy(() -> {
-                    try (val conn = getHyperQueryConnection(sut);
+                    try (val conn = getHyperQueryConnection(server, sut);
                             val stmt = conn.createStatement()) {
                         stmt.executeQuery("SELECT 1");
                     }

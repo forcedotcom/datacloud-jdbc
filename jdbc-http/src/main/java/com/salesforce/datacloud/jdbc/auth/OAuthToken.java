@@ -6,13 +6,13 @@ package com.salesforce.datacloud.jdbc.auth;
 
 import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import java.net.URI;
 import java.sql.SQLException;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Value;
 import lombok.val;
-import org.apache.commons.lang3.StringUtils;
 
 @Value
 @Builder(access = AccessLevel.PRIVATE)
@@ -26,7 +26,7 @@ public class OAuthToken {
     public static OAuthToken of(OAuthTokenResponse response) throws SQLException {
         val accessToken = response.getToken();
 
-        if (StringUtils.isBlank(accessToken)) {
+        if (StringCompatibility.isNullOrBlank(accessToken)) {
             throw new DataCloudJDBCException(FAILED_LOGIN, "28000");
         }
 

@@ -4,81 +4,33 @@
  */
 package com.salesforce.datacloud.jdbc;
 
-import static com.salesforce.datacloud.jdbc.DataCloudJDBCDriver.oauthBasedConnection;
-import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.ILLEGAL_CONNECTION_PROTOCOL;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
-import static org.assertj.core.api.AssertionsForClassTypes.fail;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
-import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.Driver;
 import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.Properties;
 import java.util.regex.Pattern;
-import lombok.val;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class DataCloudJDBCDriverTest {
     public static final String VALID_URL = "jdbc:salesforce-datacloud://login.salesforce.com";
-    private static final String DRIVER_NAME = "salesforce-datacloud-jdbc";
-    private static final String PRODUCT_NAME = "salesforce-datacloud-queryservice";
-    private static final String PRODUCT_VERSION = "1.0";
-    private final Pattern pattern = Pattern.compile("^\\d+(\\.\\d+)*(-SNAPSHOT)?$");
 
     @Test
     public void testIsDriverRegisteredInDriverManager() throws Exception {
+        Class.forName("com.salesforce.datacloud.jdbc.DataCloudJDBCDriver");
         assertThat(DriverManager.getDriver(VALID_URL)).isNotNull().isInstanceOf(DataCloudJDBCDriver.class);
-    }
-
-    @Test
-    public void testNullUrlNotAllowedWhenConnecting() {
-        final Driver driver = new DataCloudJDBCDriver();
-        Properties properties = new Properties();
-
-        assertThatExceptionOfType(SQLException.class).isThrownBy(() -> driver.connect(null, properties));
-    }
-
-    @Test
-    public void testUnsupportedPrefixUrlNotAllowedWhenConnecting() throws Exception {
-        final Driver driver = new DataCloudJDBCDriver();
-        Properties properties = new Properties();
-
-        assertThat(driver.connect("jdbc:mysql://localhost:3306", properties)).isNull();
     }
 
     @Test
     public void testInvalidPrefixUrlNotAccepted() throws Exception {
         final Driver driver = new DataCloudJDBCDriver();
+        Properties properties = new Properties();
 
+        assertThat(driver.connect("jdbc:mysql://localhost:3306", properties)).isNull();
         assertThat(driver.acceptsURL("jdbc:mysql://localhost:3306")).isFalse();
-    }
-
-    @Test
-    void testNullUrlThrows() {
-        Assertions.assertThrows(DataCloudJDBCException.class, () -> oauthBasedConnection(null, new Properties()));
-    }
-
-    @Test
-    void testUnsupportedPrefixUrlNotAllowed() {
-        val ex = assertThrows(DataCloudJDBCException.class, () -> oauthBasedConnection("fake-url", new Properties()));
-        assertThat(ex).hasMessage(ILLEGAL_CONNECTION_PROTOCOL);
-    }
-
-    @Test
-    public void testGetMajorVersion() {
-        final Driver driver = new DataCloudJDBCDriver();
-        assertThat(driver.getMajorVersion()).isEqualTo(DriverVersion.getMajorVersion());
-    }
-
-    @Test
-    public void testGetMinorVersion() {
-        final Driver driver = new DataCloudJDBCDriver();
-        assertThat(driver.getMinorVersion()).isEqualTo(DriverVersion.getMinorVersion());
     }
 
     @Test
@@ -89,75 +41,55 @@ public class DataCloudJDBCDriverTest {
     }
 
     @Test
-    public void testjdbcCompliant() {
-        final Driver driver = new DataCloudJDBCDriver();
-        assertThat(driver.jdbcCompliant()).isFalse();
-    }
-
-    @Test
     public void testSuccessfulDriverVersion() {
-        assertThat(DriverVersion.getDriverName()).isEqualTo(DRIVER_NAME);
-        assertThat(DriverVersion.getProductName()).isEqualTo(PRODUCT_NAME);
-        assertThat(DriverVersion.getProductVersion()).isEqualTo(PRODUCT_VERSION);
+        assertThat(DriverVersion.getDriverName()).isEqualTo("salesforce-datacloud-jdbc");
+        assertThat(DriverVersion.getProductName()).isEqualTo("salesforce-datacloud-queryservice");
+        assertThat(DriverVersion.getProductVersion()).isEqualTo("1.0");
 
         final String version = DriverVersion.getDriverVersion();
+        Pattern pattern = Pattern.compile("^\\d+(\\.\\d+)*(-SNAPSHOT)?$");
         assertThat(version)
                 .isNotBlank()
                 .matches(pattern)
                 .as("We expect this string to start with a digit, if this fails make sure you've run mvn compile");
 
-        final String expected = String.format("%s/%s", DRIVER_NAME, DriverVersion.getDriverVersion());
+        final String expected = String.format("salesforce-datacloud-jdbc/%s", DriverVersion.getDriverVersion());
         assertThat(DriverVersion.formatDriverInfo()).isEqualTo(expected);
     }
 
     @Test
-    public void testGetURL() throws SQLException {
-        final String url = "jdbc:salesforce-datacloud://login.salesforce.com";
+    public void testMissingClientId() {
+        final Driver driver = new DataCloudJDBCDriver();
+        Properties properties = new Properties();
+        properties.setProperty("FOO", "BAR");
 
-        final Driver driver;
-        try {
-            driver = DriverManager.getDriver(url);
-        } catch (Exception e) {
-            fail(e);
-            throw e;
-        }
-
-        assertThat(url).isEqualTo(DataCloudConnectionString.CONNECTION_PROTOCOL + "//login.salesforce.com");
-        assertThat(driver).isInstanceOf(DataCloudJDBCDriver.class);
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> driver.connect(VALID_URL, properties))
+                .withMessageContaining("Property `clientId` is missing");
     }
 
     @Test
     public void testUnknownPropertyRaisesUserError() {
         final Driver driver = new DataCloudJDBCDriver();
         Properties properties = new Properties();
+        properties.setProperty("clientId", "123");
+        properties.setProperty("clientSecret", "123");
+        properties.setProperty("userName", "user");
+        properties.setProperty("password", "pw");
         properties.setProperty("FOO", "BAR");
 
         assertThatExceptionOfType(DataCloudJDBCException.class)
                 .isThrownBy(() -> driver.connect(VALID_URL, properties))
-                .withMessageContaining("Unknown JDBC properties");
+                .withMessageContaining("Unknown JDBC properties: FOO");
     }
 
     @Test
-    public void testDirectWithUnknownPropertyRaisesUserError() {
+    public void testUnknownUrlParameterRaisesUserError() {
         final Driver driver = new DataCloudJDBCDriver();
-        Properties properties = new Properties();
-        properties.setProperty("direct", "true");
-        properties.setProperty("FOO", "BAR");
 
         assertThatExceptionOfType(DataCloudJDBCException.class)
-                .isThrownBy(() -> driver.connect(VALID_URL, properties))
-                .withMessageContaining("Unknown JDBC properties");
-    }
-
-    @Test
-    public void testKnownPropertiesWithoutAuthRaiseNoAuth() {
-        final Driver driver = new DataCloudJDBCDriver();
-        Properties properties = new Properties();
-        properties.setProperty("user", "alice");
-        properties.setProperty("querySetting.lc_time", "en_us");
-
-        assertThatExceptionOfType(DataCloudJDBCException.class)
-                .isThrownBy(() -> driver.connect(VALID_URL, properties))
-                .withMessageContaining("No authentication settings provided");
+                .isThrownBy(() -> driver.connect(
+                        VALID_URL + "?clientId=123&clientSecret=123&userName=user&password=pw&FOO=1234567890", null))
+                .withMessageContaining("Unknown JDBC properties: FOO");
     }
 }

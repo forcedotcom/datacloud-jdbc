@@ -33,7 +33,6 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Calendar;
-import java.util.Properties;
 import java.util.TimeZone;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -51,7 +50,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
-public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
+public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
 
     private DataCloudConnection connection;
 
@@ -64,7 +63,7 @@ public class DataCloudPreparedStatementTest extends HyperGrpcTestBase {
 
     @BeforeEach
     public void beforeEach() throws DataCloudJDBCException {
-        connection = DataCloudConnection.of(stubProvider, new Properties());
+        connection = getInterceptedClientConnection();
         mockParameterManager = mock(ParameterManager.class);
         preparedStatement = new DataCloudPreparedStatement(connection, "SELECT * FROM table", mockParameterManager);
     }

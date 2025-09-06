@@ -4,12 +4,11 @@
  */
 package com.salesforce.datacloud.jdbc.hyper;
 
-import static com.salesforce.datacloud.jdbc.core.DataCloudConnectionString.CONNECTION_PROTOCOL;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableMap;
+import com.salesforce.datacloud.jdbc.HyperDatasource;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
-import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -135,9 +134,8 @@ public class HyperServerProcess implements AutoCloseable {
     @SneakyThrows
     public DataCloudConnection getConnection(Map<String, String> connectionSettings) {
         val properties = new Properties();
-        properties.put(DirectDataCloudConnection.DIRECT, "true");
         properties.putAll(connectionSettings);
-        val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getPort();
-        return DirectDataCloudConnection.of(url, properties);
+        val url = "jdbc:salesforce-hyper://127.0.0.1:" + getPort();
+        return HyperDatasource.connectUsingProperties(url, properties);
     }
 }

@@ -4,7 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -54,7 +54,7 @@ public class HyperLogScope implements AutoCloseable {
     public ResultSet executeQuery(String query) throws SQLException {
         // Ensure that we have a connection
         if (connection == null) {
-            connection = HyperTestBase.getHyperQueryConnection(new Properties());
+            connection = LocalHyperTestBase.getHyperQueryConnection(new Properties());
         }
         // Close the potential statement from previous calls
         if (statement != null) {

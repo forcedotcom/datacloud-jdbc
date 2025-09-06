@@ -4,14 +4,14 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithConnection;
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertWithConnection;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertWithStatement;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.ResultSet;
@@ -20,7 +20,7 @@ import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class DataCloudStatementFunctionalTest {
     private static final HyperServerConfig configWithSleep =
             HyperServerConfig.builder().build();

@@ -11,7 +11,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.salesforce.datacloud.jdbc.auth.ResponseEnum;
-import java.util.Properties;
 import lombok.SneakyThrows;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -37,7 +36,7 @@ public class MetadataCacheInterceptorTest {
     @BeforeEach
     public void init() {
         chain = mock(Interceptor.Chain.class);
-        metadataCacheInterceptor = new MetadataCacheInterceptor(new Properties());
+        metadataCacheInterceptor = new MetadataCacheInterceptor(30000);
         doReturn(buildRequest()).when(chain).request();
     }
 

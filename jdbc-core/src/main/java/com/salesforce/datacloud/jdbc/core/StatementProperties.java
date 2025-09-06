@@ -4,8 +4,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptionalDuration;
+import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeRequired;
+
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.PropertyValidator;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,51 +46,27 @@ public class StatementProperties {
 
     /**
      * Parses statement properties from a Properties object.
+     * Removes the interpreted properties from the Properties object.
      *
      * @param props The properties to parse
      * @return A StatementProperties instance
      * @throws DataCloudJDBCException if parsing of property values fails
      */
-    public static StatementProperties of(Properties props) throws DataCloudJDBCException {
+    public static StatementProperties ofDestructive(Properties props) throws DataCloudJDBCException {
         StatementPropertiesBuilder builder = StatementProperties.builder();
 
-        // Validate common Hyper settings to ensure they use the required 'querySetting.' prefix
-        PropertyValidator.validateCommonHyperSettings(props);
-
-        // The query timeout property, zero or negative values are interpreted as infinite timeout.
-        // Positive values are interpreted as the number of seconds for the timeout
-        String queryTimeoutStr = props.getProperty("queryTimeout");
-        if (queryTimeoutStr != null) {
-            try {
-                Duration timeout = Duration.ofSeconds(Integer.parseInt(queryTimeoutStr));
-                if (timeout.isZero() || timeout.isNegative()) {
-                    builder.queryTimeout(Duration.ZERO);
-                } else {
-                    builder.queryTimeout(timeout);
-                }
-            } catch (NumberFormatException e) {
-                throw new DataCloudJDBCException("Failed to parse `queryTimeout` property: " + e.getMessage());
-            }
-        }
-
-        // The query timeout local enforcement delay property
-        String queryTimeoutLocalEnforcementDelayStr = props.getProperty("queryTimeoutLocalEnforcementDelay");
-        if (queryTimeoutLocalEnforcementDelayStr != null) {
-            try {
-                Duration delay = Duration.ofSeconds(Integer.parseInt(queryTimeoutLocalEnforcementDelayStr));
-                builder.queryTimeoutLocalEnforcementDelay(delay);
-            } catch (NumberFormatException e) {
-                throw new DataCloudJDBCException(
-                        "Failed to parse `queryTimeoutLocalEnforcementDelay` property: " + e.getMessage());
-            }
-        }
+        takeOptionalDuration(props, "queryTimeout").ifPresent(builder::queryTimeout);
+        takeOptionalDuration(props, "queryTimeoutLocalEnforcementDelay")
+                .ifPresent(builder::queryTimeoutLocalEnforcementDelay);
 
         // Parse querySetting.* properties
         Map<String, String> querySettings = new HashMap<>();
         for (String key : props.stringPropertyNames()) {
             if (key.startsWith("querySetting.")) {
                 String settingKey = key.substring("querySetting.".length());
-                String settingValue = props.getProperty(key);
+                String settingValue = takeRequired(props, key);
+                // We want `query_timeout` to be set as a JDBC-side setting, so
+                // we can also enforce it on the network level.
                 if ("query_timeout".equalsIgnoreCase(settingKey)) {
                     throw new DataCloudJDBCException(
                             "`query_timeout` is not an allowed `querySetting` subkey, use the `queryTimeout` property instead");
@@ -96,9 +74,7 @@ public class StatementProperties {
                 querySettings.put(settingKey, settingValue);
             }
         }
-        if (!querySettings.isEmpty()) {
-            builder.querySettings(querySettings);
-        }
+        builder.querySettings(querySettings);
 
         return builder.build();
     }
@@ -113,6 +89,11 @@ public class StatementProperties {
 
         if (!queryTimeout.isZero()) {
             props.setProperty("queryTimeout", String.valueOf(queryTimeout.getSeconds()));
+        }
+        if (!queryTimeoutLocalEnforcementDelay.isZero()) {
+            props.setProperty(
+                    "queryTimeoutLocalEnforcementDelay",
+                    String.valueOf(queryTimeoutLocalEnforcementDelay.getSeconds()));
         }
         for (Map.Entry<String, String> entry : querySettings.entrySet()) {
             props.setProperty("querySetting." + entry.getKey(), entry.getValue());

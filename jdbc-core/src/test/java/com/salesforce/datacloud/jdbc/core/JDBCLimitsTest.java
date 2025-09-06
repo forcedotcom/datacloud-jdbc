@@ -4,16 +4,17 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithConnection;
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertWithConnection;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertWithStatement;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import java.sql.ResultSet;
+import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -24,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @Slf4j
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class JDBCLimitsTest {
     @Test
     @SneakyThrows
@@ -132,28 +133,28 @@ public class JDBCLimitsTest {
     public void testLargeHeaders() {
         // We expect that under 1 MB total header size should be fine, we use workload as it'll get injected into the
         // header
-        val settings = Maps.immutableEntry("workload", repeat('x', 1000 * 1024));
-        assertWithStatement(
-                statement -> {
-                    val result = statement.executeQuery("SELECT 'A'");
-                    result.next();
-                    assertThat(result.getString(1)).isEqualTo("A");
-                },
-                settings);
+        val properties = new Properties();
+        properties.put("workload", repeat('x', 1000 * 1024));
+        try (val connection = getHyperQueryConnection(properties);
+                val statement = connection.createStatement()) {
+            val result = statement.executeQuery("SELECT 'A'");
+            result.next();
+            assertThat(result.getString(1)).isEqualTo("A");
+        }
     }
 
     @Test
     @SneakyThrows
     public void testTooLargeHeaders() {
         // We expect that due to 1 MB total header size limit, setting such a large workload should fail
-        val settings = Maps.immutableEntry("workload", repeat('x', 1024 * 1024));
-        assertWithStatement(
-                statement -> {
-                    assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
-                        statement.executeQuery("SELECT 'A'");
-                    });
-                },
-                settings);
+        val properties = new Properties();
+        properties.put("workload", repeat('x', 1024 * 1024));
+        try (val connection = getHyperQueryConnection(properties);
+                val statement = connection.createStatement()) {
+            assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
+                statement.executeQuery("SELECT 'A'");
+            });
+        }
     }
 
     @Test

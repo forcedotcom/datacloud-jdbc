@@ -5,6 +5,7 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
+import static com.salesforce.datacloud.jdbc.config.DriverVersion.formatDriverInfo;
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
 import static org.apache.arrow.vector.types.pojo.Schema.deserializeMessage;
@@ -15,11 +16,9 @@ import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.interceptor.NetworkTimeoutInterceptor;
 import com.salesforce.datacloud.jdbc.util.Deadline;
-import com.salesforce.datacloud.jdbc.util.PropertyValidator;
+import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.QueryStatus;
-import io.grpc.ClientInterceptor;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
 import io.grpc.stub.MetadataUtils;
 import java.sql.Array;
@@ -42,6 +41,7 @@ import java.sql.Struct;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -63,18 +63,22 @@ import salesforce.cdp.hyperdb.v1.QueryInfo;
 
 @Slf4j
 @Builder(access = AccessLevel.PRIVATE)
-public class DataCloudConnection implements Connection, AutoCloseable {
-    public static final int DEFAULT_PORT = 443;
-
+public class DataCloudConnection implements Connection {
     private final HyperGrpcStubProvider stubProvider;
 
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    private final ThrowingJdbcSupplier<String> lakehouseSupplier;
+    // Returned by DatabaseMetadata.getURL().
+    private final JdbcURL jdbcUrl;
 
-    private final ThrowingJdbcSupplier<List<String>> dataspacesSupplier;
+    // Returned by DatabaseMetadata.getUserName().
+    private final String userName;
 
-    private final DataCloudConnectionString connectionString;
+    private final String dataspace;
+
+    @NonNull private final ThrowingJdbcSupplier<String> lakehouseSupplier;
+
+    @NonNull private final ThrowingJdbcSupplier<List<String>> dataspacesSupplier;
 
     // The timeout used for network operations. This can be used as a last resort safety net to protect against
     // hanging connections. The default is zero which means no timeout.
@@ -85,81 +89,54 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     private ConnectionProperties connectionProperties;
 
     /**
-     * This allows you to create a DataCloudConnection with full control over gRPC stub details.
-     * To configure the channel with the bare minimum use {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder)}
-     * To configure the channel with property controlled settings like retries and keep alive use {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)}
+     * Creates a DataCloudConnection with the given stub provider, properties, lakehouse supplier, dataspaces supplier, and connection string.
      *
-     * This method will also not provide auth or tracing.
+     * For the external-facing JDBC driver, we use JdbcDriverStubProvider as the `stubProvider`.
+     * For internal, more flexible uses, we use a custom HyperGrpcStubProvider as the `stubProvider`.
+     * The stub provider must be already wired up to set the authentication and tracing interceptors.
+     *
      * @param stubProvider The stub provider to use for the connection
      * @param properties The properties to use for the connection
-     * @return A DataCloudConnection with the given channel and properties
-     */
-    public static DataCloudConnection of(@NonNull HyperGrpcStubProvider stubProvider, @NonNull Properties properties)
-            throws DataCloudJDBCException {
-        return logTimedValue(
-                () -> {
-                    validateProperties(properties);
-                    return DataCloudConnection.builder()
-                            .stubProvider(stubProvider)
-                            .connectionProperties(ConnectionProperties.of(properties))
-                            .build();
-                },
-                "DataCloudConnection::of with provided stub provider",
-                log);
-    }
-
-    /**
-     * This is a convenience overload for {@link DataCloudConnection#of(HyperGrpcStubProvider, Properties)}
-     * We pass true for closeChannelWithConnection to ensure the channel that is built internally is cleaned up.
-     *
-     * @param builder The builder to be passed to {@link DataCloudJdbcManagedChannel#of(ManagedChannelBuilder, Properties)}
-     * @param properties The properties for the JDBC connection
-     * @return A DataCloudConnection with the given channel and properties
-     */
-    public static DataCloudConnection of(@NonNull ManagedChannelBuilder<?> builder, @NonNull Properties properties)
-            throws DataCloudJDBCException {
-        validateProperties(properties);
-        val stubProvider = new JdbcDriverStubProvider(DataCloudJdbcManagedChannel.of(builder, properties), true);
-        return of(stubProvider, properties);
-    }
-
-    /**
-     * This overload is intended to be used from the {@code DataCloudJDBCDriver} and assumes a Data Cloud token is wired to the suppliers
-     * We pass true for closeChannelWithConnection to ensure the channel that is built internally is cleaned up.
-     *
-     * @param properties The properties for this JDBC connection
-     * @param authInterceptor a {@link ClientInterceptor} wired to provide an auth token for network requests
-     * @param lakehouseSupplier a supplier that acquires the lakehouse from a Data Cloud token
-     * @param dataspacesSupplier a supplier that acquires available dataspaces using a Data Cloud token
+     * @param lakehouseSupplier a supplier that acquires the lakehouse name
+     * @param dataspacesSupplier a supplier that acquires available dataspace names
+     * @param jdbcUrl The connection URL to use for the connection
      * @return A DataCloudConnection with the given channel and properties
      */
     public static DataCloudConnection of(
-            @NonNull ManagedChannelBuilder<?> builder,
-            @NonNull Properties properties,
-            @NonNull ClientInterceptor authInterceptor,
+            @NonNull HyperGrpcStubProvider stubProvider,
+            @NonNull ConnectionProperties properties,
+            JdbcURL jdbcUrl,
+            @NonNull String userName,
+            @NonNull String dataspace,
             @NonNull ThrowingJdbcSupplier<String> lakehouseSupplier,
-            @NonNull ThrowingJdbcSupplier<List<String>> dataspacesSupplier,
-            @NonNull DataCloudConnectionString connectionString)
+            @NonNull ThrowingJdbcSupplier<List<String>> dataspacesSupplier)
             throws DataCloudJDBCException {
         return logTimedValue(
                 () -> {
-                    validateProperties(properties);
                     return DataCloudConnection.builder()
-                            .stubProvider(new JdbcDriverStubProvider(
-                                    DataCloudJdbcManagedChannel.of(builder.intercept(authInterceptor), properties),
-                                    true))
-                            .connectionProperties(ConnectionProperties.of(properties))
+                            .stubProvider(stubProvider)
+                            .connectionProperties(properties)
+                            .jdbcUrl(jdbcUrl)
+                            .userName(userName)
+                            .dataspace(dataspace)
                             .lakehouseSupplier(lakehouseSupplier)
                             .dataspacesSupplier(dataspacesSupplier)
-                            .connectionString(connectionString)
                             .build();
                 },
-                "DataCloudConnection::of with oauth enabled suppliers",
+                "DataCloudConnection::of creation",
                 log);
     }
 
-    private static void validateProperties(Properties properties) throws DataCloudJDBCException {
-        PropertyValidator.validate(properties);
+    /**
+     * Convenience overload without `userName`, `lakehouseSupplier`, `dataspacesSupplier`.
+     */
+    public static DataCloudConnection of(
+            @NonNull HyperGrpcStubProvider stubProvider,
+            @NonNull ConnectionProperties properties,
+            @NonNull String dataspace,
+            JdbcURL jdbcUrl)
+            throws DataCloudJDBCException {
+        return of(stubProvider, properties, jdbcUrl, "", dataspace, () -> "", () -> Arrays.asList());
     }
 
     /**
@@ -170,7 +147,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         HyperServiceBlockingStub stub = stubProvider.getStub();
 
         // Attach headers derived from properties to the stub
-        val metadata = deriveHeadersFromProperties(connectionProperties);
+        val metadata = deriveHeadersFromProperties(dataspace, connectionProperties);
         stub = stub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
 
         // The interceptor will enforce the network timeout per gRPC call
@@ -182,8 +159,9 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return stub;
     }
 
-    static Metadata deriveHeadersFromProperties(ConnectionProperties connectionProperties) {
+    static Metadata deriveHeadersFromProperties(String dataspace, ConnectionProperties connectionProperties) {
         Metadata metadata = new Metadata();
+        metadata.put(Metadata.Key.of("User-Agent", Metadata.ASCII_STRING_MARSHALLER), formatDriverInfo());
         // We always add a workload name, if the property is not set we use the default value
         metadata.put(
                 Metadata.Key.of("x-hyperdb-workload", Metadata.ASCII_STRING_MARSHALLER),
@@ -193,10 +171,8 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                     Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER),
                     connectionProperties.getExternalClientContext());
         }
-        if (!connectionProperties.getDataspace().isEmpty()) {
-            metadata.put(
-                    Metadata.Key.of("dataspace", Metadata.ASCII_STRING_MARSHALLER),
-                    connectionProperties.getDataspace());
+        if (!dataspace.isEmpty()) {
+            metadata.put(Metadata.Key.of("dataspace", Metadata.ASCII_STRING_MARSHALLER), dataspace);
         }
         return metadata;
     }
@@ -402,8 +378,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
 
     @Override
     public DatabaseMetaData getMetaData() {
-        val userName = connectionProperties.getUserName();
-        return new DataCloudDatabaseMetadata(this, connectionString, lakehouseSupplier, dataspacesSupplier, userName);
+        return new DataCloudDatabaseMetadata(this, jdbcUrl, lakehouseSupplier, dataspacesSupplier, userName);
     }
 
     @Override

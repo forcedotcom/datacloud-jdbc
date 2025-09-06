@@ -4,17 +4,16 @@
  */
 package com.salesforce.datacloud.jdbc.examples;
 
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
-import io.grpc.ManagedChannelBuilder;
 import java.sql.SQLException;
 import java.time.Duration;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -22,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @Slf4j
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class ChunkBasedPaginationTest {
     /**
      * This example shows how to use the chunk based pagination mode to process large result sets.
@@ -35,15 +34,10 @@ public class ChunkBasedPaginationTest {
                 "select a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c, cast(a as numeric(38,18)) d from generate_series(1, 64) as s(a) order by a asc";
         val timeout = Duration.ofSeconds(30);
         val offset = new AtomicLong(0);
-        val properties = new Properties();
-
-        ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
-                        "127.0.0.1", HyperTestBase.getInstancePort())
-                .usePlaintext();
 
         final String queryId;
 
-        try (final DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties);
+        try (final DataCloudConnection conn = getHyperQueryConnection();
                 final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
             queryId = stmt.executeAsyncQuery(sql).getQueryId();
         }
@@ -51,7 +45,7 @@ public class ChunkBasedPaginationTest {
         int prev = 1;
         QueryStatus status = null;
         while (true) {
-            try (final DataCloudConnection conn = DataCloudConnection.of(channelBuilder, properties)) {
+            try (final DataCloudConnection conn = getHyperQueryConnection()) {
                 if (status == null || !status.allResultsProduced()) {
                     status = conn.waitFor(queryId, t -> t.getChunkCount() > offset.get());
                 }

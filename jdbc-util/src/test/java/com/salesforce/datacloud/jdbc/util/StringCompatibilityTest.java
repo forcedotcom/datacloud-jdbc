@@ -50,17 +50,4 @@ class StringCompatibilityTest {
     void isNullOrBlank_shouldReturnFalse_forNonBlankStrings(String input) {
         assertThat(StringCompatibility.isNullOrBlank(input)).isFalse();
     }
-
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(strings = {"", " ", "   ", "\t", "\n"})
-    void isBlank_shouldReturnTrue_forNullOrBlankStrings(String input) {
-        assertThat(StringCompatibility.isBlank(input)).isTrue();
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"test", " test ", "\thello", "a"})
-    void isBlank_shouldReturnFalse_forNonBlankStrings(String input) {
-        assertThat(StringCompatibility.isBlank(input)).isFalse();
-    }
 }

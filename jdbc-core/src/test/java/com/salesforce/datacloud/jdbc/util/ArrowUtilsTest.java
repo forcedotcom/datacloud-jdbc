@@ -155,7 +155,7 @@ class ArrowUtilsTest {
     @Test
     void testConvertJDBCMetadataToAvaticaColumns() throws SQLException {
         ResultSetMetaData resultSetMetaData = mockResultSetMetadata();
-        List<ColumnMetaData> columnMetaDataList = ArrowUtils.convertJDBCMetadataToAvaticaColumns(resultSetMetaData, 4);
+        List<ColumnMetaData> columnMetaDataList = ArrowUtils.convertJDBCMetadataToAvaticaColumns(resultSetMetaData);
 
         for (int i = 0; i < columnMetaDataList.size(); i++) {
             val actual = columnMetaDataList.get(i);
@@ -168,7 +168,7 @@ class ArrowUtilsTest {
 
     @Test
     void testConvertJDBCMetadataToAvaticaColumnsEmptyMetadata() {
-        assertThat(ArrowUtils.convertJDBCMetadataToAvaticaColumns(null, 7)).isEmpty();
+        assertThat(ArrowUtils.convertJDBCMetadataToAvaticaColumns(null)).isEmpty();
     }
 
     private ResultSetMetaData mockResultSetMetadata() {

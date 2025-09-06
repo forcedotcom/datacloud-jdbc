@@ -11,6 +11,7 @@ import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Iterator;
+import lombok.val;
 import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
@@ -19,8 +20,7 @@ import salesforce.cdp.hyperdb.v1.OutputFormat;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryResultPartBinary;
 
-class HyperGrpcClientTest extends HyperGrpcTestBase {
-
+class HyperGrpcClientTest extends InterceptedHyperTestBase {
     private static final ExecuteQueryResponse chunk1 = ExecuteQueryResponse.newBuilder()
             .setBinaryPart(QueryResultPartBinary.newBuilder()
                     .setData(ByteString.copyFromUtf8("test 1"))
@@ -29,6 +29,7 @@ class HyperGrpcClientTest extends HyperGrpcTestBase {
 
     @Test
     public void testExecuteQuery() throws SQLException {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
                 .willReturn(chunk1));
 

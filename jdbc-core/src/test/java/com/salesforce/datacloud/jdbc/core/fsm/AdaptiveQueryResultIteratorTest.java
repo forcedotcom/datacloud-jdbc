@@ -7,7 +7,7 @@ package com.salesforce.datacloud.jdbc.core.fsm;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
+import com.salesforce.datacloud.jdbc.core.InterceptedHyperTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.query.v3.QueryStatus;
@@ -27,7 +27,7 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 
-public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
+public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
 
     private static final String TEST_QUERY = "SELECT * FROM test_table";
     private static final String TEST_QUERY_ID = "test-query-123";
@@ -35,13 +35,14 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenExecuteQueryReturnsFinishedStatus_shouldNeverCallGetQueryInfo() throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
                 QueryParam.TransferMode.ADAPTIVE,
                 executeQueryResponse(
                         TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1));
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.getQueryId()).isEqualTo(TEST_QUERY_ID);
@@ -55,6 +56,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
     @MethodSource("finishedStatusWithMultipleChunks")
     public void whenExecuteQueryReturnsFinishedStatusWithMultipleChunks_shouldCallGetQueryResultOnlyForAvailableChunks(
             int chunkCount) throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
@@ -78,6 +81,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenGetQueryInfoReturnsFinishedStatus_shouldNotCallGetQueryInfoAgain() throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
@@ -88,7 +93,6 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
                         1));
 
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1);
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
@@ -100,6 +104,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
     @Test
     public void whenGetQueryInfoReturnsFinishedStatusWithAdditionalChunks_shouldCallGetQueryResultOnce()
             throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
@@ -112,7 +118,6 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 3);
         setupFakeChunk(1);
         setupFakeChunk(2);
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         while (iterator.hasNext()) {
@@ -125,6 +130,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenQueryIsRunning_shouldCallGetQueryInfo() throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
@@ -135,7 +142,6 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
                         1));
 
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1);
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
@@ -145,6 +151,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenResultsProducedStatus_shouldNotCallGetQueryInfoAgain() throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
@@ -153,7 +161,6 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
                         TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RESULTS_PRODUCED, 2));
 
         setupFakeChunk(1);
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         while (iterator.hasNext()) {
@@ -171,12 +178,13 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
             salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus inputStatus,
             QueryStatus.CompletionStatus expectedStatus)
             throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
                 QueryParam.TransferMode.ADAPTIVE,
                 executeQueryResponse(TEST_QUERY_ID, inputStatus, 1));
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         if (inputStatus == salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED) {
@@ -193,6 +201,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenExecuteQueryReturnsRunningWithNoAdditionalChunks_shouldCallGetQueryInfo() throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
@@ -203,7 +213,6 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
                         1));
 
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1);
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
@@ -213,6 +222,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenRunningStatusWithMultipleChunks_shouldCallGetQueryResultThenGetQueryInfo() throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
@@ -227,7 +238,6 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
         }
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 4);
         setupFakeChunk(3);
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         iterator.next();
@@ -267,6 +277,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenOptionalExecuteQueryResponseReceived_shouldSkipAndContinueProcessing() throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         val responses = Arrays.asList(
                 ExecuteQueryResponse.newBuilder()
                         .setQueryInfo(QueryInfo.newBuilder()
@@ -296,7 +308,6 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
                 TEST_QUERY,
                 QueryParam.TransferMode.ADAPTIVE,
                 responses.toArray(new ExecuteQueryResponse[0]));
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
@@ -307,6 +318,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenOptionalQueryInfoReceived_shouldSkipAndContinuePolling() throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
@@ -331,7 +344,6 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
                             .build());
                     observer.onCompleted();
                 }));
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
@@ -342,6 +354,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenExecuteQueryStreamThrowsCancelled_shouldRetryWithGetQueryInfo() throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         val queryInfoResponse = executeQueryResponse(
                 TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED, 1);
 
@@ -352,7 +366,6 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
                         .and(GrpcMock.statusException(Status.CANCELLED))));
 
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1);
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
@@ -362,6 +375,8 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenGetQueryInfoStreamThrowsCancelled_shouldRetryWithGetQueryInfo() throws Exception {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         setupExecuteQuery(
                 TEST_QUERY_ID,
                 TEST_QUERY,
@@ -390,7 +405,6 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
                 .nextWillReturn(running)
                 .nextWillReturn(GrpcMock.statusException(Status.CANCELLED))
                 .nextWillReturn(finished));
-
         val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
@@ -400,11 +414,12 @@ public class AdaptiveQueryResultIteratorTest extends HyperGrpcTestBase {
 
     @Test
     public void whenExecuteQueryThrowsCancelledWithoutQueryId_shouldFailQuery() {
+        val hyperGrpcClient = getInterceptedGrpcExecutor();
+
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
                 .withRequest(req ->
                         req.getQuery().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
                 .willReturn(GrpcMock.statusException(Status.CANCELLED)));
-
         assertThatThrownBy(() -> AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT))
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessage("Failed to execute query: " + TEST_QUERY);

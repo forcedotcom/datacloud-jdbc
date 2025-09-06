@@ -11,18 +11,22 @@ import java.net.Socket;
 import javax.net.SocketFactory;
 import lombok.extern.slf4j.Slf4j;
 
-/** Default Wrapper for SocketFactory. */
+/**
+ * Wrapper for Java's SocketFactory.
+ *
+ * It's main purpose is to avoid creating a SocksSocket when the socks proxy is disabled.
+ */
 @Slf4j
-public class SFDefaultSocketFactoryWrapper extends SocketFactory {
+public class SocketFactoryWrapper extends SocketFactory {
 
     private final boolean isSocksProxyDisabled;
     private final SocketFactory socketFactory;
 
-    public SFDefaultSocketFactoryWrapper(boolean isSocksProxyDisabled) {
+    public SocketFactoryWrapper(boolean isSocksProxyDisabled) {
         this(isSocksProxyDisabled, SocketFactory.getDefault());
     }
 
-    public SFDefaultSocketFactoryWrapper(boolean isSocksProxyDisabled, SocketFactory socketFactory) {
+    public SocketFactoryWrapper(boolean isSocksProxyDisabled, SocketFactory socketFactory) {
         super();
         this.isSocksProxyDisabled = isSocksProxyDisabled;
         this.socketFactory = socketFactory;

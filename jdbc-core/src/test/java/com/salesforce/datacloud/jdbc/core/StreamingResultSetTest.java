@@ -4,20 +4,19 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertEachRowIsTheSame;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.MockedStatic;
 
 @Slf4j
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class StreamingResultSetTest {
     public static String query(String arg) {
         return String.format(
@@ -35,7 +34,6 @@ public class StreamingResultSetTest {
                 arg);
     }
 
-    private static final Properties none = new Properties();
     private static final int rows = 64;
     private static final String regularSql = query(Integer.toString(rows));
     private static final String preparedSql = query("?");
@@ -43,7 +41,7 @@ public class StreamingResultSetTest {
     @SneakyThrows
     @Test
     public void testAdaptivePreparedStatement() {
-        withPrepared(none, preparedSql, (conn, stmt) -> {
+        withPrepared(preparedSql, (conn, stmt) -> {
             val rs = stmt.executeQuery().unwrap(DataCloudResultSet.class);
             assertThatResultSetIsCorrect(conn, rs);
         });
@@ -52,7 +50,7 @@ public class StreamingResultSetTest {
     @SneakyThrows
     @Test
     public void testAdaptiveStatement() {
-        withStatement(none, (conn, stmt) -> {
+        withStatement((conn, stmt) -> {
             val rs = stmt.executeQuery(regularSql).unwrap(DataCloudResultSet.class);
             assertThatResultSetIsCorrect(conn, rs);
         });
@@ -61,7 +59,7 @@ public class StreamingResultSetTest {
     @SneakyThrows
     @Test
     public void testAsyncPreparedStatement() {
-        withPrepared(none, preparedSql, (conn, stmt) -> {
+        withPrepared(preparedSql, (conn, stmt) -> {
             stmt.executeAsyncQuery();
             conn.waitFor(stmt.getQueryId(), QueryStatus::allResultsProduced);
             val rs = stmt.getResultSet().unwrap(DataCloudResultSet.class);
@@ -72,7 +70,7 @@ public class StreamingResultSetTest {
     @SneakyThrows
     @Test
     public void testAsyncStatement() {
-        withStatement(none, (conn, stmt) -> {
+        withStatement((conn, stmt) -> {
             stmt.executeAsyncQuery(regularSql);
             conn.waitFor(stmt.getQueryId(), QueryStatus::allResultsProduced);
             val rs = stmt.getResultSet().unwrap(DataCloudResultSet.class);
@@ -81,20 +79,16 @@ public class StreamingResultSetTest {
     }
 
     @SneakyThrows
-    private void withStatement(
-            Properties properties, ThrowingBiConsumer<DataCloudConnection, DataCloudStatement> func) {
-        try (val conn = getHyperQueryConnection(properties).unwrap(DataCloudConnection.class);
+    private void withStatement(ThrowingBiConsumer<DataCloudConnection, DataCloudStatement> func) {
+        try (val conn = getHyperQueryConnection().unwrap(DataCloudConnection.class);
                 val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
             func.accept(conn, stmt);
         }
     }
 
     @SneakyThrows
-    private void withPrepared(
-            Properties properties,
-            String sql,
-            ThrowingBiConsumer<DataCloudConnection, DataCloudPreparedStatement> func) {
-        try (val conn = getHyperQueryConnection(properties).unwrap(DataCloudConnection.class);
+    private void withPrepared(String sql, ThrowingBiConsumer<DataCloudConnection, DataCloudPreparedStatement> func) {
+        try (val conn = getHyperQueryConnection().unwrap(DataCloudConnection.class);
                 val stmt = conn.prepareStatement(sql).unwrap(DataCloudPreparedStatement.class)) {
             stmt.setInt(1, rows);
             func.accept(conn, stmt);

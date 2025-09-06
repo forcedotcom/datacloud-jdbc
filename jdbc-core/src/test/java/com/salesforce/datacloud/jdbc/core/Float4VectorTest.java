@@ -4,10 +4,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertWithStatement;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +17,7 @@ import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class Float4VectorTest {
 
     @Test

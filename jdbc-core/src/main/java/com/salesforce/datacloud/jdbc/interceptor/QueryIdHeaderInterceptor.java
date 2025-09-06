@@ -24,7 +24,7 @@ public class QueryIdHeaderInterceptor implements SingleHeaderMutatingClientInter
 
     @Override
     public void mutate(final Metadata headers) {
-        if (StringCompatibility.isBlank(value)) {
+        if (StringCompatibility.isNullOrBlank(value)) {
             return;
         }
 

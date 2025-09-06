@@ -51,7 +51,7 @@ class AuthorizationHeaderInterceptorTest {
     }
 
     private AuthorizationHeaderInterceptor sut(String token, String aud) {
-        val supplier = new AuthorizationHeaderInterceptor.TokenSupplier() {
+        val supplier = new AuthorizationHeaderInterceptor.TokenProvider() {
 
             @Override
             public String getToken() throws SQLException {

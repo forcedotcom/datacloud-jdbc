@@ -4,32 +4,26 @@
  */
 package com.salesforce.datacloud.jdbc.interceptor;
 
-import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
-import lombok.AccessLevel;
+import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProvider;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.val;
 
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class TokenProcessorSupplier implements AuthorizationHeaderInterceptor.TokenSupplier {
-    public static AuthorizationHeaderInterceptor of(TokenProcessor tokenProcessor) {
-        val supplier = new TokenProcessorSupplier(tokenProcessor);
-        return new AuthorizationHeaderInterceptor(supplier, "oauth");
-    }
-
-    private final TokenProcessor tokenProcessor;
+@AllArgsConstructor
+public class TokenProcessorSupplier implements AuthorizationHeaderInterceptor.TokenProvider {
+    private final DataCloudTokenProvider tokenProvider;
 
     @SneakyThrows
     @Override
     public String getToken() {
-        val token = tokenProcessor.getDataCloudToken();
+        val token = tokenProvider.getDataCloudToken();
         return token.getAccessToken();
     }
 
     @SneakyThrows
     @Override
     public String getAudience() {
-        val token = tokenProcessor.getDataCloudToken();
+        val token = tokenProvider.getDataCloudToken();
         return token.getTenantId();
     }
 }

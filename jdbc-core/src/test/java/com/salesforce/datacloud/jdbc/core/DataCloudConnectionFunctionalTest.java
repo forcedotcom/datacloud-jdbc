@@ -7,7 +7,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DataCloudArray;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.jdbc.util.HyperLogScope;
 import java.sql.Array;
 import java.sql.ResultSet;
@@ -22,13 +22,13 @@ import org.apache.arrow.vector.util.Text;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class DataCloudConnectionFunctionalTest {
     @Test
     public void testNetworkTimeoutDefault() throws SQLException {
         // Verify that by default no deadline is set
         HyperLogScope hyperLogScope = new HyperLogScope();
-        try (val connection = HyperTestBase.getHyperQueryConnection(hyperLogScope.getProperties())) {
+        try (val connection = LocalHyperTestBase.getHyperQueryConnection(hyperLogScope.getProperties())) {
             assertThat(connection.getNetworkTimeout()).isZero();
             // Make a call to capture the gRPC deadline
             try (val statement = connection.createStatement()) {
@@ -48,7 +48,7 @@ public class DataCloudConnectionFunctionalTest {
     public void testNetworkTimeoutPropagatesToServer() throws SQLException {
         // Verify that when network timeout is set a corresponding deadline is set on the gRPC call level
         HyperLogScope hyperLogScope = new HyperLogScope();
-        try (val connection = HyperTestBase.getHyperQueryConnection(hyperLogScope.getProperties())) {
+        try (val connection = LocalHyperTestBase.getHyperQueryConnection(hyperLogScope.getProperties())) {
             // Set the network timeout to 5 seconds
             connection.setNetworkTimeout(null, 5000);
             assertThat(connection.getNetworkTimeout()).isEqualTo(5000);
@@ -76,7 +76,7 @@ public class DataCloudConnectionFunctionalTest {
         // independently apply on each call. Thus in this test we first create a stub and then check that after a sleep
         // there still is approximately the full network timeout duration for the next call.
         HyperLogScope hyperLogScope = new HyperLogScope();
-        try (val connection = HyperTestBase.getHyperQueryConnection(hyperLogScope.getProperties())) {
+        try (val connection = LocalHyperTestBase.getHyperQueryConnection(hyperLogScope.getProperties())) {
             // Set the network timeout to 5 seconds
             connection.setNetworkTimeout(null, 5000);
             assertThat(connection.getNetworkTimeout()).isEqualTo(5000);

@@ -41,20 +41,6 @@ The class name for this driver is:
 com.salesforce.datacloud.jdbc.DataCloudJDBCDriver
 ```
 
-## Building the driver:
-
-Use the following command to build and test the driver:
-
-```shell
-./gradlew clean build
-```
-
-To inspect the jars that will be published run and take a look in `build/maven-repo`:
-
-```shell
-./gradlew build publishAllPublicationsToRootBuildDirRepository
-```
-
 ## Usage
 
 > [!INFO]
@@ -87,7 +73,6 @@ Set the following properties appropriately to establish a connection with your c
 | clientId     | The consumer key of the connected app.                                                                               |
 | clientSecret | The consumer secret of the connected app.                                                                            |
 | privateKey   | The private key of the connected app.                                                                                |
-| coreToken    | OAuth token that a connected app uses to request access to a protected resource on behalf of the client application. |
 | refreshToken | Token obtained from the web server, user-agent, or hybrid app token flow.                                            |
 
 
@@ -113,6 +98,7 @@ Instructions to generate a private key can be found [here](#generating-a-private
 
 ```java
 Properties properties = new Properties();
+properties.put("user", "${userName}");
 properties.put("privateKey", "${privateKey}");
 properties.put("clientId", "${clientId}");
 properties.put("clientSecret", "${clientSecret}");
@@ -124,7 +110,6 @@ The documentation for refresh token authentication can be found [here][refresh t
 
 ```java
 Properties properties = new Properties();
-properties.put("coreToken", "${coreToken}");
 properties.put("refreshToken", "${refreshToken}");
 properties.put("clientId", "${clientId}");
 properties.put("clientSecret", "${clientSecret}");
@@ -165,10 +150,6 @@ This section describes details around potential pitfalls / ambiguities related t
 ### Optional configuration
 
 - `dataspace`: The data space to query, defaults to "default"
-- `User-Agent`: The User-Agent string identifies the JDBC driver and, optionally, the client application making the database connection. <br />
-  By default, the User-Agent string will end with "salesforce-datacloud-jdbc/{version}" and we will prepend any User-Agent provided by the client application. <br />
-  For example: "User-Agent: ClientApp/1.2.3 salesforce-datacloud-jdbc/1.0"
-
 
 ### Usage sample code
 

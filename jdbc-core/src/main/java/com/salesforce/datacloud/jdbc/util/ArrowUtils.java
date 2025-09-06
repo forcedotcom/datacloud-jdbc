@@ -79,13 +79,21 @@ public final class ArrowUtils {
     }
 
     /** Converts from JDBC metadata to Avatica columns. */
-    public static List<ColumnMetaData> convertJDBCMetadataToAvaticaColumns(ResultSetMetaData metaData, int maxSize) {
+    public static List<ColumnMetaData> convertJDBCMetadataToAvaticaColumns(ResultSetMetaData metaData) {
         if (metaData == null) {
             return Collections.emptyList();
         }
 
+        int columnCount;
+        try {
+            columnCount = metaData.getColumnCount();
+        } catch (SQLException e) {
+            log.error("Error getting column count", e);
+            throw new RuntimeException(e);
+        }
+
         return Stream.iterate(1, i -> i + 1)
-                .limit(maxSize)
+                .limit(columnCount)
                 .map(i -> {
                     try {
                         val columnType = new ColumnType(JDBCType.valueOf(metaData.getColumnType(i)));
