@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
+import com.salesforce.datacloud.jdbc.core.DirectDataCloudConnectionProperties;
 import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 import java.io.BufferedReader;
 import java.io.File;
@@ -146,9 +147,9 @@ public class HyperServerProcess implements AutoCloseable {
     @SneakyThrows
     public DataCloudConnection getConnection(Map<String, String> connectionSettings) {
         val properties = new Properties();
-        properties.put(DirectDataCloudConnection.DIRECT, "true");
+        properties.put(DirectDataCloudConnectionProperties.direct, "true");
         // Disable SSL for local test connections - test servers run without SSL
-        properties.put("ssl_disabled", "true");
+        properties.put(DirectDataCloudConnectionProperties.sslDisabled, "true");
         properties.putAll(connectionSettings);
         val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getPort();
         return DirectDataCloudConnection.of(url, properties);

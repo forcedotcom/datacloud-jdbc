@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
+import com.salesforce.datacloud.jdbc.core.DirectDataCloudConnectionProperties;
 import com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
@@ -84,9 +85,9 @@ public class HyperTestBase implements BeforeAllCallback {
 
     @SneakyThrows
     public static DataCloudConnection getHyperQueryConnection(Properties properties) {
-        properties.put(DirectDataCloudConnection.DIRECT, "true");
+        properties.put(DirectDataCloudConnectionProperties.direct, "true");
         // Disable SSL for local test connections - test servers run without SSL
-        properties.put("ssl_disabled", "true");
+        properties.put(DirectDataCloudConnectionProperties.sslDisabled, "true");
         val url = CONNECTION_PROTOCOL + "//127.0.0.1:" + getInstancePort();
         return DirectDataCloudConnection.of(url, properties);
     }

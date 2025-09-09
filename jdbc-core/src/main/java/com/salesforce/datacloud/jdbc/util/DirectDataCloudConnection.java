@@ -16,10 +16,10 @@
 package com.salesforce.datacloud.jdbc.util;
 
 import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getBooleanOrDefault;
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnectionString;
+import com.salesforce.datacloud.jdbc.core.DirectDataCloudConnectionProperties;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.netty.GrpcSslContexts;
@@ -61,27 +61,13 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public final class DirectDataCloudConnection {
-    public static final String DIRECT = "direct";
-
-    // property to disable SSL (for testing only, we might change the implementation in future)
-    private static final String SSL_DISABLED = "ssl_disabled";
-
-    // JKS truststore properties - for trust verification
-    public static final String TRUSTSTORE_PATH = "truststore_path";
-    public static final String TRUSTSTORE_PASSWORD = "truststore_password";
-    public static final String TRUSTSTORE_TYPE = "truststore_type";
-
-    // PEM certificate properties - for trust verification and client authentication
-    public static final String CLIENT_CERT_PATH = "client_cert_path";
-    public static final String CLIENT_KEY_PATH = "client_key_path";
-    public static final String CA_CERT_PATH = "ca_cert_path";
 
     private DirectDataCloudConnection() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
     public static boolean isDirect(Properties properties) {
-        return getBooleanOrDefault(properties, DIRECT, false);
+        return getBooleanOrDefault(properties, DirectDataCloudConnectionProperties.direct, false);
     }
 
     public static DataCloudConnection of(String url, Properties properties) throws SQLException {
@@ -94,9 +80,36 @@ public final class DirectDataCloudConnection {
             throw new DataCloudJDBCException("Connection properties cannot be null");
         }
 
-        final boolean direct = getBooleanOrDefault(properties, DIRECT, false);
-        if (!direct) {
-            throw new DataCloudJDBCException("Cannot establish direct connection without " + DIRECT + " enabled");
+        // Parse properties into structured object
+        DirectDataCloudConnectionProperties directProps = DirectDataCloudConnectionProperties.of(properties);
+        return of(url, directProps, properties);
+    }
+
+    /**
+     * Creates a direct DataCloud connection using structured properties.
+     *
+     * @param url The JDBC connection URL
+     * @param directProps The parsed direct connection properties
+     * @param originalProperties The original properties (needed for DataCloudConnection.of)
+     * @return A DataCloudConnection configured for direct connection
+     * @throws SQLException if connection creation fails
+     */
+    public static DataCloudConnection of(
+            String url, DirectDataCloudConnectionProperties directProps, Properties originalProperties)
+            throws SQLException {
+        if (url == null) {
+            throw new DataCloudJDBCException("Connection URL cannot be null");
+        }
+        if (directProps == null) {
+            throw new DataCloudJDBCException("Direct connection properties cannot be null");
+        }
+        if (originalProperties == null) {
+            throw new DataCloudJDBCException("Original connection properties cannot be null");
+        }
+
+        if (!directProps.isDirectConnection()) {
+            throw new DataCloudJDBCException("Cannot establish direct connection without "
+                    + DirectDataCloudConnectionProperties.direct + " enabled");
         }
 
         final DataCloudConnectionString connString = DataCloudConnectionString.of(url);
@@ -105,8 +118,15 @@ public final class DirectDataCloudConnection {
         log.info("Creating direct gRPC connection to {}", uri);
 
         try {
-            ManagedChannelBuilder<?> builder = createChannelBuilder(uri, properties);
-            return DataCloudConnection.of(builder, properties);
+            ManagedChannelBuilder<?> builder = createChannelBuilder(uri, directProps);
+
+            // Merge direct connection properties back into the Properties object
+            // This ensures any processed/validated values are preserved
+            Properties mergedProperties = new Properties();
+            mergedProperties.putAll(originalProperties);
+            mergedProperties.putAll(directProps.toProperties());
+
+            return DataCloudConnection.of(builder, mergedProperties);
         } catch (DataCloudJDBCException e) {
             // Re-throw validation exceptions as-is
             throw e;
@@ -115,8 +135,9 @@ public final class DirectDataCloudConnection {
         }
     }
 
-    private static ManagedChannelBuilder<?> createChannelBuilder(URI uri, Properties properties) throws Exception {
-        SslMode sslMode = determineSslMode(properties);
+    private static ManagedChannelBuilder<?> createChannelBuilder(
+            URI uri, DirectDataCloudConnectionProperties directProps) throws Exception {
+        SslMode sslMode = determineSslMode(directProps);
         String endpoint = uri.getHost() + ":" + uri.getPort();
 
         log.info("Creating {} connection to {}", sslMode.getDescription(), endpoint);
@@ -128,27 +149,27 @@ public final class DirectDataCloudConnection {
                 return createSslWithSystemTrust(uri);
             case CUSTOM_TRUST:
             case MUTUAL_TLS:
-                return createCustomSslChannel(uri, properties);
+                return createCustomSslChannel(uri, directProps);
             default:
                 throw new IllegalStateException("Unsupported SSL mode: " + sslMode);
         }
     }
 
     /**
-     * Determines the appropriate SSL mode based on provided properties.
+     * Determines the appropriate SSL mode based on structured properties.
      *
-     * @param properties Connection properties
+     * @param directProps Direct connection properties
      * @return The SSL mode to use
      * @throws IllegalArgumentException if SSL configuration is invalid
      */
-    private static SslMode determineSslMode(Properties properties) {
+    private static SslMode determineSslMode(DirectDataCloudConnectionProperties directProps) {
         // Check for explicit SSL disable (testing only)
-        if (getBooleanOrDefault(properties, SSL_DISABLED, false)) {
+        if (directProps.isSslDisabledFlag()) {
             return SslMode.DISABLED;
         }
 
-        boolean hasTrustConfig = hasTrustConfiguration(properties);
-        boolean hasClientCert = hasClientCertificates(properties);
+        boolean hasTrustConfig = hasTrustConfiguration(directProps);
+        boolean hasClientCert = hasClientCertificates(directProps);
 
         if (hasClientCert) {
             return SslMode.MUTUAL_TLS;
@@ -190,34 +211,36 @@ public final class DirectDataCloudConnection {
      * Checks if trust configuration properties are provided.
      * Trust configuration determines how server certificates are verified.
      *
-     * @param properties Connection properties to check
+     * @param directProps Direct connection properties to check
      * @return true if truststore or CA certificate path is provided
      */
-    private static boolean hasTrustConfiguration(Properties properties) {
-        return optional(properties, TRUSTSTORE_PATH).isPresent()
-                || optional(properties, CA_CERT_PATH).isPresent();
+    private static boolean hasTrustConfiguration(DirectDataCloudConnectionProperties directProps) {
+        return !directProps.getTruststorePathValue().isEmpty()
+                || !directProps.getCaCertPathValue().isEmpty();
     }
 
     /**
      * Checks if client certificate properties are provided.
      * Client certificates enable two-sided TLS (mutual authentication).
      *
-     * @param properties Connection properties to check
+     * @param directProps Direct connection properties to check
      * @return true if both client certificate and key paths are provided
      * @throws IllegalArgumentException if client cert is provided without key or vice versa
      */
-    private static boolean hasClientCertificates(Properties properties) {
-        boolean hasClientCert = optional(properties, CLIENT_CERT_PATH).isPresent();
-        boolean hasClientKey = optional(properties, CLIENT_KEY_PATH).isPresent();
+    private static boolean hasClientCertificates(DirectDataCloudConnectionProperties directProps) {
+        boolean hasClientCert = !directProps.getClientCertPathValue().isEmpty();
+        boolean hasClientKey = !directProps.getClientKeyPathValue().isEmpty();
 
         // Validate that both cert and key are provided together
         if (hasClientCert && !hasClientKey) {
             throw new IllegalArgumentException("Client certificate path provided without client key path. "
-                    + "For mutual TLS, both '" + CLIENT_CERT_PATH + "' and '" + CLIENT_KEY_PATH + "' are required.");
+                    + "For mutual TLS, both '" + DirectDataCloudConnectionProperties.clientCertPath + "' and '"
+                    + DirectDataCloudConnectionProperties.clientKeyPath + "' are required.");
         }
         if (hasClientKey && !hasClientCert) {
             throw new IllegalArgumentException("Client key path provided without client certificate path. "
-                    + "For mutual TLS, both '" + CLIENT_CERT_PATH + "' and '" + CLIENT_KEY_PATH + "' are required.");
+                    + "For mutual TLS, both '" + DirectDataCloudConnectionProperties.clientCertPath + "' and '"
+                    + DirectDataCloudConnectionProperties.clientKeyPath + "' are required.");
         }
 
         return hasClientCert && hasClientKey;
@@ -254,19 +277,20 @@ public final class DirectDataCloudConnection {
      * Supports both one-sided and two-sided TLS based on provided properties.
      * Supports all combinations of JKS/PEM trust verification with PEM client certificates.
      */
-    private static ManagedChannelBuilder<?> createCustomSslChannel(URI uri, Properties properties) throws Exception {
+    private static ManagedChannelBuilder<?> createCustomSslChannel(
+            URI uri, DirectDataCloudConnectionProperties directProps) throws Exception {
         log.info("Creating SSL connection with custom configuration");
 
         SslContext sslContext;
 
         // Check if client certificates are provided (determines one-sided vs two-sided TLS)
-        if (hasClientCertificates(properties)) {
+        if (hasClientCertificates(directProps)) {
             // Two-sided TLS: trust verification + client authentication
-            sslContext = createTwoSidedTlsContext(properties);
+            sslContext = createTwoSidedTlsContext(directProps);
             log.info("Client certificates configured - using two-sided TLS");
         } else {
             // One-sided TLS: trust verification only
-            sslContext = createOneSidedTlsContext(properties);
+            sslContext = createOneSidedTlsContext(directProps);
             log.info("No client certificates - using one-sided TLS");
         }
 
@@ -277,16 +301,17 @@ public final class DirectDataCloudConnection {
      * Creates SSL context for one-sided TLS (server authentication only).
      * Supports both JKS truststore and PEM CA certificate for trust verification.
      */
-    private static SslContext createOneSidedTlsContext(Properties properties) throws Exception {
-        String truststorePath = optional(properties, TRUSTSTORE_PATH).orElse(null);
-        String caCertPath = optional(properties, CA_CERT_PATH).orElse(null);
+    private static SslContext createOneSidedTlsContext(DirectDataCloudConnectionProperties directProps)
+            throws Exception {
+        String truststorePath = directProps.getTruststorePathValue();
+        String caCertPath = directProps.getCaCertPathValue();
 
-        if (truststorePath != null) {
+        if (!truststorePath.isEmpty()) {
             // JKS truststore
             log.info("Using JKS truststore for server verification: {}", truststorePath);
-            TrustManagerFactory tmf = createJksTrustManager(properties);
+            TrustManagerFactory tmf = createJksTrustManager(directProps);
             return GrpcSslContexts.forClient().trustManager(tmf).build();
-        } else if (caCertPath != null) {
+        } else if (!caCertPath.isEmpty()) {
             // PEM CA certificate
             log.info("Using PEM CA certificate for server verification: {}", caCertPath);
             validatePemFile(caCertPath, "CA certificate");
@@ -306,24 +331,25 @@ public final class DirectDataCloudConnection {
      * Creates SSL context for two-sided TLS (mutual authentication).
      * Supports JKS truststore + PEM client certs OR PEM CA cert + PEM client certs.
      */
-    private static SslContext createTwoSidedTlsContext(Properties properties) throws Exception {
-        String clientCertPath = properties.getProperty(CLIENT_CERT_PATH);
-        String clientKeyPath = properties.getProperty(CLIENT_KEY_PATH);
-        String truststorePath = optional(properties, TRUSTSTORE_PATH).orElse(null);
-        String caCertPath = optional(properties, CA_CERT_PATH).orElse(null);
+    private static SslContext createTwoSidedTlsContext(DirectDataCloudConnectionProperties directProps)
+            throws Exception {
+        String clientCertPath = directProps.getClientCertPathValue();
+        String clientKeyPath = directProps.getClientKeyPathValue();
+        String truststorePath = directProps.getTruststorePathValue();
+        String caCertPath = directProps.getCaCertPathValue();
 
         // Validate client certificate files
-        validateCertificateFiles(clientCertPath, clientKeyPath, caCertPath);
+        validateCertificateFiles(clientCertPath, clientKeyPath, caCertPath.isEmpty() ? null : caCertPath);
 
-        if (truststorePath != null) {
+        if (!truststorePath.isEmpty()) {
             // JKS truststore + PEM client certs
             log.info("Using JKS truststore + PEM client certificates for mutual TLS");
-            TrustManagerFactory tmf = createJksTrustManager(properties);
+            TrustManagerFactory tmf = createJksTrustManager(directProps);
             return GrpcSslContexts.forClient()
                     .trustManager(tmf)
                     .keyManager(new File(clientCertPath), new File(clientKeyPath))
                     .build();
-        } else if (caCertPath != null) {
+        } else if (!caCertPath.isEmpty()) {
             // PEM CA cert + PEM client certs
             log.info("Using PEM CA certificate + PEM client certificates for mutual TLS");
             return GrpcSslContexts.forClient()
@@ -345,10 +371,11 @@ public final class DirectDataCloudConnection {
     /**
      * Creates trust manager from JKS truststore.
      */
-    private static TrustManagerFactory createJksTrustManager(Properties properties) throws Exception {
-        String truststorePath = properties.getProperty(TRUSTSTORE_PATH);
-        String truststorePassword = optional(properties, TRUSTSTORE_PASSWORD).orElse("");
-        String truststoreType = optional(properties, TRUSTSTORE_TYPE).orElse("JKS");
+    private static TrustManagerFactory createJksTrustManager(DirectDataCloudConnectionProperties directProps)
+            throws Exception {
+        String truststorePath = directProps.getTruststorePathValue();
+        String truststorePassword = directProps.getTruststorePasswordValue();
+        String truststoreType = directProps.getTruststoreTypeValue();
 
         // Validate truststore file
         validateTruststoreFile(truststorePath);
