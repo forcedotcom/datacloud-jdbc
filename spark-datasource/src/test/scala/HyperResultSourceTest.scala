@@ -83,17 +83,21 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
   }
 
   test("reports an error on unknown properties") {
-    val e = intercept[IllegalArgumentException] {
+    val e = intercept[DataCloudJDBCException] {
       spark.read
         .format("com.salesforce.datacloud.spark.HyperResultSource")
         .option(
           "jdbcUrl",
           s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
         )
-        .option("unknown-property", "maybe")
+        .option("queryId", "143241")
+        .option("unknownProperty", "maybe")
         .load()
     }
-    assert(e.getMessage.equals("Unknown JDBC properties: unknown-property"))
+    assert(
+      e.getMessage().equals("Unknown JDBC properties: unknownProperty"),
+      e.getMessage()
+    )
   }
 
   test("supports reading all types") {

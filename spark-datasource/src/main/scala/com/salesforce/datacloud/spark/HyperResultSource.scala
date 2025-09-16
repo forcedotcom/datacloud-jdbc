@@ -25,12 +25,12 @@ import scala.util.Using
   */
 class HyperResultSource extends TableProvider {
   override def inferSchema(options: CaseInsensitiveStringMap): StructType = {
-    val connectionOptions =
-      HyperResultSourceOptions.fromOptions(options)
+    val parsedOptions =
+      HyperResultSourceOptions.fromOptions(options.asCaseSensitiveMap())
 
-    Using.resource(connectionOptions.createConnection()) { conn =>
+    Using.resource(parsedOptions.createConnection()) { conn =>
       // TODO XXX: use `getResultSet` instead of `getChunkBasedResultSet`, as soon as it was added to the JDBC driver
-      val rs = conn.getChunkBasedResultSet(queryId, 0, 0);
+      val rs = conn.getChunkBasedResultSet(parsedOptions.queryId, 0, 0);
       TypeMapping.getSparkFields(rs.getMetaData())
     }
   }
@@ -40,8 +40,8 @@ class HyperResultSource extends TableProvider {
       partitioning: Array[Transform],
       properties: java.util.Map[String, String]
   ): Table = {
-    val connectionOptions =
-      HyperResultSourceOptions.fromOptions(propertiesClone)
-    HyperResultTable(connectionOptions, queryId, schema)
+    val parsedOptions =
+      HyperResultSourceOptions.fromOptions(properties)
+    HyperResultTable(parsedOptions, schema)
   }
 }

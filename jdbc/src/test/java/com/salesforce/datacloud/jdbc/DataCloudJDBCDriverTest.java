@@ -85,7 +85,7 @@ public class DataCloudJDBCDriverTest {
 
     @Test
     public void testUnknownUrlParameterRaisesUserError() {
-        final Driver driver = new HyperJDBCDriver();
+        final Driver driver = new DataCloudJDBCDriver();
 
         assertThatExceptionOfType(DataCloudJDBCException.class)
                 .isThrownBy(() -> driver.connect(

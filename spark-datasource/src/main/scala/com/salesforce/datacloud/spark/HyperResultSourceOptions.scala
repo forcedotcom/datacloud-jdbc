@@ -23,12 +23,16 @@ private object HyperResultSourceOptions {
       options: java.util.Map[String, String]
   ): HyperResultSourceOptions = {
 
+    println("options", options)
+
     val props = new Properties()
     options.forEach((key, value) => props.setProperty(key, value))
 
-    var jdbcUrl = props.getProperty("jdbcUrl");
+    val jdbcUrl = props.getProperty("jdbcUrl");
     if (jdbcUrl == null) {
-      throw new IllegalArgumentException("Missing `jdbcUrl` property")
+      throw new IllegalArgumentException(
+        s"Missing `jdbcUrl` property. Available keys: ${options.keySet().toArray.mkString(", ")}"
+      )
     }
     props.remove("jdbcUrl")
     val queryId = props.getProperty("queryId")

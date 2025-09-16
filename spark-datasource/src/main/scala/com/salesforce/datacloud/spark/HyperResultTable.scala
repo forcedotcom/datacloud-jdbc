@@ -19,11 +19,10 @@ import org.apache.spark.sql.connector.metric.CustomMetric
 import org.apache.spark.sql.connector.metric.CustomTaskMetric
 
 private case class HyperResultTable(
-    connectionOptions: HyperResultSourceOptions,
-    resultSetId: String,
+    parsedOptions: HyperResultSourceOptions,
     schema: StructType
 ) extends SupportsRead {
-  override def name(): String = s"hyper_result_set_${resultSetId}"
+  override def name(): String = s"hyper_result_set_${parsedOptions.queryId}"
 
   override def capabilities(): ju.Set[TableCapability] = {
     val capabilities = new ju.HashSet[TableCapability]()
@@ -35,16 +34,16 @@ private case class HyperResultTable(
       options: CaseInsensitiveStringMap
   ): ScanBuilder = {
     val (chunkCount, rowCount) =
-      Using(connectionOptions.createConnection()) { conn =>
+      Using(parsedOptions.createConnection()) { conn =>
         // We don't have any separate query timeouts here, as Spark already has a global job timeout, anyway.
-        val queryStatus = conn.waitFor(resultSetId, _.allResultsProduced())
+        val queryStatus =
+          conn.waitFor(parsedOptions.queryId, _.allResultsProduced())
         (queryStatus.getChunkCount(), queryStatus.getRowCount())
       }.get
 
     new ScanBuilder {
       override def build(): Scan = HyperResultScan(
-        connectionOptions,
-        resultSetId,
+        parsedOptions,
         schema,
         chunkCount,
         rowCount
@@ -54,8 +53,7 @@ private case class HyperResultTable(
 }
 
 private case class HyperResultScan(
-    connectionOptions: HyperResultSourceOptions,
-    resultSetId: String,
+    parsedOptions: HyperResultSourceOptions,
     schema: StructType,
     chunkCount: Long,
     rowCount: Long
@@ -80,8 +78,7 @@ private case class HyperResultScan(
 
   override def readSchema(): StructType = schema
   override def toBatch(): Batch = new HyperResultBatch(
-    connectionOptions,
-    resultSetId,
+    parsedOptions,
     schema,
     chunkCount
   )
