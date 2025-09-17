@@ -7,13 +7,15 @@ package com.salesforce.datacloud.jdbc.core;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 /**
- * This interface allows to provide a custom initialized stub for the Hyper gRPC client used by the JDBC Connection.
- * This is useful for example to provide a stub that uses additional custom interceptors or a custom channel. To allow
- * implementations to do proper cleanup, the interface extends AutoCloseable and the driver will call close() on the
- * provider when DataCloudConnection is closed.
+ * Interface used to generate a stub for the DataCloudConnection.
+ *
+ * Implement this interface to customize the stub creation, e.g., using custom
+ * interceptors or using a custom pool of grpc channels.
+ *
+ * To allow proper cleanup, the interface extends AutoCloseable and the driver will
+ * call close() on the provider when the DataCloudConnection is closed.
  */
 public interface HyperGrpcStubProvider extends AutoCloseable {
-
     /**
      * Returns a new HyperServiceGrpc.HyperServiceBlockingStub
      *

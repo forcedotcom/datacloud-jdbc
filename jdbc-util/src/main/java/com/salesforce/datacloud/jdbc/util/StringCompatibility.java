@@ -16,8 +16,4 @@ public class StringCompatibility {
     public static boolean isNullOrBlank(String str) {
         return str == null || str.trim().isEmpty();
     }
-
-    public static boolean isBlank(String str) {
-        return isNullOrBlank(str);
-    }
 }

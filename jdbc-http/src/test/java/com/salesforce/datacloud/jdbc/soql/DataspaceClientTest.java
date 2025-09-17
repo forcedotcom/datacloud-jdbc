@@ -4,17 +4,16 @@
  */
 package com.salesforce.datacloud.jdbc.soql;
 
-import static com.salesforce.datacloud.jdbc.auth.PropertiesUtils.randomString;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProvider;
 import com.salesforce.datacloud.jdbc.auth.OAuthToken;
-import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
 import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.http.HttpClientProperties;
 import java.util.List;
-import java.util.Properties;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -30,7 +29,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class DataspaceClientTest {
     @Mock
-    TokenProcessor tokenProcessor;
+    DataCloudTokenProvider tokenProvider;
+
+    private String randomString() {
+        return UUID.randomUUID().toString();
+    }
 
     @SneakyThrows
     @Test
@@ -48,9 +51,9 @@ class DataspaceClientTest {
         try (val server = new MockWebServer()) {
             server.start();
             oAuthTokenResponse.setInstanceUrl(server.url("").toString());
-            Mockito.when(tokenProcessor.getOAuthToken()).thenReturn(OAuthToken.of(oAuthTokenResponse));
+            Mockito.when(tokenProvider.getOAuthToken()).thenReturn(OAuthToken.of(oAuthTokenResponse));
 
-            val client = new DataspaceClient(new Properties(), tokenProcessor);
+            val client = new DataspaceClient(HttpClientProperties.defaultProperties(), tokenProvider);
 
             server.enqueue(new MockResponse().setBody(mapper.writeValueAsString(dataspaceResponse)));
             val actual = client.get();
@@ -64,7 +67,7 @@ class DataspaceClientTest {
             assertThat(actualRequest.getBody().readUtf8()).isBlank();
             assertThat(actualRequest.getHeader("Authorization")).isEqualTo("Bearer " + accessToken);
             assertThat(actualRequest.getHeader("Content-Type")).isEqualTo("application/json");
-            assertThat(actualRequest.getHeader("User-Agent")).isEqualTo("cdp/jdbc");
+            assertThat(actualRequest.getHeader("User-Agent")).startsWith("salesforce-datacloud-jdbc/");
             assertThat(actualRequest.getHeader("enable-stream-flow")).isEqualTo("false");
         }
     }
@@ -84,8 +87,8 @@ class DataspaceClientTest {
         try (val server = new MockWebServer()) {
             server.start();
             oAuthTokenResponse.setInstanceUrl(server.url("").toString());
-            Mockito.when(tokenProcessor.getOAuthToken()).thenReturn(OAuthToken.of(oAuthTokenResponse));
-            val client = new DataspaceClient(new Properties(), tokenProcessor);
+            Mockito.when(tokenProvider.getOAuthToken()).thenReturn(OAuthToken.of(oAuthTokenResponse));
+            val client = new DataspaceClient(HttpClientProperties.defaultProperties(), tokenProvider);
 
             server.enqueue(new MockResponse().setResponseCode(500));
             Assertions.assertThrows(DataCloudJDBCException.class, client::get);

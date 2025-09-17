@@ -17,10 +17,7 @@ import com.salesforce.datacloud.jdbc.util.GrpcUtils;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.StatusRuntimeException;
-import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.Statement;
-import java.util.Properties;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -38,7 +35,7 @@ import org.mockito.Mock;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 @ExtendWith(InProcessGrpcMockExtension.class)
-public class DataCloudStatementTest extends HyperGrpcTestBase {
+public class DataCloudStatementTest extends InterceptedHyperTestBase {
     @Mock
     private DataCloudConnection connection;
 
@@ -47,7 +44,7 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @BeforeEach
     @SneakyThrows
     public void beforeEach() {
-        connection = DataCloudConnection.of(stubProvider, new Properties());
+        connection = getInterceptedClientConnection();
         statement = new DataCloudStatement(connection);
     }
 
@@ -125,18 +122,6 @@ public class DataCloudStatementTest extends HyperGrpcTestBase {
     @Test
     public void testGetQueryTimeoutDefaultValue() {
         assertThat(statement.getQueryTimeout()).isEqualTo(0);
-    }
-
-    @SneakyThrows
-    @Test
-    public void testGetQueryTimeoutSetByConfig() {
-        Properties properties = new Properties();
-        properties.setProperty("queryTimeout", Integer.toString(30));
-        try (Connection connection = DataCloudConnection.of(stubProvider, properties)) {
-            try (Statement statement = connection.createStatement()) {
-                assertThat(statement.getQueryTimeout()).isEqualTo(30);
-            }
-        }
     }
 
     @Test

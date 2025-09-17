@@ -37,12 +37,6 @@ import org.apache.commons.lang3.StringUtils;
 
 @Slf4j
 final class QueryMetadataUtil {
-    static final int NUM_TABLE_METADATA_COLUMNS = 10;
-    static final int NUM_COLUMN_METADATA_COLUMNS = 24;
-    static final int NUM_SCHEMA_METADATA_COLUMNS = 2;
-    static final int NUM_TABLE_TYPES_METADATA_COLUMNS = 1;
-    static final int NUM_CATALOG_METADATA_COLUMNS = 1;
-
     private static final int TABLE_CATALOG_INDEX = 0;
     private static final int TABLE_SCHEMA_INDEX = 1;
     private static final int TABLE_NAME_INDEX = 2;
@@ -100,13 +94,13 @@ final class QueryMetadataUtil {
             data = constructTableData(resultSet);
         }
 
-        return getMetadataResultSet(QueryDBMetadata.GET_TABLES, NUM_TABLE_METADATA_COLUMNS, data);
+        return getMetadataResultSet(QueryDBMetadata.GET_TABLES, data);
     }
 
-    static AvaticaResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, int columnsCount, List<Object> data)
+    static AvaticaResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, List<Object> data)
             throws SQLException {
         QueryResultSetMetadata queryResultSetMetadata = new QueryResultSetMetadata(queryDbMetadata);
-        List<ColumnMetaData> columnMetaData = convertJDBCMetadataToAvaticaColumns(queryResultSetMetadata, columnsCount);
+        List<ColumnMetaData> columnMetaData = convertJDBCMetadataToAvaticaColumns(queryResultSetMetadata);
         Meta.Signature signature = new Meta.Signature(
                 columnMetaData, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
         return MetadataResultSet.of(
@@ -176,7 +170,7 @@ final class QueryMetadataUtil {
             data = constructColumnData(resultSet);
         }
 
-        return getMetadataResultSet(QueryDBMetadata.GET_COLUMNS, NUM_COLUMN_METADATA_COLUMNS, data);
+        return getMetadataResultSet(QueryDBMetadata.GET_COLUMNS, data);
     }
 
     private static String getColumnsQueryInner(
@@ -299,7 +293,7 @@ final class QueryMetadataUtil {
             data = constructSchemaData(resultSet);
         }
 
-        return getMetadataResultSet(QueryDBMetadata.GET_SCHEMAS, NUM_SCHEMA_METADATA_COLUMNS, data);
+        return getMetadataResultSet(QueryDBMetadata.GET_SCHEMAS, data);
     }
 
     private static String getSchemasQuery(String schemaPattern) {
@@ -330,7 +324,7 @@ final class QueryMetadataUtil {
         List<Object> data = constructTableTypesData();
         QueryDBMetadata queryDbMetadata = QueryDBMetadata.GET_TABLE_TYPES;
 
-        return getMetadataResultSet(queryDbMetadata, NUM_TABLE_TYPES_METADATA_COLUMNS, data);
+        return getMetadataResultSet(queryDbMetadata, data);
     }
 
     private static List<Object> constructTableTypesData() {
@@ -360,7 +354,7 @@ final class QueryMetadataUtil {
     public static ResultSet createCatalogsResultSet(ThrowingJdbcSupplier<String> lakehouseSupplier)
             throws SQLException {
         val data = getLakehouse(lakehouseSupplier);
-        return getMetadataResultSet(QueryDBMetadata.GET_CATALOGS, NUM_CATALOG_METADATA_COLUMNS, data);
+        return getMetadataResultSet(QueryDBMetadata.GET_CATALOGS, data);
     }
 
     private static final Map<String, Map<String, String>> tableTypeClauses = ImmutableMap.ofEntries(

@@ -4,6 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptional;
+
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.util.Properties;
 import lombok.Builder;
@@ -15,12 +17,6 @@ import lombok.Getter;
 @Getter
 @Builder
 public class ConnectionProperties {
-    /**
-     * The dataspace to use for the connection
-     */
-    @Builder.Default
-    private final String dataspace = "";
-
     /**
      * The workload to use for the connection (default: jdbcv3)
      */
@@ -34,45 +30,30 @@ public class ConnectionProperties {
     private final String externalClientContext = "";
 
     /**
-     * The user name to use for the connection
-     */
-    @Builder.Default
-    private final String userName = "";
-
-    /**
      * Statement properties associated with this connection
      */
     @Builder.Default
     private final StatementProperties statementProperties =
             StatementProperties.builder().build();
 
+    public static ConnectionProperties defaultProperties() {
+        return builder().build();
+    }
+
     /**
      * Parses connection properties from a Properties object.
+     * Removes the interpreted properties from the Properties object.
      *
      * @param props The properties to parse
      * @return A ConnectionProperties instance
      * @throws DataCloudJDBCException if parsing of property values fails
      */
-    public static ConnectionProperties of(Properties props) throws DataCloudJDBCException {
+    public static ConnectionProperties ofDestructive(Properties props) throws DataCloudJDBCException {
         ConnectionPropertiesBuilder builder = ConnectionProperties.builder();
 
-        String dataspaceValue = props.getProperty("dataspace");
-        if (dataspaceValue != null) {
-            builder.dataspace(dataspaceValue);
-        }
-        String workloadValue = props.getProperty("workload");
-        if (workloadValue != null) {
-            builder.workload(workloadValue);
-        }
-        String externalClientContextValue = props.getProperty("external-client-context");
-        if (externalClientContextValue != null) {
-            builder.externalClientContext(externalClientContextValue);
-        }
-        String userNameValue = props.getProperty("userName");
-        if (userNameValue != null) {
-            builder.userName(userNameValue);
-        }
-        builder.statementProperties(StatementProperties.of(props));
+        takeOptional(props, "workload").ifPresent(builder::workload);
+        takeOptional(props, "externalClientContext").ifPresent(builder::externalClientContext);
+        builder.statementProperties(StatementProperties.ofDestructive(props));
 
         return builder.build();
     }
@@ -85,17 +66,11 @@ public class ConnectionProperties {
     public Properties toProperties() {
         Properties props = new Properties();
 
-        if (!dataspace.isEmpty()) {
-            props.setProperty("dataspace", dataspace);
-        }
         if (!workload.isEmpty()) {
             props.setProperty("workload", workload);
         }
         if (!externalClientContext.isEmpty()) {
-            props.setProperty("external-client-context", externalClientContext);
-        }
-        if (!userName.isEmpty()) {
-            props.setProperty("userName", userName);
+            props.setProperty("externalClientContext", externalClientContext);
         }
         props.putAll(statementProperties.toProperties());
 

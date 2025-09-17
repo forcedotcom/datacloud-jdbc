@@ -4,14 +4,11 @@
  */
 package com.salesforce.datacloud.jdbc.http;
 
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.getIntegerOrDefault;
-
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -24,13 +21,11 @@ import okhttp3.ResponseBody;
 
 @Slf4j
 public class MetadataCacheInterceptor implements Interceptor {
-    private static final MediaType mediaType = MediaType.parse(Constants.CONTENT_TYPE_JSON);
+    private static final MediaType mediaType = MediaType.parse("application/json");
 
     private final Cache<String, String> metaDataCache;
 
-    public MetadataCacheInterceptor(Properties properties) {
-        val metaDataCacheDurationInMs = getIntegerOrDefault(properties, "metadataCacheTtlMs", 10000);
-
+    public MetadataCacheInterceptor(int metaDataCacheDurationInMs) {
         this.metaDataCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(metaDataCacheDurationInMs, TimeUnit.MILLISECONDS)
                 .maximumSize(10)

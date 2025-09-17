@@ -9,7 +9,6 @@ import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerProcess;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.RealisticArrowGenerator;
-import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
@@ -18,7 +17,6 @@ import io.grpc.inprocess.InProcessChannelBuilder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
 import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -30,7 +28,6 @@ import lombok.val;
 import org.grpcmock.GrpcMock;
 import org.grpcmock.junit5.InProcessGrpcMockExtension;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
@@ -38,31 +35,18 @@ import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
+/**
+ * Base class for tests with a local `hyperd` server running and intercepted grpc calls.
+ */
 @Slf4j
 @ExtendWith(InProcessGrpcMockExtension.class)
-public class HyperGrpcTestBase {
-    protected DataCloudJdbcManagedChannel channel;
-
-    protected JdbcDriverStubProvider stubProvider;
-
-    protected static HyperGrpcClientExecutor hyperGrpcClient;
-
-    private final List<HyperServerProcess> servers = new ArrayList<>();
-
+public class InterceptedHyperTestBase {
     private final List<ManagedChannel> channels = new ArrayList<>();
 
     private final List<DataCloudConnection> connections = new ArrayList<>();
 
     @AfterEach
-    public void cleanUpServers() {
-        servers.forEach(s -> {
-            try {
-                s.close();
-            } catch (Exception e) {
-                log.error("Failed to clean up hyper server process", e);
-            }
-        });
-
+    public void cleanUp() {
         channels.forEach(c -> {
             try {
                 c.shutdownNow();
@@ -80,6 +64,17 @@ public class HyperGrpcTestBase {
         });
     }
 
+    protected DataCloudConnection getInterceptedClientConnection() {
+        return getInterceptedClientConnection(
+                HyperServerConfig.builder().build(), HyperServerManager.ConfigFile.SMALL_CHUNKS);
+    }
+
+    @SneakyThrows
+    protected DataCloudConnection getInterceptedClientConnection(HyperServerConfig config) {
+        val server = HyperServerManager.get(config.toBuilder(), HyperServerManager.ConfigFile.SMALL_CHUNKS);
+        return getInterceptedClientConnection(server);
+    }
+
     protected DataCloudConnection getInterceptedClientConnection(
             HyperServerConfig config, HyperServerManager.ConfigFile configFile) {
         val server = HyperServerManager.get(config.toBuilder(), configFile);
@@ -87,7 +82,7 @@ public class HyperGrpcTestBase {
     }
 
     @SneakyThrows
-    protected DataCloudConnection getInterceptedClientConnection(HyperServerProcess server) {
+    private DataCloudConnection getInterceptedClientConnection(HyperServerProcess server) {
         val channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.getPort())
                 .usePlaintext()
                 .maxInboundMessageSize(64 * 1024 * 1024)
@@ -115,22 +110,18 @@ public class HyperGrpcTestBase {
                 HyperServiceGrpc.getGetQueryResultMethod(),
                 HyperServiceGrpc.HyperServiceBlockingStub::getQueryResult);
 
-        val conn = DataCloudConnection.of(mocked, new Properties());
+        val conn = DataCloudConnection.of(
+                JdbcDriverStubProvider.of(mocked), ConnectionProperties.defaultProperties(), "", null);
         connections.add(conn);
         return conn;
     }
 
-    protected DataCloudConnection getInterceptedClientConnection() {
-        return getInterceptedClientConnection(
-                HyperServerConfig.builder().build(), HyperServerManager.ConfigFile.SMALL_CHUNKS);
-    }
-
     @SneakyThrows
-    protected DataCloudConnection getInterceptedClientConnection(HyperServerConfig config) {
-        val server = config.start();
-        servers.add(server);
-
-        return getInterceptedClientConnection(server);
+    protected HyperGrpcClientExecutor getInterceptedGrpcExecutor() {
+        val conn = getInterceptedClientConnection();
+        return HyperGrpcClientExecutor.of(
+                conn.getStub(),
+                conn.getConnectionProperties().getStatementProperties().getQuerySettings());
     }
 
     public static <ReqT, RespT> void proxyStreamingMethod(
@@ -163,39 +154,6 @@ public class HyperGrpcTestBase {
 
             observer.onCompleted();
         }));
-    }
-
-    @SneakyThrows
-    public HyperGrpcClientExecutor setupClientWith(ClientInterceptor... interceptors) {
-        val builder = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
-                .usePlaintext()
-                .intercept(interceptors);
-
-        if (channel != null) {
-            channel.close();
-        }
-
-        channel = DataCloudJdbcManagedChannel.of(builder);
-        stubProvider = new JdbcDriverStubProvider(channel, false);
-        val connection = DataCloudConnection.of(stubProvider, new Properties());
-
-        return HyperGrpcClientExecutor.of(
-                connection.getStub(),
-                connection.getConnectionProperties().getStatementProperties().getQuerySettings());
-    }
-
-    @BeforeEach
-    public void setupClient() {
-        hyperGrpcClient = setupClientWith();
-    }
-
-    @AfterEach
-    @SneakyThrows
-    public void cleanup() {
-        if (channel != null) {
-            stubProvider.close();
-            channel.close();
-        }
     }
 
     private void willReturn(List<ExecuteQueryResponse> responses, QueryParam.TransferMode mode) {

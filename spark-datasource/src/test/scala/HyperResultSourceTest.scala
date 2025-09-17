@@ -2,6 +2,8 @@ import org.scalatest.funsuite.AnyFunSuite
 import scala.util.Using
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerManager
+import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile
 import java.sql.Date
 import java.sql.Timestamp
 import java.math.BigDecimal
@@ -20,31 +22,80 @@ import org.apache.spark.sql.types.{
   BinaryType
 }
 
-class HyperResultSourceTest
-    extends AnyFunSuite
-    with WithSparkSession
-    with WithHyperServer {
+object HyperResultSourceTest {
+  Class.forName("com.salesforce.datacloud.jdbc.HyperJDBCDriver");
+}
+
+class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
+  val hyperServerProcess = HyperServerManager.get(ConfigFile.SMALL_CHUNKS);
+
+  test("can connect using a jdbc url") {
+    val queryId = Using.Manager { use =>
+      val connection = use(hyperServerProcess.getConnection());
+      val stmt =
+        use(connection.createStatement().unwrap(classOf[DataCloudStatement]))
+      stmt.execute("SELECT 42::bigint AS bigint")
+      stmt.getQueryId()
+    }.get
+
+    val row = spark.read
+      .format("com.salesforce.datacloud.spark.HyperResultSource")
+      .option(
+        "jdbcUrl",
+        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+      )
+      .option("queryId", queryId)
+      .load()
+      .head()
+
+    // Verify the schema of the result.
+    assert(row.getAs[Long]("bigint") == 42)
+  }
 
   test("reports an error on missing query id") {
     val e = intercept[IllegalArgumentException] {
       spark.read
         .format("com.salesforce.datacloud.spark.HyperResultSource")
-        .option("port", hyperServerProcess.getPort())
+        .option(
+          "jdbcUrl",
+          s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+        )
         .load()
     }
-    assert(e.getMessage.equals("Missing `query_id` property"))
+    assert(e.getMessage.equals("Missing `queryId` property"))
   }
 
   test("reports an error on invalid query id") {
     val e = intercept[DataCloudJDBCException] {
       spark.read
         .format("com.salesforce.datacloud.spark.HyperResultSource")
-        .option("port", hyperServerProcess.getPort())
-        .option("query_id", "invalid")
+        .option(
+          "jdbcUrl",
+          s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+        )
+        .option("queryId", "invalid")
         .load()
     }
     assert(
       e.getMessage().contains("The requested query ID is unknown"),
+      e.getMessage()
+    )
+  }
+
+  test("reports an error on unknown properties") {
+    val e = intercept[DataCloudJDBCException] {
+      spark.read
+        .format("com.salesforce.datacloud.spark.HyperResultSource")
+        .option(
+          "jdbcUrl",
+          s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+        )
+        .option("queryId", "143241")
+        .option("unknownProperty", "maybe")
+        .load()
+    }
+    assert(
+      e.getMessage().equals("Unknown JDBC properties: unknownProperty"),
       e.getMessage()
     )
   }
@@ -85,8 +136,11 @@ class HyperResultSourceTest
 
     val row = spark.read
       .format("com.salesforce.datacloud.spark.HyperResultSource")
-      .option("port", hyperServerProcess.getPort())
-      .option("query_id", queryId)
+      .option(
+        "jdbcUrl",
+        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+      )
+      .option("queryId", queryId)
       .load()
       .head()
 
@@ -187,8 +241,11 @@ class HyperResultSourceTest
 
     val rows = spark.read
       .format("com.salesforce.datacloud.spark.HyperResultSource")
-      .option("port", hyperServerProcess.getPort())
-      .option("query_id", queryId)
+      .option(
+        "jdbcUrl",
+        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+      )
+      .option("queryId", queryId)
       .load()
       .collect()
 

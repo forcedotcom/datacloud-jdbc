@@ -4,14 +4,14 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertWithStatement;
-import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertEachRowIsTheSame;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertWithStatement;
+import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(HyperTestBase.class)
+@ExtendWith(LocalHyperTestBase.class)
 public class AsyncStreamingResultSetTest {
     private static final int size = 64;
 
@@ -42,8 +42,9 @@ public class AsyncStreamingResultSetTest {
                 .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContaining("HINT:")
                 .hasMessageContaining("42P01: table \"nonsense\" does not exist")
-                .hasCauseInstanceOf(StatusRuntimeException.class)
-                .hasRootCauseMessage("FAILED_PRECONDITION: table \"nonsense\" does not exist");
+                .rootCause()
+                .isInstanceOf(StatusRuntimeException.class)
+                .hasMessageContaining("FAILED_PRECONDITION: table \"nonsense\" does not exist [TraceId:");
     }
 
     @Test

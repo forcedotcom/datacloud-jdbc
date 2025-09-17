@@ -13,7 +13,9 @@ import static com.salesforce.datacloud.jdbc.core.QueryMetadataUtil.createTableTy
 import static com.salesforce.datacloud.jdbc.util.Constants.*;
 
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -33,8 +35,10 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     @Getter
     private final Connection connection;
 
-    private final DataCloudConnectionString connectionString;
+    // Returned by DatabaseMetadata.getURL().
+    private final JdbcURL jdbcUrl;
 
+    // Returned by DatabaseMetadata.getCatalogs().
     private final ThrowingJdbcSupplier<String> lakehouseSupplier;
 
     private final ThrowingJdbcSupplier<List<String>> dataspacesSupplier;
@@ -54,9 +58,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public String getURL() {
-        return Optional.ofNullable(connectionString)
-                .map(DataCloudConnectionString::getDatabaseUrl)
-                .orElse(null);
+        return Optional.ofNullable(jdbcUrl).map(JdbcURL::getUrlWithoutQuery).orElse(null);
     }
 
     @Override
@@ -86,22 +88,22 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public String getDatabaseProductName() {
-        return DATABASE_PRODUCT_NAME;
+        return DriverVersion.getProductName();
     }
 
     @Override
     public String getDatabaseProductVersion() {
-        return DATABASE_PRODUCT_VERSION;
+        return DriverVersion.getProductVersion();
     }
 
     @Override
     public String getDriverName() {
-        return DRIVER_NAME;
+        return DriverVersion.getDriverName();
     }
 
     @Override
     public String getDriverVersion() {
-        return DRIVER_VERSION;
+        return DriverVersion.getDriverVersion();
     }
 
     @Override
