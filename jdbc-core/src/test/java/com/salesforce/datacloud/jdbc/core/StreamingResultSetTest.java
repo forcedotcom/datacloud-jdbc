@@ -7,10 +7,12 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.SneakyThrows;
@@ -117,6 +119,71 @@ public class StreamingResultSetTest {
         assertThat(witnessed.get())
                 .as("last value seen from query: " + status.getQueryId())
                 .isEqualTo(rows);
+    }
+
+    @SneakyThrows
+    @Test
+    public void testGetSchemaForQueryIdWithZeroResults() {
+        withStatement(none, (conn, stmt) -> {
+            val sql =
+                    "SELECT s, s::text as s_text, cast(s as numeric(38,18)) as s_numeric FROM generate_series(1,10) s LIMIT 0";
+
+            final String queryId;
+            try (val rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
+                queryId = rs.getQueryId();
+                conn.waitFor(queryId, QueryStatus::allResultsProduced);
+            }
+
+            val schemaResultSet = conn.getSchemaForQueryId(queryId);
+            val metaData = schemaResultSet.getMetaData();
+
+            assertThat(metaData.getColumnCount()).as("column count").isEqualTo(3);
+
+            assertThat(metaData.getColumnName(1)).as("integer column").isEqualTo("s");
+            assertThat(metaData.getColumnType(1)).as("integer column").isEqualTo(Types.INTEGER);
+
+            assertThat(metaData.getColumnName(2)).as("text column").isEqualTo("s_text");
+            assertThat(metaData.getColumnType(2)).as("text column").isEqualTo(Types.VARCHAR);
+
+            assertThat(metaData.getColumnName(3)).as("decimal column name").isEqualTo("s_numeric");
+            assertThat(metaData.getColumnType(3)).as("decimal column type").isEqualTo(Types.DECIMAL);
+            assertThat(metaData.getPrecision(3)).as("decimal column precision").isEqualTo(38);
+            assertThat(metaData.getScale(3)).as("decimal column scale").isEqualTo(18);
+
+            assertFalse(schemaResultSet.next());
+        });
+    }
+
+    @SneakyThrows
+    @Test
+    public void testGetSchemaForQueryIdWithResults() {
+        withStatement(none, (conn, stmt) -> {
+            val sql = "SELECT s, s::text as s_text, cast(s as numeric(38,18)) as s_numeric FROM generate_series(1,3) s";
+
+            final String queryId;
+            try (val rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
+                queryId = rs.getQueryId();
+                conn.waitFor(queryId, QueryStatus::allResultsProduced);
+            }
+
+            val schemaResultSet = conn.getSchemaForQueryId(queryId);
+            val metaData = schemaResultSet.getMetaData();
+
+            assertThat(metaData.getColumnCount()).as("column count").isEqualTo(3);
+
+            assertThat(metaData.getColumnName(1)).as("integer column").isEqualTo("s");
+            assertThat(metaData.getColumnType(1)).as("integer column").isEqualTo(Types.INTEGER);
+
+            assertThat(metaData.getColumnName(2)).as("text column").isEqualTo("s_text");
+            assertThat(metaData.getColumnType(2)).as("text column").isEqualTo(Types.VARCHAR);
+
+            assertThat(metaData.getColumnName(3)).as("decimal column name").isEqualTo("s_numeric");
+            assertThat(metaData.getColumnType(3)).as("decimal column type").isEqualTo(Types.DECIMAL);
+            assertThat(metaData.getPrecision(3)).as("decimal column precision").isEqualTo(38);
+            assertThat(metaData.getScale(3)).as("decimal column scale").isEqualTo(18);
+
+            assertFalse(schemaResultSet.next()); // false because getSchemaForQueryId only returns schema info, no rows
+        });
     }
 
     @FunctionalInterface
