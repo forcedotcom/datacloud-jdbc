@@ -37,8 +37,7 @@ class HyperResultSource extends TableProvider {
       HyperConnectionOptions.fromOptions(options.asCaseSensitiveMap())
 
     Using.resource(connectionOptions.createConnection()) { conn =>
-      // TODO XXX: use `getResultSet` instead of `getChunkBasedResultSet`, as soon as it was added to the JDBC driver
-      val rs = conn.getChunkBasedResultSet(queryId, 0, 0);
+      val rs = conn.getSchemaForQueryId(queryId);
       TypeMapping.getSparkFields(rs.getMetaData())
     }
   }
