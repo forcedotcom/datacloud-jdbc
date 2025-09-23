@@ -7,7 +7,6 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
@@ -134,8 +133,7 @@ public class StreamingResultSetTest {
                 conn.waitFor(queryId, QueryStatus::allResultsProduced);
             }
 
-            val schemaResultSet = conn.getSchemaForQueryId(queryId);
-            val metaData = schemaResultSet.getMetaData();
+            val metaData = conn.getSchemaForQueryId(queryId);
 
             assertThat(metaData.getColumnCount()).as("column count").isEqualTo(3);
 
@@ -149,8 +147,6 @@ public class StreamingResultSetTest {
             assertThat(metaData.getColumnType(3)).as("decimal column type").isEqualTo(Types.DECIMAL);
             assertThat(metaData.getPrecision(3)).as("decimal column precision").isEqualTo(38);
             assertThat(metaData.getScale(3)).as("decimal column scale").isEqualTo(18);
-
-            assertFalse(schemaResultSet.next());
         });
     }
 
@@ -166,8 +162,7 @@ public class StreamingResultSetTest {
                 conn.waitFor(queryId, QueryStatus::allResultsProduced);
             }
 
-            val schemaResultSet = conn.getSchemaForQueryId(queryId);
-            val metaData = schemaResultSet.getMetaData();
+            val metaData = conn.getSchemaForQueryId(queryId);
 
             assertThat(metaData.getColumnCount()).as("column count").isEqualTo(3);
 
@@ -181,8 +176,6 @@ public class StreamingResultSetTest {
             assertThat(metaData.getColumnType(3)).as("decimal column type").isEqualTo(Types.DECIMAL);
             assertThat(metaData.getPrecision(3)).as("decimal column precision").isEqualTo(38);
             assertThat(metaData.getScale(3)).as("decimal column scale").isEqualTo(18);
-
-            assertFalse(schemaResultSet.next()); // false because getSchemaForQueryId only returns schema info, no rows
         });
     }
 

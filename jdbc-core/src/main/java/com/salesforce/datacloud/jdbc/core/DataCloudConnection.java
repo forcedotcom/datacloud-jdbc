@@ -27,6 +27,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
@@ -272,10 +273,10 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         return getChunkBasedResultSet(queryId, chunkId, 1);
     }
 
-    public DataCloudResultSet getSchemaForQueryId(String queryId) throws DataCloudJDBCException {
+    public ResultSetMetaData getSchemaForQueryId(String queryId) throws SQLException {
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val infos = executor.getQuerySchema(queryId);
-        return StreamingResultSet.ofSchema(infos, queryId);
+        return StreamingResultSet.ofSchema(infos, queryId).getMetaData();
     }
 
     /**

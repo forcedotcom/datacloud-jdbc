@@ -37,8 +37,7 @@ class HyperResultSource extends TableProvider {
       HyperConnectionOptions.fromOptions(options.asCaseSensitiveMap())
 
     Using.resource(connectionOptions.createConnection()) { conn =>
-      val rs = conn.getSchemaForQueryId(queryId);
-      TypeMapping.getSparkFields(rs.getMetaData())
+      TypeMapping.getSparkFields(conn.getSchemaForQueryId(queryId))
     }
   }
 
