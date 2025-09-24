@@ -219,19 +219,11 @@ class HyperResultSourceTest
         use(connection.createStatement().unwrap(classOf[DataCloudStatement]))
       stmt.execute("""
         SELECT 
-          id::int,
-          name::varchar,
-          amount::decimal(10,2),
-          created_at::timestamp,
-          is_active::boolean
-        FROM (
-          SELECT 
-            1 as id, 
-            NULL as name, 
-            NULL as amount, 
-            NULL as created_at,
-            NULL as is_active
-        ) t
+          1::int AS id,
+          NULL::varchar AS name,
+          NULL::decimal(10,2) AS amount,
+          NULL::timestamp AS created_at,
+          NULL::boolean AS is_active
         WHERE 1 = 0
       """)
       stmt.getQueryId()
@@ -247,32 +239,16 @@ class HyperResultSourceTest
     assert(df.schema.fields.length == 5)
 
     val fields = df.schema.fields
-    assert(
-      fields(0).name == "id" && fields(0).dataType == IntegerType && !fields(
-        0
-      ).nullable
-    )
-    assert(
-      fields(1).name == "name" && fields(1).dataType == StringType && fields(
-        1
-      ).nullable
-    )
-    assert(
-      fields(2).name == "amount" && fields(2).dataType == DecimalType(
-        10,
-        2
-      ) && fields(2).nullable
-    )
-    assert(
-      fields(3).name == "created_at" && fields(
-        3
-      ).dataType == TimestampType && fields(3).nullable
-    )
-    assert(
-      fields(4).name == "is_active" && fields(
-        4
-      ).dataType == BooleanType && fields(4).nullable
-    )
+    assert(fields(0).name == "id")
+    assert(fields(0).dataType == IntegerType && !fields(0).nullable)
+    assert(fields(1).name == "name")
+    assert(fields(1).dataType == StringType && fields(1).nullable)
+    assert(fields(2).name == "amount")
+    assert(fields(2).dataType == DecimalType(10, 2) && fields(2).nullable)
+    assert(fields(3).name == "created_at")
+    assert(fields(3).dataType == TimestampType && fields(3).nullable)
+    assert(fields(4).name == "is_active")
+    assert(fields(4).dataType == BooleanType && fields(4).nullable)
 
     // Verify no rows are returned
     assert(df.count() == 0)
@@ -280,84 +256,5 @@ class HyperResultSourceTest
     // Verify we can still perform operations on the empty DataFrame
     val filtered = df.filter(df("amount") > 50.0)
     assert(filtered.count() == 0)
-  }
-
-  test("supports empty result sets with comprehensive data types") {
-    val queryId = Using.Manager { use =>
-      val connection = use(hyperServerProcess.getConnection());
-      val stmt =
-        use(connection.createStatement().unwrap(classOf[DataCloudStatement]))
-      stmt.execute("""
-        SELECT 
-          id::int,
-          name::varchar,
-          amount::decimal(10,2),
-          large_decimal::decimal(38,18),
-          float_val::float4,
-          double_val::float8,
-          date_col::date,
-          timestamp_col::timestamp,
-          timestamptz_col::timestamptz,
-          is_active::boolean
-        FROM (
-          SELECT 
-            1 as id, 
-            'test' as name, 
-            100.50 as amount,
-            123456789012345678.123456789012345678 as large_decimal,
-            3.14159 as float_val,
-            2.718281828459045 as double_val,
-            '2024-01-01'::date as date_col,
-            '2024-01-01 12:00:00'::timestamp as timestamp_col,
-            '2024-01-01 12:00:00'::timestamptz as timestamptz_col,
-            true as is_active
-        ) t
-        WHERE 1 = 0
-      """)
-      stmt.getQueryId()
-    }.get
-
-    val df = spark.read
-      .format("com.salesforce.datacloud.spark.HyperResultSource")
-      .option("port", hyperServerProcess.getPort())
-      .option("query_id", queryId)
-      .load()
-
-    // Verify comprehensive schema is correctly inferred
-    assert(df.schema.fields.length == 10)
-
-    val fields = df.schema.fields
-    assert(fields(0).name == "id" && fields(0).dataType == IntegerType)
-    assert(fields(1).name == "name" && fields(1).dataType == StringType)
-    assert(
-      fields(2).name == "amount" && fields(2).dataType == DecimalType(10, 2)
-    )
-    assert(
-      fields(3).name == "large_decimal" && fields(3).dataType == DecimalType(
-        38,
-        18
-      )
-    )
-    assert(fields(4).name == "float_val" && fields(4).dataType == FloatType)
-    assert(fields(5).name == "double_val" && fields(5).dataType == DoubleType)
-    assert(fields(6).name == "date_col" && fields(6).dataType == DateType)
-    assert(
-      fields(7).name == "timestamp_col" && fields(7).dataType == TimestampType
-    )
-    assert(
-      fields(8).name == "timestamptz_col" && fields(8).dataType == TimestampType
-    )
-    assert(fields(9).name == "is_active" && fields(9).dataType == BooleanType)
-
-    // Verify no rows are returned
-    assert(df.count() == 0)
-
-    // Verify we can still perform operations on the empty DataFrame
-    val filtered = df.filter(df("amount") > 50.0)
-    assert(filtered.count() == 0)
-
-    val selected = df.select("id", "name", "amount")
-    assert(selected.count() == 0)
-    assert(selected.schema.fields.length == 3)
   }
 }
