@@ -135,6 +135,144 @@ class PropertiesTest extends HyperGrpcTestBase {
     }
 
     @Test
+    void testDatabasesParsing() throws DataCloudJDBCException {
+        Properties properties = new Properties();
+        properties.setProperty("databases.0.path", "/path/to/db");
+        properties.setProperty("databases.0.alias", "db_alias");
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+
+        assertThat(connectionProperties.getAttachedDatabases()).hasSize(1);
+        assertThat(connectionProperties.getAttachedDatabases().get(0).getPath()).isEqualTo("/path/to/db");
+        assertThat(connectionProperties.getAttachedDatabases().get(0).getAlias())
+                .isEqualTo("db_alias");
+    }
+
+    @Test
+    void testDatabasesParsingWithEmptyValue() throws DataCloudJDBCException {
+        Properties properties = new Properties();
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+
+        assertThat(connectionProperties.getAttachedDatabases()).isEmpty();
+    }
+
+    @Test
+    void testDatabasesParsingWithOptionalAlias() throws DataCloudJDBCException {
+        Properties properties = new Properties();
+        properties.setProperty("databases.0.path", "/single/path");
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+
+        assertThat(connectionProperties.getAttachedDatabases()).hasSize(1);
+        assertThat(connectionProperties.getAttachedDatabases().get(0).getPath()).isEqualTo("/single/path");
+        assertThat(connectionProperties.getAttachedDatabases().get(0).hasAlias())
+                .isFalse();
+    }
+
+    @Test
+    void testDatabasesRoundtrip() throws DataCloudJDBCException {
+        Properties properties = new Properties();
+        properties.setProperty("databases.0.path", "/path1");
+        properties.setProperty("databases.0.alias", "alias1");
+        properties.setProperty("workload", "testWorkload");
+
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+        Properties roundtripProperties = connectionProperties.toProperties();
+
+        assertThat(roundtripProperties.getProperty("databases.0.path")).isEqualTo("/path1");
+        assertThat(roundtripProperties.getProperty("databases.0.alias")).isEqualTo("alias1");
+        assertThat(roundtripProperties.getProperty("workload")).isEqualTo("testWorkload");
+    }
+
+    @Test
+    void testMultipleDatabasesParsing() throws DataCloudJDBCException {
+        Properties properties = new Properties();
+        properties.setProperty("databases.0.path", "/path/to/db1");
+        properties.setProperty("databases.0.alias", "db1_alias");
+        properties.setProperty("databases.1.path", "/path/to/db2");
+        properties.setProperty("databases.2.path", "/path/to/db3");
+        properties.setProperty("databases.2.alias", "db3_alias");
+
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+
+        assertThat(connectionProperties.getAttachedDatabases()).hasSize(3);
+
+        // First database with alias
+        assertThat(connectionProperties.getAttachedDatabases().get(0).getPath()).isEqualTo("/path/to/db1");
+        assertThat(connectionProperties.getAttachedDatabases().get(0).getAlias())
+                .isEqualTo("db1_alias");
+
+        // Second database without alias
+        assertThat(connectionProperties.getAttachedDatabases().get(1).getPath()).isEqualTo("/path/to/db2");
+        assertThat(connectionProperties.getAttachedDatabases().get(1).hasAlias())
+                .isFalse();
+
+        // Third database with alias
+        assertThat(connectionProperties.getAttachedDatabases().get(2).getPath()).isEqualTo("/path/to/db3");
+        assertThat(connectionProperties.getAttachedDatabases().get(2).getAlias())
+                .isEqualTo("db3_alias");
+    }
+
+    @Test
+    void testDatabasesRegexPatternValidation() throws DataCloudJDBCException {
+        Properties properties = new Properties();
+        // Valid consecutive patterns
+        properties.setProperty("databases.0.path", "/valid/path1");
+        properties.setProperty("databases.1.path", "/valid/path2");
+        // Invalid patterns that should be ignored
+        properties.setProperty("databases.path", "/invalid/path1");
+        properties.setProperty("databases.abc.path", "/invalid/path2");
+        properties.setProperty("databases.0.other", "/invalid/path3");
+        properties.setProperty("otherdatabases.0.path", "/invalid/path4");
+
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+
+        // Only the two valid patterns should be parsed
+        assertThat(connectionProperties.getAttachedDatabases()).hasSize(2);
+        assertThat(connectionProperties.getAttachedDatabases().get(0).getPath()).isEqualTo("/valid/path1");
+        assertThat(connectionProperties.getAttachedDatabases().get(1).getPath()).isEqualTo("/valid/path2");
+    }
+
+    @Test
+    void testDatabasesSortedByIndex() throws DataCloudJDBCException {
+        Properties properties = new Properties();
+        // Add databases in non-sequential order
+        properties.setProperty("databases.2.path", "/path/to/db3");
+        properties.setProperty("databases.0.path", "/path/to/db1");
+        properties.setProperty("databases.1.path", "/path/to/db2");
+
+        ConnectionProperties connectionProperties = ConnectionProperties.of(properties);
+
+        // Databases should be sorted by index
+        assertThat(connectionProperties.getAttachedDatabases()).hasSize(3);
+        assertThat(connectionProperties.getAttachedDatabases().get(0).getPath()).isEqualTo("/path/to/db1");
+        assertThat(connectionProperties.getAttachedDatabases().get(1).getPath()).isEqualTo("/path/to/db2");
+        assertThat(connectionProperties.getAttachedDatabases().get(2).getPath()).isEqualTo("/path/to/db3");
+    }
+
+    @Test
+    void testDatabasesMissingIndexRaisesError() {
+        Properties properties = new Properties();
+        properties.setProperty("databases.0.path", "/path/to/db1");
+        properties.setProperty("databases.2.path", "/path/to/db3"); // Missing index 1
+
+        val exception = assertThrows(DataCloudJDBCException.class, () -> ConnectionProperties.of(properties));
+        assertThat(exception.getMessage()).contains("Database indexes must be consecutive starting from 0");
+        assertThat(exception.getMessage()).contains("Missing index: 1");
+        assertThat(exception.getMessage()).contains("Found indexes: [0, 2]");
+    }
+
+    @Test
+    void testDatabasesNotStartingFromZeroRaisesError() {
+        Properties properties = new Properties();
+        properties.setProperty("databases.1.path", "/path/to/db1"); // Should start from 0
+        properties.setProperty("databases.2.path", "/path/to/db2");
+
+        val exception = assertThrows(DataCloudJDBCException.class, () -> ConnectionProperties.of(properties));
+        assertThat(exception.getMessage()).contains("Database indexes must be consecutive starting from 0");
+        assertThat(exception.getMessage()).contains("Missing index: 0");
+        assertThat(exception.getMessage()).contains("Found indexes: [1, 2]");
+    }
+
+    @Test
     void testUnknownTopLevelPropertyRaisesUserError() {
         Properties properties = new Properties();
         properties.setProperty("TIMEZONE", "UTC");
