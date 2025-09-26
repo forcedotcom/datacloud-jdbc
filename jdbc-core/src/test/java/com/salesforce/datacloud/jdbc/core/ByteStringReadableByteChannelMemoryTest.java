@@ -17,11 +17,9 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.junit.jupiter.api.Test;
-import salesforce.cdp.hyperdb.v1.QueryResult;
-import salesforce.cdp.hyperdb.v1.QueryResultPartBinary;
 
 @Slf4j
-class StreamingByteStringChannelMemoryTest {
+class ByteStringReadableByteChannelMemoryTest {
 
     @Test
     void testMemoryAllocationPattern() throws Exception {
@@ -37,7 +35,7 @@ class StreamingByteStringChannelMemoryTest {
         val allocatedBefore = memoryBean.getHeapMemoryUsage().getUsed();
 
         long totalBytesRead;
-        try (val channel = StreamingByteStringChannel.ofResults(testData.iterator())) {
+        try (val channel = new ByteStringReadableByteChannel(testData.iterator())) {
             totalBytesRead = 0;
 
             // Read all data in small chunks to simulate realistic usage
@@ -88,7 +86,7 @@ class StreamingByteStringChannelMemoryTest {
 
         val testData = createTestData(numChunks, dataSize);
         long totalRead;
-        try (val channel = StreamingByteStringChannel.ofResults(testData.iterator())) {
+        try (val channel = new ByteStringReadableByteChannel(testData.iterator())) {
 
             ByteBuffer buffer = ByteBuffer.allocate(4096);
             totalRead = 0;
@@ -143,7 +141,7 @@ class StreamingByteStringChannelMemoryTest {
         val before = memoryBean.getHeapMemoryUsage().getUsed();
 
         long totalRead;
-        try (val channel = StreamingByteStringChannel.ofResults(variableData.iterator())) {
+        try (val channel = new ByteStringReadableByteChannel(variableData.iterator())) {
             ByteBuffer buffer = ByteBuffer.allocate(1024); // Small buffer
 
             totalRead = 0;
@@ -163,19 +161,16 @@ class StreamingByteStringChannelMemoryTest {
         assertThat(totalRead).isGreaterThan(0);
     }
 
-    private List<QueryResult> createTestData(int numChunks, int chunkSize) {
+    private List<ByteString> createTestData(int numChunks, int chunkSize) {
         return IntStream.range(0, numChunks)
-                .mapToObj(chunkIndex -> createQueryResult(chunkIndex, chunkSize))
+                .mapToObj(chunkIndex -> createByteString(chunkIndex, chunkSize))
                 .collect(Collectors.toList());
     }
 
-    private QueryResult createQueryResult(int chunkIndex, int chunkSize) {
+    private ByteString createByteString(int chunkIndex, int chunkSize) {
         val data = new byte[chunkSize];
         IntStream.range(0, chunkSize).forEach(i -> data[i] = (byte) ((chunkIndex + i) % 256));
-
-        val byteString = ByteString.copyFrom(data);
-        val binaryPart = QueryResultPartBinary.newBuilder().setData(byteString).build();
-        return QueryResult.newBuilder().setBinaryPart(binaryPart).build();
+        return ByteString.copyFrom(data);
     }
 
     private void warmupAndForceGC() {

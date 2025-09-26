@@ -36,6 +36,7 @@ import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -48,6 +49,8 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.calcite.avatica.AvaticaResultSetMetaData;
+import org.apache.calcite.avatica.Meta;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc.HyperServiceBlockingStub;
 
 @Slf4j
@@ -276,7 +279,23 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     public ResultSetMetaData getSchemaForQueryId(String queryId) throws SQLException {
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val infos = executor.getQuerySchema(queryId);
-        return StreamingResultSet.ofSchema(infos, queryId).getMetaData();
+
+        try {
+            val byteStringIterator = ProtocolMappers.fromQueryInfo(infos);
+            val channel = new ByteStringReadableByteChannel(byteStringIterator);
+            val reader = new org.apache.arrow.vector.ipc.ArrowStreamReader(
+                    channel, new org.apache.arrow.memory.RootAllocator());
+            val schemaRoot = reader.getVectorSchemaRoot();
+            val columns = com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData(
+                    schemaRoot.getSchema().getFields());
+
+            // Create metadata directly without full ResultSet infrastructure
+            val signature = new Meta.Signature(
+                    columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
+            return new AvaticaResultSetMetaData(null, null, signature);
+        } catch (Exception ex) {
+            throw new DataCloudJDBCException(ex.getMessage(), ex);
+        }
     }
 
     /**

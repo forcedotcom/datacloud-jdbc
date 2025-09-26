@@ -18,15 +18,13 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.arrow.vector.ipc.ReadChannel;
 import org.junit.jupiter.api.Test;
-import salesforce.cdp.hyperdb.v1.QueryResult;
-import salesforce.cdp.hyperdb.v1.QueryResultPartBinary;
 
 @Slf4j
-class StreamingByteStringChannelTest {
+class ByteStringReadableByteChannelTest {
     @Test
     @SneakyThrows
     void isOpenFollowsNioSemantics() {
-        try (val channel = StreamingByteStringChannel.ofResults(empty())) {
+        try (val channel = new ByteStringReadableByteChannel(empty())) {
             assertThat(channel.isOpen()).isTrue(); // Channel starts open regardless of data availability
             // Even with no data, channel remains open until explicitly closed
             assertThat(channel.read(ByteBuffer.allocate(1))).isEqualTo(-1); // End-of-stream
@@ -40,7 +38,7 @@ class StreamingByteStringChannelTest {
     @Test
     @SneakyThrows
     void isOpenDetectsIfIteratorHasRemaining() {
-        try (val channel = StreamingByteStringChannel.ofResults(some())) {
+        try (val channel = new ByteStringReadableByteChannel(some())) {
             assertThat(channel.isOpen()).isTrue();
         }
     }
@@ -48,7 +46,7 @@ class StreamingByteStringChannelTest {
     @Test
     @SneakyThrows
     void readThrowsClosedChannelExceptionWhenClosed() {
-        val channel = StreamingByteStringChannel.ofResults(some());
+        val channel = new ByteStringReadableByteChannel(some());
         channel.close();
         assertThat(channel.isOpen()).isFalse();
 
@@ -59,7 +57,7 @@ class StreamingByteStringChannelTest {
     @Test
     @SneakyThrows
     void readReturnsNegativeOneOnIteratorExhaustion() {
-        try (val channel = StreamingByteStringChannel.ofResults(empty())) {
+        try (val channel = new ByteStringReadableByteChannel(empty())) {
             assertThat(channel.read(ByteBuffer.allocateDirect(2))).isEqualTo(-1);
         }
     }
@@ -69,11 +67,11 @@ class StreamingByteStringChannelTest {
     void readIsLazy() {
         val first = ByteBuffer.allocate(5);
         val second = ByteBuffer.allocate(5);
-        val seen = new ArrayList<QueryResult>();
+        val seen = new ArrayList<ByteString>();
 
         val iterator = infiniteStream().peek(seen::add).iterator();
 
-        try (val channel = new ReadChannel(StreamingByteStringChannel.ofResults(iterator))) {
+        try (val channel = new ReadChannel(new ByteStringReadableByteChannel(iterator))) {
             channel.readFully(first);
             assertThat(seen).hasSize(5);
             channel.readFully(second);
@@ -84,23 +82,15 @@ class StreamingByteStringChannelTest {
         }
     }
 
-    private static Iterator<QueryResult> some() {
+    private static Iterator<ByteString> some() {
         return infiniteStream().iterator();
     }
 
-    private static Iterator<QueryResult> empty() {
+    private static Iterator<ByteString> empty() {
         return infiniteStream().limit(0).iterator();
     }
 
-    private static Stream<QueryResult> infiniteStream() {
-        return Stream.iterate(0, i -> i + 1)
-                .map(i -> Integer.toString(i))
-                .map(StreamingByteStringChannelTest::toMessage);
-    }
-
-    private static QueryResult toMessage(String string) {
-        val byteString = ByteString.copyFromUtf8(string);
-        val binaryPart = QueryResultPartBinary.newBuilder().setData(byteString);
-        return QueryResult.newBuilder().setBinaryPart(binaryPart).build();
+    private static Stream<ByteString> infiniteStream() {
+        return Stream.iterate(0, i -> i + 1).map(i -> Integer.toString(i)).map(ByteString::copyFromUtf8);
     }
 }

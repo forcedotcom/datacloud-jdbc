@@ -130,7 +130,6 @@ public class StreamingResultSetTest {
             final String queryId;
             try (val rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
                 queryId = rs.getQueryId();
-                conn.waitFor(queryId, QueryStatus::allResultsProduced);
             }
 
             val metaData = conn.getSchemaForQueryId(queryId);
