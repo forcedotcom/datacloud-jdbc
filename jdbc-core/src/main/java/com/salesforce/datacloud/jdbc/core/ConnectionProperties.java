@@ -155,11 +155,9 @@ public class ConnectionProperties {
             props.setProperty("userName", userName);
         }
 
-        // Serialize attached databases properties - format: "databases.N.path" and "databases.N.alias"
-        for (int i = 0; i < attachedDatabases.size(); i++) {
+        for (int i = 0; i < attachedDatabases.size(); ++i) {
             AttachedDatabase database = attachedDatabases.get(i);
             props.setProperty("databases." + i + ".path", database.getPath());
-            // Only set alias if it's provided (not empty)
             if (database.hasAlias() && !database.getAlias().isEmpty()) {
                 props.setProperty("databases." + i + ".alias", database.getAlias());
             }
