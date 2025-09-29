@@ -178,6 +178,19 @@ public class StreamingResultSetTest {
         });
     }
 
+    @SneakyThrows
+    @Test
+    public void testGetSchemaForQueryIdWithInvalidQueryId() {
+        withStatement(none, (conn, stmt) -> {
+            String invalidQueryId = "invalidQueryId";
+            assertThat(org.assertj.core.api.Assertions.assertThatThrownBy(() -> {
+                        conn.getSchemaForQueryId(invalidQueryId);
+                    })
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("The requested query ID is unknown"));
+        });
+    }
+
     @FunctionalInterface
     interface ThrowingBiConsumer<T, U> {
         void accept(T var1, U var2) throws SQLException;
