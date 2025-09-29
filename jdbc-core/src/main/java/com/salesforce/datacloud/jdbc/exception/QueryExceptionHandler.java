@@ -18,6 +18,7 @@ public final class QueryExceptionHandler {
     // We introduce a limit to avoid truncating important details from the log due to large queries.
     // When testing with 60 MB queries the exception formatting also took multi second hangs.
     private static final int MAX_QUERY_LENGTH_IN_EXCEPTION = 16 * 1024;
+    public static final String SCHEMA_FAILURE = "Failed to fetch schema for queryId: ";
 
     private QueryExceptionHandler() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");

@@ -4,7 +4,12 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.SCHEMA_FAILURE;
+import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
+import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
+import static com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection.getByteBuffer;
+import static org.apache.arrow.vector.types.pojo.Schema.deserializeMessage;
 
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
@@ -49,7 +54,9 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.calcite.avatica.AvaticaResultSetMetaData;
+import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc.HyperServiceBlockingStub;
 
@@ -281,20 +288,15 @@ public class DataCloudConnection implements Connection, AutoCloseable {
         val infos = executor.getQuerySchema(queryId);
 
         try {
-            val byteStringIterator = ProtocolMappers.fromQueryInfo(infos);
-            val channel = new ByteStringReadableByteChannel(byteStringIterator);
-            val reader = new org.apache.arrow.vector.ipc.ArrowStreamReader(
-                    channel, new org.apache.arrow.memory.RootAllocator());
-            val schemaRoot = reader.getVectorSchemaRoot();
-            val columns = com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData(
-                    schemaRoot.getSchema().getFields());
+            Schema schema = deserializeMessage(getByteBuffer(queryId, infos));
+            List<ColumnMetaData> columns = toColumnMetaData(schema.getFields());
 
             // Create metadata directly without full ResultSet infrastructure
-            val signature = new Meta.Signature(
+            Meta.Signature signature = new Meta.Signature(
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             return new AvaticaResultSetMetaData(null, null, signature);
         } catch (Exception ex) {
-            throw new DataCloudJDBCException(ex.getMessage(), ex);
+            throw createException(SCHEMA_FAILURE + queryId, ex);
         }
     }
 

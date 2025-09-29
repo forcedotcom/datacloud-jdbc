@@ -49,8 +49,6 @@ class ProtocolMappersTest {
 
         Iterator<ByteString> result = ProtocolMappers.fromQueryInfo(queryInfos.iterator());
 
-        assertThat(result.hasNext()).isTrue();
-        assertThat(result.next()).isNull();
         assertThat(result.hasNext()).isFalse();
     }
 
@@ -84,8 +82,6 @@ class ProtocolMappersTest {
 
         Iterator<ByteString> result = ProtocolMappers.fromQueryResult(queryResults.iterator());
 
-        assertThat(result.hasNext()).isTrue();
-        assertThat(result.next()).isNull();
         assertThat(result.hasNext()).isFalse();
     }
 }

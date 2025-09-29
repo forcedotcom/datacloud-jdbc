@@ -4,6 +4,9 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import com.google.common.base.Function;
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterators;
 import com.google.protobuf.ByteString;
 import java.util.Iterator;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
@@ -23,35 +26,27 @@ public class ProtocolMappers {
      * Converts an Iterator<QueryInfo> to an Iterator<ByteString> by extracting binary schema data.
      */
     public static Iterator<ByteString> fromQueryInfo(Iterator<QueryInfo> queryInfos) {
-        return new Iterator<ByteString>() {
-            @Override
-            public boolean hasNext() {
-                return queryInfos.hasNext();
-            }
-
-            @Override
-            public ByteString next() {
-                QueryInfo info = queryInfos.next();
-                return info.hasBinarySchema() ? info.getBinarySchema().getData() : null;
-            }
-        };
+        return Iterators.filter(
+                Iterators.transform(queryInfos, new Function<QueryInfo, ByteString>() {
+                    @Override
+                    public ByteString apply(QueryInfo input) {
+                        return input.hasBinarySchema() ? input.getBinarySchema().getData() : null;
+                    }
+                }),
+                Predicates.notNull());
     }
 
     /**
      * Converts an Iterator<QueryResult> to an Iterator<ByteString> by extracting binary result data.
      */
     public static Iterator<ByteString> fromQueryResult(Iterator<QueryResult> queryResults) {
-        return new Iterator<ByteString>() {
-            @Override
-            public boolean hasNext() {
-                return queryResults.hasNext();
-            }
-
-            @Override
-            public ByteString next() {
-                QueryResult result = queryResults.next();
-                return result.hasBinaryPart() ? result.getBinaryPart().getData() : null;
-            }
-        };
+        return Iterators.filter(
+                Iterators.transform(queryResults, new Function<QueryResult, ByteString>() {
+                    @Override
+                    public ByteString apply(QueryResult input) {
+                        return input.hasBinaryPart() ? input.getBinaryPart().getData() : null;
+                    }
+                }),
+                Predicates.notNull());
     }
 }
