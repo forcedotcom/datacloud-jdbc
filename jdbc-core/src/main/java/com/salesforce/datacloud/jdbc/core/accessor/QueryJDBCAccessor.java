@@ -25,10 +25,6 @@ import java.util.Calendar;
 import java.util.Map;
 import java.util.function.IntSupplier;
 import org.apache.calcite.avatica.util.Cursor.Accessor;
-import org.joou.UByte;
-import org.joou.UInteger;
-import org.joou.ULong;
-import org.joou.UShort;
 
 public abstract class QueryJDBCAccessor implements Accessor {
     private final IntSupplier currentRowSupplier;
@@ -68,17 +64,7 @@ public abstract class QueryJDBCAccessor implements Accessor {
     }
 
     @Override
-    public UByte getUByte() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
-    }
-
-    @Override
     public short getShort() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
-    }
-
-    @Override
-    public UShort getUShort() throws SQLException {
         throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
     }
 
@@ -88,17 +74,7 @@ public abstract class QueryJDBCAccessor implements Accessor {
     }
 
     @Override
-    public UInteger getUInt() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
-    }
-
-    @Override
     public long getLong() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
-    }
-
-    @Override
-    public ULong getULong() throws SQLException {
         throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
     }
 

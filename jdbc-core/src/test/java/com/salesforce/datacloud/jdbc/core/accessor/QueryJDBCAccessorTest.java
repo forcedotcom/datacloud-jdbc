@@ -30,20 +30,11 @@ public class QueryJDBCAccessorTest {
         val e2 = assertThrows(DataCloudJDBCException.class, absCls::getShort);
         assertThat(e2).hasRootCauseInstanceOf(SQLFeatureNotSupportedException.class);
 
-        val eU2 = assertThrows(DataCloudJDBCException.class, absCls::getUShort);
-        assertThat(eU2).hasRootCauseInstanceOf(SQLFeatureNotSupportedException.class);
-
         val e3 = assertThrows(DataCloudJDBCException.class, absCls::getInt);
         assertThat(e3).hasRootCauseInstanceOf(SQLFeatureNotSupportedException.class);
 
-        val eU3 = assertThrows(DataCloudJDBCException.class, absCls::getUInt);
-        assertThat(eU3).hasRootCauseInstanceOf(SQLFeatureNotSupportedException.class);
-
         val e4 = assertThrows(DataCloudJDBCException.class, absCls::getLong);
         assertThat(e4).hasRootCauseInstanceOf(SQLFeatureNotSupportedException.class);
-
-        val eU4 = assertThrows(DataCloudJDBCException.class, absCls::getULong);
-        assertThat(eU4).hasRootCauseInstanceOf(SQLFeatureNotSupportedException.class);
 
         val e5 = assertThrows(DataCloudJDBCException.class, absCls::getFloat);
         assertThat(e5).hasRootCauseInstanceOf(SQLFeatureNotSupportedException.class);
@@ -64,9 +55,6 @@ public class QueryJDBCAccessorTest {
 
         val e10 = assertThrows(DataCloudJDBCException.class, absCls::getByte);
         assertThat(e10).hasRootCauseInstanceOf(SQLFeatureNotSupportedException.class);
-
-        val eU10 = assertThrows(DataCloudJDBCException.class, absCls::getUByte);
-        assertThat(eU10).hasRootCauseInstanceOf(SQLFeatureNotSupportedException.class);
 
         val e11 = assertThrows(DataCloudJDBCException.class, absCls::getBigDecimal);
         assertThat(e11).hasRootCauseInstanceOf(SQLFeatureNotSupportedException.class);
