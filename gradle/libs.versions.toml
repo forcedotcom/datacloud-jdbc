@@ -26,7 +26,7 @@ mockito = "4.11.0"
 slf4j = "[2.0.7, 3.0)"
 org-postgresql-pgjdbc = "42.7.7"
 plugin-com-google-protobuf = "0.9.4"
-plugin-com-gradleup-shadow = "9.0.2"
+plugin-com-gradleup-shadow = "9.2.2"
 plugin-freefair-lombok = "8.14.2"
 plugin-build-buf = "0.10.2"
 
