@@ -4,13 +4,12 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.SCHEMA_FAILURE;
 import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
-import static com.salesforce.datacloud.jdbc.util.DirectDataCloudConnection.getByteBuffer;
 import static org.apache.arrow.vector.types.pojo.Schema.deserializeMessage;
 
+import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.core.partial.ChunkBased;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -42,6 +41,7 @@ import java.sql.Statement;
 import java.sql.Struct;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -59,6 +59,7 @@ import org.apache.calcite.avatica.AvaticaResultSetMetaData;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc.HyperServiceBlockingStub;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
 
 @Slf4j
 @Builder(access = AccessLevel.PRIVATE)
@@ -284,11 +285,15 @@ public class DataCloudConnection implements Connection, AutoCloseable {
     }
 
     public ResultSetMetaData getSchemaForQueryId(String queryId) throws SQLException {
-        val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
-        val infos = executor.getQuerySchema(queryId);
+        HyperGrpcClientExecutor executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
+        Iterator<QueryInfo> infos = executor.getQuerySchema(queryId);
 
         try {
-            Schema schema = deserializeMessage(getByteBuffer(queryId, infos));
+            Iterator<ByteString> byteStringIterator = ProtocolMappers.fromQueryInfo(infos);
+            if (!byteStringIterator.hasNext()) {
+                throw new DataCloudJDBCException("No schema data available for queryId: " + queryId);
+            }
+            Schema schema = deserializeMessage(byteStringIterator.next().asReadOnlyByteBuffer());
             List<ColumnMetaData> columns = toColumnMetaData(schema.getFields());
 
             // Create metadata directly without full ResultSet infrastructure
@@ -296,7 +301,7 @@ public class DataCloudConnection implements Connection, AutoCloseable {
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             return new AvaticaResultSetMetaData(null, null, signature);
         } catch (Exception ex) {
-            throw createException(SCHEMA_FAILURE + queryId, ex);
+            throw createException("Failed to fetch schema for queryId: " + queryId, ex);
         }
     }
 

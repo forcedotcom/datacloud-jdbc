@@ -10,19 +10,20 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Iterator;
-import java.util.Objects;
+import lombok.NonNull;
 
 /**
  * A ReadableByteChannel that exposes an Iterator<ByteString> as a stream of bytes.
  * This class has a single responsibility: converting ByteString iterator to byte stream.
  */
 public class ByteStringReadableByteChannel implements ReadableByteChannel {
-    private final Iterator<ByteString> byteStringIterator;
+    @NonNull private final Iterator<ByteString> iterator;
+
     private boolean open = true;
     private ByteBuffer currentBuffer = null;
 
-    public ByteStringReadableByteChannel(Iterator<ByteString> byteStringIterator) {
-        this.byteStringIterator = Objects.requireNonNull(byteStringIterator, "ByteStringIterator cannot be null");
+    public ByteStringReadableByteChannel(@NonNull Iterator<ByteString> iterator) {
+        this.iterator = iterator;
     }
 
     @Override
@@ -34,11 +35,10 @@ public class ByteStringReadableByteChannel implements ReadableByteChannel {
         int totalBytesRead = 0;
 
         // Continue reading while destination has space AND we have data available
-        while (dst.hasRemaining()
-                && (byteStringIterator.hasNext() || (currentBuffer != null && currentBuffer.hasRemaining()))) {
+        while (dst.hasRemaining() && (iterator.hasNext() || (currentBuffer != null && currentBuffer.hasRemaining()))) {
             if (currentBuffer == null || !currentBuffer.hasRemaining()) {
-                if (byteStringIterator.hasNext()) {
-                    ByteString data = byteStringIterator.next();
+                if (iterator.hasNext()) {
+                    ByteString data = iterator.next();
                     currentBuffer = data.asReadOnlyByteBuffer();
                 } else {
                     break; // No more data

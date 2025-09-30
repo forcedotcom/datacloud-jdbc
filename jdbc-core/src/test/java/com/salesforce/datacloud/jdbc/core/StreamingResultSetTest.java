@@ -7,9 +7,14 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.assertEachRowIsTheSame;
 import static com.salesforce.datacloud.jdbc.hyper.HyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockStatic;
 
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Properties;
@@ -19,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.MockedStatic;
 
 @Slf4j
 @ExtendWith(HyperTestBase.class)
@@ -124,15 +130,15 @@ public class StreamingResultSetTest {
     @Test
     public void testGetSchemaForQueryIdWithZeroResults() {
         withStatement(none, (conn, stmt) -> {
-            val sql =
+            String sql =
                     "SELECT s, s::text as s_text, cast(s as numeric(38,18)) as s_numeric FROM generate_series(1,10) s LIMIT 0";
 
             final String queryId;
-            try (val rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
+            try (DataCloudResultSet rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
                 queryId = rs.getQueryId();
             }
 
-            val metaData = conn.getSchemaForQueryId(queryId);
+            ResultSetMetaData metaData = conn.getSchemaForQueryId(queryId);
 
             assertThat(metaData.getColumnCount()).as("column count").isEqualTo(3);
 
@@ -153,15 +159,16 @@ public class StreamingResultSetTest {
     @Test
     public void testGetSchemaForQueryIdWithResults() {
         withStatement(none, (conn, stmt) -> {
-            val sql = "SELECT s, s::text as s_text, cast(s as numeric(38,18)) as s_numeric FROM generate_series(1,3) s";
+            String sql =
+                    "SELECT s, s::text as s_text, cast(s as numeric(38,18)) as s_numeric FROM generate_series(1,3) s";
 
             final String queryId;
-            try (val rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
+            try (DataCloudResultSet rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
                 queryId = rs.getQueryId();
                 conn.waitFor(queryId, QueryStatus::allResultsProduced);
             }
 
-            val metaData = conn.getSchemaForQueryId(queryId);
+            ResultSetMetaData metaData = conn.getSchemaForQueryId(queryId);
 
             assertThat(metaData.getColumnCount()).as("column count").isEqualTo(3);
 
@@ -183,11 +190,36 @@ public class StreamingResultSetTest {
     public void testGetSchemaForQueryIdWithInvalidQueryId() {
         withStatement(none, (conn, stmt) -> {
             String invalidQueryId = "invalidQueryId";
-            assertThat(org.assertj.core.api.Assertions.assertThatThrownBy(() -> {
+            assertThat(assertThatThrownBy(() -> {
                         conn.getSchemaForQueryId(invalidQueryId);
                     })
                     .isInstanceOf(SQLException.class)
                     .hasMessageContaining("The requested query ID is unknown"));
+        });
+    }
+
+    @SneakyThrows
+    @Test
+    public void testGetSchemaForQueryIdWithNoSchemaData() {
+        withStatement(none, (conn, stmt) -> {
+            String sql = "SELECT 1 as test_column";
+
+            final String queryId;
+            try (DataCloudResultSet rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
+                queryId = rs.getQueryId();
+                conn.waitFor(queryId, QueryStatus::allResultsProduced);
+            }
+            try (MockedStatic<ProtocolMappers> mockedStatic = mockStatic(ProtocolMappers.class)) {
+                mockedStatic
+                        .when(() -> ProtocolMappers.fromQueryInfo(any()))
+                        .thenReturn(java.util.Collections.emptyIterator());
+
+                assertThat(assertThatThrownBy(() -> {
+                            conn.getSchemaForQueryId(queryId);
+                        })
+                        .isInstanceOf(DataCloudJDBCException.class)
+                        .hasMessageContaining("Failed to fetch schema for queryId: " + queryId));
+            }
         });
     }
 
