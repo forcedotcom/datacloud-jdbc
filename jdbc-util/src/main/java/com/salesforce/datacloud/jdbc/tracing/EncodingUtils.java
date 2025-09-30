@@ -4,9 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.tracing;
 
-import javax.annotation.concurrent.Immutable;
-
-@Immutable
 public final class EncodingUtils {
     static final int BYTE_BASE16 = 2;
     private static final String ALPHABET = "0123456789abcdef";

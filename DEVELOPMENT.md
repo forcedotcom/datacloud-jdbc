@@ -14,6 +14,12 @@ Run `./gradlew clean build testCodeCoverageReport` to build the coverage report 
 
 There will also be an accompanying CSV in `build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.csv` and a xml file in `build/reports/jacoco/testCodeCoverageReport/testCodeCoverageReport.xml` to be consumed by other tools.
 
+## Maintenance
+
+The following commands should be run regularly to ensure the project stays healthy
+- `./gradlew createModuleGraph`, it updates the module graph in this document and should be run every time the inter project dependencies change
+- `./gradlew versionCatalogUpdate`, should be run every time a dependency is added and regularly anyway to avoid vulnerable versions
+
 ## Module Graph
 
 ```mermaid
@@ -26,16 +32,15 @@ There will also be an accompanying CSV in `build/reports/jacoco/testCodeCoverage
 graph LR
   :jdbc-core --> :jdbc-grpc
   :jdbc-core --> :jdbc-util
+  :jdbc-core --> :jdbc-reference
+  :spark-datasource --> :spark-datasource-core
   :spark-datasource --> :jdbc
-  :spark-datasource --> :jdbc-grpc
-  :spark-datasource --> :jdbc-core
-  :spark-datasource --> :jdbc-util
+  :spark-datasource-core --> :jdbc-grpc
+  :spark-datasource-core --> :jdbc-core
+  :spark-datasource-core --> :jdbc-util
   :jdbc-http --> :jdbc-util
   :jdbc --> :jdbc-core
   :jdbc --> :jdbc-util
   :jdbc --> :jdbc-http
   :jdbc --> :jdbc-grpc
 ```
-
-Above graph is generated based on the gradle build files.
-It can be regenerated using `./gradlew createModuleGraph`.

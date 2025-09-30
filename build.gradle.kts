@@ -5,6 +5,7 @@ plugins {
     id("com.diffplug.spotless")
     id("dev.iurysouza.modulegraph") version "0.12.1"
     id("jacoco-report-aggregation")
+    id("version-updates")
 }
 
 repositories { mavenCentral() }

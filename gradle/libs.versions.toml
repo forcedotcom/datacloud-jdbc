@@ -1,98 +1,130 @@
 # https://docs.gradle.org/current/userguide/platforms.html#sub::toml-dependencies-format
 # https://docs.gradle.org/current/userguide/version_catalogs.html
-
 [versions]
-com-fasterxml-jackson-core-jackson-databind = "[2.17.1, 3.0)"
-com-fasterxml-jackson-module-jackson-module-scala = "2.17.2"
-com-google-guava-guava = "33.4.0-jre"
-org-apache-spark = "3.5.5"
-org-scalatest = "3.2.19"
-org-junit-platform = "1.12.0"
-org-scalatestplus-junit5 = "3.2.19.0"
-okhttp3 = "[4.12.0, 5.0)"
-protobuf = "3.25.5"
-grpc = "[1.70.0, 2.0)"
-jjwt = "0.12.6"
-javax-annotation-javax-annotation-api = "1.3.2"
-net-jodah-failsafe = "[3.2.3, 4.0)"
+# @pin this version as it is the last Java 8 compatible version of Arrow
 arrow = "17.0.0"
-org-apache-calcite-avatica-core = "[1.26.0, 1.27.0)"
-org-apache-commons-commons-lang3 = "[3.12.0, 4.0)"
-org-assertj-assertj-core = "3.26.3"
-org-grpcmock-grpcmock-junit5 = "0.13.0"
-org-junit-bom = "5.13.4"
-org-junit-platform-junit-platform-launcher = "1.11.4"
+com-fasterxml-jackson-core-jackson-databind = "2.20.0"
+com-fasterxml-jackson-module-jackson-module-scala = "2.20.0"
+# This has special version logic in `buildSrc/src/main/kotlin/version-updates.gradle.kts` to also pick the -jre version
+com-google-guava-guava = "33.5.0-jre"
+grpc = "1.75.0"
+# This is only indirectly used by gRPC & Arrow but we provide an explicit version to fix security issues in the transitive dependencies
+io-netty = "4.2.6.Final"
+javax-annotation-javax-annotation-api = "1.3.2"
+jjwt = "0.13.0"
+# This is soft pinned to !=5 (as 5 is not Java 8 compatible) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 mockito = "4.11.0"
-slf4j = "[2.0.7, 3.0)"
-org-postgresql-pgjdbc = "42.7.7"
-plugin-com-google-protobuf = "0.9.4"
+net-jodah-failsafe = "3.3.2"
+# This is soft pinned to !=5 (as we didn't invest in the upgrade yet) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
+okhttp3 = "4.12.0"
+# @pin this version as the following versions have a breaking Cursor change, that - with the upcoming Avactica removal - we currently don't want to invest in
+org-apache-calcite-avatica-core = "1.26.0"
+org-apache-commons-commons-lang3 = "3.19.0"
+# This is soft pinned to !=4 (as the driver is targetting in Spark 3.5) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
+org-apache-spark = "3.5.7"
+org-assertj-assertj-core = "3.27.6"
+org-grpcmock-grpcmock-junit5 = "0.16.0"
+# This is soft pinned to !=6 (as 6 is not Java 8 compatible) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
+org-junit-bom = "5.14.0"
+org-junit-platform-junit-platform-launcher = "1.14.0"
+org-postgresql-pgjdbc = "42.7.8"
+org-scalatest = "3.2.19"
+org-scalatestplus-junit5 = "3.2.19.0"
+plugin-build-buf = "0.10.3"
+plugin-com-google-protobuf = "0.9.5"
 plugin-com-gradleup-shadow = "9.2.2"
-plugin-freefair-lombok = "8.14.2"
-plugin-build-buf = "0.10.2"
-
-
+plugin-freefair-lombok = "9.0.0"
+protobuf = "4.32.1"
+slf4j = "2.0.17"
 
 [libraries]
-jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "com-fasterxml-jackson-core-jackson-databind" }
-jackson-module-scala = { module = "com.fasterxml.jackson.module:jackson-module-scala_2.13", version.ref = "com-fasterxml-jackson-module-jackson-module-scala" }
-guava = { module = "com.google.guava:guava", version.ref = "com-google-guava-guava" }
-spark-sql = { module = "org.apache.spark:spark-sql_2.13", version.ref = "org-apache-spark" }
-spark-core = { module = "org.apache.spark:spark-core_2.13", version.ref = "org-apache-spark" }
-scalatest = { module = "org.scalatest:scalatest_3", version.ref = "org-scalatest" }
-junit-platform-engine = { module = "org.junit.platform:junit-platform-engine", version.ref = "org-junit-platform" }
-junit-platform-launcher-test = { module = "org.junit.platform:junit-platform-launcher", version.ref = "org-junit-platform" }
-scalatestplus-junit5 = { module = "org.scalatestplus:junit-5-12_3", version.ref = "org-scalatestplus-junit5" }
-okhttp3-client = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
-okhttp3-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp3" }
-okhttp3-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
-grpc-netty = { module = "io.grpc:grpc-netty", version.ref = "grpc" }
-grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
-grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
-grpc-protoc = { group = "io.grpc", name = "protoc-gen-grpc-java", version.ref = "grpc" }
-grpc-inprocess = { module = "io.grpc:grpc-inprocess", version.ref = "grpc" }
-
-protobuf-bom = { module = "com.google.protobuf:protobuf-bom", version.ref = "protobuf" }
-protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
-
-jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
-jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
-jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
-
-javax-annotation-api = { module = "javax.annotation:javax.annotation-api", version.ref = "javax-annotation-javax-annotation-api" }
-failsafe = { module = "dev.failsafe:failsafe", version.ref = "net-jodah-failsafe" }
 apache-arrow-memory-netty = { module = "org.apache.arrow:arrow-memory-netty", version.ref = "arrow" }
 apache-arrow-vector = { module = "org.apache.arrow:arrow-vector", version.ref = "arrow" }
 apache-calcite-avatica = { module = "org.apache.calcite.avatica:avatica-core", version.ref = "org-apache-calcite-avatica-core" }
 apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "org-apache-commons-commons-lang3" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "org-assertj-assertj-core" }
+failsafe = { module = "dev.failsafe:failsafe", version.ref = "net-jodah-failsafe" }
+grpc-inprocess = { module = "io.grpc:grpc-inprocess", version.ref = "grpc" }
+grpc-netty = { module = "io.grpc:grpc-netty", version.ref = "grpc" }
+grpc-protobuf = { module = "io.grpc:grpc-protobuf", version.ref = "grpc" }
+grpc-protoc = { module = "io.grpc:protoc-gen-grpc-java", version.ref = "grpc" }
+grpc-stub = { module = "io.grpc:grpc-stub", version.ref = "grpc" }
 grpcmock = { module = "org.grpcmock:grpcmock-junit5", version.ref = "org-grpcmock-grpcmock-junit5" }
-junit-bom = { module = "org.junit:junit-bom", version.ref = "org-junit-bom" }
-junit-jupiter-base = { module = "org.junit.jupiter:junit-jupiter" }
-junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api" }
-junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine" }
-junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params" }
+guava = { module = "com.google.guava:guava", version.ref = "com-google-guava-guava" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "com-fasterxml-jackson-core-jackson-databind" }
+jackson-module-scala = { module = "com.fasterxml.jackson.module:jackson-module-scala_2.13", version.ref = "com-fasterxml-jackson-module-jackson-module-scala" }
+javax-annotation-api = { module = "javax.annotation:javax.annotation-api", version.ref = "javax-annotation-javax-annotation-api" }
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+junit-bom = "org.junit:junit-bom:5.14.0"
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "org-junit-bom" }
+junit-jupiter-base = { module = "org.junit.jupiter:junit-jupiter", version.ref = "org-junit-bom" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "org-junit-bom" }
+junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "org-junit-bom" }
+junit-platform-engine = { module = "org.junit.platform:junit-platform-engine", version.ref = "org-junit-platform-junit-platform-launcher" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "org-junit-platform-junit-platform-launcher" }
+junit-platform-launcher-test = { module = "org.junit.platform:junit-platform-launcher", version.ref = "org-junit-platform-junit-platform-launcher" }
 mockito-inline = { module = "org.mockito:mockito-inline", version.ref = "mockito" }
 mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
+netty-common = { module = "io.netty:netty-common", version.ref = "io-netty" }
+okhttp3-client = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp3" }
+okhttp3-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "okhttp3" }
+okhttp3-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp3" }
+pgjdbc = { module = "org.postgresql:postgresql", version.ref = "org-postgresql-pgjdbc" }
+protobuf-bom = { module = "com.google.protobuf:protobuf-bom", version.ref = "protobuf" }
+protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+protoc = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
+scalatest = { module = "org.scalatest:scalatest_3", version.ref = "org-scalatest" }
+scalatestplus-junit5 = { module = "org.scalatestplus:junit-5-12_3", version.ref = "org-scalatestplus-junit5" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
-pgjdbc = { module = "org.postgresql:postgresql", version.ref = "org-postgresql-pgjdbc" }
-protoc = { group = "com.google.protobuf", name = "protoc", version.ref = "protobuf" }
-
-
+spark-core = { module = "org.apache.spark:spark-core_2.13", version.ref = "org-apache-spark" }
+spark-sql = { module = "org.apache.spark:spark-sql_2.13", version.ref = "org-apache-spark" }
 
 [bundles]
-arrow = ["apache-arrow-vector", "apache-arrow-memory-netty"]
-grpc-impl = ["protobuf-java", "grpc-netty", "grpc-protobuf", "grpc-stub", "javax-annotation-api"]
-grpc-testing = ["grpcmock", "grpc-inprocess"]
-testing = ["junit-jupiter-base", "junit-jupiter-api", "junit-jupiter-engine", "junit-jupiter-params", "junit-platform-launcher", "assertj", "slf4j-simple"]
-mocking = ["mockito-inline", "mockito-junit-jupiter", "okhttp3-mockwebserver"]
-spark = ["spark-sql", "spark-core"]
-scala-testing = ["scalatest", "junit-platform-engine", "junit-platform-launcher-test", "scalatestplus-junit5"]
-
+arrow = [
+    "apache-arrow-memory-netty",
+    "apache-arrow-vector",
+]
+grpc-impl = [
+    "grpc-netty",
+    "grpc-protobuf",
+    "grpc-stub",
+    "javax-annotation-api",
+    "protobuf-java",
+]
+grpc-testing = [
+    "grpc-inprocess",
+    "grpcmock",
+]
+mocking = [
+    "mockito-inline",
+    "mockito-junit-jupiter",
+    "okhttp3-mockwebserver",
+]
+scala-testing = [
+    "junit-platform-engine",
+    "junit-platform-launcher-test",
+    "scalatest",
+    "scalatestplus-junit5",
+]
+spark = [
+    "spark-core",
+    "spark-sql",
+]
+testing = [
+    "assertj",
+    "junit-jupiter-api",
+    "junit-jupiter-base",
+    "junit-jupiter-engine",
+    "junit-jupiter-params",
+    "junit-platform-launcher",
+    "slf4j-simple",
+]
 
 [plugins]
+buf = { id = "build.buf", version.ref = "plugin-build-buf" }
+lombok = { id = "io.freefair.lombok", version.ref = "plugin-freefair-lombok" }
 protobuf = { id = "com.google.protobuf", version.ref = "plugin-com-google-protobuf" }
 shadow = { id = "com.gradleup.shadow", version.ref = "plugin-com-gradleup-shadow" }
-lombok = { id = "io.freefair.lombok", version.ref = "plugin-freefair-lombok"}
-buf = { id = "build.buf", version.ref = "plugin-build-buf" }
