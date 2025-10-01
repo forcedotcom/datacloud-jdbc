@@ -19,6 +19,10 @@ There will also be an accompanying CSV in `build/reports/jacoco/testCodeCoverage
 The following commands should be run regularly to ensure the project stays healthy
 - `./gradlew createModuleGraph`, it updates the module graph in this document and should be run every time the inter project dependencies change
 - `./gradlew versionCatalogUpdate`, should be run every time a dependency is added and regularly anyway to avoid vulnerable versions
+## Tech Debt
+
+- Some of our classes are tested using assertions generated with [the assertj assertions generator][assertion generator]. Due to some transient test-compile issues we experienced, we checked in generated assertions for some of our classes. With the move to Gradle we lost the ability to update them and thus we should completely remove those files. To find these generated assertions, look for files with the path `**/test/**/*Assert.java`.
+
 
 ## Module Graph
 

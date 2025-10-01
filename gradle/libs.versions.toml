@@ -12,19 +12,19 @@ grpc = "1.75.0"
 io-netty = "4.2.6.Final"
 javax-annotation-javax-annotation-api = "1.3.2"
 jjwt = "0.13.0"
-# This is soft pinned to !=5 (as 5 is not Java 8 compatible) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
+# This is soft pinned to 4.* (as 5 is not Java 8 compatible) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 mockito = "4.11.0"
 net-jodah-failsafe = "3.3.2"
-# This is soft pinned to !=5 (as we didn't invest in the upgrade yet) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
+# This is soft pinned to 4.* (as we didn't invest in the upgrade yet) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 okhttp3 = "4.12.0"
 # @pin this version as the following versions have a breaking Cursor change, that - with the upcoming Avactica removal - we currently don't want to invest in
 org-apache-calcite-avatica-core = "1.26.0"
 org-apache-commons-commons-lang3 = "3.19.0"
-# This is soft pinned to !=4 (as the driver is targetting in Spark 3.5) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
+# This is soft pinned to 3.* (as the driver is targetting in Spark 3) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 org-apache-spark = "3.5.7"
 org-assertj-assertj-core = "3.27.6"
 org-grpcmock-grpcmock-junit5 = "0.16.0"
-# This is soft pinned to !=6 (as 6 is not Java 8 compatible) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
+# This is soft pinned to 5.* (as 6 is not Java 8 compatible) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 org-junit-bom = "5.14.0"
 org-junit-platform-junit-platform-launcher = "1.14.0"
 org-postgresql-pgjdbc = "42.7.8"

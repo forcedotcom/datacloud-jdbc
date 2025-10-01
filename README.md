@@ -193,25 +193,9 @@ public static void executeQuery() throws ClassNotFoundException, SQLException {
 }
 ```
 
-## Generated assertions
-
-Some of our classes are tested using assertions generated with [the assertj assertions generator][assertion generator].
-Due to some transient test-compile issues we experienced, we checked in generated assertions for some of our classes.
-If you make changes to any of these classes, you will need to re-run the assertion generator to have the appropriate assertions available for that class.
-
-To find examples of these generated assertions, look for files with the path `**/test/**/*Assert.java`.
-
-To re-generate these assertions execute the following command:
-
-```shell
-mvn assertj:generate-assertions
-```
-
-
 [oauth authorization flows]: https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_flows.htm&type=5
 [username flow]: https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_username_password_flow.htm&type=5
 [jwt flow]: https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_jwt_flow.htm&type=5
 [refresh token flow]: https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_refresh_token_flow.htm&type=5
 [connection settings]: https://tableau.github.io/hyper-db/docs/hyper-api/connection#connection-settings
-[assertion generator]: https://joel-costigliola.github.io/assertj/assertj-assertions-generator-maven-plugin.html#configuration
 [connected app overview]: https://help.salesforce.com/s/articleView?id=sf.connected_app_overview.htm&type=5
