@@ -1,3 +1,11 @@
+## Development Guidelines
+
+### Best Practices
+
+#### Working with Streams
+
+**FluentIterable** from Google Guava is the established reference interface for operating on iterator and stream-like data structures in this codebase. It provides a fluent API for transforming, filtering, and manipulating collections in a functional programming style.
+
 ## Coverage
 
 Run `./gradlew clean build testCodeCoverageReport` to build the coverage report in `build/reports/jacoco/testCodeCoverageReport/html/index.html`.
