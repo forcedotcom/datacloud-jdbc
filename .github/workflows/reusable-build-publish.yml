@@ -148,6 +148,8 @@ jobs:
           echo "resolved_version=$RESOLVED_VERSION" >> $GITHUB_OUTPUT
       - name: Publish to Maven Central
         uses: jreleaser/release-action@v2
+        with:
+          version: 1.19.0
         env:
           JRELEASER_PROJECT_VERSION: ${{ steps.resolve_version.outputs.resolved_version }}
           JRELEASER_MAVENCENTRAL_USERNAME: ${{ secrets.publish_user }}
