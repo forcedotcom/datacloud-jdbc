@@ -37,12 +37,7 @@ public class ByteStringReadableByteChannel implements ReadableByteChannel {
         // Continue reading while destination has space AND we have data available
         while (dst.hasRemaining() && (iterator.hasNext() || (currentBuffer != null && currentBuffer.hasRemaining()))) {
             if (currentBuffer == null || !currentBuffer.hasRemaining()) {
-                if (iterator.hasNext()) {
-                    ByteString data = iterator.next();
-                    currentBuffer = data.asReadOnlyByteBuffer();
-                } else {
-                    break; // No more data
-                }
+                currentBuffer = iterator.next().asReadOnlyByteBuffer();
             }
 
             int bytesTransferred = transferToDestination(currentBuffer, dst);
