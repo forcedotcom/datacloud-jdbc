@@ -66,7 +66,8 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             querySettings.put(
                     "query_timeout", queryTimeout.getServerQueryTimeout().toMillis() + "ms");
         }
-        return HyperGrpcClientExecutor.of(stub, querySettings);
+        val databases = connection.getConnectionProperties().getAttachedDatabases();
+        return HyperGrpcClientExecutor.of(stub, querySettings, databases);
     }
 
     @Getter
