@@ -84,39 +84,6 @@ public class SalesforceAuthProperties {
     @Builder.Default
     private final String dataspace = null;
 
-    public static SalesforceAuthPropertiesBuilder builderUsingPassword(URI loginUrl, String userName, String password) {
-        if (!isKnownLoginUrl(loginUrl.getHost())) {
-            log.warn("The specified url `{}` does not match any known Salesforce hosts.", loginUrl);
-        }
-        return builder()
-                .loginUrl(loginUrl)
-                .authenticationMode(AuthenticationMode.PASSWORD)
-                .userName(userName)
-                .password(password);
-    }
-
-    public static SalesforceAuthPropertiesBuilder builderUsingPrivateKey(
-            URI loginUrl, String userName, RSAPrivateKey privateKey) {
-        if (!isKnownLoginUrl(loginUrl.getHost())) {
-            log.warn("The specified url `{}` does not match any known Salesforce hosts.", loginUrl);
-        }
-        return builder()
-                .loginUrl(loginUrl)
-                .authenticationMode(AuthenticationMode.PRIVATE_KEY)
-                .userName(userName)
-                .privateKey(privateKey);
-    }
-
-    public static SalesforceAuthPropertiesBuilder builderUsingRefreshToken(URI loginUrl, String refreshToken) {
-        if (!isKnownLoginUrl(loginUrl.getHost())) {
-            log.warn("The specified url `{}` does not match any known Salesforce hosts.", loginUrl);
-        }
-        return builder()
-                .loginUrl(loginUrl)
-                .authenticationMode(AuthenticationMode.REFRESH_TOKEN)
-                .refreshToken(refreshToken);
-    }
-
     /**
      * Parses authentication properties from a Properties object.
      * Removes the interpreted properties from the Properties object.
