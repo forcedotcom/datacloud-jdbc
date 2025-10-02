@@ -275,7 +275,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
       val stmt =
         use(connection.createStatement().unwrap(classOf[DataCloudStatement]))
       stmt.execute("""
-        SELECT 
+        SELECT
           1::int AS id,
           NULL::varchar AS name,
           NULL::decimal(10,2) AS amount,
@@ -288,8 +288,11 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
 
     val df = spark.read
       .format("com.salesforce.datacloud.spark.HyperResultSource")
-      .option("port", hyperServerProcess.getPort())
-      .option("query_id", queryId)
+      .option(
+        "jdbcUrl",
+        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+      )
+      .option("queryId", queryId)
       .load()
 
     // Verify schema is correctly inferred with nullable columns

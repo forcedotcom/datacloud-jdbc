@@ -29,7 +29,9 @@ class HyperResultSource extends TableProvider {
       HyperResultSourceOptions.fromOptions(options.asCaseSensitiveMap())
 
     Using.resource(parsedOptions.createConnection()) { conn =>
-      TypeMapping.getSparkFields(conn.getSchemaForQueryId(parsedOptions.queryId))
+      TypeMapping.getSparkFields(
+        conn.getSchemaForQueryId(parsedOptions.queryId)
+      )
     }
   }
 

@@ -116,7 +116,7 @@ public class DataCloudConnectionFunctionalTest {
         String query =
                 "SELECT '[abc,def,ghi]'::text[] as a, 0 as g UNION ALL SELECT ARRAY[rpad('', 1024*1024, 'x')] as a, g FROM generate_series(1, 200) g ORDER BY g ASC";
 
-        try (DataCloudConnection connection = HyperTestBase.getHyperQueryConnection()) {
+        try (DataCloudConnection connection = LocalHyperTestBase.getHyperQueryConnection()) {
             try (Statement statement = connection.createStatement()) {
                 ResultSet rs = statement.executeQuery(query);
                 // Access the first row
@@ -144,7 +144,7 @@ public class DataCloudConnectionFunctionalTest {
         // Integration test demonstrating that DataCloudArray data persists after ResultSet is closed
         // This test would have failed before the fix due to data loss
         HyperLogScope hyperLogScope = new HyperLogScope();
-        try (val connection = HyperTestBase.getHyperQueryConnection(hyperLogScope.getProperties())) {
+        try (val connection = LocalHyperTestBase.getHyperQueryConnection(hyperLogScope.getProperties())) {
 
             try (val statement = connection.createStatement()) {
                 val query = "SELECT '[abc,null,def,ghi,jkl,mno]'::text[] as strings_";

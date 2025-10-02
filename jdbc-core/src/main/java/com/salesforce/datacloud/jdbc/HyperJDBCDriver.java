@@ -14,8 +14,8 @@ import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.logging.Logger;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.nullness.qual.NonNull;
 
 @Slf4j
 public class HyperJDBCDriver implements Driver {

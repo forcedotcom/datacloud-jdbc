@@ -123,7 +123,7 @@ public class StreamingResultSetTest {
     @SneakyThrows
     @Test
     public void testGetSchemaForQueryIdWithZeroResults() {
-        withStatement(none, (conn, stmt) -> {
+        withStatement((conn, stmt) -> {
             String sql =
                     "SELECT s, s::text as s_text, cast(s as numeric(38,18)) as s_numeric FROM generate_series(1,10) s LIMIT 0";
 
@@ -152,7 +152,7 @@ public class StreamingResultSetTest {
     @SneakyThrows
     @Test
     public void testGetSchemaForQueryIdWithResults() {
-        withStatement(none, (conn, stmt) -> {
+        withStatement((conn, stmt) -> {
             String sql =
                     "SELECT s, s::text as s_text, cast(s as numeric(38,18)) as s_numeric FROM generate_series(1,3) s";
 
@@ -182,7 +182,7 @@ public class StreamingResultSetTest {
     @SneakyThrows
     @Test
     public void testGetSchemaForQueryIdWithInvalidQueryId() {
-        withStatement(none, (conn, stmt) -> {
+        withStatement((conn, stmt) -> {
             String invalidQueryId = "invalidQueryId";
             assertThat(assertThatThrownBy(() -> {
                         conn.getSchemaForQueryId(invalidQueryId);
@@ -195,7 +195,7 @@ public class StreamingResultSetTest {
     @SneakyThrows
     @Test
     public void testGetSchemaForQueryIdWithNoSchemaData() {
-        withStatement(none, (conn, stmt) -> {
+        withStatement((conn, stmt) -> {
             String sql = "SELECT 1 as test_column";
 
             final String queryId;

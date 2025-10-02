@@ -81,8 +81,8 @@ public class RowBasedTest {
                 .isInstanceOf(DataCloudJDBCException.class)
                 .rootCause()
                 .isInstanceOf(StatusRuntimeException.class)
-                .hasMessageContaining(String.format(
-                        "INVALID_ARGUMENT: Request out of range: The specified offset is %d, but only %d tuples are available [TraceId:",
+                .hasMessage(String.format(
+                        "INVALID_ARGUMENT: Request out of range: The specified offset is %d, but only %d tuples are available",
                         tinySize, tinySize));
     }
 

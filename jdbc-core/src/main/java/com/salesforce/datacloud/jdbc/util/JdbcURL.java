@@ -15,7 +15,7 @@ import java.util.Properties;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import lombok.NonNull;
 
 /**
  * Parse JDBC URLs into host, port, path, and parameters.
@@ -82,7 +82,7 @@ public class JdbcURL {
      * Parse query string `key=value&key2=value2` into parameters, following Javascript's URLSearchParams behavior.
      * Handles URL decoding, empty values, and throws SqlException for duplicate keys.
      */
-    private static Map<String, String> parseQueryString(@NonNull String query) throws DataCloudJDBCException {
+    private static Map<String, String> parseQueryString(String query) throws DataCloudJDBCException {
         Map<String, String> parameters = new HashMap<>();
 
         if (query == null || query.isEmpty()) {

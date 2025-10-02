@@ -6,6 +6,7 @@ package com.salesforce.datacloud.jdbc;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -91,5 +92,22 @@ public class DataCloudJDBCDriverTest {
                 .isThrownBy(() -> driver.connect(
                         VALID_URL + "?clientId=123&clientSecret=123&userName=user&password=pw&FOO=1234567890", null))
                 .withMessageContaining("Unknown JDBC properties: FOO");
+    }
+
+    @Test
+    public void testInvalidConnection() {
+        // We expect that nobody is listening on port 23123
+        String url = String.format("jdbc:salesforce-datacloud://localhost:23123");
+        Properties properties = new Properties();
+        properties.setProperty("clientId", "123");
+        properties.setProperty("clientSecret", "123");
+        properties.setProperty("userName", "user");
+        properties.setProperty("password", "pw");
+        // We expect that the connection will fail, so we set the max retries to 0 to make this test faster
+        properties.setProperty("http.maxRetries", "0");
+
+        assertThatThrownBy(() -> DriverManager.getConnection(url, properties))
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessageContaining("Failed to connect to");
     }
 }

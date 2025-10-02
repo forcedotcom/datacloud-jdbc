@@ -14,6 +14,7 @@ import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.HttpClientProperties;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.TokenProcessorSupplier;
+import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
 import com.salesforce.datacloud.jdbc.soql.DataspaceClient;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.PropertyParsingUtils;
@@ -147,8 +148,9 @@ public class DataCloudDatasource implements DataSource {
 
         // Setup the gRPC stub provider
         val host = tokenProvider.getDataCloudToken().getTenantUrl();
-        final ManagedChannelBuilder<?> builder =
-                ManagedChannelBuilder.forAddress(host, 443).intercept(authInterceptor);
+        final ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(host, 443)
+                .intercept(authInterceptor)
+                .intercept(TracingHeadersInterceptor.of());
         val stubProvider = JdbcDriverStubProvider.of(builder, grpcChannelProperties);
 
         return DataCloudConnection.of(

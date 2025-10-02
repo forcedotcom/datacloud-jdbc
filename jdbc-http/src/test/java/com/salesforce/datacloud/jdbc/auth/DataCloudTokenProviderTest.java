@@ -442,15 +442,15 @@ class DataCloudTokenProviderTest {
 
     private static void assertAuthorizationException(Throwable actual, CharSequence... messages) {
         AssertionsForClassTypes.assertThat(actual)
+                .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContainingAll(messages)
-                .hasCauseInstanceOf(DataCloudJDBCException.class)
                 .hasRootCauseInstanceOf(AuthorizationException.class);
     }
 
     private static void assertSQLException(Throwable actual, CharSequence... messages) {
         AssertionsForClassTypes.assertThat(actual)
+                .isInstanceOf(DataCloudJDBCException.class)
                 .hasMessageContainingAll(messages)
-                .hasCauseInstanceOf(DataCloudJDBCException.class)
                 .hasRootCauseInstanceOf(SQLException.class);
     }
 }

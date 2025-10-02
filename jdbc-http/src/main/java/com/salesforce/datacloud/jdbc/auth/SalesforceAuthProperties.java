@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -91,7 +92,8 @@ public class SalesforceAuthProperties {
      * @param props The properties to parse
      * @return A SalesforceAuthProperties instance
      */
-    public static SalesforceAuthProperties ofDestructive(URI loginUrl, Properties props) throws DataCloudJDBCException {
+    public static SalesforceAuthProperties ofDestructive(@NonNull URI loginUrl, Properties props)
+            throws DataCloudJDBCException {
         if (!isKnownLoginUrl(loginUrl.getHost())) {
             log.warn("The specified url `{}` does not match any known Salesforce hosts.", loginUrl);
         }
@@ -206,7 +208,7 @@ public class SalesforceAuthProperties {
             Pattern.compile("^login\\.test\\d+\\.pc-rnd\\.salesforce\\.com$"),
             Pattern.compile("^.+--.+\\.sandbox\\.my\\.salesforce\\.com$"));
 
-    public static boolean isKnownLoginUrl(String host) {
+    public static boolean isKnownLoginUrl(@NonNull String host) {
         return KNOWN_LOGIN_URL_PATTERNS.stream().map(Pattern::asPredicate).anyMatch(p -> p.test(host));
     }
 }

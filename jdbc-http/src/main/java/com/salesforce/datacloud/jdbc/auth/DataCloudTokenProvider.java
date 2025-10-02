@@ -95,26 +95,19 @@ public class DataCloudTokenProvider {
     }
 
     public OAuthToken getOAuthToken() throws SQLException {
-        try {
-            // XXX should this also be cached?
-            return fetchOAuthToken();
-        } catch (Exception ex) {
-            throw new DataCloudJDBCException(ex.getMessage(), "28000", ex);
-        }
+        return fetchOAuthToken();
     }
 
     public DataCloudToken getDataCloudToken() throws SQLException {
         if (cachedDataCloudToken != null && cachedDataCloudToken.isAlive()) {
-            return cachedDataCloudToken;
+            if (cachedDataCloudToken.isAlive()) {
+                return cachedDataCloudToken;
+            }
+            cachedDataCloudToken = null;
         }
 
-        try {
-            cachedDataCloudToken = exchangeOauthForDataCloudToken();
-            return cachedDataCloudToken;
-        } catch (Exception ex) {
-            cachedDataCloudToken = null;
-            throw new DataCloudJDBCException(ex.getMessage(), "28000", ex);
-        }
+        cachedDataCloudToken = exchangeOauthForDataCloudToken();
+        return cachedDataCloudToken;
     }
 
     public String getLakehouseName() throws SQLException {

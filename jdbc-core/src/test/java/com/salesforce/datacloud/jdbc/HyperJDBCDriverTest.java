@@ -6,6 +6,7 @@ package com.salesforce.datacloud.jdbc;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
@@ -28,11 +29,11 @@ public class HyperJDBCDriverTest {
         assertThat(DriverManager.getDriver(FAKE_URL)).isNotNull().isInstanceOf(HyperJDBCDriver.class);
     }
 
+    @Test
     public void testSuccessfulConnection() throws SQLException {
         int port = HyperServerManager.get(ConfigFile.SMALL_CHUNKS).getPort();
         Properties properties = new Properties();
         // Test a couple of properties
-        properties.setProperty("http.logging.level", "NONE");
         properties.setProperty("grpc.keepAlive", "false");
         properties.setProperty("workload", "test-workload");
 
@@ -46,9 +47,10 @@ public class HyperJDBCDriverTest {
         }
     }
 
+    @Test
     public void testUrlParameters() throws SQLException {
         int port = HyperServerManager.get(ConfigFile.SMALL_CHUNKS).getPort();
-        String url = String.format("jdbc:salesforce-hyper://localhost:%d?http.logging.level=NONE", port);
+        String url = String.format("jdbc:salesforce-hyper://localhost:%d?workload=test-workload", port);
         try (Connection connection = DriverManager.getConnection(url)) {
             try (Statement statement = connection.createStatement()) {
                 ResultSet resultSet = statement.executeQuery("SELECT 1");
@@ -93,5 +95,22 @@ public class HyperJDBCDriverTest {
         assertThatExceptionOfType(DataCloudJDBCException.class)
                 .isThrownBy(() -> driver.connect(FAKE_URL + "?clientId=1234567890", null))
                 .withMessageContaining("Unknown JDBC properties: clientId");
+    }
+
+    @Test
+    public void testInvalidConnection() {
+        // We expect that nobody is listening on port 23123
+        String url = String.format("jdbc:salesforce-hyper://localhost:23123");
+
+        assertThatThrownBy(() -> {
+                    try (Connection connection = DriverManager.getConnection(url, null)) {
+                        try (Statement statement = connection.createStatement()) {
+                            // Execute an actual query to trigger the connection creation
+                            statement.executeQuery("SELECT 1");
+                        }
+                    }
+                })
+                .isInstanceOf(DataCloudJDBCException.class)
+                .hasMessageContaining("Failed to execute query");
     }
 }

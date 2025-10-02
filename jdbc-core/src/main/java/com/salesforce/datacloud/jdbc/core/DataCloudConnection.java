@@ -4,8 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 import static com.salesforce.datacloud.jdbc.config.DriverVersion.formatDriverInfo;
+import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
 import static org.apache.arrow.vector.types.pojo.Schema.deserializeMessage;
@@ -39,9 +39,9 @@ import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;

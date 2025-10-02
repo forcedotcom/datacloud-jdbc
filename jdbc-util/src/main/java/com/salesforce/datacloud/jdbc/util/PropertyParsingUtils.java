@@ -20,6 +20,10 @@ import java.util.stream.Collectors;
  * We remove the parsed properties from the Properties object. After parsing
  * finished, we check if any properties are left in the Properties object. If so,
  * we throw an exception in `validateRemainingProperties`.
+ *
+ * Be careful when multiple pieces accept the same property, in particular using
+ * `takeOptional`. The first call to `takeOptional` will remove the property from
+ * the Properties object, so the second call will not find it anymore.
  */
 public final class PropertyParsingUtils {
     private PropertyParsingUtils() {

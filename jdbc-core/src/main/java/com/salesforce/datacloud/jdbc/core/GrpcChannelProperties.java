@@ -13,7 +13,6 @@ import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOption
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.interceptor.TracingHeadersInterceptor;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import io.grpc.ManagedChannelBuilder;
 import java.util.Arrays;
@@ -213,7 +212,6 @@ public class GrpcChannelProperties {
         // General, setting-independent setup
         builder.maxInboundMessageSize(GRPC_INBOUND_MESSAGE_MAX_SIZE);
         builder.userAgent(formatDriverInfo());
-        builder.intercept(TracingHeadersInterceptor.of());
 
         // Keep alive settings
         if (isKeepAliveEnabled()) {
