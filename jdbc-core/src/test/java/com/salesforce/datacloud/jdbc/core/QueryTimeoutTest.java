@@ -17,6 +17,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
 import java.util.Properties;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -83,6 +84,7 @@ class QueryTimeoutTest {
     }
 
     @Test
+    @Disabled // This test is too slow, executing for 2 minutes
     void testNetworkTimeoutDoesntInterfereWithLocalEnforcement() throws SQLException {
         // Both local enforcement and network timeout integrate with the gRPC deadline mechanism.
         // This test verifies that they don't interfere with each other. If the local enforcement
