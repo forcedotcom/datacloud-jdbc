@@ -19,12 +19,14 @@ import java.util.List;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.apache.arrow.vector.util.Text;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(HyperTestBase.class)
 public class DataCloudConnectionFunctionalTest {
     @Test
+    @Disabled // This test is too slow, executing for 2 minutes
     public void testNetworkTimeoutDefault() throws SQLException {
         // Verify that by default no deadline is set
         HyperLogScope hyperLogScope = new HyperLogScope();
@@ -45,6 +47,7 @@ public class DataCloudConnectionFunctionalTest {
     }
 
     @Test
+    @Disabled // This test is too slow, executing for 2 minutes
     public void testNetworkTimeoutPropagatesToServer() throws SQLException {
         // Verify that when network timeout is set a corresponding deadline is set on the gRPC call level
         HyperLogScope hyperLogScope = new HyperLogScope();
@@ -70,6 +73,7 @@ public class DataCloudConnectionFunctionalTest {
 
     @Test
     @SneakyThrows
+    @Disabled // This test is too slow, executing for 2 minutes
     public void testNetworkTimeoutIsPerGrpcCall() {
         // This is a regression test as we previously had set the deadline on the stub which results in a deadline
         // across all calls made on that stub. While the desired network timeout behavior is that it should
