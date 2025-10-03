@@ -17,4 +17,8 @@ jobs:
       signing_pass: ${{ secrets.GPG_SIGNING_KEY_PASSWORD }}
       publish_user: ${{ secrets.CENTRAL_TOKEN_USERNAME }}
       publish_pass: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
+      DATACLOUD_USERNAME: ${{ secrets.DATACLOUD_USERNAME }}
+      DATACLOUD_PASSWORD: ${{ secrets.DATACLOUD_PASSWORD }}
+      DATACLOUD_CLIENT_ID: ${{ secrets.DATACLOUD_CLIENT_ID }}
+      DATACLOUD_CLIENT_SECRET: ${{ secrets.DATACLOUD_CLIENT_SECRET }}
 
