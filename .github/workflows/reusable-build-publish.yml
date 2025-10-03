@@ -25,6 +25,14 @@ on:
         required: false
       signing_pub:
         required: false
+      DATACLOUD_USERNAME:
+        required: false
+      DATACLOUD_PASSWORD:
+        required: false
+      DATACLOUD_CLIENT_ID:
+        required: false
+      DATACLOUD_CLIENT_SECRET:
+        required: false
 
 jobs:
   prepare:
@@ -120,8 +128,41 @@ jobs:
             build/hyperd/*.log
           retention-days: 5
 
-  publish-jreleaser:
+  integration-test:
     needs: [ prepare, build ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build shaded JAR
+        run: ./gradlew clean :jdbc:shadowJar
+      - name: Run integration test
+        run: |
+          ./gradlew :integration-test:runIntegrationTest \
+            -Dtest.connection.url="jdbc:salesforce-datacloud://login.test2.pc-rnd.salesforce.com" \
+            -Dtest.connection.userName="${{ secrets.DATACLOUD_USERNAME }}" \
+            -Dtest.connection.password="${{ secrets.DATACLOUD_PASSWORD }}" \
+            -Dtest.connection.clientId="${{ secrets.DATACLOUD_CLIENT_ID }}" \
+            -Dtest.connection.clientSecret="${{ secrets.DATACLOUD_CLIENT_SECRET }}" \
+            --info
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            integration-test/build/reports/
+            jdbc/build/libs/*-shaded.jar
+
+  publish-jreleaser:
+    needs: [ prepare, build, integration-test ]
     if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
     env:
