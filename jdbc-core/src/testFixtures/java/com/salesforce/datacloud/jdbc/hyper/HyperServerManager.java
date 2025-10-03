@@ -14,8 +14,7 @@ public final class HyperServerManager {
     @AllArgsConstructor
     public enum ConfigFile {
         DEFAULT("default.yaml"),
-        SMALL_CHUNKS("hyper.yaml"),
-        TIMEOUT("timeout.yaml");
+        SMALL_CHUNKS("hyper.yaml");
 
         final String filename;
     }
@@ -55,27 +54,19 @@ public final class HyperServerManager {
 
     static HyperServerProcess get(HyperServerConfig.HyperServerConfigBuilder builder, String yaml) {
         val key = new HyperProcessHandle(yaml, builder.build());
-        return instances.computeIfAbsent(key, k -> {
+        val server = instances.computeIfAbsent(key, k -> {
             log.warn("Cache miss for Hyper server yaml={}, config={}", yaml, builder.build());
             return new HyperServerProcess(k.config.toBuilder(), k.yaml);
         });
+        assert (server != null) && server.isHealthy(): "Hyper wasn't started, failing test";
+        return server;
     }
 
     public static HyperServerProcess get(HyperServerConfig.HyperServerConfigBuilder builder, ConfigFile yaml) {
         return get(builder, yaml.filename);
     }
 
-    @Deprecated
-    public static HyperServerProcess closeToDefault() {
-        val config = HyperServerConfig.builder();
-        val name = "default.yaml";
-        return get(config, name);
-    }
-
-    @Deprecated
-    public static HyperServerProcess withSmallChunks() {
-        val config = HyperServerConfig.builder();
-        val name = "hyper.yaml";
-        return get(config, name);
+    public static HyperServerProcess get(ConfigFile yaml) {
+        return get(HyperServerConfig.builder(), yaml);
     }
 }

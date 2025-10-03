@@ -11,9 +11,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.anyString;
 
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.config.KeywordResources;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
-import com.salesforce.datacloud.jdbc.util.Constants;
+import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -56,8 +57,8 @@ public class DataCloudDatabaseMetadataTest {
     @BeforeEach
     @SneakyThrows
     public void beforeEach() {
-        val connectionString = DataCloudConnectionString.of("jdbc:salesforce-datacloud://login.salesforce.com");
-        dataCloudDatabaseMetadata = new DataCloudDatabaseMetadata(connection, connectionString, null, null, "userName");
+        val jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://login.salesforce.com");
+        dataCloudDatabaseMetadata = new DataCloudDatabaseMetadata(connection, jdbcUrl, null, null, "userName");
     }
 
     @Test
@@ -102,22 +103,22 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetDatabaseProductName() {
-        assertThat(dataCloudDatabaseMetadata.getDatabaseProductName()).isEqualTo(Constants.DATABASE_PRODUCT_NAME);
+        assertThat(dataCloudDatabaseMetadata.getDatabaseProductName()).isEqualTo(DriverVersion.getProductName());
     }
 
     @Test
     public void testGetDatabaseProductVersion() {
-        assertThat(dataCloudDatabaseMetadata.getDatabaseProductVersion()).isEqualTo(Constants.DATABASE_PRODUCT_VERSION);
+        assertThat(dataCloudDatabaseMetadata.getDatabaseProductVersion()).isEqualTo(DriverVersion.getProductVersion());
     }
 
     @Test
     public void testGetDriverName() {
-        assertThat(dataCloudDatabaseMetadata.getDriverName()).isEqualTo(Constants.DRIVER_NAME);
+        assertThat(dataCloudDatabaseMetadata.getDriverName()).isEqualTo(DriverVersion.getDriverName());
     }
 
     @Test
     public void testGetDriverVersion() {
-        assertThat(dataCloudDatabaseMetadata.getDriverVersion()).isEqualTo(Constants.DRIVER_VERSION);
+        assertThat(dataCloudDatabaseMetadata.getDriverVersion()).isEqualTo(DriverVersion.getDriverVersion());
     }
 
     @Test
@@ -836,8 +837,8 @@ public class DataCloudDatabaseMetadataTest {
     @SneakyThrows
     @Test
     public void testGetDataspacesHandlesNullSupplier() {
-        val connectionString = DataCloudConnectionString.of("jdbc:salesforce-datacloud://login.salesforce.com");
-        val sut = new DataCloudDatabaseMetadata(connection, connectionString, null, null, "userName");
+        val jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://login.salesforce.com");
+        val sut = new DataCloudDatabaseMetadata(connection, jdbcUrl, null, null, "userName");
 
         assertThat(sut.getDataspaces()).isEqualTo(ImmutableList.of());
     }
@@ -846,9 +847,8 @@ public class DataCloudDatabaseMetadataTest {
     @Test
     public void testGetDataspacesRespectsSupplier() {
         val actual = UUID.randomUUID().toString();
-        val connectionString = DataCloudConnectionString.of("jdbc:salesforce-datacloud://login.salesforce.com");
-        val sut = new DataCloudDatabaseMetadata(
-                connection, connectionString, null, () -> ImmutableList.of(actual), "userName");
+        val jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://login.salesforce.com");
+        val sut = new DataCloudDatabaseMetadata(connection, jdbcUrl, null, () -> ImmutableList.of(actual), "userName");
 
         assertThat(sut.getDataspaces()).isEqualTo(ImmutableList.of(actual));
     }

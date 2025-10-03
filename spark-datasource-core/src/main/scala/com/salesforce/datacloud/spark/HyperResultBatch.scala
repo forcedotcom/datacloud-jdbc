@@ -42,8 +42,7 @@ private case class HyperResultInputPartition(
 /** A batch is a collection of partitions.
   */
 private case class HyperResultBatch(
-    connectionOptions: HyperConnectionOptions,
-    resultSetId: String,
+    parsedOptions: HyperResultSourceOptions,
     schema: StructType,
     chunkCount: Long
 ) extends Batch {
@@ -57,7 +56,7 @@ private case class HyperResultBatch(
         // Handle rounding issues with integer division.
         chunksPerPartition += 1
       }
-      HyperResultInputPartition(resultSetId, i, chunksPerPartition)
+      HyperResultInputPartition(parsedOptions.queryId, i, chunksPerPartition)
     })
   }
 
@@ -69,8 +68,7 @@ private case class HyperResultBatch(
         val partition = partitionBase.asInstanceOf[HyperResultInputPartition]
         new HyperResultPartitionReader(
           schema,
-          connectionOptions,
-          resultSetId,
+          parsedOptions,
           partition.chunkIndex,
           partition.chunkCount
         )
@@ -87,8 +85,7 @@ private class HyperResultPartitionReader extends PartitionReader[InternalRow] {
 
   def this(
       schema: StructType,
-      connectionOptions: HyperConnectionOptions,
-      resultSetId: String,
+      parsedOptions: HyperResultSourceOptions,
       chunkIndex: Long,
       chunkCount: Long
   ) = {
@@ -96,9 +93,9 @@ private class HyperResultPartitionReader extends PartitionReader[InternalRow] {
     mutableRow = new SpecificInternalRow(
       schema.fields.map(x => x.dataType).toIndexedSeq
     )
-    connection = connectionOptions.createConnection()
-    resultSet = this.connection.getChunkBasedResultSet(
-      resultSetId,
+    connection = parsedOptions.createConnection()
+    resultSet = connection.getChunkBasedResultSet(
+      parsedOptions.queryId,
       chunkIndex,
       chunkCount
     )

@@ -4,44 +4,65 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import java.util.concurrent.TimeUnit;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 /**
  * This class is used to provide a stub for the Hyper gRPC client used by the JDBC Connection.
+ *
+ * It sets up the provided  {@link io.grpc.ManagedChannel} using the default settings
+ * for the JDBC driver. Alternatively, you can implement your own {@link HyperGrpcStubProvider}
+ * to customize the stub creation.
  */
 @Slf4j
+@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public class JdbcDriverStubProvider implements HyperGrpcStubProvider {
-
-    private final DataCloudJdbcManagedChannel channel;
-    private final boolean shouldCloseChannelWithStub;
+    private final ManagedChannel channel;
 
     /**
-     * Initializes a new JdbcDriverStubProvider with the given channel and a flag indicating whether the channel should
-     * be closed when the stub is closed (when the channel is shared across multiple stub providers this should be false).
-     *
-     * @param channel the channel to use for the stub
-     * @param shouldCloseChannelWithStub a flag indicating whether the channel should be closed when the stub is closed
+     * Configure required settings (inbound message size and user agent) in addition to optional keep alive and retry settings based on the provided properties.
      */
-    public JdbcDriverStubProvider(DataCloudJdbcManagedChannel channel, boolean shouldCloseChannelWithStub) {
-        this.channel = channel;
-        this.shouldCloseChannelWithStub = shouldCloseChannelWithStub;
+    public static JdbcDriverStubProvider of(ManagedChannelBuilder<?> builder, GrpcChannelProperties properties) {
+        properties.applyToChannel(builder);
+        return new JdbcDriverStubProvider(builder.build());
+    }
+
+    /**
+     * Configure only required settings ({@link ManagedChannelBuilder#maxInboundMessageSize(int)} and {@link ManagedChannelBuilder#userAgent(String)}) and immediately builds and stores a {@link ManagedChannel}.
+     */
+    public static JdbcDriverStubProvider of(ManagedChannelBuilder<?> builder) {
+        return of(builder, GrpcChannelProperties.defaultProperties());
     }
 
     /**
      * Returns a new HyperServiceGrpc.HyperServiceBlockingStub using the configured channel.
-     *
-     * @return a new HyperServiceGrpc.HyperServiceBlockingStub configured using the Properties
      */
     @Override
     public HyperServiceGrpc.HyperServiceBlockingStub getStub() {
-        return HyperServiceGrpc.newBlockingStub(channel.getChannel());
+        return HyperServiceGrpc.newBlockingStub(channel);
     }
 
     @Override
-    public void close() throws Exception {
-        if (shouldCloseChannelWithStub) {
-            channel.close();
+    public void close() {
+        if (channel == null || channel.isShutdown() || channel.isTerminated()) {
+            return;
+        }
+
+        channel.shutdown();
+
+        try {
+            channel.awaitTermination(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            log.error("Failed to shutdown channel within 5 seconds", e);
+        } finally {
+            if (!channel.isTerminated()) {
+                channel.shutdownNow();
+            }
         }
     }
 }

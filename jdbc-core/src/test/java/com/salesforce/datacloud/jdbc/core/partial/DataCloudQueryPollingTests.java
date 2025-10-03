@@ -7,7 +7,7 @@ package com.salesforce.datacloud.jdbc.core.partial;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-import com.salesforce.datacloud.jdbc.core.HyperGrpcTestBase;
+import com.salesforce.datacloud.jdbc.core.InterceptedHyperTestBase;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.query.v3.QueryStatus;
@@ -28,7 +28,7 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
 
 @Slf4j
-public class DataCloudQueryPollingTests extends HyperGrpcTestBase {
+public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
     ManagedChannel channel;
     HyperServiceGrpc.HyperServiceBlockingStub stub;
 

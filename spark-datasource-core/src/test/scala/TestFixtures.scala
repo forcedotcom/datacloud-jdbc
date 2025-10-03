@@ -5,6 +5,7 @@ import com.salesforce.datacloud.jdbc.hyper.{
   HyperServerManager,
   HyperServerProcess
 }
+import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile
 
 trait WithSparkSession extends BeforeAndAfterAll { self: Suite =>
   protected var spark: SparkSession = _
@@ -25,14 +26,5 @@ trait WithSparkSession extends BeforeAndAfterAll { self: Suite =>
   override def afterAll(): Unit = {
     super.afterAll();
     spark.stop()
-  }
-}
-
-trait WithHyperServer extends BeforeAndAfterAll { self: Suite =>
-  var hyperServerProcess: HyperServerProcess = _;
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    this.hyperServerProcess = HyperServerManager.withSmallChunks()
   }
 }
