@@ -52,7 +52,12 @@ abstract class ShadingExtension @Inject constructor(
             
             isReproducibleFileOrder = true
             isPreserveFileTimestamps = false
-            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            duplicatesStrategy = DuplicatesStrategy.INCLUDE
+            
+            // Exclude duplicates for non-service files to avoid bloat
+            filesNotMatching("META-INF/services/**") {
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            }
             
             // JAR naming configuration
             archiveBaseName.set(project.name)
@@ -74,6 +79,8 @@ abstract class ShadingExtension @Inject constructor(
             relocate("org.apache.commons", "$shadeBase.org.apache.commons")
             relocate("org.apache.hc", "$shadeBase.org.apache.hc")
 
+            // Use built-in service file merging with package relocation support
+            // This automatically handles relocated class names in service files!
             mergeServiceFiles {
                 exclude("META-INF/services/java.sql.Driver")
             }
