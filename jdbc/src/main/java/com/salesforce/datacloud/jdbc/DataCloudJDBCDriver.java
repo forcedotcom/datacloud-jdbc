@@ -138,7 +138,26 @@ public class DataCloudJDBCDriver implements Driver {
         val tokenProcessor = getDataCloudTokenProcessor(properties);
         val authInterceptor = TokenProcessorSupplier.of(tokenProcessor);
 
-        val host = tokenProcessor.getDataCloudToken().getTenantUrl();
+                val tenantUrl = tokenProcessor.getDataCloudToken().getTenantUrl();
+        log.info("Creating gRPC channel for tenant URL: {}", tenantUrl);
+        
+        // Extract hostname from tenant URL, handling both URLs with and without schemes
+        String host;
+        if (tenantUrl.contains("://")) {
+            // URL has a scheme, parse it normally
+            val tenantUri = java.net.URI.create(tenantUrl);
+            host = tenantUri.getHost();
+        } else {
+            // URL is just a hostname, use it directly
+            host = tenantUrl;
+        }
+        log.info("Extracted hostname from tenant URL: {}", host);
+        
+        if (host == null || host.trim().isEmpty()) {
+            throw new DataCloudJDBCException(
+                String.format("Invalid tenant URL '%s': could not extract hostname", tenantUrl));
+        }
+        
         final ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(
                         host, DataCloudConnection.DEFAULT_PORT)
                 .intercept(TracingHeadersInterceptor.of());
