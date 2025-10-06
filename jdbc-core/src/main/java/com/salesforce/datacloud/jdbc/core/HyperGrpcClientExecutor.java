@@ -16,6 +16,7 @@ import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
@@ -24,6 +25,7 @@ import lombok.Builder;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import salesforce.cdp.hyperdb.v1.AttachedDatabase;
 import salesforce.cdp.hyperdb.v1.CancelQueryParam;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
@@ -61,11 +63,25 @@ public class HyperGrpcClientExecutor {
 
     public static HyperGrpcClientExecutor of(
             @NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, Map<String, String> querySettings) {
+        return of(stub, querySettings, List.of());
+    }
+
+    public static HyperGrpcClientExecutor of(
+            @NonNull HyperServiceGrpc.HyperServiceBlockingStub stub,
+            Map<String, String> querySettings,
+            List<AttachedDatabase> databases) {
         val builder = HyperGrpcClientExecutor.builder().stub(stub);
 
-        if (!querySettings.isEmpty()) {
-            builder.settingsQueryParams(
-                    QueryParam.newBuilder().putAllSettings(querySettings).build());
+        if (!querySettings.isEmpty() || !databases.isEmpty()) {
+            val queryParamBuilder = QueryParam.newBuilder();
+
+            if (!querySettings.isEmpty()) {
+                queryParamBuilder.putAllSettings(querySettings);
+            }
+            if (!databases.isEmpty()) {
+                queryParamBuilder.addAllDatabases(databases);
+            }
+            builder.settingsQueryParams(queryParamBuilder.build());
         }
 
         return builder.build();

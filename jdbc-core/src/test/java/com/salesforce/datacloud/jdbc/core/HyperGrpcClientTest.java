@@ -11,8 +11,10 @@ import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.List;
 import org.grpcmock.GrpcMock;
 import org.junit.jupiter.api.Test;
+import salesforce.cdp.hyperdb.v1.AttachedDatabase;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.OutputFormat;
@@ -45,6 +47,43 @@ class HyperGrpcClientTest extends HyperGrpcTestBase {
                 .setQuery(query)
                 .setOutputFormat(OutputFormat.ARROW_IPC)
                 .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
+                .build();
+        GrpcMock.verifyThat(
+                GrpcMock.calledMethod(HyperServiceGrpc.getExecuteQueryMethod()).withRequest(expectedQueryParam));
+    }
+
+    @Test
+    public void testExecuteQueryWithDatabases() throws SQLException {
+        List<AttachedDatabase> databases = List.of(
+                AttachedDatabase.newBuilder()
+                        .setPath("/path/to/db1")
+                        .setAlias("db1_alias")
+                        .build(),
+        );
+
+        HyperGrpcClientExecutor clientWithDatabases = HyperGrpcClientExecutor.of(
+                stubProvider.getStub(),
+                java.util.Map.of(),
+                databases
+        );
+
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
+                .willReturn(chunk1));
+
+        String query = "SELECT * FROM test";
+        Iterator<ExecuteQueryResponse> queryResultIterator =
+                clientWithDatabases.executeQuery(query, QueryTimeout.of(Duration.ZERO, Duration.ZERO));
+        assertDoesNotThrow(() -> {
+            while (queryResultIterator.hasNext()) {
+                queryResultIterator.next();
+            }
+        });
+
+        QueryParam expectedQueryParam = QueryParam.newBuilder()
+                .setQuery(query)
+                .setOutputFormat(OutputFormat.ARROW_IPC)
+                .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
+                .addAllDatabases(databases)
                 .build();
         GrpcMock.verifyThat(
                 GrpcMock.calledMethod(HyperServiceGrpc.getExecuteQueryMethod()).withRequest(expectedQueryParam));
