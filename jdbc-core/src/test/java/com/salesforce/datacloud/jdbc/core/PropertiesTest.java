@@ -67,7 +67,7 @@ class PropertiesTest extends InterceptedHyperTestBase {
     }
 
     @Test
-    void testQuerySettingsParsing() throws DataCloudJDBCException {
+    void testQuerySettingsParsing() throws SQLException {
         Properties properties = new Properties();
         properties.setProperty("querySetting.lc_time", "en_us");
         // This is a normal interpreted setting and should not land in query settings
@@ -81,7 +81,7 @@ class PropertiesTest extends InterceptedHyperTestBase {
     }
 
     @Test
-    void testInvalidSettingValue() throws DataCloudJDBCException {
+    void testInvalidSettingValue() throws SQLException {
         // This test case verifies that we raise the right exception when the user provides an invalid setting value
         Properties properties = new Properties();
         properties.setProperty("queryTimeout", "invalid");
@@ -96,7 +96,7 @@ class PropertiesTest extends InterceptedHyperTestBase {
         // Only time_zone should trigger the targeted hint here.
         Properties properties = new Properties();
         properties.setProperty("time_zone", "Asia/Tokyo");
-        val exception = assertThrows(DataCloudJDBCException.class, () -> getHyperQueryConnection(properties));
+        val exception = assertThrows(SQLException.class, () -> getHyperQueryConnection(properties));
         assertThat(exception.getMessage()).contains("Use 'querySetting.time_zone'");
     }
 
@@ -104,7 +104,7 @@ class PropertiesTest extends InterceptedHyperTestBase {
     void testUnprefixedLcTimeRaisesUserError() {
         Properties properties = new Properties();
         properties.setProperty("lc_time", "en_us");
-        val exception = assertThrows(DataCloudJDBCException.class, () -> getHyperQueryConnection(properties));
+        val exception = assertThrows(SQLException.class, () -> getHyperQueryConnection(properties));
         assertThat(exception.getMessage()).contains("Use 'querySetting.lc_time'");
     }
 
@@ -113,7 +113,7 @@ class PropertiesTest extends InterceptedHyperTestBase {
         Properties properties = new Properties();
         properties.setProperty("TIMEZONE", "UTC");
         // This will be caught by StatementProperties but also ensure a random key errors at connect-time
-        val exception = assertThrows(DataCloudJDBCException.class, () -> getHyperQueryConnection(properties));
+        val exception = assertThrows(SQLException.class, () -> getHyperQueryConnection(properties));
         // With no aliasing for TIMEZONE, this is treated as an unknown property
         assertThat(exception.getMessage()).contains("Unknown JDBC properties: TIMEZONE");
     }

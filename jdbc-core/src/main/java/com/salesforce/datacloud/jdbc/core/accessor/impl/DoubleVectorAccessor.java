@@ -6,7 +6,6 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
@@ -97,7 +96,7 @@ public class DoubleVectorAccessor extends QueryJDBCAccessor {
         final double value = this.getDouble();
         if (Double.isInfinite(value) || Double.isNaN(value)) {
             val rootCauseException = new UnsupportedOperationException(INVALID_VALUE_ERROR_RESPONSE);
-            throw new DataCloudJDBCException(INVALID_VALUE_ERROR_RESPONSE, "2200G", rootCauseException);
+            throw new SQLException(INVALID_VALUE_ERROR_RESPONSE, "2200G", rootCauseException);
         }
         return this.wasNull ? null : BigDecimal.valueOf(value);
     }
@@ -107,7 +106,7 @@ public class DoubleVectorAccessor extends QueryJDBCAccessor {
         final double value = this.getDouble();
         if (Double.isInfinite(value) || Double.isNaN(value)) {
             val rootCauseException = new UnsupportedOperationException(INVALID_VALUE_ERROR_RESPONSE);
-            throw new DataCloudJDBCException(INVALID_VALUE_ERROR_RESPONSE, "2200G", rootCauseException);
+            throw new SQLException(INVALID_VALUE_ERROR_RESPONSE, "2200G", rootCauseException);
         }
         return this.wasNull ? null : BigDecimal.valueOf(value).setScale(scale, RoundingMode.HALF_UP);
     }

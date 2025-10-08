@@ -6,12 +6,12 @@ package com.salesforce.datacloud.jdbc.core.partial;
 
 import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
@@ -74,9 +74,9 @@ public final class DataCloudQueryPolling {
      * </pre>
      *
      * @return The first status that satisfies the predicate, or the last status received before timeout
-     * @throws DataCloudJDBCException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
+     * @throws SQLException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
      */
-    public QueryStatus waitFor() throws DataCloudJDBCException {
+    public QueryStatus waitFor() throws SQLException {
         Exception lastException = null;
         while (!deadline.hasPassed() && state != State.COMPLETED) {
             try {
@@ -84,30 +84,29 @@ public final class DataCloudQueryPolling {
             } catch (StatusRuntimeException ex) {
                 log.error("Caught unexpected exception from server. {}", this, ex);
                 if (ex.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED) {
-                    throw new DataCloudJDBCException("Predicate was not satisfied before timeout. " + this, ex);
+                    throw new SQLException("Predicate was not satisfied before timeout. " + this, ex);
                 } else {
                     throw createException("Failed when getting query status. " + this, ex);
                 }
 
-            } catch (DataCloudJDBCException ex) {
+            } catch (SQLException ex) {
                 log.error("Failed to process current state. {}", this, ex);
                 throw ex;
             }
         }
 
         if (lastStatus == null) {
-            throw new DataCloudJDBCException("Failed to get query status response. " + this, lastException);
+            throw new SQLException("Failed to get query status response. " + this, lastException);
         } else if (predicate.test(lastStatus)) {
             return lastStatus;
         } else if (deadline.hasPassed()) {
-            throw new DataCloudJDBCException("Predicate was not satisfied before timeout. " + this, lastException);
+            throw new SQLException("Predicate was not satisfied before timeout. " + this, lastException);
         } else {
-            throw new DataCloudJDBCException(
-                    "Predicate was not satisfied when execution finished. " + this, lastException);
+            throw new SQLException("Predicate was not satisfied when execution finished. " + this, lastException);
         }
     }
 
-    private void processCurrentState() throws DataCloudJDBCException {
+    private void processCurrentState() throws SQLException {
         switch (state) {
             case RESET_QUERY_INFO_STREAM:
                 queryInfos = getQueryInfoIterator();
@@ -135,9 +134,8 @@ public final class DataCloudQueryPolling {
                     val mapped = QueryStatus.of(info);
 
                     if (!mapped.isPresent()) {
-                        throw new DataCloudJDBCException(
-                                "Query info could not be mapped to DataCloudQueryStatus. queryId=" + queryId
-                                        + ", queryInfo=" + info + ". " + this);
+                        throw new SQLException("Query info could not be mapped to DataCloudQueryStatus. queryId="
+                                + queryId + ", queryInfo=" + info + ". " + this);
                     }
 
                     lastStatus = mapped.get();
@@ -156,7 +154,7 @@ public final class DataCloudQueryPolling {
                 break;
 
             default:
-                throw new DataCloudJDBCException("Cannot calculate transition from unknown state, state=" + state);
+                throw new SQLException("Cannot calculate transition from unknown state, state=" + state);
         }
     }
 

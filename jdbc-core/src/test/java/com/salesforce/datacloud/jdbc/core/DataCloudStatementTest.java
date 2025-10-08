@@ -18,6 +18,7 @@ import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -59,7 +60,7 @@ public class DataCloudStatementTest extends InterceptedHyperTestBase {
     @MethodSource("unsupportedBatchExecutes")
     @SneakyThrows
     public void batchExecutesAreNotSupported(Executable func) {
-        val ex = Assertions.assertThrows(DataCloudJDBCException.class, func);
+        val ex = Assertions.assertThrows(SQLException.class, func);
         assertThat(ex)
                 .hasMessage("Batch execution is not supported in Data Cloud query")
                 .hasFieldOrPropertyWithValue("SQLState", SqlErrorCodes.FEATURE_NOT_SUPPORTED);
@@ -107,7 +108,7 @@ public class DataCloudStatementTest extends InterceptedHyperTestBase {
     @Test
     public void testExecuteUpdate() {
         String sql = "UPDATE table SET column = value";
-        val e = assertThrows(DataCloudJDBCException.class, () -> statement.executeUpdate(sql));
+        val e = assertThrows(SQLException.class, () -> statement.executeUpdate(sql));
         assertThat(e)
                 .hasMessageContaining("is not supported in Data Cloud query")
                 .hasFieldOrPropertyWithValue("SQLState", SqlErrorCodes.FEATURE_NOT_SUPPORTED);

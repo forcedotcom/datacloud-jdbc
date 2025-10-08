@@ -10,9 +10,9 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.sql.Types;
 import java.util.HashMap;
 import java.util.stream.Stream;
@@ -317,7 +317,7 @@ public class DataCloudArrayTest {
         val dataCloudArray = new DataCloudArray(dataVector, 0, dataVector.getValueCount());
 
         val e = Assertions.assertThrows(RuntimeException.class, () -> func.accept(dataCloudArray));
-        AssertionsForClassTypes.assertThat(e).hasRootCauseInstanceOf(DataCloudJDBCException.class);
+        AssertionsForClassTypes.assertThat(e).hasRootCauseInstanceOf(SQLException.class);
         AssertionsForClassTypes.assertThat(e).hasMessageContaining("Array method is not supported in Data Cloud query");
     }
 }

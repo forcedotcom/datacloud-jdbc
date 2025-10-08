@@ -4,7 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.logging;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -17,7 +16,7 @@ public final class ElapsedLogger {
     }
 
     public static <T> T logTimedValue(ThrowingJdbcSupplier<T> supplier, String name, Logger logger)
-            throws DataCloudJDBCException {
+            throws SQLException {
         val start = System.currentTimeMillis();
         try {
             logger.info("Starting name={}", name);
@@ -25,14 +24,10 @@ public final class ElapsedLogger {
             val elapsed = System.currentTimeMillis() - start;
             logger.info("Success name={}, millis={}, duration={}", name, elapsed, Duration.ofMillis(elapsed));
             return result;
-        } catch (DataCloudJDBCException e) {
-            val elapsed = System.currentTimeMillis() - start;
-            logger.error("Failed name={}, millis={}, duration={}", name, elapsed, Duration.ofMillis(elapsed), e);
-            throw e;
         } catch (SQLException e) {
             val elapsed = System.currentTimeMillis() - start;
             logger.error("Failed name={}, millis={}, duration={}", name, elapsed, Duration.ofMillis(elapsed), e);
-            throw new DataCloudJDBCException(e);
+            throw e;
         }
     }
 }

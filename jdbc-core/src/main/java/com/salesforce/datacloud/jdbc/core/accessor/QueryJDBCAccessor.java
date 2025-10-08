@@ -4,7 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -50,152 +49,152 @@ public abstract class QueryJDBCAccessor implements Accessor {
 
     @Override
     public String getString() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public boolean getBoolean() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public byte getByte() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public short getShort() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public int getInt() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public long getLong() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public float getFloat() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public double getDouble() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public BigDecimal getBigDecimal() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public BigDecimal getBigDecimal(int i) throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public byte[] getBytes() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public InputStream getAsciiStream() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public InputStream getUnicodeStream() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public InputStream getBinaryStream() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Object getObject() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Reader getCharacterStream() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Object getObject(Map<String, Class<?>> map) throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Ref getRef() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Blob getBlob() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Clob getClob() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Array getArray() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Struct getStruct() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Date getDate(Calendar calendar) throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Time getTime(Calendar calendar) throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Timestamp getTimestamp(Calendar calendar) throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public URL getURL() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public NClob getNClob() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public SQLXML getSQLXML() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public String getNString() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override
     public Reader getNCharacterStream() throws SQLException {
-        throw new DataCloudJDBCException(getOperationNotSupported(this.getClass()));
+        throw getOperationNotSupported(this.getClass());
     }
 
     @Override

@@ -6,7 +6,7 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptional;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 import java.util.Properties;
 import lombok.Builder;
 import lombok.Getter;
@@ -46,9 +46,9 @@ public class ConnectionProperties {
      *
      * @param props The properties to parse
      * @return A ConnectionProperties instance
-     * @throws DataCloudJDBCException if parsing of property values fails
+     * @throws SQLException if parsing of property values fails
      */
-    public static ConnectionProperties ofDestructive(Properties props) throws DataCloudJDBCException {
+    public static ConnectionProperties ofDestructive(Properties props) throws SQLException {
         ConnectionPropertiesBuilder builder = ConnectionProperties.builder();
 
         takeOptional(props, "workload").ifPresent(builder::workload);

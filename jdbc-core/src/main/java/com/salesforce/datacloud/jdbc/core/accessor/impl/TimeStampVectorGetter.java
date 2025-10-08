@@ -4,7 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.SQLException;
 import lombok.val;
 import org.apache.arrow.vector.TimeStampMicroTZVector;
@@ -63,7 +62,7 @@ final class TimeStampVectorGetter {
         }
 
         val rootCauseException = new UnsupportedOperationException(INVALID_VECTOR_ERROR_RESPONSE);
-        throw new DataCloudJDBCException(INVALID_VECTOR_ERROR_RESPONSE, "22007", rootCauseException);
+        throw new SQLException(INVALID_VECTOR_ERROR_RESPONSE, "22007", rootCauseException);
     }
 
     private static Getter createGetter(TimeStampNanoVector vector) {

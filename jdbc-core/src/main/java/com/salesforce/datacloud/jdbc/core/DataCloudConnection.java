@@ -110,7 +110,7 @@ public class DataCloudConnection implements Connection {
             @NonNull String dataspace,
             @NonNull ThrowingJdbcSupplier<String> lakehouseSupplier,
             @NonNull ThrowingJdbcSupplier<List<String>> dataspacesSupplier)
-            throws DataCloudJDBCException {
+            throws SQLException {
         return logTimedValue(
                 () -> {
                     return DataCloudConnection.builder()
@@ -135,7 +135,7 @@ public class DataCloudConnection implements Connection {
             @NonNull ConnectionProperties properties,
             @NonNull String dataspace,
             JdbcURL jdbcUrl)
-            throws DataCloudJDBCException {
+            throws SQLException {
         return of(stubProvider, properties, jdbcUrl, "", dataspace, () -> "", () -> Arrays.asList());
     }
 
@@ -213,10 +213,9 @@ public class DataCloudConnection implements Connection {
      * @param offset  The starting row offset.
      * @param limit   The maximum number of rows to retrieve.
      * @return A {@link DataCloudResultSet} containing the query results.
-     * @throws DataCloudJDBCException if the specified range of rows is not available on the server
+     * @throws SQLException if the specified range of rows is not available on the server
      */
-    public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit)
-            throws DataCloudJDBCException {
+    public DataCloudResultSet getRowBasedResultSet(String queryId, long offset, long limit) throws SQLException {
         log.info("Get row-based result set. queryId={}, offset={}, limit={}", queryId, offset, limit);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = RowBased.of(executor, queryId, offset, limit);
@@ -246,17 +245,16 @@ public class DataCloudConnection implements Connection {
      * @param chunkId The starting chunk offset.
      * @param limit   The maximum number of chunks to retrieve.
      * @return A {@link DataCloudResultSet} containing the query results.
-     * @throws DataCloudJDBCException if the specified range of chunks is not available on the server
+     * @throws SQLException if the specified range of chunks is not available on the server
      */
-    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit)
-            throws DataCloudJDBCException {
+    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId, long limit) throws SQLException {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = ChunkBased.of(executor, queryId, chunkId, limit, false);
         return StreamingResultSet.of(iterator, queryId);
     }
 
-    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) throws DataCloudJDBCException {
+    public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) throws SQLException {
         return getChunkBasedResultSet(queryId, chunkId, 1);
     }
 
@@ -267,7 +265,7 @@ public class DataCloudConnection implements Connection {
         try {
             Iterator<ByteString> byteStringIterator = ProtocolMappers.fromQueryInfo(infos);
             if (!byteStringIterator.hasNext()) {
-                throw new DataCloudJDBCException("No schema data available for queryId: " + queryId);
+                throw new SQLException("No schema data available for queryId: " + queryId);
             }
             Schema schema = deserializeMessage(byteStringIterator.next().asReadOnlyByteBuffer());
             List<ColumnMetaData> columns = toColumnMetaData(schema.getFields());
@@ -296,10 +294,10 @@ public class DataCloudConnection implements Connection {
      * @param queryId The identifier of the query to check
      * @param predicate The condition to check against the query status
      * @return The first status that satisfies the predicate
-     * @throws DataCloudJDBCException if the server reports all results produced but the predicate returns false or if the query fails
+     * @throws SQLException if the server reports all results produced but the predicate returns false or if the query fails
      * @see #waitFor(String, Duration, Predicate)
      */
-    public QueryStatus waitFor(String queryId, Predicate<QueryStatus> predicate) throws DataCloudJDBCException {
+    public QueryStatus waitFor(String queryId, Predicate<QueryStatus> predicate) throws SQLException {
         return HyperGrpcClientExecutor.forSubmittedQuery(getStub()).waitFor(queryId, Deadline.infinite(), predicate);
     }
 
@@ -319,11 +317,11 @@ public class DataCloudConnection implements Connection {
      * @param waitTimeout the maximum time to wait for the predicate to be satisfied before timing out
      * @param predicate The condition to check against the query status
      * @return The first status that satisfies the predicate
-     * @throws DataCloudJDBCException if the server reports all results produced but the predicate returns false, if the query fails, or if the timeout is exceeded
+     * @throws SQLException if the server reports all results produced but the predicate returns false, if the query fails, or if the timeout is exceeded
      * @see #waitFor(String, Duration, Predicate)
      */
     public QueryStatus waitFor(String queryId, Duration waitTimeout, Predicate<QueryStatus> predicate)
-            throws DataCloudJDBCException {
+            throws SQLException {
         return HyperGrpcClientExecutor.forSubmittedQuery(getStub())
                 .waitFor(queryId, Deadline.of(waitTimeout), predicate);
     }
@@ -332,7 +330,7 @@ public class DataCloudConnection implements Connection {
      * Sends a command to the server to cancel the query with the specified query id.
      * @param queryId The query id for the query you want to cancel
      */
-    public void cancelQuery(String queryId) throws DataCloudJDBCException {
+    public void cancelQuery(String queryId) throws SQLException {
         HyperGrpcClientExecutor.forSubmittedQuery(getStub()).cancel(queryId);
     }
 
@@ -515,7 +513,7 @@ public class DataCloudConnection implements Connection {
     @Override
     public boolean isValid(int timeout) throws SQLException {
         if (timeout < 0) {
-            throw new DataCloudJDBCException(String.format("Invalid timeout value: %d", timeout));
+            throw new SQLException(String.format("Invalid timeout value: %d", timeout));
         }
         return !isClosed();
     }
@@ -596,7 +594,7 @@ public class DataCloudConnection implements Connection {
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
         if (!iface.isInstance(this)) {
-            throw new DataCloudJDBCException(this.getClass().getName() + " not unwrappable from " + iface.getName());
+            throw new SQLException(this.getClass().getName() + " not unwrappable from " + iface.getName());
         }
         return (T) this;
     }

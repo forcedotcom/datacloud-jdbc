@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.net.URI;
+import java.sql.SQLException;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +55,7 @@ class SalesforceAuthPropertiesTest {
                     + "-----END PRIVATE KEY-----";
 
     @Test
-    void parsesPasswordAuthenticationProperties() throws DataCloudJDBCException {
+    void parsesPasswordAuthenticationProperties() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
         props.setProperty("clientSecret", TEST_CLIENT_SECRET);
@@ -74,7 +75,7 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
-    void parsesPrivateKeyAuthenticationProperties() throws DataCloudJDBCException {
+    void parsesPrivateKeyAuthenticationProperties() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
         props.setProperty("clientSecret", TEST_CLIENT_SECRET);
@@ -95,7 +96,7 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
-    void parsesRefreshTokenAuthenticationProperties() throws DataCloudJDBCException {
+    void parsesRefreshTokenAuthenticationProperties() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
         props.setProperty("clientSecret", TEST_CLIENT_SECRET);
@@ -114,7 +115,7 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
-    void parsesRefreshTokenWithOptionalUserName() throws DataCloudJDBCException {
+    void parsesRefreshTokenWithOptionalUserName() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
         props.setProperty("clientSecret", TEST_CLIENT_SECRET);
@@ -130,7 +131,7 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
-    void parsesPropertiesWithoutDataspace() throws DataCloudJDBCException {
+    void parsesPropertiesWithoutDataspace() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
         props.setProperty("clientSecret", TEST_CLIENT_SECRET);
@@ -143,7 +144,7 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
-    void toPropertiesRoundtripPasswordAuthentication() throws DataCloudJDBCException {
+    void toPropertiesRoundtripPasswordAuthentication() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
         props.setProperty("clientSecret", TEST_CLIENT_SECRET);
@@ -159,7 +160,7 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
-    void toPropertiesRoundtripPrivateKeyAuthentication() throws DataCloudJDBCException {
+    void toPropertiesRoundtripPrivateKeyAuthentication() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
         props.setProperty("clientSecret", TEST_CLIENT_SECRET);
@@ -175,7 +176,7 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
-    void toPropertiesRoundtripRefreshTokenAuthentication() throws DataCloudJDBCException {
+    void toPropertiesRoundtripRefreshTokenAuthentication() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
         props.setProperty("clientSecret", TEST_CLIENT_SECRET);
@@ -244,7 +245,7 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
-    void acceptsKnownLoginUrlPatterns() throws DataCloudJDBCException {
+    void acceptsKnownLoginUrlPatterns() throws SQLException {
         String[] knownHosts = {
             "login.salesforce.com",
             "test.salesforce.com",
@@ -260,7 +261,7 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
-    void warnsOnUnknownLoginUrl() throws DataCloudJDBCException {
+    void warnsOnUnknownLoginUrl() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
         props.setProperty("clientSecret", TEST_CLIENT_SECRET);

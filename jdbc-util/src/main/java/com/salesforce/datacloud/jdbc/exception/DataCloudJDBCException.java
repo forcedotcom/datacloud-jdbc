@@ -13,36 +13,8 @@ public class DataCloudJDBCException extends SQLException {
 
     private String customerDetail;
 
-    public DataCloudJDBCException() {
-        super();
-    }
-
-    public DataCloudJDBCException(String reason) {
-        super(reason);
-    }
-
-    public DataCloudJDBCException(String reason, String SQLState) {
-        super(reason, SQLState);
-    }
-
-    public DataCloudJDBCException(String reason, String SQLState, int vendorCode) {
-        super(reason, SQLState, vendorCode);
-    }
-
     public DataCloudJDBCException(Throwable cause) {
         super(cause);
-    }
-
-    public DataCloudJDBCException(String reason, Throwable cause) {
-        super(reason, cause);
-    }
-
-    public DataCloudJDBCException(String reason, String SQLState, Throwable cause) {
-        super(reason, SQLState, cause);
-    }
-
-    public DataCloudJDBCException(String reason, String SQLState, int vendorCode, Throwable cause) {
-        super(reason, SQLState, vendorCode, cause);
     }
 
     public DataCloudJDBCException(

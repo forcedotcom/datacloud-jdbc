@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 import java.util.UUID;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -84,7 +84,7 @@ class DataCloudTokenTest {
         bad.setToken("token");
         bad.setTokenType("type");
         bad.setExpiresIn(123);
-        val exception = assertThrows(DataCloudJDBCException.class, () -> DataCloudToken.of(bad));
+        val exception = assertThrows(SQLException.class, () -> DataCloudToken.of(bad));
         assertThat(exception.getMessage()).contains(FAILED_LOGIN);
         assertThat(exception.getCause().getMessage())
                 .contains("Malformed escape pair at index 0: " + nonNullOrBlankIllegalUrl);

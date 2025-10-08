@@ -13,7 +13,6 @@ import static org.mockito.Mockito.anyString;
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.config.KeywordResources;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
@@ -1417,7 +1416,7 @@ public class DataCloudDatabaseMetadataTest {
         } catch (Exception e) {
             fail("Uncaught Exception", e);
         }
-        val ex = assertThrows(DataCloudJDBCException.class, () -> dataCloudDatabaseMetadata.unwrap(String.class));
+        val ex = assertThrows(SQLException.class, () -> dataCloudDatabaseMetadata.unwrap(String.class));
     }
 
     @Test

@@ -4,7 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,7 +34,7 @@ public class MetadataCursor extends AbstractCursor {
             try {
                 o = ((List) data.get(currentRow)).get(index);
             } catch (RuntimeException e) {
-                throw new DataCloudJDBCException(e);
+                throw new SQLException(e);
             }
             wasNull[0] = o == null;
             return o;

@@ -5,11 +5,11 @@
 package com.salesforce.datacloud.jdbc.config;
 
 import com.google.common.io.ByteStreams;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -44,14 +44,14 @@ public final class ResourceReader {
         try (val in = ResourceReader.class.getResourceAsStream(path)) {
             if (in == null) {
                 val message = String.format("%s. path=%s", NOT_FOUND_MESSAGE, path);
-                throw new DataCloudJDBCException(message, SqlErrorCodes.UNDEFINED_FILE);
+                throw new SQLException(message, SqlErrorCodes.UNDEFINED_FILE);
             }
 
             consumer.accept(in);
         } catch (IOException e) {
             val message = String.format("%s. path=%s", IO_EXCEPTION_MESSAGE, path);
             log.error(message, e);
-            throw new DataCloudJDBCException(message, SqlErrorCodes.UNDEFINED_FILE, e);
+            throw new SQLException(message, SqlErrorCodes.UNDEFINED_FILE, e);
         }
     }
 

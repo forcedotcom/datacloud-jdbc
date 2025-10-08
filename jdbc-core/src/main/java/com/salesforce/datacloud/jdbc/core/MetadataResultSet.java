@@ -6,7 +6,6 @@ package com.salesforce.datacloud.jdbc.core;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -54,11 +53,7 @@ public class MetadataResultSet extends AvaticaResultSet {
             List<Object> data)
             throws SQLException {
         AvaticaResultSet result;
-        try {
-            result = new MetadataResultSet(statement, state, signature, resultSetMetaData, timeZone, firstFrame);
-        } catch (SQLException e) {
-            throw new DataCloudJDBCException(e);
-        }
+        result = new MetadataResultSet(statement, state, signature, resultSetMetaData, timeZone, firstFrame);
         result.execute2(new MetadataCursor(data), signature.columns);
         return result;
     }

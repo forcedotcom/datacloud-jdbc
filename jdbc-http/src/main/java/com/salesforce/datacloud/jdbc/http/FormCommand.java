@@ -6,7 +6,6 @@ package com.salesforce.datacloud.jdbc.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.salesforce.datacloud.jdbc.auth.errors.AuthorizationException;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import java.io.IOException;
 import java.net.URI;
@@ -93,7 +92,7 @@ public class FormCommand {
             val json = body.string();
             return mapper.readValue(json, type);
         } catch (IOException e) {
-            throw new DataCloudJDBCException(e);
+            throw new SQLException(e);
         }
     }
 

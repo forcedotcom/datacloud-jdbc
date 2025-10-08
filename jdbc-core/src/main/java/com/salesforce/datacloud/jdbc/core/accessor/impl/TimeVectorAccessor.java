@@ -11,7 +11,6 @@ import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimeFromMil
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -146,6 +145,6 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
         }
 
         val rootCauseException = new UnsupportedOperationException(INVALID_VECTOR_ERROR_RESPONSE);
-        throw new DataCloudJDBCException(INVALID_VECTOR_ERROR_RESPONSE, "22007", rootCauseException);
+        throw new SQLException(INVALID_VECTOR_ERROR_RESPONSE, "22007", rootCauseException);
     }
 }

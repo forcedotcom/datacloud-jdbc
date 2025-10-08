@@ -8,7 +8,6 @@ import static com.salesforce.datacloud.jdbc.core.accessor.impl.NumericGetter.cre
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
@@ -169,7 +168,7 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
                 break;
             default:
                 val rootCauseException = new UnsupportedOperationException(INVALID_TYPE_ERROR_RESPONSE);
-                throw new DataCloudJDBCException(INVALID_TYPE_ERROR_RESPONSE, "2200G", rootCauseException);
+                throw new SQLException(INVALID_TYPE_ERROR_RESPONSE, "2200G", rootCauseException);
         }
         return wasNull ? null : number;
     }

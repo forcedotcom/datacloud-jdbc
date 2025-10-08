@@ -4,7 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.SQLException;
 import lombok.val;
 import org.apache.arrow.vector.BaseIntVector;
@@ -50,7 +49,7 @@ final class NumericGetter {
             return createGetter((UInt4Vector) vector);
         }
         val rootCauseException = new UnsupportedOperationException(INVALID_VECTOR_ERROR_RESPONSE);
-        throw new DataCloudJDBCException(INVALID_VECTOR_ERROR_RESPONSE, "2200G", rootCauseException);
+        throw new SQLException(INVALID_VECTOR_ERROR_RESPONSE, "2200G", rootCauseException);
     }
 
     private static Getter createGetter(TinyIntVector vector) {

@@ -9,12 +9,12 @@ import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertWithS
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.Test;
@@ -136,15 +136,15 @@ public class DataCloudStatementFunctionalTest {
     @Test
     public void requiresExecutedResultSet() {
         assertWithStatement(statement -> assertThatThrownBy(statement::getResultSetType)
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessage(EXECUTED_MESSAGE));
 
         assertWithStatement(statement -> assertThatThrownBy(statement::getResultSetConcurrency)
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessage(EXECUTED_MESSAGE));
 
         assertWithStatement(statement -> assertThatThrownBy(statement::getFetchDirection)
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessage(EXECUTED_MESSAGE));
     }
 }

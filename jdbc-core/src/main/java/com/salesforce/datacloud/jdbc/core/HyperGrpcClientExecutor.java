@@ -7,7 +7,6 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 
 import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
@@ -96,7 +95,7 @@ public class HyperGrpcClientExecutor {
         return execute(sql, queryTimeout, QueryParam.TransferMode.ASYNC, QueryParam.newBuilder());
     }
 
-    public Iterator<QueryInfo> getQueryInfo(String queryId) throws DataCloudJDBCException {
+    public Iterator<QueryInfo> getQueryInfo(String queryId) throws SQLException {
         return logTimedValue(
                 () -> {
                     val param = getQueryInfoParam(queryId);
@@ -106,7 +105,7 @@ public class HyperGrpcClientExecutor {
                 log);
     }
 
-    public Iterator<QueryInfo> getQuerySchema(String queryId) throws DataCloudJDBCException {
+    public Iterator<QueryInfo> getQuerySchema(String queryId) throws SQLException {
         return logTimedValue(
                 () -> {
                     val param = QueryInfoParam.newBuilder()
@@ -119,7 +118,7 @@ public class HyperGrpcClientExecutor {
                 log);
     }
 
-    public void cancel(String queryId) throws DataCloudJDBCException {
+    public void cancel(String queryId) throws SQLException {
         logTimedValue(
                 () -> {
                     val request =
@@ -147,17 +146,16 @@ public class HyperGrpcClientExecutor {
      * @param deadline The deadline for waiting for the engine to produce results.
      * @param predicate The condition to check against the query status
      * @return The first status that satisfies the predicate, or the last status received before timeout
-     * @throws DataCloudJDBCException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
+     * @throws SQLException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
      */
     public QueryStatus waitFor(String queryId, Deadline deadline, Predicate<QueryStatus> predicate)
-            throws DataCloudJDBCException {
+            throws SQLException {
         val stub = getStub(queryId);
         return DataCloudQueryPolling.of(stub, queryId, deadline, predicate).waitFor();
     }
 
     public Iterator<QueryResult> getQueryResult(
-            String queryId, long offset, long rowLimit, long byteLimit, boolean omitSchema)
-            throws DataCloudJDBCException {
+            String queryId, long offset, long rowLimit, long byteLimit, boolean omitSchema) throws SQLException {
         val rowRange = ResultRange.newBuilder()
                 .setRowOffset(offset)
                 .setRowLimit(rowLimit)
@@ -212,8 +210,7 @@ public class HyperGrpcClientExecutor {
                 .build();
     }
 
-    public Iterator<ExecuteQueryResponse> execute(QueryParam request, QueryTimeout timeout)
-            throws DataCloudJDBCException {
+    public Iterator<ExecuteQueryResponse> execute(QueryParam request, QueryTimeout timeout) throws SQLException {
         // We set the deadline based off the query timeout here as the server-side doesn't properly enforce
         // the query timeout during the initial compilation phase. By setting the deadline, we can ensure
         // that the query timeout is enforced also when the server hangs during compilation.

@@ -13,7 +13,6 @@ import static com.salesforce.datacloud.jdbc.util.ArrowUtils.convertJDBCMetadataT
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
@@ -109,23 +108,19 @@ final class QueryMetadataUtil {
 
     private static List<Object> constructTableData(ResultSet resultSet) throws SQLException {
         List<Object> data = new ArrayList<>();
-        try {
-            while (resultSet.next()) {
-                List<Object> rowData = Arrays.asList(
-                        resultSet.getString("TABLE_CAT"),
-                        resultSet.getString("TABLE_SCHEM"),
-                        resultSet.getString("TABLE_NAME"),
-                        "TABLE",
-                        resultSet.getString("REMARKS"),
-                        resultSet.getString("TYPE_CAT"),
-                        resultSet.getString("TYPE_SCHEM"),
-                        resultSet.getString("TYPE_NAME"),
-                        resultSet.getString("SELF_REFERENCING_COL_NAME"),
-                        resultSet.getString("REF_GENERATION"));
-                data.add(rowData);
-            }
-        } catch (SQLException e) {
-            throw new DataCloudJDBCException(e);
+        while (resultSet.next()) {
+            List<Object> rowData = Arrays.asList(
+                    resultSet.getString("TABLE_CAT"),
+                    resultSet.getString("TABLE_SCHEM"),
+                    resultSet.getString("TABLE_NAME"),
+                    "TABLE",
+                    resultSet.getString("REMARKS"),
+                    resultSet.getString("TYPE_CAT"),
+                    resultSet.getString("TYPE_SCHEM"),
+                    resultSet.getString("TYPE_NAME"),
+                    resultSet.getString("SELF_REFERENCING_COL_NAME"),
+                    resultSet.getString("REF_GENERATION"));
+            data.add(rowData);
         }
         return data;
     }
@@ -193,92 +188,88 @@ final class QueryMetadataUtil {
 
     private static List<Object> constructColumnData(ResultSet resultSet) throws SQLException {
         List<Object> data = new ArrayList<>();
-        try {
-            while (resultSet.next()) {
-                Object[] rowData = new Object[24];
+        while (resultSet.next()) {
+            Object[] rowData = new Object[24];
 
-                String tableCatalog = null;
-                rowData[TABLE_CATALOG_INDEX] = tableCatalog;
+            String tableCatalog = null;
+            rowData[TABLE_CATALOG_INDEX] = tableCatalog;
 
-                String tableSchema = resultSet.getString("nspname");
-                rowData[TABLE_SCHEMA_INDEX] = tableSchema;
+            String tableSchema = resultSet.getString("nspname");
+            rowData[TABLE_SCHEMA_INDEX] = tableSchema;
 
-                String tableName = resultSet.getString("relname");
-                rowData[TABLE_NAME_INDEX] = tableName;
+            String tableName = resultSet.getString("relname");
+            rowData[TABLE_NAME_INDEX] = tableName;
 
-                String columnName = resultSet.getString("attname");
-                rowData[COLUMN_NAME_INDEX] = columnName;
+            String columnName = resultSet.getString("attname");
+            rowData[COLUMN_NAME_INDEX] = columnName;
 
-                int dataType = (int) resultSet.getLong("atttypid");
+            int dataType = (int) resultSet.getLong("atttypid");
+            rowData[DATA_TYPE_INDEX] = dataType;
+
+            String typeName = resultSet.getString("datatype");
+            typeName = typeName == null ? StringUtils.EMPTY : typeName;
+            if (typeName.toLowerCase().contains("numeric")) {
+                rowData[TYPE_NAME_INDEX] = SqlType.NUMERIC.toString();
+                rowData[DATA_TYPE_INDEX] = SqlType.valueOf(SqlType.NUMERIC.toString()).id;
+            } else {
+                rowData[TYPE_NAME_INDEX] = dbTypeToSql.getOrDefault(typeName.toLowerCase(), typeName);
+                dataType = dbTypeToSql.containsKey(typeName.toLowerCase())
+                        ? SqlType.valueOf(dbTypeToSql.get(typeName.toLowerCase())).id
+                        : (int) resultSet.getLong("atttypid");
                 rowData[DATA_TYPE_INDEX] = dataType;
-
-                String typeName = resultSet.getString("datatype");
-                typeName = typeName == null ? StringUtils.EMPTY : typeName;
-                if (typeName.toLowerCase().contains("numeric")) {
-                    rowData[TYPE_NAME_INDEX] = SqlType.NUMERIC.toString();
-                    rowData[DATA_TYPE_INDEX] = SqlType.valueOf(SqlType.NUMERIC.toString()).id;
-                } else {
-                    rowData[TYPE_NAME_INDEX] = dbTypeToSql.getOrDefault(typeName.toLowerCase(), typeName);
-                    dataType = dbTypeToSql.containsKey(typeName.toLowerCase())
-                            ? SqlType.valueOf(dbTypeToSql.get(typeName.toLowerCase())).id
-                            : (int) resultSet.getLong("atttypid");
-                    rowData[DATA_TYPE_INDEX] = dataType;
-                }
-                int columnSize = 255;
-                rowData[COLUMN_SIZE_INDEX] = columnSize;
-
-                int decimalDigits = 2;
-                rowData[DECIMAL_DIGITS_INDEX] = decimalDigits;
-
-                int numPrecRadix = 10;
-                rowData[NUM_PREC_RADIX_INDEX] = numPrecRadix;
-
-                int nullable = resultSet.getBoolean("attnotnull")
-                        ? DatabaseMetaData.columnNoNulls
-                        : DatabaseMetaData.columnNullable;
-                rowData[NULLABLE_INDEX] = nullable;
-
-                String description = resultSet.getString("description");
-                rowData[DESCRIPTION_INDEX] = description;
-
-                String columnDefault = resultSet.getString("adsrc");
-                rowData[COLUMN_DEFAULT_INDEX] = columnDefault;
-
-                rowData[SQL_DATA_TYPE_INDEX] = null;
-
-                String sqlDateTimeSub = StringUtils.EMPTY;
-                rowData[SQL_DATE_TIME_SUB_INDEX] = sqlDateTimeSub;
-
-                int charOctetLength = 2;
-                rowData[CHAR_OCTET_LENGTH_INDEX] = charOctetLength;
-
-                int ordinalPosition = resultSet.getInt("attnum");
-                rowData[ORDINAL_POSITION_INDEX] = ordinalPosition;
-
-                String isNullable = resultSet.getBoolean("attnotnull") ? "NO" : "YES";
-                rowData[IS_NULLABLE_INDEX] = isNullable;
-
-                rowData[SCOPE_CATALOG_INDEX] = null;
-                rowData[SCOPE_SCHEMA_INDEX] = null;
-                rowData[SCOPE_TABLE_INDEX] = null;
-                rowData[SOURCE_DATA_TYPE_INDEX] = null;
-
-                String identity = resultSet.getString("attidentity");
-                String defval = resultSet.getString("adsrc");
-                String autoIncrement = "NO";
-                if ((defval != null && defval.contains("nextval(")) || identity != null) {
-                    autoIncrement = "YES";
-                }
-                rowData[AUTO_INCREMENT_INDEX] = autoIncrement;
-
-                String generated = resultSet.getString("attgenerated");
-                String generatedColumn = generated != null ? "YES" : "NO";
-                rowData[GENERATED_COLUMN_INDEX] = generatedColumn;
-
-                data.add(Arrays.asList(rowData));
             }
-        } catch (SQLException e) {
-            throw new DataCloudJDBCException(e);
+            int columnSize = 255;
+            rowData[COLUMN_SIZE_INDEX] = columnSize;
+
+            int decimalDigits = 2;
+            rowData[DECIMAL_DIGITS_INDEX] = decimalDigits;
+
+            int numPrecRadix = 10;
+            rowData[NUM_PREC_RADIX_INDEX] = numPrecRadix;
+
+            int nullable = resultSet.getBoolean("attnotnull")
+                    ? DatabaseMetaData.columnNoNulls
+                    : DatabaseMetaData.columnNullable;
+            rowData[NULLABLE_INDEX] = nullable;
+
+            String description = resultSet.getString("description");
+            rowData[DESCRIPTION_INDEX] = description;
+
+            String columnDefault = resultSet.getString("adsrc");
+            rowData[COLUMN_DEFAULT_INDEX] = columnDefault;
+
+            rowData[SQL_DATA_TYPE_INDEX] = null;
+
+            String sqlDateTimeSub = StringUtils.EMPTY;
+            rowData[SQL_DATE_TIME_SUB_INDEX] = sqlDateTimeSub;
+
+            int charOctetLength = 2;
+            rowData[CHAR_OCTET_LENGTH_INDEX] = charOctetLength;
+
+            int ordinalPosition = resultSet.getInt("attnum");
+            rowData[ORDINAL_POSITION_INDEX] = ordinalPosition;
+
+            String isNullable = resultSet.getBoolean("attnotnull") ? "NO" : "YES";
+            rowData[IS_NULLABLE_INDEX] = isNullable;
+
+            rowData[SCOPE_CATALOG_INDEX] = null;
+            rowData[SCOPE_SCHEMA_INDEX] = null;
+            rowData[SCOPE_TABLE_INDEX] = null;
+            rowData[SOURCE_DATA_TYPE_INDEX] = null;
+
+            String identity = resultSet.getString("attidentity");
+            String defval = resultSet.getString("adsrc");
+            String autoIncrement = "NO";
+            if ((defval != null && defval.contains("nextval(")) || identity != null) {
+                autoIncrement = "YES";
+            }
+            rowData[AUTO_INCREMENT_INDEX] = autoIncrement;
+
+            String generated = resultSet.getString("attgenerated");
+            String generatedColumn = generated != null ? "YES" : "NO";
+            rowData[GENERATED_COLUMN_INDEX] = generatedColumn;
+
+            data.add(Arrays.asList(rowData));
         }
         return data;
     }
@@ -306,15 +297,10 @@ final class QueryMetadataUtil {
 
     private static List<Object> constructSchemaData(ResultSet resultSet) throws SQLException {
         List<Object> data = new ArrayList<>();
-
-        try {
-            while (resultSet.next()) {
-                List<Object> rowData =
-                        Arrays.asList(resultSet.getString("TABLE_SCHEM"), resultSet.getString("TABLE_CATALOG"));
-                data.add(rowData);
-            }
-        } catch (SQLException e) {
-            throw new DataCloudJDBCException(e);
+        while (resultSet.next()) {
+            List<Object> rowData =
+                    Arrays.asList(resultSet.getString("TABLE_SCHEM"), resultSet.getString("TABLE_CATALOG"));
+            data.add(rowData);
         }
         return data;
     }

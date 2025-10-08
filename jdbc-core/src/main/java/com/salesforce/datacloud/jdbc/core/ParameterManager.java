@@ -5,7 +5,6 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +26,7 @@ class DefaultParameterManager implements ParameterManager {
     @Override
     public void setParameter(int index, int sqlType, Object value) throws SQLException {
         if (index <= 0) {
-            throw new DataCloudJDBCException(PARAMETER_INDEX_ERROR);
+            throw new SQLException(PARAMETER_INDEX_ERROR);
         }
 
         while (parameters.size() < index) {

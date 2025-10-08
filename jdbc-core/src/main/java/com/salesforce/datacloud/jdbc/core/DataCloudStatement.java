@@ -11,7 +11,6 @@ import com.salesforce.datacloud.jdbc.core.fsm.AsyncQueryResultHandle;
 import com.salesforce.datacloud.jdbc.core.fsm.QueryResultHandle;
 import com.salesforce.datacloud.jdbc.core.fsm.QueryResultIterator;
 import com.salesforce.datacloud.jdbc.core.partial.RowBased;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import com.salesforce.datacloud.query.v3.QueryStatus;
@@ -59,7 +58,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         this.statementProperties = connection.getConnectionProperties().getStatementProperties();
     }
 
-    protected HyperGrpcClientExecutor getQueryClient(QueryTimeout queryTimeout) throws DataCloudJDBCException {
+    protected HyperGrpcClientExecutor getQueryClient(QueryTimeout queryTimeout) throws SQLException {
         val stub = connection.getStub();
         val querySettings = new HashMap<>(statementProperties.getQuerySettings());
         if (!queryTimeout.getServerQueryTimeout().isZero()) {
@@ -72,9 +71,9 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     @Getter
     protected QueryResultHandle queryHandle;
 
-    private void assertQueryExecuted() throws DataCloudJDBCException {
+    private void assertQueryExecuted() throws SQLException {
         if (queryHandle == null) {
-            throw new DataCloudJDBCException("a query was not executed before attempting to access results");
+            throw new SQLException("a query was not executed before attempting to access results");
         }
     }
 
@@ -82,7 +81,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
      * @return The Data Cloud query id of the last executed query from this statement.
      * @throws SQLException throws an exception if a query has not been executed from this statement
      */
-    public String getQueryId() throws DataCloudJDBCException {
+    public String getQueryId() throws SQLException {
         assertQueryExecuted();
         return queryHandle.getQueryId();
     }
@@ -127,18 +126,14 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void close() throws SQLException {
         log.debug("Entering close");
         if (resultSet != null) {
-            try {
-                resultSet.close();
-            } catch (SQLException e) {
-                throw new DataCloudJDBCException(e);
-            }
+            resultSet.close();
         }
         log.debug("Exiting close");
     }
@@ -151,7 +146,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     @Override
     public void setMaxFieldSize(int max) {}
 
-    public void clearResultSetConstraints() throws DataCloudJDBCException {
+    public void clearResultSetConstraints() throws SQLException {
         setResultSetConstraints(0, RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
     }
 
@@ -163,16 +158,16 @@ public class DataCloudStatement implements Statement, AutoCloseable {
      * @param maxBytes The maximum byte size a ResultSet can be,
      *                 must fall in the range {@link RowBased#HYPER_MIN_ROW_LIMIT_BYTE_SIZE}
      *                 and {@link RowBased#HYPER_MAX_ROW_LIMIT_BYTE_SIZE}
-     * @throws DataCloudJDBCException If the target maximum byte size is outside the aforementioned range
+     * @throws SQLException If the target maximum byte size is outside the aforementioned range
      */
-    public void setResultSetConstraints(int maxRows, int maxBytes) throws DataCloudJDBCException {
+    public void setResultSetConstraints(int maxRows, int maxBytes) throws SQLException {
         if (maxRows < 0) {
-            throw new DataCloudJDBCException(
+            throw new SQLException(
                     "setResultSetConstraints maxRows must be set to 0 to be disabled but was " + maxRows);
         }
 
         if (maxBytes < RowBased.HYPER_MIN_ROW_LIMIT_BYTE_SIZE || maxBytes > RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE) {
-            throw new DataCloudJDBCException(String.format(
+            throw new SQLException(String.format(
                     "The specified maxBytes (%d) must satisfy the following constraints: %d >= x >= %d",
                     maxBytes, RowBased.HYPER_MIN_ROW_LIMIT_BYTE_SIZE, RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE));
         }
@@ -185,7 +180,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
      * @see DataCloudStatement#setResultSetConstraints
      * @param maxRows The target maximum number of rows a ResultSet can have, zero means there is no limit.
      */
-    public void setResultSetConstraints(int maxRows) throws DataCloudJDBCException {
+    public void setResultSetConstraints(int maxRows) throws SQLException {
         setResultSetConstraints(maxRows, RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
     }
 
@@ -227,7 +222,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
      * Cancels the most recently executed query from this statement.
      */
     @Override
-    public void cancel() throws DataCloudJDBCException {
+    public void cancel() throws SQLException {
         if (queryHandle == null) {
             log.warn("There was no in-progress query registered with this statement to cancel");
             return;
@@ -281,7 +276,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     @Override
     public void setFetchDirection(int direction) throws SQLException {
-        throw new DataCloudJDBCException(CHANGE_FETCH_DIRECTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(CHANGE_FETCH_DIRECTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
@@ -312,17 +307,17 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     @Override
     public void addBatch(String sql) throws SQLException {
-        throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void clearBatch() throws SQLException {
-        throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public int[] executeBatch() throws SQLException {
-        throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
@@ -337,32 +332,32 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     @Override
     public int executeUpdate(String sql, int autoGeneratedKeys) throws SQLException {
-        throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public int executeUpdate(String sql, int[] columnIndexes) throws SQLException {
-        throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public int executeUpdate(String sql, String[] columnNames) throws SQLException {
-        throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public boolean execute(String sql, int autoGeneratedKeys) throws SQLException {
-        throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public boolean execute(String sql, int[] columnIndexes) throws SQLException {
-        throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public boolean execute(String sql, String[] columnNames) throws SQLException {
-        throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
@@ -396,7 +391,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         if (iFace.isInstance(this)) {
             return iFace.cast(this);
         }
-        throw new DataCloudJDBCException("Cannot unwrap to " + iFace.getName());
+        throw new SQLException("Cannot unwrap to " + iFace.getName());
     }
 
     @Override

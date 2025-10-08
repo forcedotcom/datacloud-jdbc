@@ -8,10 +8,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.core.InterceptedHyperTestBase;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.Status;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
@@ -421,7 +421,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                         req.getQuery().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
                 .willReturn(GrpcMock.statusException(Status.CANCELLED)));
         assertThatThrownBy(() -> AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessage("Failed to execute query: " + TEST_QUERY);
 
         verifyGetQueryInfo(0);

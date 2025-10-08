@@ -4,8 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.core.fsm;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 
 public interface QueryResultHandle {
-    String getQueryId() throws DataCloudJDBCException;
+    String getQueryId() throws SQLException;
 }

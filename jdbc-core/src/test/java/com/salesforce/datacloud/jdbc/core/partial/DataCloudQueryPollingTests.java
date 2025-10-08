@@ -8,13 +8,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.core.InterceptedHyperTestBase;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.ManagedChannel;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.inprocess.InProcessChannelBuilder;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.UUID;
@@ -190,7 +190,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
         val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, status -> false);
 
         assertThatThrownBy(polling::waitFor)
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Predicate was not satisfied before timeout. queryId=test-query-123")
                 .hasMessageContaining(TEST_QUERY_ID);
 
@@ -206,7 +206,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
         val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, status -> status.getRowCount() >= 100);
 
         assertThatThrownBy(polling::waitFor)
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Predicate was not satisfied when execution finished")
                 .hasMessageContaining(TEST_QUERY_ID);
 
@@ -244,7 +244,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
         val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
 
         assertThatThrownBy(polling::waitFor)
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasRootCauseMessage("INVALID_ARGUMENT: " + message)
                 .hasRootCauseInstanceOf(StatusRuntimeException.class);
 
@@ -311,16 +311,12 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
 
         val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, status -> false);
 
-        assertThatThrownBy(polling::waitFor)
-                .isInstanceOf(DataCloudJDBCException.class)
-                .satisfies(ex -> {
-                    String msg = ex.getMessage();
-                    boolean ok = msg.contains("Predicate was not satisfied before timeout.")
-                            || msg.contains("Failed to get query status response.");
-                    assertThat(ok)
-                            .as("message contains timeout or failed-to-get")
-                            .isTrue();
-                });
+        assertThatThrownBy(polling::waitFor).isInstanceOf(SQLException.class).satisfies(ex -> {
+            String msg = ex.getMessage();
+            boolean ok = msg.contains("Predicate was not satisfied before timeout.")
+                    || msg.contains("Failed to get query status response.");
+            assertThat(ok).as("message contains timeout or failed-to-get").isTrue();
+        });
 
         verifyGetQueryInfoAtLeast(2);
     }

@@ -8,7 +8,6 @@ import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorGe
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Time;
@@ -150,7 +149,7 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
                         DateUtility.getLocalDateTimeFromEpochMilli(TimeUnit.SECONDS.toMillis(seconds), timeZoneID);
             default:
                 val rootCauseException = new UnsupportedOperationException(INVALID_UNIT_ERROR_RESPONSE);
-                throw new DataCloudJDBCException(INVALID_UNIT_ERROR_RESPONSE, "22007", rootCauseException);
+                throw new SQLException(INVALID_UNIT_ERROR_RESPONSE, "22007", rootCauseException);
         }
     }
 
@@ -178,7 +177,7 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
                 return TimeUnit.SECONDS;
             default:
                 val rootCauseException = new UnsupportedOperationException(INVALID_UNIT_ERROR_RESPONSE);
-                throw new DataCloudJDBCException(INVALID_UNIT_ERROR_RESPONSE, "22007", rootCauseException);
+                throw new SQLException(INVALID_UNIT_ERROR_RESPONSE, "22007", rootCauseException);
         }
     }
 }
