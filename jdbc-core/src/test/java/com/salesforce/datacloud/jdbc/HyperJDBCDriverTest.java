@@ -36,6 +36,7 @@ public class HyperJDBCDriverTest {
         // Test a couple of properties
         properties.setProperty("grpc.keepAlive", "false");
         properties.setProperty("workload", "test-workload");
+        properties.setProperty("ssl.disabled", "true");
 
         String url = String.format("jdbc:salesforce-hyper://localhost:%d", port);
         try (Connection connection = DriverManager.getConnection(url, properties)) {
@@ -50,7 +51,8 @@ public class HyperJDBCDriverTest {
     @Test
     public void testUrlParameters() throws SQLException {
         int port = HyperServerManager.get(ConfigFile.SMALL_CHUNKS).getPort();
-        String url = String.format("jdbc:salesforce-hyper://localhost:%d?workload=test-workload", port);
+        String url =
+                String.format("jdbc:salesforce-hyper://localhost:%d?workload=test-workload&ssl.disabled=true", port);
         try (Connection connection = DriverManager.getConnection(url)) {
             try (Statement statement = connection.createStatement()) {
                 ResultSet resultSet = statement.executeQuery("SELECT 1");

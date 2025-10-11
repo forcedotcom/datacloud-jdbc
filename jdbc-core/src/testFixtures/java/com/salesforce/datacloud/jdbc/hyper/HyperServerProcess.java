@@ -134,6 +134,7 @@ public class HyperServerProcess implements AutoCloseable {
     @SneakyThrows
     public DataCloudConnection getConnection(Map<String, String> connectionSettings) {
         val properties = new Properties();
+        properties.setProperty("ssl.disabled", "true");
         properties.putAll(connectionSettings);
         val url = "jdbc:salesforce-hyper://127.0.0.1:" + getPort();
         return HyperDatasource.connectUsingProperties(url, properties);

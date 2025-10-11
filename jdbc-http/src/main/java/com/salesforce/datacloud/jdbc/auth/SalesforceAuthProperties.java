@@ -110,9 +110,9 @@ public class SalesforceAuthProperties {
 
         // Determine authentication mode and set credentials
         if (props.containsKey(AUTH_USER_NAME) && props.containsKey(AUTH_PASSWORD)) {
-            builder.authenticationMode(AuthenticationMode.PASSWORD)
-                    .userName(takeRequired(props, AUTH_USER_NAME))
-                    .password(takeRequired(props, AUTH_PASSWORD));
+            builder.authenticationMode(AuthenticationMode.PASSWORD);
+            builder.userName(takeRequired(props, AUTH_USER_NAME));
+            builder.password(takeRequired(props, AUTH_PASSWORD));
         } else if (props.containsKey(AUTH_USER_NAME) && props.containsKey(AUTH_PRIVATE_KEY)) {
             builder.authenticationMode(AuthenticationMode.PRIVATE_KEY);
             builder.userName(takeRequired(props, AUTH_USER_NAME));

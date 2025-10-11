@@ -42,7 +42,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
       .format("com.salesforce.datacloud.spark.HyperResultSource")
       .option(
         "jdbcUrl",
-        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}?ssl.disabled=true"
       )
       .option("queryId", queryId)
       .load()
@@ -58,7 +58,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
         .format("com.salesforce.datacloud.spark.HyperResultSource")
         .option(
           "jdbcUrl",
-          s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+          s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}?ssl.disabled=true"
         )
         .load()
     }
@@ -71,7 +71,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
         .format("com.salesforce.datacloud.spark.HyperResultSource")
         .option(
           "jdbcUrl",
-          s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+          s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}?ssl.disabled=true"
         )
         .option("queryId", "invalid")
         .load()
@@ -88,7 +88,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
         .format("com.salesforce.datacloud.spark.HyperResultSource")
         .option(
           "jdbcUrl",
-          s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+          s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}?ssl.disabled=true"
         )
         .option("queryId", "143241")
         .option("unknownProperty", "maybe")
@@ -138,7 +138,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
       .format("com.salesforce.datacloud.spark.HyperResultSource")
       .option(
         "jdbcUrl",
-        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}?ssl.disabled=true"
       )
       .option("queryId", queryId)
       .load()
@@ -243,7 +243,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
       .format("com.salesforce.datacloud.spark.HyperResultSource")
       .option(
         "jdbcUrl",
-        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}?ssl.disabled=true"
       )
       .option("queryId", queryId)
       .load()
@@ -290,7 +290,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
       .format("com.salesforce.datacloud.spark.HyperResultSource")
       .option(
         "jdbcUrl",
-        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}"
+        s"jdbc:salesforce-hyper://localhost:${hyperServerProcess.getPort()}?ssl.disabled=true"
       )
       .option("queryId", queryId)
       .load()
