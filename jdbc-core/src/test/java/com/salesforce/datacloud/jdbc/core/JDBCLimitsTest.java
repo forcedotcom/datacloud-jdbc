@@ -208,33 +208,33 @@ public class JDBCLimitsTest {
     @Test
     @SneakyThrows
     public void testLargeResponseHeaders() {
+        // We are not allowed to close as this instance is cached
+        val server = HyperServerManager.get(HyperServerManager.ConfigFile.SMALL_CHUNKS);
         // The Hyper service sends back the trace id as response header. With the JDBC drivers channel config we should
         // support close to 1 MB response header as large headers can get injected by side cars in mesh scenarios.
-        try (val server = HyperServerManager.get(HyperServerManager.ConfigFile.SMALL_CHUNKS)) {
-            try (val connection = DataCloudConnection.of(
-                    new TraceIdChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), true),
-                    ConnectionProperties.defaultProperties(),
-                    "dataspace/unused",
-                    null)) {
-                try (val stmt = connection.createStatement()) {
-                    // We just verify that we are able to get a full response
-                    val result = stmt.executeQuery("SELECT 'A'");
-                    result.next();
-                    assertThat(result.getString(1)).isEqualTo("A");
-                }
+        try (val connection = DataCloudConnection.of(
+                new TraceIdChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), true),
+                ConnectionProperties.defaultProperties(),
+                "dataspace/unused",
+                null)) {
+            try (val stmt = connection.createStatement()) {
+                // We just verify that we are able to get a full response
+                val result = stmt.executeQuery("SELECT 'A'");
+                result.next();
+                assertThat(result.getString(1)).isEqualTo("A");
             }
-            // Verify that the trace id is indeed sent back by checking that the stmt fails with gRPC defaults for the
-            // channel.
-            try (val connection = DataCloudConnection.of(
-                    new TraceIdChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), false),
-                    ConnectionProperties.defaultProperties(),
-                    "dataspace/unused",
-                    null)) {
-                try (val stmt = connection.createStatement()) {
-                    assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
-                        stmt.executeQuery("SELECT 'A'");
-                    });
-                }
+        }
+        // Verify that the trace id is indeed sent back by checking that the stmt fails with gRPC defaults for the
+        // channel.
+        try (val connection = DataCloudConnection.of(
+                new TraceIdChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), false),
+                ConnectionProperties.defaultProperties(),
+                "dataspace/unused",
+                null)) {
+            try (val stmt = connection.createStatement()) {
+                assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
+                    stmt.executeQuery("SELECT 'A'");
+                });
             }
         }
     }
