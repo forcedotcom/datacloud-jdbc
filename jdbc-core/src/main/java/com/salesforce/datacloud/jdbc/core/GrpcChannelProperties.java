@@ -63,6 +63,7 @@ public class GrpcChannelProperties {
     public static final String GRPC_RETRY_POLICY_RETRYABLE_STATUS_CODES = "grpc.retryPolicy.retryableStatusCodes";
 
     private static final int GRPC_INBOUND_MESSAGE_MAX_SIZE = 64 * 1024 * 1024;
+    private static final int GRPC_INBOUND_METADATA_MAX_SIZE = 1024 * 1024;
 
     // Keep alive properties
     @Builder.Default
@@ -211,6 +212,7 @@ public class GrpcChannelProperties {
     public void applyToChannel(ManagedChannelBuilder<?> builder) {
         // General, setting-independent setup
         builder.maxInboundMessageSize(GRPC_INBOUND_MESSAGE_MAX_SIZE);
+        builder.maxInboundMetadataSize(GRPC_INBOUND_METADATA_MAX_SIZE);
         builder.userAgent(formatDriverInfo());
 
         // Keep alive settings

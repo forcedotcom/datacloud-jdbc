@@ -12,7 +12,9 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
+import io.grpc.*;
 import java.sql.ResultSet;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -20,9 +22,11 @@ import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 @Slf4j
 @ExtendWith(LocalHyperTestBase.class)
@@ -154,6 +158,84 @@ public class JDBCLimitsTest {
             assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
                 statement.executeQuery("SELECT 'A'");
             });
+        }
+    }
+
+    /**
+     * A stub provider that injects a configureable trace id and allows to toggle whether the jdbc channel configuration
+     * should be applied or not. Used to allow testing the difference between default gRPC and JDBC behavior for headers.
+     */
+    public static class TraceIdChannelConfigStubProvider implements HyperGrpcStubProvider {
+        final ManagedChannel channel;
+
+        TraceIdChannelConfigStubProvider(int port, String traceId, boolean useJDBCChannelConfig) {
+            ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress("localhost", port);
+            if (useJDBCChannelConfig) {
+                val jdbcChannelProperties = GrpcChannelProperties.defaultProperties();
+                jdbcChannelProperties.applyToChannel(builder);
+            }
+            builder = builder.intercept(new ClientInterceptor() {
+                        @Override
+                        public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
+                                MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
+                            return new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(
+                                    next.newCall(method, callOptions)) {
+                                @Override
+                                public void start(Listener<RespT> responseListener, Metadata headers) {
+                                    // Add B3 trace ID header
+                                    headers.put(
+                                            Metadata.Key.of("x-b3-traceid", Metadata.ASCII_STRING_MARSHALLER), traceId);
+                                    super.start(responseListener, headers);
+                                }
+                            };
+                        }
+                    })
+                    .usePlaintext();
+            channel = builder.build();
+        }
+
+        @Override
+        public HyperServiceGrpc.HyperServiceBlockingStub getStub() {
+            return HyperServiceGrpc.newBlockingStub(channel);
+        }
+
+        @Override
+        public void close() {
+            channel.shutdown();
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testLargeResponseHeaders() {
+        // The Hyper service sends back the trace id as response header. With the JDBC drivers channel config we should
+        // support close to 1 MB response header as large headers can get injected by side cars in mesh scenarios.
+        try (val server = HyperServerManager.get(HyperServerManager.ConfigFile.SMALL_CHUNKS)) {
+            try (val connection = DataCloudConnection.of(
+                    new TraceIdChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), true),
+                    ConnectionProperties.defaultProperties(),
+                    "dataspace/unused",
+                    null)) {
+                try (val stmt = connection.createStatement()) {
+                    // We just verify that we are able to get a full response
+                    val result = stmt.executeQuery("SELECT 'A'");
+                    result.next();
+                    assertThat(result.getString(1)).isEqualTo("A");
+                }
+            }
+            // Verify that the trace id is indeed sent back by checking that the stmt fails with gRPC defaults for the
+            // channel.
+            try (val connection = DataCloudConnection.of(
+                    new TraceIdChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), false),
+                    ConnectionProperties.defaultProperties(),
+                    "dataspace/unused",
+                    null)) {
+                try (val stmt = connection.createStatement()) {
+                    assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
+                        stmt.executeQuery("SELECT 'A'");
+                    });
+                }
+            }
         }
     }
 
