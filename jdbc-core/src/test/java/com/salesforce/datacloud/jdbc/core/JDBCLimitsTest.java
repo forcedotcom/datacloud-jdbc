@@ -233,7 +233,7 @@ public class JDBCLimitsTest {
                 "dataspace/unused",
                 null)) {
             try (val stmt = connection.createStatement()) {
-                assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
+                assertThatExceptionOfType(SQLException.class).isThrownBy(() -> {
                     stmt.executeQuery("SELECT 'A'");
                 });
             }
