@@ -41,14 +41,12 @@ public class DataCloudStatementFunctionalTest {
             assertThat(a.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
 
             stmt.cancel();
-
-            // we wait for all results produced, because this will throw waitFor's predicate failed but query finished
-            // flow
-            // but on subsequent invocations of waitFor we will see the canceled status we are expecting to see to test
-            // stmt::cancel
-            client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced);
-            assertThatThrownBy(() -> client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced))
-                    .hasMessageContaining("57014: canceled by user");
+            assertThatThrownBy(() -> {
+                conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                // We need a second try as Hyper sometimes returns results produced in the get query info call
+                // while cancellation is happening
+                conn.waitFor(queryId, QueryStatus::allResultsProduced);
+            }).hasMessageContaining("57014: canceled by user");
         }
     }
 
