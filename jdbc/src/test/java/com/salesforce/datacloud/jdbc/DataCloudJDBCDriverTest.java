@@ -9,7 +9,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOf
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
