@@ -36,6 +36,7 @@ public final class DataCloudQueryPolling {
     }
 
     private final HyperServiceGrpc.HyperServiceBlockingStub stub;
+    private final boolean includeCustomerDetailInReason;
     private final String queryId;
     private final Deadline deadline;
     private final Predicate<QueryStatus> predicate;
@@ -56,10 +57,11 @@ public final class DataCloudQueryPolling {
      */
     public static DataCloudQueryPolling of(
             HyperServiceGrpc.HyperServiceBlockingStub stub,
+            boolean includeCustomerDetailInReason,
             String queryId,
             Deadline deadline,
             Predicate<QueryStatus> predicate) {
-        return new DataCloudQueryPolling(stub, queryId, deadline, predicate);
+        return new DataCloudQueryPolling(stub, includeCustomerDetailInReason, queryId, deadline, predicate);
     }
 
     /**
@@ -77,18 +79,17 @@ public final class DataCloudQueryPolling {
      * @throws SQLException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
      */
     public QueryStatus waitFor() throws SQLException {
-        Exception lastException = null;
         while (!deadline.hasPassed() && state != State.COMPLETED) {
             try {
                 processCurrentState();
             } catch (StatusRuntimeException ex) {
                 log.error("Caught unexpected exception from server. {}", this, ex);
+                val queryEx = createException(includeCustomerDetailInReason, null, queryId, ex);
                 if (ex.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED) {
-                    throw new SQLException("Predicate was not satisfied before timeout. " + this, ex);
+                    throw new SQLException("Predicate was not satisfied before timeout. " + this, queryEx);
                 } else {
-                    throw createException("Failed when getting query status. " + this, ex);
+                    throw queryEx;
                 }
-
             } catch (SQLException ex) {
                 log.error("Failed to process current state. {}", this, ex);
                 throw ex;
@@ -96,13 +97,13 @@ public final class DataCloudQueryPolling {
         }
 
         if (lastStatus == null) {
-            throw new SQLException("Failed to get query status response. " + this, lastException);
+            throw new SQLException("Failed to get query status response. " + this);
         } else if (predicate.test(lastStatus)) {
             return lastStatus;
         } else if (deadline.hasPassed()) {
-            throw new SQLException("Predicate was not satisfied before timeout. " + this, lastException);
+            throw new SQLException("Predicate was not satisfied before timeout. " + this);
         } else {
-            throw new SQLException("Predicate was not satisfied when execution finished. " + this, lastException);
+            throw new SQLException("Predicate was not satisfied when execution finished. " + this);
         }
     }
 

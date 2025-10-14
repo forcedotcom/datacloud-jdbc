@@ -4,7 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 import static com.salesforce.datacloud.jdbc.util.ThrowingFunction.rethrowFunction;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
@@ -85,7 +84,7 @@ class ArrowStreamReaderCursor extends AbstractCursor {
             }
             return next;
         } catch (Exception e) {
-            throw createException("Failed to load next batch", e);
+            throw new SQLException("Failed to load next batch: " + e.getMessage(), e);
         }
     }
 

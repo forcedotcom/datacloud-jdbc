@@ -211,7 +211,8 @@ public class StreamingResultSetTest {
                             conn.getSchemaForQueryId(queryId);
                         })
                         .isInstanceOf(SQLException.class)
-                        .hasMessageContaining("Failed to fetch schema for queryId: " + queryId));
+                        .hasMessageContaining("Failed to execute query: No schema data available")
+                        .hasMessageContaining("QUERY-ID: "));
             }
         });
     }

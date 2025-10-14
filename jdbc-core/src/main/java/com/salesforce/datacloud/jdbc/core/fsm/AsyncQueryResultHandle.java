@@ -18,10 +18,11 @@ public class AsyncQueryResultHandle implements QueryResultHandle {
     @Getter
     private final String queryId;
 
-    public static AsyncQueryResultHandle of(String sql, HyperGrpcClientExecutor client, QueryTimeout timeout)
+    public static AsyncQueryResultHandle of(
+            boolean includeCustomerDetailInReason, String sql, HyperGrpcClientExecutor client, QueryTimeout timeout)
             throws SQLException {
         val response = client.executeAsyncQuery(sql, timeout);
-        val queryInfo = getInitialQueryInfo(sql, response);
+        val queryInfo = getInitialQueryInfo(includeCustomerDetailInReason, sql, response);
         val queryId = queryInfo.getQueryStatus().getQueryId();
         return new AsyncQueryResultHandle(queryId);
     }

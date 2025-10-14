@@ -14,3 +14,4 @@ log_full_context_level: trace
 # will give us chunks with 4 tuples each.
 result_target_chunk_size: 1
 arrow_write_buffer_initial_tuple_limit: 4
+grpc_service_roles: {"default": {"user": "", "authorizations": [ "ERROR_DETAIL_INTERNAL", "DEBUG_ACCESS"]}}

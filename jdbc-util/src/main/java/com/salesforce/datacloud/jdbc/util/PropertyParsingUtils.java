@@ -56,9 +56,9 @@ public final class PropertyParsingUtils {
 
     public static Optional<Boolean> takeOptionalBoolean(Properties properties, String key) {
         return takeOptional(properties, key).map(str -> {
-            if (str == "true") {
+            if (str.equals("true")) {
                 return true;
-            } else if (str == "false") {
+            } else if (str.equals("false")) {
                 return false;
             } else {
                 throw new IllegalArgumentException("Failed to parse `" + key + "` property as a boolean");

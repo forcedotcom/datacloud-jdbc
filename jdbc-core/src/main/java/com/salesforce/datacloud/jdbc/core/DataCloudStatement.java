@@ -104,12 +104,13 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         val queryTimeout = QueryTimeout.of(
                 statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
         val client = getQueryClient(queryTimeout);
-
+        val includeCustomerDetail = connection.getConnectionProperties().isIncludeCustomerDetailInReason();
         queryHandle = targetMaxRows > 0
-                ? AdaptiveQueryResultIterator.of(sql, client, queryTimeout, targetMaxRows, targetMaxBytes)
-                : AdaptiveQueryResultIterator.of(sql, client, queryTimeout);
+                ? AdaptiveQueryResultIterator.of(
+                        includeCustomerDetail, sql, client, queryTimeout, targetMaxRows, targetMaxBytes)
+                : AdaptiveQueryResultIterator.of(includeCustomerDetail, sql, client, queryTimeout);
 
-        resultSet = StreamingResultSet.of((AdaptiveQueryResultIterator) queryHandle);
+        resultSet = StreamingResultSet.of(includeCustomerDetail, (AdaptiveQueryResultIterator) queryHandle);
         log.info("executeAdaptiveQuery completed. queryId={}", queryHandle.getQueryId());
         return (DataCloudResultSet) resultSet;
     }
@@ -119,7 +120,8 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         val queryTimeout = QueryTimeout.of(
                 statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
         val client = getQueryClient(queryTimeout);
-        queryHandle = AsyncQueryResultHandle.of(sql, client, queryTimeout);
+        val includeCustomerDetail = connection.getConnectionProperties().isIncludeCustomerDetailInReason();
+        queryHandle = AsyncQueryResultHandle.of(includeCustomerDetail, sql, client, queryTimeout);
         log.info("executeAsyncQuery completed. queryId={}", queryHandle.getQueryId());
         return this;
     }
@@ -248,8 +250,10 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         return logTimedValue(
                 () -> {
                     assertQueryExecuted();
+                    val includeCustomerDetail =
+                            connection.getConnectionProperties().isIncludeCustomerDetailInReason();
                     if (resultSet == null && queryHandle instanceof QueryResultIterator) {
-                        resultSet = StreamingResultSet.of((QueryResultIterator) queryHandle);
+                        resultSet = StreamingResultSet.of(includeCustomerDetail, (QueryResultIterator) queryHandle);
                     } else if (resultSet == null) {
                         log.warn(
                                 "Prefer acquiring async result sets from helper methods DataCloudConnection::getChunkBasedResultSet and DataCloudConnection::getRowBasedResultSet. We will wait for the query's results to be produced in their entirety before returning a result set.");

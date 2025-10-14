@@ -5,6 +5,7 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptional;
+import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptionalBoolean;
 
 import java.sql.SQLException;
 import java.util.Properties;
@@ -30,6 +31,13 @@ public class ConnectionProperties {
     private final String externalClientContext = "";
 
     /**
+     * Whether to include query or other fragments that contain details from the query / customer specific data in the reason for
+     * Exceptions thrown by the JDBC driver.
+     */
+    @Builder.Default
+    private final boolean includeCustomerDetailInReason = true;
+
+    /**
      * Statement properties associated with this connection
      */
     @Builder.Default
@@ -53,6 +61,7 @@ public class ConnectionProperties {
 
         takeOptional(props, "workload").ifPresent(builder::workload);
         takeOptional(props, "externalClientContext").ifPresent(builder::externalClientContext);
+        takeOptionalBoolean(props, "errorsIncludeCustomerDetails").ifPresent(builder::includeCustomerDetailInReason);
         builder.statementProperties(StatementProperties.ofDestructive(props));
 
         return builder.build();
@@ -71,6 +80,9 @@ public class ConnectionProperties {
         }
         if (!externalClientContext.isEmpty()) {
             props.setProperty("externalClientContext", externalClientContext);
+        }
+        if (!includeCustomerDetailInReason) {
+            props.setProperty("errorsIncludeCustomerDetails", "false");
         }
         props.putAll(statementProperties.toProperties());
 

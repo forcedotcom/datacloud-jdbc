@@ -148,10 +148,12 @@ public class HyperGrpcClientExecutor {
      * @return The first status that satisfies the predicate, or the last status received before timeout
      * @throws SQLException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
      */
-    public QueryStatus waitFor(String queryId, Deadline deadline, Predicate<QueryStatus> predicate)
+    public QueryStatus waitFor(
+            boolean includeCustomerDetailInReason, String queryId, Deadline deadline, Predicate<QueryStatus> predicate)
             throws SQLException {
         val stub = getStub(queryId);
-        return DataCloudQueryPolling.of(stub, queryId, deadline, predicate).waitFor();
+        return DataCloudQueryPolling.of(stub, includeCustomerDetailInReason, queryId, deadline, predicate)
+                .waitFor();
     }
 
     public Iterator<QueryResult> getQueryResult(

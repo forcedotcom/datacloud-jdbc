@@ -43,19 +43,25 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
     private final Context context;
     private State state = State.PROCESS_EXECUTE_QUERY_STREAM;
 
-    public static AdaptiveQueryResultIterator of(String sql, HyperGrpcClientExecutor client, QueryTimeout timeout)
+    public static AdaptiveQueryResultIterator of(
+            boolean includeCustomerDetail, String sql, HyperGrpcClientExecutor client, QueryTimeout timeout)
             throws SQLException {
         val response = client.executeQuery(sql, timeout);
-        val context = Context.of(sql, response, timeout.getLocalDeadline());
+        val context = Context.of(includeCustomerDetail, sql, response, timeout.getLocalDeadline());
 
         return new AdaptiveQueryResultIterator(client, context);
     }
 
     public static AdaptiveQueryResultIterator of(
-            String sql, HyperGrpcClientExecutor client, QueryTimeout timeout, long maxRows, long maxBytes)
+            boolean includeCustomerDetail,
+            String sql,
+            HyperGrpcClientExecutor client,
+            QueryTimeout timeout,
+            long maxRows,
+            long maxBytes)
             throws SQLException {
         val response = client.executeQuery(sql, timeout, maxRows, maxBytes);
-        val context = Context.of(sql, response, timeout.getLocalDeadline());
+        val context = Context.of(includeCustomerDetail, sql, response, timeout.getLocalDeadline());
 
         return new AdaptiveQueryResultIterator(client, context);
     }
@@ -220,8 +226,13 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
 
     @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     static class Context {
-        static Context of(String sql, Iterator<ExecuteQueryResponse> response, Deadline deadline) throws SQLException {
-            val queryInfo = getInitialQueryInfo(sql, response);
+        static Context of(
+                boolean includeCustomerDetailInReason,
+                String sql,
+                Iterator<ExecuteQueryResponse> response,
+                Deadline deadline)
+                throws SQLException {
+            val queryInfo = getInitialQueryInfo(includeCustomerDetailInReason, sql, response);
             val context = new Context(deadline, response);
             context.updateQueryContext(queryInfo);
             return context;

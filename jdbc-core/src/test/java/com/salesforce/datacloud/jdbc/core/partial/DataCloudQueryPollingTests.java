@@ -58,7 +58,8 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
 
         val deadline = Deadline.of(TEST_TIMEOUT);
 
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, status -> status.getChunkCount() >= 5);
+        val polling =
+                DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, status -> status.getChunkCount() >= 5);
 
         val result = polling.waitFor();
 
@@ -94,7 +95,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
         val stub = HyperServiceGrpc.newBlockingStub(InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
                 .usePlaintext()
                 .build());
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
+        val polling = DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
 
         val result = polling.waitFor();
 
@@ -129,7 +130,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
                 }));
 
         val deadline = Deadline.of(TEST_TIMEOUT);
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
+        val polling = DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
 
         val result = polling.waitFor();
 
@@ -163,7 +164,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
 
         val deadline = Deadline.of(TEST_TIMEOUT);
 
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
+        val polling = DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
 
         val result = polling.waitFor();
 
@@ -187,7 +188,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
 
         val deadline = Deadline.of(SHORT_TIMEOUT);
 
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, status -> false);
+        val polling = DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, status -> false);
 
         assertThatThrownBy(polling::waitFor)
                 .isInstanceOf(SQLException.class)
@@ -203,7 +204,8 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
 
         val deadline = Deadline.of(TEST_TIMEOUT);
 
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, status -> status.getRowCount() >= 100);
+        val polling =
+                DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, status -> status.getRowCount() >= 100);
 
         assertThatThrownBy(polling::waitFor)
                 .isInstanceOf(SQLException.class)
@@ -220,7 +222,8 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
 
         val deadline = Deadline.of(TEST_TIMEOUT);
 
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, status -> status.getChunkCount() >= 3);
+        val polling =
+                DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, status -> status.getChunkCount() >= 3);
 
         val result = polling.waitFor();
 
@@ -234,14 +237,12 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
         val message = "Invalid query ID " + UUID.randomUUID();
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getGetQueryInfoMethod())
                 .withRequest(req -> req.getQueryId().equals(TEST_QUERY_ID))
-                .willProxyTo((request, observer) -> {
-                    observer.onError(
-                            Status.INVALID_ARGUMENT.withDescription(message).asRuntimeException());
-                }));
+                .willProxyTo((request, observer) -> observer.onError(
+                        Status.INVALID_ARGUMENT.withDescription(message).asRuntimeException())));
 
         val deadline = Deadline.of(TEST_TIMEOUT);
 
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
+        val polling = DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
 
         assertThatThrownBy(polling::waitFor)
                 .isInstanceOf(SQLException.class)
@@ -256,7 +257,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RESULTS_PRODUCED, 3);
 
         val deadline = Deadline.of(TEST_TIMEOUT);
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
+        val polling = DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
 
         val result = polling.waitFor();
 
@@ -268,13 +269,9 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
 
     @Test
     public void whenOptionalQueryInfoReceived_shouldSkipAndContinuePolling() throws Exception {
-        val callCount = new java.util.concurrent.atomic.AtomicInteger(0);
-
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getGetQueryInfoMethod())
                 .withRequest(req -> req.getQueryId().equals(TEST_QUERY_ID))
                 .willProxyTo((request, observer) -> {
-                    int count = callCount.incrementAndGet();
-
                     observer.onNext(QueryInfo.newBuilder().setOptional(true).build());
 
                     observer.onNext(QueryInfo.newBuilder()
@@ -289,7 +286,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
                 }));
 
         val deadline = Deadline.of(TEST_TIMEOUT);
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
+        val polling = DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, QueryStatus::allResultsProduced);
 
         val result = polling.waitFor();
 
@@ -309,7 +306,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
 
         val deadline = Deadline.of(SHORT_TIMEOUT);
 
-        val polling = DataCloudQueryPolling.of(stub, TEST_QUERY_ID, deadline, status -> false);
+        val polling = DataCloudQueryPolling.of(stub, true, TEST_QUERY_ID, deadline, status -> false);
 
         assertThatThrownBy(polling::waitFor).isInstanceOf(SQLException.class).satisfies(ex -> {
             String msg = ex.getMessage();

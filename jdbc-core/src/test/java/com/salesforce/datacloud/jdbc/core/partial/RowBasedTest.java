@@ -12,7 +12,6 @@ import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudPreparedStatement;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.query.v3.QueryStatus;
@@ -79,7 +78,7 @@ public class RowBasedTest {
     @Test
     void throwsWhenFullRangeOverrunsAvailableRows() {
         assertThatThrownBy(() -> sut(tiny, 0, tinySize * 3))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .rootCause()
                 .isInstanceOf(StatusRuntimeException.class)
                 .hasMessage(String.format(

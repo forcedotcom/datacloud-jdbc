@@ -55,7 +55,7 @@ public class JDBCLimitsTest {
                     .isThrownBy(() -> statement.executeQuery(query))
                     // Also verify that we don't explode exception sizes by keeping the full query
                     .withMessageEndingWith("<truncated>")
-                    .satisfies(t -> assertThat(t.getMessage()).hasSizeLessThan(16500));
+                    .satisfies(t -> assertThat(t.getMessage()).hasSizeLessThan(16600));
         });
     }
 

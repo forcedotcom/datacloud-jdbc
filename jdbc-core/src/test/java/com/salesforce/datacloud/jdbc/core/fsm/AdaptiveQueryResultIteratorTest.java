@@ -43,7 +43,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                 QueryParam.TransferMode.ADAPTIVE,
                 executeQueryResponse(
                         TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1));
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.getQueryId()).isEqualTo(TEST_QUERY_ID);
         assertThat(iterator.hasNext()).isFalse();
@@ -69,7 +69,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
             setupFakeChunk(i);
         }
 
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         while (iterator.hasNext()) {
             iterator.next();
@@ -93,7 +93,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                         1));
 
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1);
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
 
@@ -118,7 +118,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 3);
         setupFakeChunk(1);
         setupFakeChunk(2);
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         while (iterator.hasNext()) {
             iterator.next();
@@ -142,7 +142,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                         1));
 
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1);
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
 
@@ -161,7 +161,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                         TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RESULTS_PRODUCED, 2));
 
         setupFakeChunk(1);
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         while (iterator.hasNext()) {
             iterator.next();
@@ -185,7 +185,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                 TEST_QUERY,
                 QueryParam.TransferMode.ADAPTIVE,
                 executeQueryResponse(TEST_QUERY_ID, inputStatus, 1));
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         if (inputStatus == salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED) {
             assertThat(iterator.getQueryStatus().getCompletionStatus()).isEqualTo(expectedStatus);
@@ -213,7 +213,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                         1));
 
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1);
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
         verifyGetQueryInfo(1);
@@ -238,7 +238,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
         }
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 4);
         setupFakeChunk(3);
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         iterator.next();
         iterator.next();
@@ -308,7 +308,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                 TEST_QUERY,
                 QueryParam.TransferMode.ADAPTIVE,
                 responses.toArray(new ExecuteQueryResponse[0]));
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
         assertThat(iterator.getQueryStatus().allResultsProduced()).isTrue();
@@ -344,7 +344,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                             .build());
                     observer.onCompleted();
                 }));
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
         assertThat(iterator.getQueryStatus().allResultsProduced()).isTrue();
@@ -366,7 +366,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                         .and(GrpcMock.statusException(Status.CANCELLED))));
 
         setupGetQueryInfo(TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1);
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
         verifyGetQueryInfo(1);
@@ -405,7 +405,7 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                 .nextWillReturn(running)
                 .nextWillReturn(GrpcMock.statusException(Status.CANCELLED))
                 .nextWillReturn(finished));
-        val iterator = AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
+        val iterator = AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT);
 
         assertThat(iterator.hasNext()).isFalse();
         verifyGetQueryInfo(4);
@@ -420,9 +420,10 @@ public class AdaptiveQueryResultIteratorTest extends InterceptedHyperTestBase {
                 .withRequest(req ->
                         req.getQuery().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
                 .willReturn(GrpcMock.statusException(Status.CANCELLED)));
-        assertThatThrownBy(() -> AdaptiveQueryResultIterator.of(TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT))
+        assertThatThrownBy(() -> AdaptiveQueryResultIterator.of(true, TEST_QUERY, hyperGrpcClient, TEST_TIMEOUT))
                 .isInstanceOf(SQLException.class)
-                .hasMessage("Failed to execute query: " + TEST_QUERY);
+                .hasMessageContaining("Failed to execute query")
+                .hasMessageContaining("QUERY: " + TEST_QUERY);
 
         verifyGetQueryInfo(0);
         verifyGetQueryResult(0);

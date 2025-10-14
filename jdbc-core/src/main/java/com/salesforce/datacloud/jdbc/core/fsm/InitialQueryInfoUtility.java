@@ -4,8 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.fsm;
 
-import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createQueryException;
-
+import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -22,11 +21,13 @@ final class InitialQueryInfoUtility {
      * with the QueryId or cause a {@link StatusRuntimeException} to be thrown with details about why the query failed.
      * Use this utility to make sure we always get the first response the same way and craft an exception if necessary.
      */
-    static QueryInfo getInitialQueryInfo(String sql, Iterator<ExecuteQueryResponse> response) throws SQLException {
+    static QueryInfo getInitialQueryInfo(
+            boolean includeCustomerDetailInReason, String sql, Iterator<ExecuteQueryResponse> response)
+            throws SQLException {
         try {
             return response.next().getQueryInfo();
         } catch (StatusRuntimeException ex) {
-            throw createQueryException(sql, ex);
+            throw QueryExceptionHandler.createException(includeCustomerDetailInReason, sql, null, ex);
         }
     }
 }

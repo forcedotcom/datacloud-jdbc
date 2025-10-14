@@ -219,7 +219,7 @@ public class DataCloudConnection implements Connection {
         log.info("Get row-based result set. queryId={}, offset={}, limit={}", queryId, offset, limit);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = RowBased.of(executor, queryId, offset, limit);
-        return StreamingResultSet.of(iterator, queryId);
+        return StreamingResultSet.of(connectionProperties.isIncludeCustomerDetailInReason(), iterator, queryId);
     }
 
     /**
@@ -251,7 +251,7 @@ public class DataCloudConnection implements Connection {
         log.info("Get chunk-based result set. queryId={}, chunkId={}, limit={}", queryId, chunkId, limit);
         val executor = HyperGrpcClientExecutor.forSubmittedQuery(getStub());
         val iterator = ChunkBased.of(executor, queryId, chunkId, limit, false);
-        return StreamingResultSet.of(iterator, queryId);
+        return StreamingResultSet.of(connectionProperties.isIncludeCustomerDetailInReason(), iterator, queryId);
     }
 
     public DataCloudResultSet getChunkBasedResultSet(String queryId, long chunkId) throws SQLException {
@@ -265,7 +265,7 @@ public class DataCloudConnection implements Connection {
         try {
             Iterator<ByteString> byteStringIterator = ProtocolMappers.fromQueryInfo(infos);
             if (!byteStringIterator.hasNext()) {
-                throw new SQLException("No schema data available for queryId: " + queryId);
+                throw new SQLException("No schema data available");
             }
             Schema schema = deserializeMessage(byteStringIterator.next().asReadOnlyByteBuffer());
             List<ColumnMetaData> columns = toColumnMetaData(schema.getFields());
@@ -275,7 +275,7 @@ public class DataCloudConnection implements Connection {
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             return new AvaticaResultSetMetaData(null, null, signature);
         } catch (Exception ex) {
-            throw createException("Failed to fetch schema for queryId: " + queryId, ex);
+            throw createException(connectionProperties.isIncludeCustomerDetailInReason(), null, queryId, ex);
         }
     }
 
@@ -298,7 +298,12 @@ public class DataCloudConnection implements Connection {
      * @see #waitFor(String, Duration, Predicate)
      */
     public QueryStatus waitFor(String queryId, Predicate<QueryStatus> predicate) throws SQLException {
-        return HyperGrpcClientExecutor.forSubmittedQuery(getStub()).waitFor(queryId, Deadline.infinite(), predicate);
+        return HyperGrpcClientExecutor.forSubmittedQuery(getStub())
+                .waitFor(
+                        connectionProperties.isIncludeCustomerDetailInReason(),
+                        queryId,
+                        Deadline.infinite(),
+                        predicate);
     }
 
     /**
@@ -323,7 +328,11 @@ public class DataCloudConnection implements Connection {
     public QueryStatus waitFor(String queryId, Duration waitTimeout, Predicate<QueryStatus> predicate)
             throws SQLException {
         return HyperGrpcClientExecutor.forSubmittedQuery(getStub())
-                .waitFor(queryId, Deadline.of(waitTimeout), predicate);
+                .waitFor(
+                        connectionProperties.isIncludeCustomerDetailInReason(),
+                        queryId,
+                        Deadline.of(waitTimeout),
+                        predicate);
     }
 
     /**

@@ -53,17 +53,21 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
         this.queryId = queryId;
     }
 
-    public static StreamingResultSet of(QueryResultIterator iterator) throws SQLException {
-        return of(iterator, iterator.getQueryId());
+    public static StreamingResultSet of(boolean includeCustomerDetailInReason, QueryResultIterator iterator)
+            throws SQLException {
+        return of(includeCustomerDetailInReason, iterator, iterator.getQueryId());
     }
 
-    public static StreamingResultSet of(Iterator<QueryResult> iterator, String queryId) throws SQLException {
+    public static StreamingResultSet of(
+            boolean includeCustomerDetailInReason, Iterator<QueryResult> iterator, String queryId) throws SQLException {
         val byteStringIterator = ProtocolMappers.fromQueryResult(iterator);
         val channel = new ByteStringReadableByteChannel(byteStringIterator);
-        return of(channel, queryId);
+        return of(includeCustomerDetailInReason, channel, queryId);
     }
 
-    private static StreamingResultSet of(ByteStringReadableByteChannel channel, String queryId) throws SQLException {
+    private static StreamingResultSet of(
+            boolean includeCustomerDetailInReason, ByteStringReadableByteChannel channel, String queryId)
+            throws SQLException {
         try {
             val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
             val schemaRoot = reader.getVectorSchemaRoot();
@@ -79,11 +83,9 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
             return result;
         } catch (Exception ex) {
-            throw createException(QUERY_FAILURE + queryId, ex);
+            throw createException(includeCustomerDetailInReason, null, queryId, ex);
         }
     }
-
-    private static final String QUERY_FAILURE = "Failed to execute query: ";
 
     @Override
     public int getType() {
