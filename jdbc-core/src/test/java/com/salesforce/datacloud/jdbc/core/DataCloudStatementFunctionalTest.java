@@ -42,11 +42,12 @@ public class DataCloudStatementFunctionalTest {
 
             stmt.cancel();
             assertThatThrownBy(() -> {
-                conn.waitFor(queryId, QueryStatus::allResultsProduced);
-                // We need a second try as Hyper sometimes returns results produced in the get query info call
-                // while cancellation is happening
-                conn.waitFor(queryId, QueryStatus::allResultsProduced);
-            }).hasMessageContaining("57014: canceled by user");
+                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                        // We need a second try as Hyper sometimes returns results produced in the get query info call
+                        // while cancellation is happening
+                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                    })
+                    .hasMessageContaining("57014: canceled by user");
         }
     }
 
