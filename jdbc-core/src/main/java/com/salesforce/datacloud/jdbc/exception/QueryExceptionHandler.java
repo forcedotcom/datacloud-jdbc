@@ -23,14 +23,14 @@ public final class QueryExceptionHandler {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
-    public static DataCloudJDBCException createQueryException(String query, Exception e) {
+    public static SQLException createQueryException(String query, Exception e) {
         String exceptionQuery = query.length() > MAX_QUERY_LENGTH_IN_EXCEPTION
                 ? query.substring(0, MAX_QUERY_LENGTH_IN_EXCEPTION) + "<truncated>"
                 : query;
         return QueryExceptionHandler.createException("Failed to execute query: " + exceptionQuery, e);
     }
 
-    public static DataCloudJDBCException createException(String message, Exception e) {
+    public static SQLException createException(String message, Exception e) {
         if (e instanceof StatusRuntimeException) {
             StatusRuntimeException ex = (StatusRuntimeException) e;
             com.google.rpc.Status status = StatusProto.fromThrowable(ex);
@@ -46,7 +46,7 @@ public final class QueryExceptionHandler {
                     try {
                         errorInfo = firstError.unpack(ErrorInfo.class);
                     } catch (InvalidProtocolBufferException exc) {
-                        return new DataCloudJDBCException("Invalid error info", e);
+                        return new SQLException("Invalid error info", e);
                     }
 
                     String sqlState = errorInfo.getSqlstate();
@@ -59,18 +59,10 @@ public final class QueryExceptionHandler {
                 }
             }
         }
-        return new DataCloudJDBCException(message, e);
+        return new SQLException(message, e);
     }
 
     public static SQLException createException(String message, String sqlState, Exception e) {
         return new SQLException(message, sqlState, e.getCause());
-    }
-
-    public static SQLException createException(String message, String sqlState) {
-        return new SQLException(message, sqlState);
-    }
-
-    public static SQLException createException(String message) {
-        return new DataCloudJDBCException(message);
     }
 }

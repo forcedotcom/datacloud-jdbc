@@ -7,7 +7,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptionalDuration;
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeRequired;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,9 +50,9 @@ public class StatementProperties {
      *
      * @param props The properties to parse
      * @return A StatementProperties instance
-     * @throws DataCloudJDBCException if parsing of property values fails
+     * @throws SQLException if parsing of property values fails
      */
-    public static StatementProperties ofDestructive(Properties props) throws DataCloudJDBCException {
+    public static StatementProperties ofDestructive(Properties props) throws SQLException {
         StatementPropertiesBuilder builder = StatementProperties.builder();
 
         takeOptionalDuration(props, "queryTimeout").ifPresent(builder::queryTimeout);
@@ -68,7 +68,7 @@ public class StatementProperties {
                 // We want `query_timeout` to be set as a JDBC-side setting, so
                 // we can also enforce it on the network level.
                 if ("query_timeout".equalsIgnoreCase(settingKey)) {
-                    throw new DataCloudJDBCException(
+                    throw new SQLException(
                             "`query_timeout` is not an allowed `querySetting` subkey, use the `queryTimeout` property instead");
                 }
                 querySettings.put(settingKey, settingValue);

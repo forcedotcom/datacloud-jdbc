@@ -6,8 +6,8 @@ package com.salesforce.datacloud.jdbc.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.internal.SocketFactoryWrapper;
+import java.sql.SQLException;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
@@ -20,7 +20,7 @@ import org.mockito.Mockito;
 
 class HttpClientPropertiesTest {
     @Test
-    void testParseFromPropertiesWithAllSettings() throws DataCloudJDBCException {
+    void testParseFromPropertiesWithAllSettings() throws SQLException {
         Properties props = new Properties();
         props.setProperty(HttpClientProperties.HTTP_LOG_LEVEL, "BODY");
         props.setProperty(HttpClientProperties.HTTP_READ_TIMEOUT_SECONDS, "300");
@@ -47,7 +47,7 @@ class HttpClientPropertiesTest {
     }
 
     @Test
-    void testParseFromPropertiesWithPartialSettings() throws DataCloudJDBCException {
+    void testParseFromPropertiesWithPartialSettings() throws SQLException {
         Properties props = new Properties();
         props.setProperty(HttpClientProperties.HTTP_LOG_LEVEL, "HEADERS");
         props.setProperty(HttpClientProperties.HTTP_READ_TIMEOUT_SECONDS, "900");
@@ -70,7 +70,7 @@ class HttpClientPropertiesTest {
     }
 
     @Test
-    void testParseFromEmptyProperties() throws DataCloudJDBCException {
+    void testParseFromEmptyProperties() throws SQLException {
         Properties props = new Properties();
 
         HttpClientProperties httpProps = HttpClientProperties.ofDestructive(props);
@@ -89,7 +89,7 @@ class HttpClientPropertiesTest {
     }
 
     @Test
-    void testRoundtripConversion() throws DataCloudJDBCException {
+    void testRoundtripConversion() throws SQLException {
         Properties originalProps = new Properties();
         originalProps.setProperty(HttpClientProperties.HTTP_LOG_LEVEL, "BODY");
         originalProps.setProperty(HttpClientProperties.HTTP_READ_TIMEOUT_SECONDS, "300");
@@ -123,7 +123,7 @@ class HttpClientPropertiesTest {
     }
 
     @Test
-    void testRoundtripConversionWithDefaults() throws DataCloudJDBCException {
+    void testRoundtripConversionWithDefaults() throws SQLException {
         Properties originalProps = new Properties();
         // Only set one non-default value
         originalProps.setProperty(HttpClientProperties.HTTP_LOG_LEVEL, "NONE");
@@ -141,7 +141,7 @@ class HttpClientPropertiesTest {
     }
 
     @Test
-    void testBuildOkHttpClient() throws DataCloudJDBCException {
+    void testBuildOkHttpClient() throws SQLException {
         Properties props = new Properties();
         props.setProperty(HttpClientProperties.HTTP_LOG_LEVEL, "BODY");
         props.setProperty(HttpClientProperties.HTTP_READ_TIMEOUT_SECONDS, "300");

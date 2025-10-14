@@ -11,7 +11,6 @@ import com.salesforce.datacloud.jdbc.auth.errors.AuthorizationException;
 import com.salesforce.datacloud.jdbc.auth.model.AuthenticationResponseWithError;
 import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
 import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.FormCommand;
 import com.salesforce.datacloud.jdbc.http.HttpClientProperties;
 import dev.failsafe.Failsafe;
@@ -47,8 +46,7 @@ public class DataCloudTokenProvider {
     private RetryPolicy<AuthenticationResponseWithError> exponentialBackOffPolicy;
 
     public static DataCloudTokenProvider of(
-            HttpClientProperties clientProperties, SalesforceAuthProperties authProperties)
-            throws DataCloudJDBCException {
+            HttpClientProperties clientProperties, SalesforceAuthProperties authProperties) throws SQLException {
         val settings = authProperties;
         val client = clientProperties.buildOkHttpClient();
         val exponentialBackOffPolicy = buildExponentialBackoffRetryPolicy(clientProperties.getMaxRetries());
@@ -155,7 +153,7 @@ public class DataCloudTokenProvider {
     /**
      * Build a JWT assertion for the private key authentication mode.
      */
-    private String buildJwt() throws DataCloudJDBCException {
+    private String buildJwt() throws SQLException {
         assert settings.getAuthenticationMode() == SalesforceAuthProperties.AuthenticationMode.PRIVATE_KEY;
         try {
             val now = Instant.now();
@@ -170,7 +168,7 @@ public class DataCloudTokenProvider {
                     .signWith(settings.getPrivateKey(), Jwts.SIG.RS256)
                     .compact();
         } catch (Exception ex) {
-            throw new DataCloudJDBCException(
+            throw new SQLException(
                     "JWT assertion creation failed. Please check Username, Client Id and Private key.", "28000", ex);
         }
     }
@@ -190,7 +188,7 @@ public class DataCloudTokenProvider {
                     .errorDescription(description)
                     .build();
         } else if (Strings.isNullOrEmpty(token)) {
-            throw new DataCloudJDBCException(message + ", no token in response.", "28000");
+            throw new SQLException(message + ", no token in response.", "28000");
         }
 
         return response;
@@ -202,9 +200,9 @@ public class DataCloudTokenProvider {
             return Failsafe.with(this.exponentialBackOffPolicy).get(response);
         } catch (FailsafeException ex) {
             if (ex.getCause() != null) {
-                throw new DataCloudJDBCException(ex.getCause().getMessage(), "28000", ex);
+                throw new SQLException(ex.getCause().getMessage(), "28000", ex);
             }
-            throw new DataCloudJDBCException(ex.getMessage(), "28000", ex);
+            throw new SQLException(ex.getMessage(), "28000", ex);
         }
     }
 

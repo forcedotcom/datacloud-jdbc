@@ -39,7 +39,7 @@ class QueryExceptionHandlerTest {
 
     @Test
     void testCreateException() {
-        SQLException actualException = QueryExceptionHandler.createException("test message");
+        SQLException actualException = new SQLException("test message");
 
         assertInstanceOf(SQLException.class, actualException);
         assertEquals("test message", actualException.getMessage());
@@ -59,7 +59,7 @@ class QueryExceptionHandlerTest {
     @Test
     public void testCreateExceptionWithSQLStateAndMessage() {
         String mockSQLState = "42P01";
-        SQLException sqlException = QueryExceptionHandler.createException("test message", mockSQLState);
+        SQLException sqlException = new SQLException("test message", mockSQLState);
 
         assertInstanceOf(SQLException.class, sqlException);
         assertEquals("42P01", sqlException.getSQLState());

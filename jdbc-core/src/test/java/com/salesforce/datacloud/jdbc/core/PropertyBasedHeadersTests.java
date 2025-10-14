@@ -8,15 +8,15 @@ import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.common.collect.ImmutableSet;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import io.grpc.Metadata;
+import java.sql.SQLException;
 import java.util.Properties;
 import lombok.val;
 import org.junit.Test;
 
 public class PropertyBasedHeadersTests {
     @Test
-    public void testEmptyPropertiesOnlyContainsWorkload() throws DataCloudJDBCException {
+    public void testEmptyPropertiesOnlyContainsWorkload() throws SQLException {
         val properties = new Properties();
         val connectionProperties = ConnectionProperties.ofDestructive(properties);
         val metadata = DataCloudConnection.deriveHeadersFromProperties("", connectionProperties);
@@ -26,7 +26,7 @@ public class PropertyBasedHeadersTests {
     }
 
     @Test
-    public void testPropertyForwarding() throws DataCloudJDBCException {
+    public void testPropertyForwarding() throws SQLException {
         val properties = new Properties();
         properties.setProperty("workload", "wl");
         properties.setProperty("externalClientContext", "ctx");

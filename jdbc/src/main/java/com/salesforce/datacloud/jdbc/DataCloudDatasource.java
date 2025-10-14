@@ -10,7 +10,6 @@ import com.salesforce.datacloud.jdbc.core.ConnectionProperties;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.GrpcChannelProperties;
 import com.salesforce.datacloud.jdbc.core.JdbcDriverStubProvider;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.HttpClientProperties;
 import com.salesforce.datacloud.jdbc.interceptor.AuthorizationHeaderInterceptor;
 import com.salesforce.datacloud.jdbc.interceptor.TokenProcessorSupplier;
@@ -78,21 +77,21 @@ public class DataCloudDatasource implements DataSource {
         log.info("connect url={}", url);
 
         if (!acceptsURL(url)) {
-            throw new DataCloudJDBCException("Invalid URL. URL must start with 'jdbc:salesforce-datacloud:'");
+            throw new SQLException("Invalid URL. URL must start with 'jdbc:salesforce-datacloud:'");
         }
 
         try {
             // Determine the login URL
             final JdbcURL jdbcUrl = JdbcURL.of(url);
             if (jdbcUrl.getHost().startsWith("http://") || jdbcUrl.getHost().startsWith("https://")) {
-                throw new DataCloudJDBCException("The JDBC URL must not contain a http/https prefix");
+                throw new SQLException("The JDBC URL must not contain a http/https prefix");
             }
             int effectivePort = jdbcUrl.getPort() == -1 ? 443 : jdbcUrl.getPort();
             URI loginUrl;
             try {
                 loginUrl = new URI("https://" + jdbcUrl.getHost() + ":" + String.valueOf(effectivePort));
             } catch (URISyntaxException e) {
-                throw new DataCloudJDBCException("Invalid URI syntax: " + e.getReason());
+                throw new SQLException("Invalid URI syntax: " + e.getReason());
             }
 
             // Parse the properties
@@ -113,12 +112,12 @@ public class DataCloudDatasource implements DataSource {
         }
     }
 
-    private static void normalizeUsernameProperty(Properties properties) throws DataCloudJDBCException {
+    private static void normalizeUsernameProperty(Properties properties) throws SQLException {
         // For backwards compatibility, we support both the "user" and "userName" properties.
         // Normalize it to "userName".
         if (properties.containsKey("user")) {
             if (properties.containsKey("userName")) {
-                throw new DataCloudJDBCException("userName and user properties cannot be mixed", "28000");
+                throw new SQLException("userName and user properties cannot be mixed", "28000");
             }
             properties.setProperty("userName", properties.getProperty("user"));
             properties.remove("user");
@@ -165,33 +164,33 @@ public class DataCloudDatasource implements DataSource {
 
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public PrintWriter getLogWriter() throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setLogWriter(PrintWriter out) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setLoginTimeout(int seconds) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public int getLoginTimeout() throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @SneakyThrows
     @Override
     public Logger getParentLogger() {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override

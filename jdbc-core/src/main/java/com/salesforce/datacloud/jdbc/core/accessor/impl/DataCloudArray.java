@@ -6,7 +6,6 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static com.salesforce.datacloud.jdbc.util.ArrowToColumnTypeMapper.toColumnType;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.sql.Array;
 import java.sql.ResultSet;
@@ -80,7 +79,7 @@ public class DataCloudArray implements Array {
     @Override
     public Object getArray(Map<String, Class<?>> map) throws SQLException {
         if (map != null) {
-            throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+            throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
         }
         return this.data;
     }
@@ -93,7 +92,7 @@ public class DataCloudArray implements Array {
     @Override
     public Object getArray(long index, int count, Map<String, Class<?>> map) throws SQLException {
         if (map != null) {
-            throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+            throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
         }
         checkBoundaries(index, count);
         int startIndex = (int) index - 1;
@@ -104,22 +103,22 @@ public class DataCloudArray implements Array {
 
     @Override
     public ResultSet getResultSet() throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public ResultSet getResultSet(Map<String, Class<?>> map) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public ResultSet getResultSet(long index, int count) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public ResultSet getResultSet(long index, int count, Map<String, Class<?>> map) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override

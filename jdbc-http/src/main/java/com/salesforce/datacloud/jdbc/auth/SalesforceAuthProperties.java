@@ -8,11 +8,11 @@ import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOption
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeRequired;
 
 import com.google.common.collect.ImmutableList;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.net.URI;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -92,8 +92,7 @@ public class SalesforceAuthProperties {
      * @param props The properties to parse
      * @return A SalesforceAuthProperties instance
      */
-    public static SalesforceAuthProperties ofDestructive(@NonNull URI loginUrl, Properties props)
-            throws DataCloudJDBCException {
+    public static SalesforceAuthProperties ofDestructive(@NonNull URI loginUrl, Properties props) throws SQLException {
         if (!isKnownLoginUrl(loginUrl.getHost())) {
             log.warn("The specified url `{}` does not match any known Salesforce hosts.", loginUrl);
         }
@@ -124,7 +123,7 @@ public class SalesforceAuthProperties {
             // in the `DatabaseMetadata.getUserName` call.
             builder.userName(takeOptional(props, AUTH_USER_NAME).orElse(null));
         } else {
-            throw new DataCloudJDBCException(
+            throw new SQLException(
                     "Properties must contain either (userName + password), (userName + privateKey), or refreshToken",
                     "28000");
         }
@@ -132,7 +131,7 @@ public class SalesforceAuthProperties {
         // Check for mixed authentication modes
         if (!Collections.disjoint(
                 props.keySet(), Arrays.asList(AUTH_USER_NAME, AUTH_PASSWORD, AUTH_PRIVATE_KEY, AUTH_REFRESH_TOKEN))) {
-            throw new DataCloudJDBCException("Properties from different authentication modes cannot be mixed", "28000");
+            throw new SQLException("Properties from different authentication modes cannot be mixed", "28000");
         }
 
         return builder.build();
@@ -171,11 +170,11 @@ public class SalesforceAuthProperties {
         return props;
     }
 
-    private static RSAPrivateKey parsePrivateKey(String privateKey) throws DataCloudJDBCException {
+    private static RSAPrivateKey parsePrivateKey(String privateKey) throws SQLException {
         privateKey = privateKey.trim();
         if (!privateKey.startsWith("-----BEGIN PRIVATE KEY-----")
                 || !privateKey.endsWith("-----END PRIVATE KEY-----")) {
-            throw new DataCloudJDBCException("Private key must be in PEM format", "28000");
+            throw new SQLException("Private key must be in PEM format", "28000");
         }
 
         try {
@@ -188,7 +187,7 @@ public class SalesforceAuthProperties {
             KeyFactory factory = KeyFactory.getInstance("RSA");
             return (RSAPrivateKey) factory.generatePrivate(keySpec);
         } catch (Exception ex) {
-            throw new DataCloudJDBCException("Failed to parse private key", "28000", ex);
+            throw new SQLException("Failed to parse private key", "28000", ex);
         }
     }
 

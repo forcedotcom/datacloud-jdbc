@@ -1,25 +1,26 @@
 import org.scalatest.funsuite.AnyFunSuite
+
 import scala.util.Using
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile
-import java.sql.Date
-import java.sql.Timestamp
+
+import java.sql.{Date, SQLException, Timestamp}
 import java.math.BigDecimal
 import org.apache.spark.sql.types.{
-  StructField,
-  ShortType,
+  BinaryType,
+  BooleanType,
+  DateType,
+  DecimalType,
+  DoubleType,
+  FloatType,
   IntegerType,
   LongType,
-  BooleanType,
-  DecimalType,
-  FloatType,
-  DoubleType,
+  ShortType,
   StringType,
-  DateType,
-  TimestampType,
-  BinaryType
+  StructField,
+  TimestampType
 }
 
 object HyperResultSourceTest {
@@ -83,7 +84,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
   }
 
   test("reports an error on unknown properties") {
-    val e = intercept[DataCloudJDBCException] {
+    val e = intercept[SQLException] {
       spark.read
         .format("com.salesforce.datacloud.spark.HyperResultSource")
         .option(

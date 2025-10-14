@@ -8,7 +8,6 @@ import static com.salesforce.datacloud.jdbc.util.Require.requireNotNullOrBlank;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.io.IOException;
 import java.net.URI;
 import java.sql.SQLException;
@@ -56,7 +55,7 @@ public class DataCloudToken {
         } catch (IllegalArgumentException ex) {
             val rootCauseException = new IllegalArgumentException(
                     "Failed to parse the provided tenantUrl: '" + tenantUrl + "'. " + ex.getMessage(), ex.getCause());
-            throw new DataCloudJDBCException(FAILED_LOGIN, "28000", rootCauseException);
+            throw new SQLException(FAILED_LOGIN, "28000", rootCauseException);
         }
     }
 
@@ -89,7 +88,7 @@ public class DataCloudToken {
                     .get(AUDIENCE_TENANT_ID)
                     .asText();
         } catch (IOException e) {
-            throw new DataCloudJDBCException(TENANT_IO_ERROR_RESPONSE, "58030", e);
+            throw new SQLException(TENANT_IO_ERROR_RESPONSE, "58030", e);
         }
     }
 }

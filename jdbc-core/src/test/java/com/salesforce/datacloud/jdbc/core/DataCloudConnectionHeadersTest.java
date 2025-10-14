@@ -6,9 +6,9 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import io.grpc.Metadata;
 import io.grpc.inprocess.InProcessChannelBuilder;
+import java.sql.SQLException;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
@@ -34,14 +34,14 @@ class DataCloudConnectionHeadersTest {
     }
 
     @Test
-    void deriveHeaders_defaultsOnlyWorkload() throws DataCloudJDBCException {
+    void deriveHeaders_defaultsOnlyWorkload() throws SQLException {
         ConnectionProperties cp = ConnectionProperties.ofDestructive(new Properties());
         Metadata md = DataCloudConnection.deriveHeadersFromProperties("", cp);
         assertThat(md.keys()).containsExactly("user-agent", "x-hyperdb-workload");
     }
 
     @Test
-    void deriveHeaders_allFieldsPresent() throws DataCloudJDBCException {
+    void deriveHeaders_allFieldsPresent() throws SQLException {
         Properties props = new Properties();
         props.setProperty("workload", "wl");
         props.setProperty("externalClientContext", "{}");
@@ -60,7 +60,7 @@ class DataCloudConnectionHeadersTest {
     }
 
     @Test
-    void getStub_attachesInterceptors_andHonorsNetworkTimeout() throws DataCloudJDBCException {
+    void getStub_attachesInterceptors_andHonorsNetworkTimeout() throws SQLException {
         Properties props = new Properties();
         props.setProperty("workload", "wl");
         DataCloudConnection conn =

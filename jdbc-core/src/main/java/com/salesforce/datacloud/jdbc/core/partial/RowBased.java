@@ -5,7 +5,7 @@
 package com.salesforce.datacloud.jdbc.core.partial;
 
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -27,7 +27,7 @@ class RowBasedContext {
     @Getter
     private final AtomicLong seen = new AtomicLong(0);
 
-    public Iterator<QueryResult> getQueryResult(boolean omitSchema) throws DataCloudJDBCException {
+    public Iterator<QueryResult> getQueryResult(boolean omitSchema) throws SQLException {
         val currentOffset = offset + seen.get();
         val currentLimit = limit - seen.get();
         return client.getQueryResult(
@@ -47,7 +47,7 @@ public class RowBased implements Iterator<QueryResult> {
     public static final int HYPER_MIN_ROW_LIMIT_BYTE_SIZE = 1024;
 
     public static RowBased of(@NonNull HyperGrpcClientExecutor client, @NonNull String queryId, long offset, long limit)
-            throws DataCloudJDBCException {
+            throws SQLException {
         val context = RowBasedContext.builder()
                 .client(client)
                 .queryId(queryId)

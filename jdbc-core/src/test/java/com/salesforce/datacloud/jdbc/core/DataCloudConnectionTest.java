@@ -10,9 +10,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import io.grpc.ClientInterceptor;
 import java.sql.Connection;
+import java.sql.SQLException;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -58,7 +58,7 @@ class DataCloudConnectionTest extends InterceptedHyperTestBase {
     @Test
     void testIsValidNegativeTimeoutThrows() {
         try (val connection = getInterceptedClientConnection()) {
-            val ex = assertThrows(DataCloudJDBCException.class, () -> connection.isValid(-1));
+            val ex = assertThrows(SQLException.class, () -> connection.isValid(-1));
             assertThat(ex).hasMessage("Invalid timeout value: -1").hasNoCause();
         }
     }
@@ -78,7 +78,7 @@ class DataCloudConnectionTest extends InterceptedHyperTestBase {
         val unwrapped = connection.unwrap(DataCloudConnection.class);
         assertThat(connection.isWrapperFor(DataCloudConnection.class)).isTrue();
         assertThat(unwrapped).isInstanceOf(DataCloudConnection.class);
-        assertThrows(DataCloudJDBCException.class, () -> connection.unwrap(String.class));
+        assertThrows(SQLException.class, () -> connection.unwrap(String.class));
         connection.close();
     }
 

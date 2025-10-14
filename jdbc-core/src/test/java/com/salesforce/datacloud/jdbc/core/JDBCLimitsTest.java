@@ -16,6 +16,7 @@ import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import io.grpc.*;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -50,7 +51,7 @@ public class JDBCLimitsTest {
     public void testTooLargeQuery() {
         String query = "SELECT 'a', /*" + repeat('x', 65 * 1024 * 1024) + "*/ 'b'";
         assertWithStatement(statement -> {
-            assertThatExceptionOfType(DataCloudJDBCException.class)
+            assertThatExceptionOfType(SQLException.class)
                     .isThrownBy(() -> statement.executeQuery(query))
                     // Also verify that we don't explode exception sizes by keeping the full query
                     .withMessageEndingWith("<truncated>")
@@ -124,7 +125,7 @@ public class JDBCLimitsTest {
         String value = repeat('x', 64 * 1024 * 1024);
         assertWithConnection(connection -> {
             try (val stmt = connection.prepareStatement("SELECT length(?)")) {
-                assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
+                assertThatExceptionOfType(SQLException.class).isThrownBy(() -> {
                     stmt.setString(1, value);
                     stmt.executeQuery();
                 });
@@ -155,7 +156,7 @@ public class JDBCLimitsTest {
         properties.put("workload", repeat('x', 1024 * 1024));
         try (val connection = getHyperQueryConnection(properties);
                 val statement = connection.createStatement()) {
-            assertThatExceptionOfType(DataCloudJDBCException.class).isThrownBy(() -> {
+            assertThatExceptionOfType(SQLException.class).isThrownBy(() -> {
                 statement.executeQuery("SELECT 'A'");
             });
         }

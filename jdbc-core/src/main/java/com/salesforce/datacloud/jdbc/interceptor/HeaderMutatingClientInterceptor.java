@@ -4,7 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.interceptor;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
@@ -12,11 +11,12 @@ import io.grpc.ClientInterceptor;
 import io.grpc.ForwardingClientCall;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
+import java.sql.SQLException;
 import lombok.SneakyThrows;
 
 @FunctionalInterface
 public interface HeaderMutatingClientInterceptor extends ClientInterceptor {
-    void mutate(final Metadata headers) throws DataCloudJDBCException;
+    void mutate(final Metadata headers) throws SQLException;
 
     @Override
     default <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
@@ -28,8 +28,7 @@ public interface HeaderMutatingClientInterceptor extends ClientInterceptor {
                 try {
                     mutate(headers);
                 } catch (Exception ex) {
-                    throw new DataCloudJDBCException(
-                            "Caught exception when mutating headers in client interceptor", ex);
+                    throw new SQLException("Caught exception when mutating headers in client interceptor", ex);
                 }
 
                 super.start(responseListener, headers);

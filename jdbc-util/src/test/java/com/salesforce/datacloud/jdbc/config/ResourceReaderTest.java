@@ -10,8 +10,8 @@ import static com.salesforce.datacloud.jdbc.config.ResourceReader.readResourceAs
 import static com.salesforce.datacloud.jdbc.config.ResourceReader.withResourceAsStream;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.UUID;
 import lombok.val;
 import org.assertj.core.api.AssertionsForInterfaceTypes;
@@ -27,7 +27,7 @@ class ResourceReaderTest {
     void withResourceAsStreamHandlesIOException() {
         val message = UUID.randomUUID().toString();
         val ex = Assertions.assertThrows(
-                DataCloudJDBCException.class,
+                SQLException.class,
                 () -> withResourceAsStream(validPath, in -> {
                     throw new IOException(message);
                 }));
@@ -41,7 +41,7 @@ class ResourceReaderTest {
     @Test
     void readResourceAsStringThrowsOnNotFound() {
         val badPath = "/" + UUID.randomUUID();
-        val ex = Assertions.assertThrows(DataCloudJDBCException.class, () -> readResourceAsString(badPath));
+        val ex = Assertions.assertThrows(SQLException.class, () -> readResourceAsString(badPath));
 
         assertThat(ex).hasMessage("Resource file not found. path=" + badPath);
         assertThat(ex.getSQLState()).isEqualTo(expectedState);
@@ -50,7 +50,7 @@ class ResourceReaderTest {
     @Test
     void readResourceAsPropertiesThrowsOnNotFound() {
         val badPath = "/" + UUID.randomUUID();
-        val ex = Assertions.assertThrows(DataCloudJDBCException.class, () -> readResourceAsProperties(badPath));
+        val ex = Assertions.assertThrows(SQLException.class, () -> readResourceAsProperties(badPath));
 
         assertThat(ex).hasMessage("Resource file not found. path=" + badPath);
         assertThat(ex.getSQLState()).isEqualTo(expectedState);

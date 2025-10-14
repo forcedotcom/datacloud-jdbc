@@ -6,8 +6,8 @@ package com.salesforce.datacloud.jdbc.core.fsm;
 
 import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createQueryException;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import io.grpc.StatusRuntimeException;
+import java.sql.SQLException;
 import java.util.Iterator;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
@@ -22,8 +22,7 @@ final class InitialQueryInfoUtility {
      * with the QueryId or cause a {@link StatusRuntimeException} to be thrown with details about why the query failed.
      * Use this utility to make sure we always get the first response the same way and craft an exception if necessary.
      */
-    static QueryInfo getInitialQueryInfo(String sql, Iterator<ExecuteQueryResponse> response)
-            throws DataCloudJDBCException {
+    static QueryInfo getInitialQueryInfo(String sql, Iterator<ExecuteQueryResponse> response) throws SQLException {
         try {
             return response.next().getQueryInfo();
         } catch (StatusRuntimeException ex) {

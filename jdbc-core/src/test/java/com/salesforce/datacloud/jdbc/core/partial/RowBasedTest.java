@@ -17,6 +17,7 @@ import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.StatusRuntimeException;
+import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -115,7 +116,7 @@ public class RowBasedTest {
                     .map(page -> {
                         try {
                             return conn.getRowBasedResultSet(queryId, page.getOffset(), page.getLimit());
-                        } catch (DataCloudJDBCException e) {
+                        } catch (SQLException e) {
                             throw new RuntimeException(e);
                         }
                     })
@@ -135,7 +136,7 @@ public class RowBasedTest {
                     .map(page -> {
                         try {
                             return conn.getRowBasedResultSet(small, page.getOffset(), page.getLimit());
-                        } catch (DataCloudJDBCException e) {
+                        } catch (SQLException e) {
                             throw new RuntimeException(e);
                         }
                     })

@@ -11,8 +11,8 @@ import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProvider;
 import com.salesforce.datacloud.jdbc.auth.OAuthToken;
 import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.HttpClientProperties;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import lombok.SneakyThrows;
@@ -91,7 +91,7 @@ class DataspaceClientTest {
             val client = new DataspaceClient(HttpClientProperties.defaultProperties(), tokenProvider);
 
             server.enqueue(new MockResponse().setResponseCode(500));
-            Assertions.assertThrows(DataCloudJDBCException.class, client::get);
+            Assertions.assertThrows(SQLException.class, client::get);
         }
     }
 }

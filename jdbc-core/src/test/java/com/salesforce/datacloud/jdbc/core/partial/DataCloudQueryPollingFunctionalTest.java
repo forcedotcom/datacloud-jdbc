@@ -8,9 +8,9 @@ import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.getHyperQue
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
+import java.sql.SQLException;
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +44,7 @@ class DataCloudQueryPollingFunctionalTest {
             Assertions.assertThatThrownBy(() -> connection.waitFor(
                             statement.getQueryId(), Duration.ofSeconds(1), t -> t.getRowCount() >= 110))
                     .hasMessageContaining("Predicate was not satisfied when execution finished.")
-                    .isInstanceOf(DataCloudJDBCException.class);
+                    .isInstanceOf(SQLException.class);
         }
     }
 }

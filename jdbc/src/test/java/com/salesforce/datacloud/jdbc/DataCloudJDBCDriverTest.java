@@ -9,9 +9,9 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOf
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.Driver;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -79,7 +79,7 @@ public class DataCloudJDBCDriverTest {
         properties.setProperty("password", "pw");
         properties.setProperty("FOO", "BAR");
 
-        assertThatExceptionOfType(DataCloudJDBCException.class)
+        assertThatExceptionOfType(SQLException.class)
                 .isThrownBy(() -> driver.connect(VALID_URL, properties))
                 .withMessageContaining("Unknown JDBC properties: FOO");
     }
@@ -88,7 +88,7 @@ public class DataCloudJDBCDriverTest {
     public void testUnknownUrlParameterRaisesUserError() {
         final Driver driver = new DataCloudJDBCDriver();
 
-        assertThatExceptionOfType(DataCloudJDBCException.class)
+        assertThatExceptionOfType(SQLException.class)
                 .isThrownBy(() -> driver.connect(
                         VALID_URL + "?clientId=123&clientSecret=123&userName=user&password=pw&FOO=1234567890", null))
                 .withMessageContaining("Unknown JDBC properties: FOO");
@@ -107,7 +107,7 @@ public class DataCloudJDBCDriverTest {
         properties.setProperty("http.maxRetries", "0");
 
         assertThatThrownBy(() -> DriverManager.getConnection(url, properties))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Failed to connect to");
     }
 }

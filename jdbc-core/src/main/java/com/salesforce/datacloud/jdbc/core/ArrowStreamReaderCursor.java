@@ -8,7 +8,6 @@ import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.crea
 import static com.salesforce.datacloud.jdbc.util.ThrowingFunction.rethrowFunction;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Calendar;
@@ -68,7 +67,7 @@ class ArrowStreamReaderCursor extends AbstractCursor {
                 return true;
             }
         } catch (IOException e) {
-            throw new DataCloudJDBCException(e);
+            throw new SQLException(e);
         }
         return false;
     }

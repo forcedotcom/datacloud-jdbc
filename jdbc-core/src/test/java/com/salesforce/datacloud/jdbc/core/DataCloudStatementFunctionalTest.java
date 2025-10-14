@@ -9,12 +9,12 @@ import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertWithS
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.Test;
@@ -58,24 +58,21 @@ public class DataCloudStatementFunctionalTest {
         try (val server = configWithSleep.start();
                 val conn = server.getConnection();
                 val stmt = conn.prepareStatement("select pg_sleep(?)").unwrap(DataCloudPreparedStatement.class)) {
-
-            val client = HyperGrpcClientExecutor.forSubmittedQuery(conn.getStub());
-
             stmt.setInt(1, 5000000);
             stmt.executeAsyncQuery();
 
             val queryId = stmt.getQueryId();
-            val a = client.waitFor(queryId, Deadline.infinite(), t -> true);
-            assertThat(a.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
+            // Wait for at least one query info message to ensure query is running
+            val status = conn.waitFor(queryId, t -> true);
+            assertThat(status.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
 
             stmt.cancel();
-
-            // we wait for all results produced, because this will throw waitFor's predicate failed but query finished
-            // flow
-            // but on subsequent invocations of waitFor we will see the canceled status we are expecting to see to test
-            // stmt::cancel
-            client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced);
-            assertThatThrownBy(() -> client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced))
+            assertThatThrownBy(() -> {
+                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                        // We need a second try as Hyper sometimes returns results produced in the get query info call
+                        // while cancellation is happening
+                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                    })
                     .hasMessageContaining("57014: canceled by user");
         }
     }
@@ -86,23 +83,20 @@ public class DataCloudStatementFunctionalTest {
         try (val server = configWithSleep.start();
                 val conn = server.getConnection().unwrap(DataCloudConnection.class);
                 val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
-
-            val client = HyperGrpcClientExecutor.forSubmittedQuery(conn.getStub());
-
             stmt.executeAsyncQuery("select pg_sleep(5000000);");
             val queryId = stmt.getQueryId();
 
-            val a = client.waitFor(queryId, Deadline.infinite(), t -> true);
-            assertThat(a.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
+            // Wait for at least one query info message to ensure query is running
+            val status = conn.waitFor(queryId, t -> true);
+            assertThat(status.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
 
             conn.cancelQuery(queryId);
-
-            // we wait for all results produced, because this will throw waitFor's predicate failed but query finished
-            // flow
-            // but on subsequent invocations of waitFor we will see the canceled status we are expecting to see to test
-            // stmt::cancel
-            client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced);
-            assertThatThrownBy(() -> client.waitFor(queryId, Deadline.infinite(), QueryStatus::allResultsProduced))
+            assertThatThrownBy(() -> {
+                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                        // We need a second try as Hyper sometimes returns results produced in the get query info call
+                        // while cancellation is happening
+                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                    })
                     .hasMessageStartingWith("57014: canceled by user");
         }
     }
@@ -136,15 +130,15 @@ public class DataCloudStatementFunctionalTest {
     @Test
     public void requiresExecutedResultSet() {
         assertWithStatement(statement -> assertThatThrownBy(statement::getResultSetType)
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessage(EXECUTED_MESSAGE));
 
         assertWithStatement(statement -> assertThatThrownBy(statement::getResultSetConcurrency)
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessage(EXECUTED_MESSAGE));
 
         assertWithStatement(statement -> assertThatThrownBy(statement::getFetchDirection)
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessage(EXECUTED_MESSAGE));
     }
 }

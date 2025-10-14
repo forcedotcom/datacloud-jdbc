@@ -7,7 +7,7 @@ package com.salesforce.datacloud.jdbc.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -153,13 +153,13 @@ class PropertyParsingUtilsTest {
     }
 
     @Test
-    void validateRemainingProperties_shouldNotThrow_whenPropertiesIsNull() throws DataCloudJDBCException {
+    void validateRemainingProperties_shouldNotThrow_whenPropertiesIsNull() throws SQLException {
         PropertyParsingUtils.validateRemainingProperties(null);
         // Should not throw
     }
 
     @Test
-    void validateRemainingProperties_shouldNotThrow_whenPropertiesIsEmpty() throws DataCloudJDBCException {
+    void validateRemainingProperties_shouldNotThrow_whenPropertiesIsEmpty() throws SQLException {
         Properties properties = new Properties();
         PropertyParsingUtils.validateRemainingProperties(properties);
         // Should not throw
@@ -171,8 +171,8 @@ class PropertyParsingUtilsTest {
         properties.setProperty("unknown1", "value1");
         properties.setProperty("unknown2", "value2");
 
-        DataCloudJDBCException exception = assertThrows(
-                DataCloudJDBCException.class, () -> PropertyParsingUtils.validateRemainingProperties(properties));
+        SQLException exception =
+                assertThrows(SQLException.class, () -> PropertyParsingUtils.validateRemainingProperties(properties));
 
         assertThat(exception.getMessage()).startsWith("Unknown JDBC properties: ");
         assertThat(exception.getMessage()).contains("unknown1");
@@ -184,8 +184,8 @@ class PropertyParsingUtilsTest {
         Properties properties = new Properties();
         properties.setProperty("time_zone", "UTC");
 
-        DataCloudJDBCException exception = assertThrows(
-                DataCloudJDBCException.class, () -> PropertyParsingUtils.validateRemainingProperties(properties));
+        SQLException exception =
+                assertThrows(SQLException.class, () -> PropertyParsingUtils.validateRemainingProperties(properties));
 
         assertThat(exception.getMessage())
                 .isEqualTo("Invalid property 'time_zone'. Use 'querySetting.time_zone' to set the query setting.");
@@ -196,8 +196,8 @@ class PropertyParsingUtilsTest {
         Properties properties = new Properties();
         properties.setProperty("TIME-ZONE", "UTC");
 
-        DataCloudJDBCException exception = assertThrows(
-                DataCloudJDBCException.class, () -> PropertyParsingUtils.validateRemainingProperties(properties));
+        SQLException exception =
+                assertThrows(SQLException.class, () -> PropertyParsingUtils.validateRemainingProperties(properties));
 
         assertThat(exception.getMessage())
                 .isEqualTo("Invalid property 'TIME-ZONE'. Use 'querySetting.time_zone' to set the query setting.");

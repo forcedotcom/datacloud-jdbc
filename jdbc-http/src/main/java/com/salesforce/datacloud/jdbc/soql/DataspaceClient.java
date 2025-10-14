@@ -9,7 +9,6 @@ import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProvider;
 import com.salesforce.datacloud.jdbc.auth.OAuthToken;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.FormCommand;
 import com.salesforce.datacloud.jdbc.http.HttpClientProperties;
 import com.salesforce.datacloud.jdbc.tracing.Tracer;
@@ -29,7 +28,7 @@ public class DataspaceClient implements ThrowingJdbcSupplier<List<String>> {
     private final OkHttpClient client;
 
     public DataspaceClient(HttpClientProperties clientProperties, final DataCloudTokenProvider tokenProvider)
-            throws DataCloudJDBCException {
+            throws SQLException {
         this.tokenProvider = tokenProvider;
         this.client = clientProperties.buildOkHttpClient();
     }
@@ -47,7 +46,7 @@ public class DataspaceClient implements ThrowingJdbcSupplier<List<String>> {
                     .map(DataspaceResponse.DataSpaceAttributes::getName)
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            throw new DataCloudJDBCException(e);
+            throw new SQLException(e);
         }
     }
 
@@ -57,7 +56,7 @@ public class DataspaceClient implements ThrowingJdbcSupplier<List<String>> {
             val command = buildGetDataspaceFormCommand(token);
             return FormCommand.get(client, command, DataspaceResponse.class);
         } catch (Exception e) {
-            throw new DataCloudJDBCException(e);
+            throw new SQLException(e);
         }
     }
 

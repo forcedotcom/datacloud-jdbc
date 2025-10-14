@@ -8,7 +8,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile;
 import java.sql.Connection;
@@ -83,7 +82,7 @@ public class HyperJDBCDriverTest {
         // Note that `clientId` is accepted by the DataCloud driver, but not by the Hyper driver
         properties.setProperty("clientId", "1234567890");
 
-        assertThatExceptionOfType(DataCloudJDBCException.class)
+        assertThatExceptionOfType(SQLException.class)
                 .isThrownBy(() -> driver.connect(FAKE_URL, properties))
                 .withMessageContaining("Unknown JDBC properties: clientId");
     }
@@ -92,7 +91,7 @@ public class HyperJDBCDriverTest {
     public void testUnknownUrlParameterRaisesUserError() {
         final Driver driver = new HyperJDBCDriver();
 
-        assertThatExceptionOfType(DataCloudJDBCException.class)
+        assertThatExceptionOfType(SQLException.class)
                 .isThrownBy(() -> driver.connect(FAKE_URL + "?clientId=1234567890", null))
                 .withMessageContaining("Unknown JDBC properties: clientId");
     }
@@ -110,7 +109,7 @@ public class HyperJDBCDriverTest {
                         }
                     }
                 })
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Failed to execute query");
     }
 }

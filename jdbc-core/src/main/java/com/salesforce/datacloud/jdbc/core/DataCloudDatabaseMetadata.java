@@ -14,7 +14,6 @@ import static com.salesforce.datacloud.jdbc.util.Constants.*;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
@@ -940,7 +939,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
         if (!iface.isInstance(this)) {
-            throw new DataCloudJDBCException(this.getClass().getName() + " not unwrappable from " + iface.getName());
+            throw new SQLException(this.getClass().getName() + " not unwrappable from " + iface.getName());
         }
         return (T) this;
     }

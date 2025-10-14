@@ -9,9 +9,9 @@ import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOption
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptionalEnum;
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptionalInteger;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.http.internal.SocketFactoryWrapper;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import lombok.Builder;
@@ -79,7 +79,7 @@ public class HttpClientProperties {
      * @param props The properties to parse
      * @return An HttpChannelProperties instance
      */
-    public static HttpClientProperties ofDestructive(Properties props) throws DataCloudJDBCException {
+    public static HttpClientProperties ofDestructive(Properties props) throws SQLException {
         val builder = HttpClientProperties.builder();
 
         takeOptionalEnum(props, HTTP_LOG_LEVEL, HttpLoggingInterceptor.Level.class)
@@ -129,7 +129,7 @@ public class HttpClientProperties {
     /**
      * Builds an OkHttpClient with the properties of this instance.
      */
-    public OkHttpClient buildOkHttpClient() throws DataCloudJDBCException {
+    public OkHttpClient buildOkHttpClient() throws SQLException {
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor(new HttpClientLogger());
         loggingInterceptor.setLevel(getLogLevel());
 

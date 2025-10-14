@@ -8,11 +8,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -129,7 +129,7 @@ public class FloatVectorAccessorTest {
     void testGetBigDecimalIllegalFloatsMethodFromFloat4Vector() {
         val consumer = iterate(
                 ImmutableList.of(Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NaN),
-                expected -> sut -> assertThrows(DataCloudJDBCException.class, sut::getBigDecimal));
+                expected -> sut -> assertThrows(SQLException.class, sut::getBigDecimal));
         consumer.assertThat().hasNullSeen(0).hasNotNullSeen(3);
     }
 

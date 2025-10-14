@@ -7,13 +7,13 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
 class GrpcChannelPropertiesTest {
     @Test
-    void testParseFromPropertiesWithKeepAliveEnabled() throws DataCloudJDBCException {
+    void testParseFromPropertiesWithKeepAliveEnabled() throws SQLException {
         Properties props = new Properties();
         props.setProperty(GrpcChannelProperties.GRPC_KEEP_ALIVE_ENABLED, "true");
         props.setProperty(GrpcChannelProperties.GRPC_KEEP_ALIVE_TIME, "90");
@@ -36,7 +36,7 @@ class GrpcChannelPropertiesTest {
     }
 
     @Test
-    void testParseFromPropertiesWithRetryEnabled() throws DataCloudJDBCException {
+    void testParseFromPropertiesWithRetryEnabled() throws SQLException {
         Properties props = new Properties();
         props.setProperty(GrpcChannelProperties.GRPC_RETRY_ENABLED, "true");
         props.setProperty(GrpcChannelProperties.GRPC_RETRY_POLICY_MAX_ATTEMPTS, "7");
@@ -62,7 +62,7 @@ class GrpcChannelPropertiesTest {
     }
 
     @Test
-    void testParseFromPropertiesWithKeepAliveDisabled() throws DataCloudJDBCException {
+    void testParseFromPropertiesWithKeepAliveDisabled() throws SQLException {
         Properties props = new Properties();
         props.setProperty(GrpcChannelProperties.GRPC_KEEP_ALIVE_ENABLED, "false");
 
@@ -75,7 +75,7 @@ class GrpcChannelPropertiesTest {
     }
 
     @Test
-    void testParseFromPropertiesWithRetryDisabled() throws DataCloudJDBCException {
+    void testParseFromPropertiesWithRetryDisabled() throws SQLException {
         Properties props = new Properties();
         props.setProperty(GrpcChannelProperties.GRPC_RETRY_ENABLED, "false");
 
@@ -88,7 +88,7 @@ class GrpcChannelPropertiesTest {
     }
 
     @Test
-    void testParseFromEmptyProperties() throws DataCloudJDBCException {
+    void testParseFromEmptyProperties() throws SQLException {
         Properties props = new Properties();
 
         GrpcChannelProperties grpcProps = GrpcChannelProperties.ofDestructive(props);
@@ -108,8 +108,7 @@ class GrpcChannelPropertiesTest {
         Properties props = new Properties();
         props.setProperty(GrpcChannelProperties.GRPC_KEEP_ALIVE_TIME, "90");
 
-        DataCloudJDBCException exception =
-                assertThrows(DataCloudJDBCException.class, () -> GrpcChannelProperties.ofDestructive(props));
+        SQLException exception = assertThrows(SQLException.class, () -> GrpcChannelProperties.ofDestructive(props));
 
         assertThat(exception.getMessage())
                 .contains(
@@ -123,8 +122,7 @@ class GrpcChannelPropertiesTest {
         props.setProperty(GrpcChannelProperties.GRPC_RETRY_ENABLED, "false");
         props.setProperty(GrpcChannelProperties.GRPC_RETRY_POLICY_MAX_ATTEMPTS, "7");
 
-        DataCloudJDBCException exception =
-                assertThrows(DataCloudJDBCException.class, () -> GrpcChannelProperties.ofDestructive(props));
+        SQLException exception = assertThrows(SQLException.class, () -> GrpcChannelProperties.ofDestructive(props));
 
         assertThat(exception.getMessage())
                 .contains("grpc.enableRetries must be set to true if grpc.retryPolicy.* properties are used");
@@ -132,7 +130,7 @@ class GrpcChannelPropertiesTest {
     }
 
     @Test
-    void testRoundtripConversion() throws DataCloudJDBCException {
+    void testRoundtripConversion() throws SQLException {
         Properties originalProps = new Properties();
         originalProps.setProperty(GrpcChannelProperties.GRPC_KEEP_ALIVE_ENABLED, "true");
         originalProps.setProperty(GrpcChannelProperties.GRPC_KEEP_ALIVE_TIME, "90");

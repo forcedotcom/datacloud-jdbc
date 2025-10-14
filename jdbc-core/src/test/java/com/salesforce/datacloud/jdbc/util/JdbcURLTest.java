@@ -7,14 +7,14 @@ package com.salesforce.datacloud.jdbc.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 import java.util.Properties;
 import org.junit.jupiter.api.Test;
 
 public class JdbcURLTest {
 
     @Test
-    void testValidUrlWithoutParameters() throws DataCloudJDBCException {
+    void testValidUrlWithoutParameters() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://localhost:8080");
 
         assertThat(jdbcUrl.getHost()).isEqualTo("localhost");
@@ -23,7 +23,7 @@ public class JdbcURLTest {
     }
 
     @Test
-    void testValidUrlWithDefaultPort() throws DataCloudJDBCException {
+    void testValidUrlWithDefaultPort() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://localhost");
 
         assertThat(jdbcUrl.getHost()).isEqualTo("localhost");
@@ -32,7 +32,7 @@ public class JdbcURLTest {
     }
 
     @Test
-    void testValidUrlWithParameters() throws DataCloudJDBCException {
+    void testValidUrlWithParameters() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://example.com:9090?user=test&password=secret");
 
         assertThat(jdbcUrl.getHost()).isEqualTo("example.com");
@@ -45,7 +45,7 @@ public class JdbcURLTest {
     }
 
     @Test
-    void testUrlWithEmptyParameters() throws DataCloudJDBCException {
+    void testUrlWithEmptyParameters() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://host:1234?");
 
         assertThat(jdbcUrl.getHost()).isEqualTo("host");
@@ -54,7 +54,7 @@ public class JdbcURLTest {
     }
 
     @Test
-    void testUrlWithUrlEncodedParameters() throws DataCloudJDBCException {
+    void testUrlWithUrlEncodedParameters() throws SQLException {
         JdbcURL jdbcUrl =
                 JdbcURL.of("jdbc:salesforce-datacloud://host:1234?user=test%40example.com&password=secret%21");
 
@@ -67,7 +67,7 @@ public class JdbcURLTest {
     }
 
     @Test
-    void testUrlWithEmptyParameterValue() throws DataCloudJDBCException {
+    void testUrlWithEmptyParameterValue() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://host:1234?user=&password=secret");
 
         assertThat(jdbcUrl.getHost()).isEqualTo("host");
@@ -80,16 +80,15 @@ public class JdbcURLTest {
 
     @Test
     void testUrlWithParameterWithoutValue() {
-        DataCloudJDBCException exception = assertThrows(
-                DataCloudJDBCException.class,
-                () -> JdbcURL.of("jdbc:salesforce-datacloud://host:1234?user&password=secret"));
+        SQLException exception = assertThrows(
+                SQLException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://host:1234?user&password=secret"));
 
         assertThat(exception.getMessage()).contains("Parameter without value in JDBC URL: user");
         assertThat(exception.getSQLState()).isEqualTo("HY000");
     }
 
     @Test
-    void testUrlWithEmptyPairs() throws DataCloudJDBCException {
+    void testUrlWithEmptyPairs() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://host:1234?user=test&&password=secret");
 
         assertThat(jdbcUrl.getHost()).isEqualTo("host");
@@ -101,7 +100,7 @@ public class JdbcURLTest {
     }
 
     @Test
-    void testUrlWithMultipleEqualsInValue() throws DataCloudJDBCException {
+    void testUrlWithMultipleEqualsInValue() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://host:1234?config=key=value&other=test");
 
         assertThat(jdbcUrl.getHost()).isEqualTo("host");
@@ -113,7 +112,7 @@ public class JdbcURLTest {
     }
 
     @Test
-    void testAddParametersToProperties() throws DataCloudJDBCException {
+    void testAddParametersToProperties() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://host:1234?user=admin&password=secret&timeout=30");
         Properties properties = new Properties();
 
@@ -125,7 +124,7 @@ public class JdbcURLTest {
     }
 
     @Test
-    void testAddParametersToPropertiesWithExistingProperties() throws DataCloudJDBCException {
+    void testAddParametersToPropertiesWithExistingProperties() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://host:1234?user=admin&password=secret");
         Properties properties = new Properties();
         properties.setProperty("timeout", "60");
@@ -138,13 +137,12 @@ public class JdbcURLTest {
     }
 
     @Test
-    void testAddParametersToPropertiesWithConflict() throws DataCloudJDBCException {
+    void testAddParametersToPropertiesWithConflict() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://host:1234?user=admin&password=secret");
         Properties properties = new Properties();
         properties.setProperty("user", "existing");
 
-        DataCloudJDBCException exception =
-                assertThrows(DataCloudJDBCException.class, () -> jdbcUrl.addParametersToProperties(properties));
+        SQLException exception = assertThrows(SQLException.class, () -> jdbcUrl.addParametersToProperties(properties));
 
         assertThat(exception.getMessage()).contains("Parameter `user` is set both in the URL and the properties");
         assertThat(exception.getSQLState()).isEqualTo("HY000");
@@ -160,56 +158,55 @@ public class JdbcURLTest {
 
     @Test
     void testInvalidUrlWithPath() {
-        DataCloudJDBCException exception = assertThrows(
-                DataCloudJDBCException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://host:1234/path"));
+        SQLException exception =
+                assertThrows(SQLException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://host:1234/path"));
 
         assertThat(exception.getMessage()).contains("JDBC URLs must not contain a path");
     }
 
     @Test
     void testInvalidUrlWithEmptyPath() {
-        DataCloudJDBCException exception =
-                assertThrows(DataCloudJDBCException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://host:1234/"));
+        SQLException exception =
+                assertThrows(SQLException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://host:1234/"));
 
         assertThat(exception.getMessage()).contains("JDBC URLs must not contain a path");
     }
 
     @Test
     void testInvalidUrlWithFragment() {
-        DataCloudJDBCException exception = assertThrows(
-                DataCloudJDBCException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://host:1234#fragment"));
+        SQLException exception =
+                assertThrows(SQLException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://host:1234#fragment"));
 
         assertThat(exception.getMessage()).contains("JDBC URLs must not contain a fragment");
     }
 
     @Test
     void testInvalidUrlWithUserInfo() {
-        DataCloudJDBCException exception = assertThrows(
-                DataCloudJDBCException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://user:pass@host:1234"));
+        SQLException exception =
+                assertThrows(SQLException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://user:pass@host:1234"));
 
         assertThat(exception.getMessage()).contains("JDBC URLs must not contain a user info");
     }
 
     @Test
     void testInvalidUrlWithMalformedUri() {
-        DataCloudJDBCException exception =
-                assertThrows(DataCloudJDBCException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://[invalid"));
+        SQLException exception =
+                assertThrows(SQLException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://[invalid"));
 
         assertThat(exception.getMessage()).contains("Invalid URI syntax");
     }
 
     @Test
     void testDuplicateParameterKey() {
-        DataCloudJDBCException exception = assertThrows(
-                DataCloudJDBCException.class,
-                () -> JdbcURL.of("jdbc:salesforce-datacloud://host:1234?user=admin&user=guest"));
+        SQLException exception = assertThrows(
+                SQLException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://host:1234?user=admin&user=guest"));
 
         assertThat(exception.getMessage()).contains("Duplicate parameter key in JDBC URL: user");
         assertThat(exception.getSQLState()).isEqualTo("HY000");
     }
 
     @Test
-    void testUrlWithSpecialCharactersInParameters() throws DataCloudJDBCException {
+    void testUrlWithSpecialCharactersInParameters() throws SQLException {
         JdbcURL jdbcUrl =
                 JdbcURL.of("jdbc:salesforce-datacloud://host:1234?query=SELECT%20*%20FROM%20table&name=test%2Buser");
 
@@ -223,14 +220,14 @@ public class JdbcURLTest {
 
     @Test
     void testUrlWithEmptyHost() {
-        DataCloudJDBCException exception =
-                assertThrows(DataCloudJDBCException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://:8080"));
+        SQLException exception =
+                assertThrows(SQLException.class, () -> JdbcURL.of("jdbc:salesforce-datacloud://:8080"));
 
         assertThat(exception.getMessage()).contains("JDBC URLs must contain a host");
     }
 
     @Test
-    void testUrlWithIpv6Host() throws DataCloudJDBCException {
+    void testUrlWithIpv6Host() throws SQLException {
         JdbcURL jdbcUrl = JdbcURL.of("jdbc:salesforce-datacloud://[::1]:8080");
 
         assertThat(jdbcUrl.getHost()).isEqualTo("[::1]");

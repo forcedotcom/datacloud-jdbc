@@ -15,7 +15,6 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.DateTimeUtils;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
@@ -23,15 +22,7 @@ import io.grpc.StatusRuntimeException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
-import java.sql.Blob;
-import java.sql.Clob;
-import java.sql.Date;
-import java.sql.NClob;
-import java.sql.PreparedStatement;
-import java.sql.Statement;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.sql.Types;
+import java.sql.*;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.stream.Stream;
@@ -62,7 +53,7 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
     private final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+2"));
 
     @BeforeEach
-    public void beforeEach() throws DataCloudJDBCException {
+    public void beforeEach() throws SQLException {
         connection = getInterceptedClientConnection();
         mockParameterManager = mock(ParameterManager.class);
         preparedStatement = new DataCloudPreparedStatement(connection, "SELECT * FROM table", mockParameterManager);
@@ -72,7 +63,7 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
     @SneakyThrows
     public void testExecuteQuery() {
         assertThatThrownBy(() -> preparedStatement.executeQuery("SELECT * FROM table"))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessage(
                         "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::executeQuery() instead.");
     }
@@ -81,7 +72,7 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
     @SneakyThrows
     public void testExecute() {
         assertThatThrownBy(() -> preparedStatement.execute("SELECT * FROM table"))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessage(
                         "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::execute() instead.");
     }
@@ -93,7 +84,7 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
         GrpcMock.stubFor(GrpcMock.unaryMethod(HyperServiceGrpc.getExecuteQueryMethod())
                 .willReturn(GrpcMock.exception(fakeException)));
 
-        assertThrows(DataCloudJDBCException.class, () -> preparedStatement.executeQuery());
+        assertThrows(SQLException.class, () -> preparedStatement.executeQuery());
     }
 
     @Test
@@ -112,11 +103,11 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
         preparedStatement = new DataCloudPreparedStatement(connection, parameterManager);
 
         assertThatThrownBy(() -> preparedStatement.setString(0, "TEST"))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Parameter index must be greater than 0");
 
         assertThatThrownBy(() -> preparedStatement.setString(-1, "TEST"))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Parameter index must be greater than 0");
     }
 
@@ -218,7 +209,7 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
         }
 
         assertThatThrownBy(() -> preparedStatement.setObject(1, new InvalidClass()))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Object type not supported for:");
     }
 
@@ -278,7 +269,7 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
     @MethodSource("unsupported")
     void testUnsupportedOperations(ThrowingConsumer<DataCloudPreparedStatement> func) {
         val e = Assertions.assertThrows(RuntimeException.class, () -> func.accept(preparedStatement));
-        AssertionsForClassTypes.assertThat(e).hasRootCauseInstanceOf(DataCloudJDBCException.class);
+        AssertionsForClassTypes.assertThat(e).hasRootCauseInstanceOf(SQLException.class);
         AssertionsForClassTypes.assertThat(e.getCause())
                 .hasMessageContaining("is not supported in Data Cloud query")
                 .hasFieldOrPropertyWithValue("SQLState", SqlErrorCodes.FEATURE_NOT_SUPPORTED);
@@ -291,7 +282,7 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
         assertThat(result).isExactlyInstanceOf(DataCloudPreparedStatement.class);
 
         assertThatThrownBy(() -> preparedStatement.unwrap(String.class))
-                .isExactlyInstanceOf(DataCloudJDBCException.class)
+                .isExactlyInstanceOf(SQLException.class)
                 .hasMessageContaining("Cannot unwrap to java.lang.String");
 
         assertThat(preparedStatement.isWrapperFor(DataCloudPreparedStatement.class))

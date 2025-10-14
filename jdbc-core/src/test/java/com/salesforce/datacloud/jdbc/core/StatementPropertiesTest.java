@@ -7,7 +7,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Properties;
 import lombok.val;
@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 class StatementPropertiesTest {
     @Test
-    void parsesAllProperties() throws DataCloudJDBCException {
+    void parsesAllProperties() throws SQLException {
         Properties props = new Properties();
         props.setProperty("queryTimeout", "10");
         props.setProperty("queryTimeoutLocalEnforcementDelay", "7");
@@ -42,13 +42,13 @@ class StatementPropertiesTest {
         Properties props = new Properties();
         props.setProperty("querySetting.query_timeout", "5s");
         assertThatThrownBy(() -> StatementProperties.ofDestructive(props))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("`query_timeout` is not an allowed `querySetting` subkey")
                 .hasMessageContaining("use the `queryTimeout` property instead");
     }
 
     @Test
-    void parses_queryTimeoutLocalEnforcementDelay_seconds() throws DataCloudJDBCException {
+    void parses_queryTimeoutLocalEnforcementDelay_seconds() throws SQLException {
         Properties props = new Properties();
         props.setProperty("queryTimeoutLocalEnforcementDelay", "7");
         val sp = StatementProperties.ofDestructive(props);

@@ -7,7 +7,6 @@ package com.salesforce.datacloud.jdbc.core.fsm;
 import static com.salesforce.datacloud.jdbc.core.fsm.InitialQueryInfoUtility.getInitialQueryInfo;
 
 import com.salesforce.datacloud.jdbc.core.HyperGrpcClientExecutor;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.query.v3.QueryStatus;
@@ -81,7 +80,7 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
             } catch (StatusRuntimeException ex) {
                 log.error("Failed to process current state, state={}, queryId={}", state, getQueryId(), ex);
                 throw ex;
-            } catch (DataCloudJDBCException ex) {
+            } catch (SQLException ex) {
                 log.error("Failed to process current state, state={}, queryId={}", state, getQueryId(), ex);
                 throw new RuntimeException("Query processing failed: " + ex.getMessage(), ex);
             }
@@ -97,9 +96,9 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
         return context.popQueryResult();
     }
 
-    private void processCurrentState() throws DataCloudJDBCException {
+    private void processCurrentState() throws SQLException {
         if (context.deadline.hasPassed()) {
-            throw new DataCloudJDBCException(String.format(
+            throw new SQLException(String.format(
                     "deadline has passed, state=%s, queryId=%s, status=%s", state, getQueryId(), getQueryStatus()));
         }
 
@@ -114,7 +113,7 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
                             context.setQueryResult(response.getQueryResult());
                         } else {
                             if (!response.getOptional()) {
-                                throw new DataCloudJDBCException(
+                                throw new SQLException(
                                         "Got unexpected non-optional message from executeQuery response stream, queryId="
                                                 + context.getQueryId());
                             }
@@ -135,7 +134,7 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
                         context.queryResults = client.getQueryResult(context.getQueryId(), chunkId, true);
                         transitionTo(State.PROCESS_QUERY_RESULT_STREAM);
                     } else {
-                        throw new DataCloudJDBCException(
+                        throw new SQLException(
                                 "Unexpected null chunk id from getNextChunkId when hasMoreChunks reported true");
                     }
                 } else if (!context.allResultsProduced()) {
@@ -221,8 +220,7 @@ public class AdaptiveQueryResultIterator implements QueryResultIterator {
 
     @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
     static class Context {
-        static Context of(String sql, Iterator<ExecuteQueryResponse> response, Deadline deadline)
-                throws DataCloudJDBCException {
+        static Context of(String sql, Iterator<ExecuteQueryResponse> response, Deadline deadline) throws SQLException {
             val queryInfo = getInitialQueryInfo(sql, response);
             val context = new Context(deadline, response);
             context.updateQueryContext(queryInfo);

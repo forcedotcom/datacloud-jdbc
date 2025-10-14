@@ -13,7 +13,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.salesforce.datacloud.jdbc.core.fsm.AsyncQueryResultHandle;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.io.IOException;
@@ -64,32 +63,28 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     }
 
     private <T> void setParameter(int parameterIndex, int sqlType, T value) throws SQLException {
-        try {
-            parameterManager.setParameter(parameterIndex, sqlType, value);
-        } catch (SQLException e) {
-            throw new DataCloudJDBCException(e);
-        }
+        parameterManager.setParameter(parameterIndex, sqlType, value);
     }
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
-        throw new DataCloudJDBCException(
+        throw new SQLException(
                 "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::executeQuery() instead.");
     }
 
     @Override
     public boolean execute(String sql) throws SQLException {
-        throw new DataCloudJDBCException(
+        throw new SQLException(
                 "Per the JDBC specification this method cannot be called on a PreparedStatement, use DataCloudPreparedStatement::execute() instead.");
     }
 
     @Override
-    protected HyperGrpcClientExecutor getQueryClient(QueryTimeout queryTimeout) throws DataCloudJDBCException {
+    protected HyperGrpcClientExecutor getQueryClient(QueryTimeout queryTimeout) throws SQLException {
         final byte[] encodedRow;
         try {
             encodedRow = toArrowByteArray(parameterManager.getParameters(), calendar);
         } catch (IOException e) {
-            throw new DataCloudJDBCException("Failed to encode parameters on prepared statement", e);
+            throw new SQLException("Failed to encode parameters on prepared statement", e);
         }
 
         val preparedQueryParams = QueryParam.newBuilder()
@@ -124,7 +119,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public int executeUpdate() throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
@@ -179,7 +174,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public void setBytes(int parameterIndex, byte[] x) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
@@ -199,17 +194,17 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setUnicodeStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
@@ -235,50 +230,46 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
         TypeHandler handler = TypeHandlers.typeHandlerMap.get(x.getClass());
         if (handler != null) {
-            try {
-                handler.setParameter(this, parameterIndex, x);
-            } catch (SQLException e) {
-                throw new DataCloudJDBCException(e);
-            }
+            handler.setParameter(this, parameterIndex, x);
         } else {
             String message = "Object type not supported for: " + x.getClass().getSimpleName() + " (value: " + x + ")";
-            throw new DataCloudJDBCException(new SQLFeatureNotSupportedException(message));
+            throw new SQLFeatureNotSupportedException(message);
         }
     }
 
     @Override
     public void addBatch() throws SQLException {
-        throw new DataCloudJDBCException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(BATCH_EXECUTION_IS_NOT_SUPPORTED, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader, int length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setRef(int parameterIndex, Ref x) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setBlob(int parameterIndex, Blob x) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setClob(int parameterIndex, Clob x) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setArray(int parameterIndex, Array x) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
@@ -301,112 +292,112 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public void setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setURL(int parameterIndex, URL x) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public ParameterMetaData getParameterMetaData() throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setRowId(int parameterIndex, RowId x) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setNString(int parameterIndex, String value) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setNCharacterStream(int parameterIndex, Reader value, long length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setNClob(int parameterIndex, NClob value) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setClob(int parameterIndex, Reader reader, long length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setNClob(int parameterIndex, Reader reader, long length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setSQLXML(int parameterIndex, SQLXML xmlObject) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x, long length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x, long length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setNCharacterStream(int parameterIndex, Reader value) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setClob(int parameterIndex, Reader reader) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
     public void setNClob(int parameterIndex, Reader reader) throws SQLException {
-        throw new DataCloudJDBCException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
     @Override
@@ -414,7 +405,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
         if (iFace.isInstance(this)) {
             return iFace.cast(this);
         }
-        throw new DataCloudJDBCException("Cannot unwrap to " + iFace.getName());
+        throw new SQLException("Cannot unwrap to " + iFace.getName());
     }
 
     @Override

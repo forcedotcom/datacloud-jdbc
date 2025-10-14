@@ -5,7 +5,6 @@
 package com.salesforce.datacloud.jdbc.auth;
 
 import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import java.net.URI;
 import java.sql.SQLException;
@@ -27,7 +26,7 @@ public class OAuthToken {
         val accessToken = response.getToken();
 
         if (StringCompatibility.isNullOrBlank(accessToken)) {
-            throw new DataCloudJDBCException(FAILED_LOGIN, "28000");
+            throw new SQLException(FAILED_LOGIN, "28000");
         }
 
         try {
@@ -38,7 +37,7 @@ public class OAuthToken {
                     .instanceUrl(instanceUrl)
                     .build();
         } catch (Exception ex) {
-            throw new DataCloudJDBCException(FAILED_LOGIN, "28000", ex);
+            throw new SQLException(FAILED_LOGIN, "28000", ex);
         }
     }
 

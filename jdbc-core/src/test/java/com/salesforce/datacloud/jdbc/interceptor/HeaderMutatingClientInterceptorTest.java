@@ -11,11 +11,11 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import io.grpc.Metadata;
+import java.sql.SQLException;
 import java.util.UUID;
 import java.util.function.Consumer;
 import lombok.AllArgsConstructor;
@@ -65,7 +65,7 @@ class HeaderMutatingClientInterceptorTest {
                         stmt.executeQuery("SELECT 1");
                     }
                 })
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasRootCauseMessage(message)
                 .hasMessage("Caught exception when mutating headers in client interceptor");
 

@@ -11,7 +11,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.ResultSetMetaData;
@@ -211,7 +210,7 @@ public class StreamingResultSetTest {
                 assertThat(assertThatThrownBy(() -> {
                             conn.getSchemaForQueryId(queryId);
                         })
-                        .isInstanceOf(DataCloudJDBCException.class)
+                        .isInstanceOf(SQLException.class)
                         .hasMessageContaining("Failed to fetch schema for queryId: " + queryId));
             }
         });

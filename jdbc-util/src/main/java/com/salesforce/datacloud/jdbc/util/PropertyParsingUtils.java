@@ -5,7 +5,7 @@
 package com.salesforce.datacloud.jdbc.util;
 
 import com.google.common.collect.ImmutableSet;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -104,7 +104,7 @@ public final class PropertyParsingUtils {
                 .map(str -> Arrays.stream(str.split(",")).collect(Collectors.toList()));
     }
 
-    public static void validateRemainingProperties(Properties properties) throws DataCloudJDBCException {
+    public static void validateRemainingProperties(Properties properties) throws SQLException {
         if (properties == null) {
             return;
         }
@@ -115,15 +115,14 @@ public final class PropertyParsingUtils {
         for (String rawKey : properties.stringPropertyNames()) {
             String canonical = rawKey.trim().toLowerCase().replace('-', '_');
             if (COMMON_HYPER_SETTINGS.contains(canonical)) {
-                throw new DataCloudJDBCException("Invalid property '" + rawKey + "'. Use 'querySetting." + canonical
+                throw new SQLException("Invalid property '" + rawKey + "'. Use 'querySetting." + canonical
                         + "' to set the query setting.");
             }
         }
 
         // If there are any remaining properties, throw an exception.
         if (!properties.isEmpty()) {
-            throw new DataCloudJDBCException(
-                    "Unknown JDBC properties: " + String.join(", ", properties.stringPropertyNames()));
+            throw new SQLException("Unknown JDBC properties: " + String.join(", ", properties.stringPropertyNames()));
         }
     }
 }
