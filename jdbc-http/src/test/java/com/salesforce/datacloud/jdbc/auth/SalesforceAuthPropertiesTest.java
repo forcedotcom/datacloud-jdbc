@@ -198,7 +198,7 @@ class SalesforceAuthPropertiesTest {
         // Missing all authentication credentials
 
         assertThatThrownBy(() -> SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining(
                         "Properties must contain either (userName + password), (userName + privateKey), or refreshToken");
     }
@@ -213,7 +213,7 @@ class SalesforceAuthPropertiesTest {
         props.setProperty("privateKey", FAKE_PRIVATE_KEY); // Mixed with password
 
         assertThatThrownBy(() -> SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Properties from different authentication modes cannot be mixed");
     }
 
@@ -226,7 +226,7 @@ class SalesforceAuthPropertiesTest {
         props.setProperty("privateKey", "invalid-key-format");
 
         assertThatThrownBy(() -> SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Private key must be in PEM format");
     }
 
@@ -240,7 +240,7 @@ class SalesforceAuthPropertiesTest {
                 "privateKey", "-----BEGIN PRIVATE KEY-----\ninvalid-base64-content\n-----END PRIVATE KEY-----");
 
         assertThatThrownBy(() -> SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props))
-                .isInstanceOf(DataCloudJDBCException.class)
+                .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Failed to parse private key");
     }
 
