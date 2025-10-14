@@ -67,7 +67,12 @@ public class DataCloudStatementFunctionalTest {
             assertThat(status.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
 
             stmt.cancel();
-            assertThatThrownBy(() -> conn.waitFor(queryId, QueryStatus::allResultsProduced))
+            assertThatThrownBy(() -> {
+                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                        // We need a second try as Hyper sometimes returns results produced in the get query info call
+                        // while cancellation is happening
+                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                    })
                     .hasMessageContaining("57014: canceled by user");
         }
     }
@@ -86,7 +91,12 @@ public class DataCloudStatementFunctionalTest {
             assertThat(status.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
 
             conn.cancelQuery(queryId);
-            assertThatThrownBy(() -> conn.waitFor(queryId, QueryStatus::allResultsProduced))
+            assertThatThrownBy(() -> {
+                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                        // We need a second try as Hyper sometimes returns results produced in the get query info call
+                        // while cancellation is happening
+                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
+                    })
                     .hasMessageStartingWith("57014: canceled by user");
         }
     }
