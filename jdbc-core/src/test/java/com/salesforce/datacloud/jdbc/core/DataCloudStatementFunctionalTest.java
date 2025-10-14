@@ -58,9 +58,6 @@ public class DataCloudStatementFunctionalTest {
         try (val server = configWithSleep.start();
                 val conn = server.getConnection();
                 val stmt = conn.prepareStatement("select pg_sleep(?)").unwrap(DataCloudPreparedStatement.class)) {
-
-            val client = HyperGrpcClientExecutor.forSubmittedQuery(conn.getStub());
-
             stmt.setInt(1, 5000000);
             stmt.executeAsyncQuery();
 
@@ -81,9 +78,6 @@ public class DataCloudStatementFunctionalTest {
         try (val server = configWithSleep.start();
                 val conn = server.getConnection().unwrap(DataCloudConnection.class);
                 val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
-
-            val client = HyperGrpcClientExecutor.forSubmittedQuery(conn.getStub());
-
             stmt.executeAsyncQuery("select pg_sleep(5000000);");
             val queryId = stmt.getQueryId();
 

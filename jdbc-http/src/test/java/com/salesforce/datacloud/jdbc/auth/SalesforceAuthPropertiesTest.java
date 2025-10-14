@@ -8,7 +8,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.net.URI;
 import java.sql.SQLException;
 import java.util.Properties;
@@ -245,7 +244,7 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
-    void acceptsKnownLoginUrlPatterns() throws SQLException {
+    void acceptsKnownLoginUrlPatterns() {
         String[] knownHosts = {
             "login.salesforce.com",
             "test.salesforce.com",
