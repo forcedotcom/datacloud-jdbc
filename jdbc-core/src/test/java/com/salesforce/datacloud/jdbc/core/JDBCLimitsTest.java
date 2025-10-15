@@ -163,13 +163,15 @@ public class JDBCLimitsTest {
     }
 
     /**
-     * A stub provider that injects a configureable trace id and allows to toggle whether the jdbc channel configuration
-     * should be applied or not. Used to allow testing the difference between default gRPC and JDBC behavior for headers.
+     * The intent of this stub provider is to inject a large header that the Hyper server will also mirror back
+     * and that thus we get a large header in the _response_ from the Hyper server which we can use to test
+     * compatibility with potentially large headers coming through the response.
+     * We use the trace id header as it is one of the few headers that Hyper will send back unchanged to the caller.
      */
-    public static class TraceIdChannelConfigStubProvider implements HyperGrpcStubProvider {
+    public static class LargeHeaderChannelConfigStubProvider implements HyperGrpcStubProvider {
         final ManagedChannel channel;
 
-        TraceIdChannelConfigStubProvider(int port, String traceId, boolean useJDBCChannelConfig) {
+        LargeHeaderChannelConfigStubProvider(int port, String traceId, boolean useJDBCChannelConfig) {
             ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress("localhost", port);
             if (useJDBCChannelConfig) {
                 val jdbcChannelProperties = GrpcChannelProperties.defaultProperties();
@@ -211,10 +213,12 @@ public class JDBCLimitsTest {
     public void testLargeResponseHeaders() {
         // We are not allowed to close as this instance is cached
         val server = HyperServerManager.get(HyperServerManager.ConfigFile.SMALL_CHUNKS);
-        // The Hyper service sends back the trace id as response header. With the JDBC drivers channel config we should
-        // support close to 1 MB response header as large headers can get injected by side cars in mesh scenarios.
+        // For this test case, we want Hyper to respond with a large header. The easiest way to do so, is by sending a
+        // large x-b3-traceid as part of the request. Hyper will copy over the trace id into its response headers.
+        // With the JDBC drivers channel config we should support close to 1 MB response header as large headers can
+        // get injected by side cars in mesh scenarios.
         try (val connection = DataCloudConnection.of(
-                new TraceIdChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), true),
+                new LargeHeaderChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), true),
                 ConnectionProperties.defaultProperties(),
                 "dataspace/unused",
                 null)) {
@@ -228,7 +232,7 @@ public class JDBCLimitsTest {
         // Verify that the trace id is indeed sent back by checking that the stmt fails with gRPC defaults for the
         // channel.
         try (val connection = DataCloudConnection.of(
-                new TraceIdChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), false),
+                new LargeHeaderChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), false),
                 ConnectionProperties.defaultProperties(),
                 "dataspace/unused",
                 null)) {
