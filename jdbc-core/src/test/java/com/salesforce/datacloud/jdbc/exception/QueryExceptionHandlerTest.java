@@ -20,7 +20,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(LocalHyperTestBase.class)
 class QueryExceptionHandlerTest {
-    // TODO: Add coverage for system
     @Test
     public void testServerReportedErrorWithCustomerDetails() throws SQLException {
         // Verify that the normal exception messages contains the query and customer details & hints from the server
@@ -29,17 +28,20 @@ class QueryExceptionHandlerTest {
             try (val stmt = (DataCloudStatement) connection.createStatement()) {
                 String query = "WITH \"A\" AS (SELECT 1) SELECT * FROM A";
                 DataCloudJDBCException ex = assertThrows(DataCloudJDBCException.class, () -> stmt.executeQuery(query));
-                String customerDetail = "\n"
+                String customerDetail = String.format(
+                        "%n%s%n%s",
                         // Indentation to more easily see that the ascii art matches (the mismatch is from the escape
                         // characters for the double quotes)
-                        + "line 1, column 38: WITH \"A\" AS (SELECT 1) SELECT * FROM A\n"
-                        + "                                                        ^";
+                        "line 1, column 38: WITH \"A\" AS (SELECT 1) SELECT * FROM A",
+                        "                                                        ^");
                 String customerHint = "Try quoting the identifier: `\"A\"`";
-                String expectedMessage = "Failed to execute query: table \"a\" does not exist\n"
-                        + "SQLSTATE: 42P01\n"
-                        + "QUERY-ID: " + stmt.getQueryId() + "\n"
-                        + "DETAIL: " + customerDetail + "\n"
-                        + "HINT: " + customerHint;
+                String expectedMessage = String.format(
+                        "Failed to execute query: table \"a\" does not exist%n"
+                                + "SQLSTATE: 42P01%n"
+                                + "QUERY-ID: %s%n"
+                                + "DETAIL: %s%n"
+                                + "HINT: %s",
+                        stmt.getQueryId(), customerDetail, customerHint);
                 assertEquals(expectedMessage, ex.getMessage());
                 assertEquals(ex.getMessage(), ex.getFullCustomerMessage());
                 assertEquals("42P01", ex.getSQLState());
@@ -54,14 +56,15 @@ class QueryExceptionHandlerTest {
                 DataCloudJDBCException resultEx = assertThrows(
                         DataCloudJDBCException.class, () -> connection.getChunkBasedResultSet(stmt.getQueryId(), 1));
                 assertEquals("Query error: " + ex.getPrimaryMessage(), resultEx.getSystemDetail());
-                String expectedMessageResult =
-                        "Failed to execute query: Query execution has failed, call GetQueryInfo to get the error message\n"
-                                + "SQLSTATE: 55000\n"
-                                + "QUERY-ID: " + stmt.getQueryId();
+                String expectedMessageResult = String.format(
+                        "Failed to execute query: Query execution has failed, call GetQueryInfo to get the error message%n"
+                                + "SQLSTATE: 55000%n"
+                                + "QUERY-ID: %s",
+                        stmt.getQueryId());
                 assertEquals(expectedMessageResult, resultEx.getMessage());
                 assertEquals(resultEx.getMessage(), resultEx.getFullCustomerMessage());
-                String expectedSystemMessageResult =
-                        expectedMessageResult + "\n" + "SYSTEM-DETAIL: Query error: table \"a\" does not exist";
+                String expectedSystemMessageResult = String.format(
+                        "%s%n%s", expectedMessageResult, "SYSTEM-DETAIL: Query error: table \"a\" does not exist");
                 assertEquals(expectedSystemMessageResult, resultEx.getFullSystemMessage());
             }
         }
@@ -78,20 +81,23 @@ class QueryExceptionHandlerTest {
             try (val stmt = (DataCloudStatement) connection.createStatement()) {
                 String query = "WITH \"A\" AS (SELECT 1) SELECT * FROM A";
                 DataCloudJDBCException ex = assertThrows(DataCloudJDBCException.class, () -> stmt.executeQuery(query));
-                String customerDetail = "\n"
+                String customerDetail = String.format(
+                        "%n%s%n%s",
                         // Indentation to more easily see that the ascii art matches (the mismatch is from the escape
                         // characters for the double quotes)
-                        + "line 1, column 38: WITH \"A\" AS (SELECT 1) SELECT * FROM A\n"
-                        + "                                                        ^";
+                        "line 1, column 38: WITH \"A\" AS (SELECT 1) SELECT * FROM A",
+                        "                                                        ^");
                 String customerHint = "Try quoting the identifier: `\"A\"`";
-                String expectedMessage = "Failed to execute query: table \"a\" does not exist\n"
-                        + "SQLSTATE: 42P01\n"
-                        + "QUERY-ID: " + stmt.getQueryId();
-                String expectedFullCustomerMessage = "Failed to execute query: table \"a\" does not exist\n"
-                        + "SQLSTATE: 42P01\n"
-                        + "QUERY-ID: " + stmt.getQueryId() + "\n"
-                        + "DETAIL: " + customerDetail + "\n"
-                        + "HINT: " + customerHint;
+                String expectedMessage = String.format(
+                        "Failed to execute query: table \"a\" does not exist%n" + "SQLSTATE: 42P01%n" + "QUERY-ID: %s",
+                        stmt.getQueryId());
+                String expectedFullCustomerMessage = String.format(
+                        "Failed to execute query: table \"a\" does not exist%n"
+                                + "SQLSTATE: 42P01%n"
+                                + "QUERY-ID: %s%n"
+                                + "DETAIL: %s%n"
+                                + "HINT: %s",
+                        stmt.getQueryId(), customerDetail, customerHint);
                 assertEquals(expectedMessage, ex.getMessage());
                 assertEquals(expectedFullCustomerMessage, ex.getFullCustomerMessage());
                 assertEquals("42P01", ex.getSQLState());
@@ -107,14 +113,15 @@ class QueryExceptionHandlerTest {
                 DataCloudJDBCException resultEx = assertThrows(
                         DataCloudJDBCException.class, () -> connection.getChunkBasedResultSet(stmt.getQueryId(), 1));
                 assertEquals("Query error: " + ex.getPrimaryMessage(), resultEx.getSystemDetail());
-                String expectedMessageResult =
-                        "Failed to execute query: Query execution has failed, call GetQueryInfo to get the error message\n"
-                                + "SQLSTATE: 55000\n"
-                                + "QUERY-ID: " + stmt.getQueryId();
+                String expectedMessageResult = String.format(
+                        "Failed to execute query: Query execution has failed, call GetQueryInfo to get the error message%n"
+                                + "SQLSTATE: 55000%n"
+                                + "QUERY-ID: %s",
+                        stmt.getQueryId());
                 assertEquals(expectedMessageResult, resultEx.getMessage());
                 assertEquals(resultEx.getMessage(), resultEx.getFullCustomerMessage());
-                String expectedSystemMessageResult =
-                        expectedMessageResult + "\n" + "SYSTEM-DETAIL: Query error: table \"a\" does not exist";
+                String expectedSystemMessageResult = String.format(
+                        "%s%n%s", expectedMessageResult, "SYSTEM-DETAIL: Query error: table \"a\" does not exist");
                 assertEquals(expectedSystemMessageResult, resultEx.getFullSystemMessage());
             }
         }
@@ -123,11 +130,12 @@ class QueryExceptionHandlerTest {
     @Test
     public void testCreateExceptionWithStatusRuntimeExceptionAndCustomerDetails() {
         StatusRuntimeException fakeException = GrpcUtils.getFakeStatusRuntimeExceptionAsInvalidArgument();
-        String fullMessage = "Failed to execute query: Resource Not Found\n"
-                + "SQLSTATE: 42P01\n"
-                + "QUERY-ID: 1-2-3-4\n"
-                + "QUERY: SELECT 1";
-        String redactedMessage = "Failed to execute query: Resource Not Found\nSQLSTATE: 42P01\nQUERY-ID: 1-2-3-4";
+        String fullMessage = String.format("Failed to execute query: Resource Not Found%n"
+                + "SQLSTATE: 42P01%n"
+                + "QUERY-ID: 1-2-3-4%n"
+                + "QUERY: SELECT 1");
+        String redactedMessage = String.format(
+                "Failed to execute query: Resource Not Found%n" + "SQLSTATE: 42P01%n" + "QUERY-ID: 1-2-3-4");
 
         // Verify with customer details
         DataCloudJDBCException actualException = (DataCloudJDBCException)
@@ -149,11 +157,12 @@ class QueryExceptionHandlerTest {
     @Test
     void testCreateExceptionWithGenericException() {
         Exception mockException = new Exception("Host not found");
-        String fullMessage = "Failed to execute query: Host not found\n"
-                + "SQLSTATE: HY000\n"
-                + "QUERY-ID: 1-2-3-4\n"
-                + "QUERY: SELECT 1";
-        String redactedMessage = "Failed to execute query: Host not found\nSQLSTATE: HY000\nQUERY-ID: 1-2-3-4";
+        String fullMessage = String.format("Failed to execute query: Host not found%n"
+                + "SQLSTATE: HY000%n"
+                + "QUERY-ID: 1-2-3-4%n"
+                + "QUERY: SELECT 1");
+        String redactedMessage =
+                String.format("Failed to execute query: Host not found%n" + "SQLSTATE: HY000%n" + "QUERY-ID: 1-2-3-4");
 
         // Test with customer details
         DataCloudJDBCException sqlException = (DataCloudJDBCException)
