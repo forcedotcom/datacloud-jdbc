@@ -29,11 +29,7 @@ import org.grpcmock.GrpcMock;
 import org.grpcmock.junit5.InProcessGrpcMockExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
-import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
-import salesforce.cdp.hyperdb.v1.QueryInfo;
-import salesforce.cdp.hyperdb.v1.QueryParam;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
+import salesforce.cdp.hyperdb.v1.*;
 
 /**
  * Base class for tests with a local `hyperd` server running and intercepted grpc calls.
@@ -191,7 +187,7 @@ public class InterceptedHyperTestBase {
                 mode);
     }
 
-    public void setupExecuteQuery(
+    public QueryParam setupExecuteQuery(
             String queryId, String query, QueryParam.TransferMode mode, ExecuteQueryResponse... responses) {
         val first = ExecuteQueryResponse.newBuilder()
                 .setQueryInfo(QueryInfo.newBuilder()
@@ -204,6 +200,11 @@ public class InterceptedHyperTestBase {
                 .withRequest(req -> req.getQuery().equals(query) && req.getTransferMode() == mode)
                 .willReturn(
                         Stream.concat(Stream.of(first), Stream.of(responses)).collect(Collectors.toList())));
+        return QueryParam.newBuilder()
+                .setQuery(query)
+                .setTransferMode(mode)
+                .setOutputFormat(OutputFormat.ARROW_IPC)
+                .build();
     }
 
     public void setupGetQueryInfo(String queryId, QueryStatus.CompletionStatus completionStatus) {

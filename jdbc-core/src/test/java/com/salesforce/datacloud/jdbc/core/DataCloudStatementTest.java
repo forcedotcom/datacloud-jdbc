@@ -11,8 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableList;
-import com.salesforce.datacloud.jdbc.core.partial.RowBased;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.protocol.RowRangeIterator;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import com.salesforce.datacloud.query.v3.QueryStatus;
@@ -141,8 +141,8 @@ public class DataCloudStatementTest extends InterceptedHyperTestBase {
     @SneakyThrows
     @ValueSource(
             ints = {
-                RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE + 1,
-                RowBased.HYPER_MIN_ROW_LIMIT_BYTE_SIZE - 1,
+                RowRangeIterator.HYPER_MAX_ROW_LIMIT_BYTE_SIZE + 1,
+                RowRangeIterator.HYPER_MIN_ROW_LIMIT_BYTE_SIZE - 1,
                 Integer.MAX_VALUE,
                 Integer.MIN_VALUE
             })
@@ -150,12 +150,19 @@ public class DataCloudStatementTest extends InterceptedHyperTestBase {
         assertThatThrownBy(() -> statement.setResultSetConstraints(0, bytes))
                 .hasMessageContaining(
                         "The specified maxBytes (%d) must satisfy the following constraints: %d >= x >= %d",
-                        bytes, RowBased.HYPER_MIN_ROW_LIMIT_BYTE_SIZE, RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
+                        bytes,
+                        RowRangeIterator.HYPER_MIN_ROW_LIMIT_BYTE_SIZE,
+                        RowRangeIterator.HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
     }
 
     @ParameterizedTest
     @SneakyThrows
-    @ValueSource(ints = {RowBased.HYPER_MAX_ROW_LIMIT_BYTE_SIZE, RowBased.HYPER_MIN_ROW_LIMIT_BYTE_SIZE, 100000})
+    @ValueSource(
+            ints = {
+                RowRangeIterator.HYPER_MAX_ROW_LIMIT_BYTE_SIZE,
+                RowRangeIterator.HYPER_MIN_ROW_LIMIT_BYTE_SIZE,
+                100000
+            })
     public void testConstraintsValid(int bytes) {
         val rows = 123 + bytes;
         statement.setResultSetConstraints(rows, bytes);

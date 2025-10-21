@@ -8,8 +8,6 @@ import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.assertEachR
 import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mockStatic;
 
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.query.v3.QueryStatus;
@@ -22,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.MockedStatic;
 
 @Slf4j
 @ExtendWith(LocalHyperTestBase.class)
@@ -188,32 +185,6 @@ public class StreamingResultSetTest {
                     })
                     .isInstanceOf(SQLException.class)
                     .hasMessageContaining("The requested query ID is unknown"));
-        });
-    }
-
-    @SneakyThrows
-    @Test
-    public void testGetSchemaForQueryIdWithNoSchemaData() {
-        withStatement((conn, stmt) -> {
-            String sql = "SELECT 1 as test_column";
-
-            final String queryId;
-            try (DataCloudResultSet rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
-                queryId = rs.getQueryId();
-                conn.waitFor(queryId, QueryStatus::allResultsProduced);
-            }
-            try (MockedStatic<ProtocolMappers> mockedStatic = mockStatic(ProtocolMappers.class)) {
-                mockedStatic
-                        .when(() -> ProtocolMappers.fromQueryInfo(any()))
-                        .thenReturn(java.util.Collections.emptyIterator());
-
-                assertThat(assertThatThrownBy(() -> {
-                            conn.getSchemaForQueryId(queryId);
-                        })
-                        .isInstanceOf(SQLException.class)
-                        .hasMessageContaining("Failed to execute query: No schema data available")
-                        .hasMessageContaining("QUERY-ID: "));
-            }
         });
     }
 

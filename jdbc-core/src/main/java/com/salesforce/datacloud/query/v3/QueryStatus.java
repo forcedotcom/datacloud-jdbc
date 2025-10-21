@@ -5,6 +5,7 @@
 package com.salesforce.datacloud.query.v3;
 
 import com.salesforce.datacloud.jdbc.util.Unstable;
+import java.sql.SQLException;
 import java.util.Optional;
 import lombok.Value;
 import lombok.val;
@@ -38,6 +39,10 @@ public class QueryStatus {
 
     CompletionStatus completionStatus;
 
+    public static boolean allResultsProduced(salesforce.cdp.hyperdb.v1.QueryStatus status) {
+        return status.getCompletionStatus() == salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RESULTS_PRODUCED
+                || status.getCompletionStatus() == salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED;
+    }
     /**
      * Checks if all the query's results are ready, the row count and chunk count are stable.
      *
@@ -56,16 +61,21 @@ public class QueryStatus {
         return completionStatus == CompletionStatus.FINISHED;
     }
 
-    public static Optional<QueryStatus> of(QueryInfo queryInfo) {
-        return Optional.ofNullable(queryInfo).map(QueryInfo::getQueryStatus).map(QueryStatus::of);
+    public static Optional<QueryStatus> of(QueryInfo queryInfo) throws SQLException {
+        if (!queryInfo.hasQueryStatus()) {
+            return Optional.empty();
+        }
+        val status = of(queryInfo.getQueryStatus());
+        return Optional.of(status);
     }
 
-    public static QueryStatus of(salesforce.cdp.hyperdb.v1.QueryStatus s) {
+    public static QueryStatus of(salesforce.cdp.hyperdb.v1.QueryStatus s) throws SQLException {
         val completionStatus = of(s.getCompletionStatus());
         return new QueryStatus(s.getQueryId(), s.getChunkCount(), s.getRowCount(), s.getProgress(), completionStatus);
     }
 
-    private static CompletionStatus of(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus completionStatus) {
+    private static CompletionStatus of(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus completionStatus)
+            throws SQLException {
         switch (completionStatus) {
             case RUNNING_OR_UNSPECIFIED:
                 return CompletionStatus.RUNNING;
@@ -74,7 +84,7 @@ public class QueryStatus {
             case FINISHED:
                 return CompletionStatus.FINISHED;
             default:
-                throw new IllegalArgumentException("Unknown completion status. status=" + completionStatus);
+                throw new SQLException("Unknown completion status. status=" + completionStatus, "XX000");
         }
     }
 }

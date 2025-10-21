@@ -71,8 +71,12 @@ class QueryTimeoutTest {
         try (Connection connection = LocalHyperTestBase.getHyperQueryConnection()) {
             try (Statement statement = connection.createStatement()) {
                 statement.setQueryTimeout(1);
-                DataCloudJDBCException ex = assertThrows(
-                        DataCloudJDBCException.class, () -> statement.executeQuery("SELECT pg_sleep(100)"));
+                DataCloudJDBCException ex = assertThrows(DataCloudJDBCException.class, () -> {
+                    ResultSet rs = statement.executeQuery("SELECT pg_sleep(100)");
+                    while (rs.next()) {
+                        // Consume result
+                    }
+                });
                 // Check that the exception contains the error message that Hyper server produces on server-side
                 // timeouts
                 assertThat(ex.getMessage()).contains("canceled by query timeout");

@@ -11,7 +11,6 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
 import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
-import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -31,13 +30,10 @@ public class DataCloudStatementFunctionalTest {
         try (val server = configWithSleep.start();
                 val conn = server.getConnection();
                 val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
-
-            val client = HyperGrpcClientExecutor.forSubmittedQuery(conn.getStub());
-
             stmt.executeAsyncQuery("select pg_sleep(5000000);");
 
             val queryId = stmt.unwrap(DataCloudStatement.class).getQueryId();
-            val a = client.waitFor(true, queryId, Deadline.infinite(), t -> true);
+            val a = conn.waitFor(queryId, t -> true);
             assertThat(a.getCompletionStatus()).isEqualTo(QueryStatus.CompletionStatus.RUNNING);
 
             stmt.cancel();

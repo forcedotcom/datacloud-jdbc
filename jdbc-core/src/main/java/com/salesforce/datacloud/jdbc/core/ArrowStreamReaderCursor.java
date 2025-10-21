@@ -59,14 +59,10 @@ class ArrowStreamReaderCursor extends AbstractCursor {
         return QueryJDBCAccessorFactory.createAccessor(vector, currentIndex::get, this::wasNullConsumer);
     }
 
-    private boolean loadNextBatch() throws SQLException {
-        try {
-            if (reader.loadNextBatch()) {
-                currentIndex.set(0);
-                return true;
-            }
-        } catch (IOException e) {
-            throw new SQLException(e);
+    private boolean loadNextBatch() throws IOException {
+        if (reader.loadNextBatch()) {
+            currentIndex.set(0);
+            return true;
         }
         return false;
     }
@@ -84,7 +80,12 @@ class ArrowStreamReaderCursor extends AbstractCursor {
             }
             return next;
         } catch (Exception e) {
-            throw new SQLException("Failed to load next batch: " + e.getMessage(), e);
+            // This can happen due ti SneakyThrows.
+            if (e instanceof SQLException) {
+                throw e;
+            } else {
+                throw new SQLException("Failed to load next batch: " + e.getMessage(), e);
+            }
         }
     }
 

@@ -2,7 +2,7 @@
  * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
  * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
  */
-package com.salesforce.datacloud.jdbc.core.partial;
+package com.salesforce.datacloud.jdbc.protocol;
 
 import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -13,15 +13,17 @@ import com.salesforce.datacloud.jdbc.core.DataCloudPreparedStatement;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
-import com.salesforce.datacloud.jdbc.util.StreamUtilities;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -34,7 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 @Slf4j
 @ExtendWith(LocalHyperTestBase.class)
-public class RowBasedTest {
+public class RowRangeIteratorTest {
     @SneakyThrows
     private List<Integer> sut(String queryId, long offset, long limit) {
         try (val connection = getHyperQueryConnection()) {
@@ -119,7 +121,7 @@ public class RowBasedTest {
                             throw new RuntimeException(e);
                         }
                     })
-                    .flatMap(RowBasedTest::toStream)
+                    .flatMap(RowRangeIteratorTest::toStream)
                     .collect(Collectors.toList());
             assertThat(actual).containsExactlyElementsOf(expected);
         }
@@ -139,7 +141,7 @@ public class RowBasedTest {
                             throw new RuntimeException(e);
                         }
                     })
-                    .flatMap(RowBasedTest::toStream)
+                    .flatMap(RowRangeIteratorTest::toStream)
                     .collect(Collectors.toList());
             assertThat(actual).containsExactlyElementsOf(rangeClosed(1, smallSize));
         }
@@ -182,7 +184,8 @@ public class RowBasedTest {
             }
         };
 
-        return StreamUtilities.toStream(iterator);
+        val spliterator = Spliterators.spliteratorUnknownSize(iterator, Spliterator.ORDERED);
+        return StreamSupport.stream(spliterator, false);
     }
 
     private static List<Integer> toList(DataCloudResultSet resultSet) {

@@ -54,6 +54,16 @@ public class LocalHyperTestBase implements BeforeAllCallback {
     }
 
     @SneakyThrows
+    public static void assertWithStubProvider(ThrowingConsumer<JdbcDriverStubProvider> assertion) {
+        val server = HyperServerManager.get(ConfigFile.SMALL_CHUNKS);
+        ManagedChannelBuilder<?> channel =
+                ManagedChannelBuilder.forAddress("127.0.0.1", server.getPort()).usePlaintext();
+        try (val stubProvider = JdbcDriverStubProvider.of(channel)) {
+            assertion.accept(stubProvider);
+        }
+    }
+
+    @SneakyThrows
     public static DataCloudConnection getHyperQueryConnection(
             HyperServerProcess server, ClientInterceptor interceptor) {
         ManagedChannelBuilder<?> channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.getPort())

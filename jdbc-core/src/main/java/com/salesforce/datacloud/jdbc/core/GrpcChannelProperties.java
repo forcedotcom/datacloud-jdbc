@@ -12,6 +12,7 @@ import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOption
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.salesforce.datacloud.jdbc.protocol.grpc.HyperGrpcChannelSettings;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.SQLException;
@@ -61,9 +62,6 @@ public class GrpcChannelProperties {
     public static final String GRPC_RETRY_POLICY_MAX_BACKOFF = "grpc.retryPolicy.maxBackoff";
     public static final String GRPC_RETRY_POLICY_BACKOFF_MULTIPLIER = "grpc.retryPolicy.backoffMultiplier";
     public static final String GRPC_RETRY_POLICY_RETRYABLE_STATUS_CODES = "grpc.retryPolicy.retryableStatusCodes";
-
-    private static final int GRPC_INBOUND_MESSAGE_MAX_SIZE = 64 * 1024 * 1024;
-    private static final int GRPC_INBOUND_METADATA_MAX_SIZE = 1024 * 1024;
 
     // Keep alive properties
     @Builder.Default
@@ -211,8 +209,7 @@ public class GrpcChannelProperties {
      */
     public void applyToChannel(ManagedChannelBuilder<?> builder) {
         // General, setting-independent setup
-        builder.maxInboundMessageSize(GRPC_INBOUND_MESSAGE_MAX_SIZE);
-        builder.maxInboundMetadataSize(GRPC_INBOUND_METADATA_MAX_SIZE);
+        HyperGrpcChannelSettings.applyToBuilder(builder);
         builder.userAgent(formatDriverInfo());
 
         // Keep alive settings

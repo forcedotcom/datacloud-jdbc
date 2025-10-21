@@ -2,7 +2,7 @@
  * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
  * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
  */
-package com.salesforce.datacloud.jdbc.core.partial;
+package com.salesforce.datacloud.jdbc.protocol;
 
 import static com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase.getHyperQueryConnection;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -24,14 +24,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @Slf4j
 @ExtendWith(LocalHyperTestBase.class)
-class ChunkBasedTest {
+class ChunkRangeIteratorTest {
     @SneakyThrows
     private List<Integer> sut(String queryId, long chunkId, long limit) {
         try (val connection = getHyperQueryConnection()) {
             val rs = limit == 1
                     ? connection.getChunkBasedResultSet(queryId, chunkId)
                     : connection.getChunkBasedResultSet(queryId, chunkId, limit);
-            return RowBasedTest.toStream(rs).collect(Collectors.toList());
+            return RowRangeIteratorTest.toStream(rs).collect(Collectors.toList());
         }
     }
 
@@ -57,6 +57,13 @@ class ChunkBasedTest {
     void canGetSimpleChunk() {
         val actual = sut(singleChunk, 0, 1);
         assertThat(actual).containsExactly(1, 2, 3, 4);
+    }
+
+    @SneakyThrows
+    @Test
+    void canGetPartialRange() {
+        val actual = sut(multipleChunks, 1, 2);
+        assertThat(actual).containsExactly(5, 6, 7, 8, 9, 10, 11, 12);
     }
 
     @SneakyThrows

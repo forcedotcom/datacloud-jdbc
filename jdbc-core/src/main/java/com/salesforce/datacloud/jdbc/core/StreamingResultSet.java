@@ -4,34 +4,28 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
 
-import com.salesforce.datacloud.jdbc.core.fsm.QueryResultIterator;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.QueryStatus;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.TimeZone;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
 import org.apache.calcite.avatica.AvaticaResultSet;
 import org.apache.calcite.avatica.AvaticaResultSetMetaData;
 import org.apache.calcite.avatica.AvaticaStatement;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.QueryState;
-import salesforce.cdp.hyperdb.v1.QueryResult;
 
 @Slf4j
 public class StreamingResultSet extends AvaticaResultSet implements DataCloudResultSet {
-    private static final int ROOT_ALLOCATOR_MB_FROM_V2 = 100 * 1024 * 1024;
-
     @Getter
     private final String queryId;
 
@@ -53,37 +47,22 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
         this.queryId = queryId;
     }
 
-    public static StreamingResultSet of(boolean includeCustomerDetailInReason, QueryResultIterator iterator)
-            throws SQLException {
-        return of(includeCustomerDetailInReason, iterator, iterator.getQueryId());
-    }
-
-    public static StreamingResultSet of(
-            boolean includeCustomerDetailInReason, Iterator<QueryResult> iterator, String queryId) throws SQLException {
-        val byteStringIterator = ProtocolMappers.fromQueryResult(iterator);
-        val channel = new ByteStringReadableByteChannel(byteStringIterator);
-        return of(includeCustomerDetailInReason, channel, queryId);
-    }
-
-    private static StreamingResultSet of(
-            boolean includeCustomerDetailInReason, ByteStringReadableByteChannel channel, String queryId)
-            throws SQLException {
+    public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId) throws SQLException {
         try {
-            val reader = new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
-            val schemaRoot = reader.getVectorSchemaRoot();
+            val schemaRoot = resultStream.getVectorSchemaRoot();
             val columns = toColumnMetaData(schemaRoot.getSchema().getFields());
             val timezone = TimeZone.getDefault();
             val state = new QueryState();
             val signature = new Meta.Signature(
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
-            val cursor = new ArrowStreamReaderCursor(reader);
+            val cursor = new ArrowStreamReaderCursor(resultStream);
             val result = new StreamingResultSet(cursor, queryId, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
 
             return result;
-        } catch (Exception ex) {
-            throw createException(includeCustomerDetailInReason, null, queryId, ex);
+        } catch (IOException ex) {
+            throw new SQLException("Unexpected error during ResultSet creation", "XX000", ex);
         }
     }
 

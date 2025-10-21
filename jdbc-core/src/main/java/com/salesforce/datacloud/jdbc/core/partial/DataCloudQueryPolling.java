@@ -6,62 +6,42 @@ package com.salesforce.datacloud.jdbc.core.partial;
 
 import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 
-import com.salesforce.datacloud.jdbc.util.Deadline;
+import com.salesforce.datacloud.jdbc.protocol.QueryInfoIterator;
+import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
 import com.salesforce.datacloud.jdbc.util.Unstable;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.sql.SQLException;
-import java.time.Duration;
-import java.util.Iterator;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
-import salesforce.cdp.hyperdb.v1.QueryInfo;
-import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 
 @Unstable
 @Slf4j
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DataCloudQueryPolling {
-
-    enum State {
-        RESET_QUERY_INFO_STREAM,
-        PROCESS_QUERY_INFO_STREAM,
-        COMPLETED
-    }
-
-    private final HyperServiceGrpc.HyperServiceBlockingStub stub;
+    private final QueryAccessGrpcClient client;
     private final boolean includeCustomerDetailInReason;
-    private final String queryId;
-    private final Deadline deadline;
     private final Predicate<QueryStatus> predicate;
-
-    private State state = State.RESET_QUERY_INFO_STREAM;
     private QueryStatus lastStatus = null;
-    private Iterator<QueryInfo> queryInfos = null;
-    private long timeInState = System.currentTimeMillis();
 
     /**
      * Creates a new instance for polling query status.
+     * <p>To set a timeout, configure the stub in the client accordingly before creating the poller
      *
-     * @param stub The gRPC stub to use for querying status
-     * @param queryId The identifier of the query to check
-     * @param deadline The deadline for polling operations
+     * @param queryClient The client for a specific query id
+     * @param includeCustomerDetailInReason Whether to include customer detail in the reason for exceptions
      * @param predicate The condition to check against the query status
      * @return A new DataCloudQueryPolling instance
      */
     public static DataCloudQueryPolling of(
-            HyperServiceGrpc.HyperServiceBlockingStub stub,
+            QueryAccessGrpcClient queryClient,
             boolean includeCustomerDetailInReason,
-            String queryId,
-            Deadline deadline,
             Predicate<QueryStatus> predicate) {
-        return new DataCloudQueryPolling(stub, includeCustomerDetailInReason, queryId, deadline, predicate);
+        return new DataCloudQueryPolling(queryClient, includeCustomerDetailInReason, predicate);
     }
 
     /**
@@ -79,121 +59,38 @@ public final class DataCloudQueryPolling {
      * @throws SQLException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
      */
     public QueryStatus waitFor() throws SQLException {
-        while (!deadline.hasPassed() && state != State.COMPLETED) {
-            try {
-                processCurrentState();
-            } catch (StatusRuntimeException ex) {
-                log.error("Caught unexpected exception from server. {}", this, ex);
-                val queryEx = createException(includeCustomerDetailInReason, null, queryId, ex);
-                if (ex.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED) {
-                    throw new SQLException("Predicate was not satisfied before timeout. " + this, queryEx);
-                } else {
-                    throw queryEx;
+        try {
+            val queryInfos = QueryInfoIterator.of(client);
+            while (queryInfos.hasNext()) {
+                val info = queryInfos.next();
+                // Skip non status messages
+                if (!info.hasQueryStatus()) {
+                    continue;
                 }
-            } catch (SQLException ex) {
-                log.error("Failed to process current state. {}", this, ex);
-                throw ex;
+
+                lastStatus = QueryStatus.of(info.getQueryStatus());
+                if (predicate.test(lastStatus)) {
+                    return lastStatus;
+                } else if (lastStatus.isExecutionFinished()) {
+                    throw new SQLException("Predicate was not satisfied when execution finished. " + this, "HYT00");
+                }
+            }
+            // This should never happen, we expect that the iterator will throw an exception if there is a timeout
+            // or that otherwise we either get a query error or the query is finished.
+            throw new SQLException("Unexpected end of query info polling before finish. " + this, "XX000");
+        } catch (StatusRuntimeException ex) {
+            val queryEx = createException(includeCustomerDetailInReason, null, client.getQueryId(), ex);
+            if (ex.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED) {
+                throw new SQLException("Predicate was not satisfied before timeout. " + this, "HYT00", queryEx);
+            } else {
+                log.info("waitFor failed with {}", this, ex);
+                throw queryEx;
             }
         }
-
-        if (lastStatus == null) {
-            throw new SQLException("Failed to get query status response. " + this);
-        } else if (predicate.test(lastStatus)) {
-            return lastStatus;
-        } else if (deadline.hasPassed()) {
-            throw new SQLException("Predicate was not satisfied before timeout. " + this);
-        } else {
-            throw new SQLException("Predicate was not satisfied when execution finished. " + this);
-        }
-    }
-
-    private void processCurrentState() throws SQLException {
-        switch (state) {
-            case RESET_QUERY_INFO_STREAM:
-                queryInfos = getQueryInfoIterator();
-                transitionTo(State.PROCESS_QUERY_INFO_STREAM);
-                break;
-
-            case PROCESS_QUERY_INFO_STREAM:
-                if (queryInfos == null) {
-                    transitionTo(State.RESET_QUERY_INFO_STREAM);
-                    break;
-                }
-
-                try {
-                    if (!queryInfos.hasNext()) {
-                        transitionTo(State.RESET_QUERY_INFO_STREAM);
-                        break;
-                    }
-
-                    val info = queryInfos.next();
-                    if (info.getOptional()) {
-                        log.trace("Unexpected optional message, message={} {}", info, this);
-                        break; // Per hyper_service.proto: clients must ignore optional messages which they do not know
-                    }
-
-                    val mapped = QueryStatus.of(info);
-
-                    if (!mapped.isPresent()) {
-                        throw new SQLException("Query info could not be mapped to DataCloudQueryStatus. queryId="
-                                + queryId + ", queryInfo=" + info + ". " + this);
-                    }
-
-                    lastStatus = mapped.get();
-
-                    if (predicate.test(lastStatus)) {
-                        transitionTo(State.COMPLETED);
-                    } else if (lastStatus.isExecutionFinished()) {
-                        transitionTo(State.COMPLETED);
-                    }
-
-                } catch (StatusRuntimeException ex) {
-                    handleStatusRuntimeException(ex);
-                    queryInfos = null;
-                    transitionTo(State.RESET_QUERY_INFO_STREAM);
-                }
-                break;
-
-            default:
-                throw new SQLException("Cannot calculate transition from unknown state, state=" + state);
-        }
-    }
-
-    private void transitionTo(State newState) {
-        val elapsed = getTimeInStateAndReset();
-        log.trace("state transition from={}, to={}, elapsed={}, queryId={}", state, newState, elapsed, queryId);
-        state = newState;
-    }
-
-    private Duration getTimeInStateAndReset() {
-        val result = Duration.ofMillis(System.currentTimeMillis() - timeInState);
-        timeInState = System.currentTimeMillis();
-        return result;
-    }
-
-    private void handleStatusRuntimeException(StatusRuntimeException ex) throws StatusRuntimeException {
-        if (ex.getStatus().getCode() == Status.Code.CANCELLED) {
-            log.warn("Caught retryable CANCELLED exception, {}", this, ex);
-        } else {
-            log.error("Caught non-retryable exception, {}", this, ex);
-            throw ex;
-        }
-    }
-
-    private Iterator<QueryInfo> getQueryInfoIterator() {
-        val param = QueryInfoParam.newBuilder()
-                .setQueryId(queryId)
-                .setStreaming(true)
-                .build();
-
-        val remaining = deadline.getRemaining();
-        return stub.withDeadlineAfter(remaining.toMillis(), TimeUnit.MILLISECONDS)
-                .getQueryInfo(param);
     }
 
     @Override
     public String toString() {
-        return String.format(
-                "queryId=%s, state=%s, deadline=%s, status=%s", queryId, state.name(), deadline, lastStatus);
+        return String.format("queryId=%s, queryStatus=%s", client.getQueryId(), lastStatus);
     }
 }

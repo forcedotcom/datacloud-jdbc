@@ -17,8 +17,8 @@ import lombok.val;
 @Value
 public class HyperServerConfig {
     @Builder.Default
-    @JsonProperty("grpc-request-timeout")
-    String grpcRequestTimeoutSeconds = "120s";
+    @JsonProperty("grpc-adaptive-timeout")
+    String grpcAdaptiveTimeoutSeconds = "60s";
 
     @Override
     public String toString() {

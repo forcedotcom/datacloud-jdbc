@@ -6,6 +6,7 @@ package com.salesforce.datacloud.query.v3;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
+import java.sql.SQLException;
 import java.util.UUID;
 import java.util.function.Consumer;
 import lombok.val;
@@ -24,7 +25,7 @@ class QueryStatusTest {
     }
 
     @Test
-    void testRunningOrUnspecified() {
+    void testRunningOrUnspecified() throws SQLException {
         val actual = QueryStatus.of(queryInfoWith(s -> {}));
 
         assertThat(actual).isPresent().get().satisfies(t -> {
@@ -34,7 +35,7 @@ class QueryStatusTest {
     }
 
     @Test
-    void testExecutionFinished() {
+    void testExecutionFinished() throws SQLException {
         val actual = QueryStatus.of(queryInfoWith(
                 s -> s.setCompletionStatus(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED)));
 
@@ -45,7 +46,7 @@ class QueryStatusTest {
     }
 
     @Test
-    void testResultsProduced() {
+    void testResultsProduced() throws SQLException {
         val actual = QueryStatus.of(queryInfoWith(
                 s -> s.setCompletionStatus(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RESULTS_PRODUCED)));
 
@@ -56,7 +57,7 @@ class QueryStatusTest {
     }
 
     @Test
-    void testQueryId() {
+    void testQueryId() throws SQLException {
         val queryId = UUID.randomUUID().toString();
         val queryInfo = queryInfoWith(s -> s.setQueryId(queryId));
         val actual = QueryStatus.of(queryInfo);
@@ -65,7 +66,7 @@ class QueryStatusTest {
     }
 
     @Test
-    void testProgress() {
+    void testProgress() throws SQLException {
         val progress = 0.35;
         val queryInfo = queryInfoWith(s -> s.setProgress(progress));
         val actual = QueryStatus.of(queryInfo);
@@ -74,7 +75,7 @@ class QueryStatusTest {
     }
 
     @Test
-    void testChunkCount() {
+    void testChunkCount() throws SQLException {
         val chunks = 5678L;
         val queryInfo = queryInfoWith(s -> s.setChunkCount(chunks));
         val actual = QueryStatus.of(queryInfo);
@@ -83,7 +84,7 @@ class QueryStatusTest {
     }
 
     @Test
-    void testRowCount() {
+    void testRowCount() throws SQLException {
         val rows = 1234L;
         val queryInfo = queryInfoWith(s -> s.setRowCount(rows));
         val actual = QueryStatus.of(queryInfo);

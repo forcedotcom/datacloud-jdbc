@@ -12,7 +12,6 @@ import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimestampFr
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
-import com.salesforce.datacloud.jdbc.core.fsm.AsyncQueryResultHandle;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.io.IOException;
@@ -98,11 +97,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     }
 
     public boolean executeAsyncQuery() throws SQLException {
-        val queryTimeout = QueryTimeout.of(
-                statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
-        val client = getQueryClient(queryTimeout);
-        val includeCustomerDetails = connection.getConnectionProperties().isIncludeCustomerDetailInReason();
-        queryHandle = AsyncQueryResultHandle.of(includeCustomerDetails, sql, client, queryTimeout);
+        super.executeAsyncQueryInternal(sql);
         return true;
     }
 

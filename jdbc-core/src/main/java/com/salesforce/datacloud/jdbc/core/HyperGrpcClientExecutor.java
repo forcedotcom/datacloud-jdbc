@@ -4,34 +4,13 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
-
-import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
-import com.salesforce.datacloud.jdbc.interceptor.QueryIdHeaderInterceptor;
-import com.salesforce.datacloud.jdbc.util.Deadline;
-import com.salesforce.datacloud.jdbc.util.QueryTimeout;
+import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
 import com.salesforce.datacloud.jdbc.util.Unstable;
-import com.salesforce.datacloud.query.v3.QueryStatus;
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Predicate;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.NonNull;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
-import salesforce.cdp.hyperdb.v1.CancelQueryParam;
-import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
-import salesforce.cdp.hyperdb.v1.OutputFormat;
-import salesforce.cdp.hyperdb.v1.QueryInfo;
-import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 import salesforce.cdp.hyperdb.v1.QueryParam;
-import salesforce.cdp.hyperdb.v1.QueryResult;
-import salesforce.cdp.hyperdb.v1.QueryResultParam;
 import salesforce.cdp.hyperdb.v1.ResultRange;
 
 /**
@@ -42,21 +21,12 @@ import salesforce.cdp.hyperdb.v1.ResultRange;
 @Slf4j
 @Unstable
 public class HyperGrpcClientExecutor {
+    @Getter
     @NonNull private final HyperServiceGrpc.HyperServiceBlockingStub stub;
 
     private final QueryParam settingsQueryParams;
 
     private QueryParam additionalQueryParams;
-
-    /**
-     * Creates an executor for operations on an already submitted query. Since the query has already been submitted,
-     * this executor does not support query settings.
-     * @param stub The stub to use for the executor.
-     * @return A new executor to interact with a submitted query
-     */
-    public static HyperGrpcClientExecutor forSubmittedQuery(@NonNull HyperServiceGrpc.HyperServiceBlockingStub stub) {
-        return of(stub, new HashMap<>());
-    }
 
     public static HyperGrpcClientExecutor of(
             @NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, Map<String, String> querySettings) {
@@ -75,165 +45,35 @@ public class HyperGrpcClientExecutor {
         return this;
     }
 
-    public Iterator<ExecuteQueryResponse> executeQuery(String sql, QueryTimeout queryTimeout) throws SQLException {
-        return execute(sql, queryTimeout, QueryParam.TransferMode.ADAPTIVE, QueryParam.newBuilder());
-    }
-
-    public Iterator<ExecuteQueryResponse> executeQuery(
-            String sql, QueryTimeout queryTimeout, long maxRows, long maxBytes) throws SQLException {
-        val builder = QueryParam.newBuilder();
-        if (maxRows > 0) {
-            log.info("setting row limit query. maxRows={}, maxBytes={}", maxRows, maxBytes);
-            val range = ResultRange.newBuilder().setRowLimit(maxRows).setByteLimit(maxBytes);
-            builder.setResultRange(range);
-        }
-
-        return execute(sql, queryTimeout, QueryParam.TransferMode.ADAPTIVE, builder);
-    }
-
-    public Iterator<ExecuteQueryResponse> executeAsyncQuery(String sql, QueryTimeout queryTimeout) throws SQLException {
-        return execute(sql, queryTimeout, QueryParam.TransferMode.ASYNC, QueryParam.newBuilder());
-    }
-
-    public Iterator<QueryInfo> getQueryInfo(String queryId) throws SQLException {
-        return logTimedValue(
-                () -> {
-                    val param = getQueryInfoParam(queryId);
-                    return getStub(queryId).getQueryInfo(param);
-                },
-                "getQueryInfo queryId=" + queryId,
-                log);
-    }
-
-    public Iterator<QueryInfo> getQuerySchema(String queryId) throws SQLException {
-        return logTimedValue(
-                () -> {
-                    val param = QueryInfoParam.newBuilder()
-                            .setQueryId(queryId)
-                            .setSchemaOutputFormat(OutputFormat.ARROW_IPC)
-                            .build();
-                    return getStub(queryId).getQueryInfo(param);
-                },
-                "getQuerySchema queryId=" + queryId,
-                log);
-    }
-
-    public void cancel(String queryId) throws SQLException {
-        logTimedValue(
-                () -> {
-                    val request =
-                            CancelQueryParam.newBuilder().setQueryId(queryId).build();
-                    val stub = getStub(queryId);
-                    stub.cancelQuery(request);
-                    return null;
-                },
-                "cancel queryId=" + queryId,
-                log);
-    }
-
-    /**
-     * Waits for the status of the specified query to satisfy the given predicate, polling until the predicate returns true or the timeout is reached.
-     * The predicate determines what condition you are waiting for. For example, to wait until at least a certain number of rows are available, use:
-     * <pre>
-     *     status -> status.allResultsProduced() || status.getRowCount() >= targetRows
-     * </pre>
-     * Or, to wait for enough chunks:
-     * <pre>
-     *     status -> status.allResultsProduced() || status.getChunkCount() >= targetChunks
-     * </pre>
-     *
-     * @param queryId The identifier of the query to check
-     * @param deadline The deadline for waiting for the engine to produce results.
-     * @param predicate The condition to check against the query status
-     * @return The first status that satisfies the predicate, or the last status received before timeout
-     * @throws SQLException if the server reports all results produced but the predicate returns false, or if the timeout is exceeded
-     */
-    public QueryStatus waitFor(
-            boolean includeCustomerDetailInReason, String queryId, Deadline deadline, Predicate<QueryStatus> predicate)
-            throws SQLException {
-        val stub = getStub(queryId);
-        return DataCloudQueryPolling.of(stub, includeCustomerDetailInReason, queryId, deadline, predicate)
-                .waitFor();
-    }
-
-    public Iterator<QueryResult> getQueryResult(
-            String queryId, long offset, long rowLimit, long byteLimit, boolean omitSchema) throws SQLException {
-        val rowRange = ResultRange.newBuilder()
-                .setRowOffset(offset)
-                .setRowLimit(rowLimit)
-                .setByteLimit(byteLimit);
-
-        val param = QueryResultParam.newBuilder()
-                .setQueryId(queryId)
-                .setResultRange(rowRange)
-                .setOmitSchema(omitSchema)
-                .setOutputFormat(OutputFormat.ARROW_IPC)
-                .build();
-
-        val message = String.format(
-                "getQueryResult queryId=%s, offset=%d, rowLimit=%d, byteLimit=%d, omitSchema=%s",
-                queryId, offset, rowLimit, byteLimit, omitSchema);
-        return logTimedValue(() -> getStub(queryId).getQueryResult(param), message, log);
-    }
-
-    public Iterator<QueryResult> getQueryResult(String queryId, long chunkId, boolean omitSchema) {
-        val param = getQueryResultParam(queryId, chunkId, omitSchema);
-        return getStub(queryId).getQueryResult(param);
-    }
-
-    private QueryParam getQueryParams(String sql, QueryParam.Builder builder, QueryParam.TransferMode mode) {
-        builder.setQuery(sql).setOutputFormat(OutputFormat.ARROW_IPC).setTransferMode(mode);
-
+    private QueryParam completeBuilder(QueryParam.Builder builder) {
         if (additionalQueryParams != null) {
             builder.mergeFrom(additionalQueryParams);
         }
-
         if (settingsQueryParams != null) {
             builder.mergeFrom(settingsQueryParams);
         }
-
         return builder.build();
     }
 
-    private QueryResultParam getQueryResultParam(String queryId, long chunkId, boolean omitSchema) {
-        val builder = QueryResultParam.newBuilder()
-                .setQueryId(queryId)
-                .setChunkId(chunkId)
-                .setOmitSchema(omitSchema)
-                .setOutputFormat(OutputFormat.ARROW_IPC);
-
-        return builder.build();
+    public QueryParam getQueryParams(String sql, QueryParam.TransferMode transferMode) {
+        return completeBuilder(QueryParam.newBuilder()
+                .setQuery(sql)
+                .setOutputFormat(QueryResultArrowStream.OUTPUT_FORMAT)
+                .setTransferMode(transferMode));
     }
 
-    private QueryInfoParam getQueryInfoParam(String queryId) {
-        return QueryInfoParam.newBuilder()
-                .setQueryId(queryId)
-                .setStreaming(true)
-                .build();
+    public QueryParam getAdaptiveQueryParams(String sql) {
+        return getQueryParams(sql, QueryParam.TransferMode.ADAPTIVE);
     }
 
-    public Iterator<ExecuteQueryResponse> execute(QueryParam request, QueryTimeout timeout) throws SQLException {
-        // We set the deadline based off the query timeout here as the server-side doesn't properly enforce
-        // the query timeout during the initial compilation phase. By setting the deadline, we can ensure
-        // that the query timeout is enforced also when the server hangs during compilation.
-        val remainingDuration = timeout.getLocalDeadline().getRemaining();
-        val message = "executeQuery. mode=" + request.getTransferMode() + ", remaining=" + remainingDuration;
-        return logTimedValue(
-                () -> stub.withDeadlineAfter(remainingDuration.toMillis(), TimeUnit.MILLISECONDS)
-                        .executeQuery(request),
-                message,
-                log);
-    }
-
-    private Iterator<ExecuteQueryResponse> execute(
-            String sql, QueryTimeout queryTimeout, QueryParam.TransferMode mode, QueryParam.Builder builder)
-            throws SQLException {
-        val request = getQueryParams(sql, builder, mode);
-        return execute(request, queryTimeout);
-    }
-
-    private HyperServiceGrpc.HyperServiceBlockingStub getStub(@NonNull String queryId) {
-        val queryIdHeaderInterceptor = new QueryIdHeaderInterceptor(queryId);
-        return stub.withInterceptors(queryIdHeaderInterceptor);
+    public QueryParam getAdaptiveRowLimitQueryParams(String sql, long maxRows, long maxBytes) {
+        val builder = QueryParam.newBuilder()
+                .setQuery(sql)
+                .setOutputFormat(QueryResultArrowStream.OUTPUT_FORMAT)
+                .setTransferMode(QueryParam.TransferMode.ADAPTIVE);
+        val range = ResultRange.newBuilder().setRowLimit(maxRows).setByteLimit(maxBytes);
+        builder.setResultRange(range);
+        log.info("setting row limit query. maxRows={}, maxBytes={}", maxRows, maxBytes);
+        return completeBuilder(builder);
     }
 }
