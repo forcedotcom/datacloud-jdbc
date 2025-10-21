@@ -11,3 +11,5 @@ experimental_pg_sleep: true
 # will give us chunks with 4 tuples each.
 result_target_chunk_size: 1
 arrow_write_buffer_initial_tuple_limit: 4
+# Hyper has a default of zero threads on Windows
+grpc_threads: 2
