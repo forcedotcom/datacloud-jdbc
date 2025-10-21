@@ -67,10 +67,6 @@ public class QueryResultIterator implements Iterator<QueryResult>, QueryAccessHa
                             null,
                             executeQueryParam.getTransferMode() == QueryParam.TransferMode.ASYNC ? 0 : 1,
                             null);
-                    // For initialization of the iterator to ensure that the status is initialized and the query
-                    // compiles
-                    // successfully (as receiving the schema forces that).
-                    iterator.hasNext();
                     return iterator;
                 },
                 message,

@@ -69,7 +69,7 @@ class SQLExceptionQueryResultIterator implements Iterator<QueryResult> {
         try {
             return grpcIterator.hasNext();
         } catch (StatusRuntimeException ex) {
-            throw QueryExceptionHandler.createException(includeCustomerDetail, queryId, sql, ex);
+            throw QueryExceptionHandler.createException(includeCustomerDetail, sql, queryId, ex);
         }
     }
 

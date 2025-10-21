@@ -114,6 +114,8 @@ public class DataCloudStatement implements Statement, AutoCloseable {
                             queryTimeout.getLocalDeadline().getRemaining().toMillis(), TimeUnit.MILLISECONDS);
             val iterator = QueryResultIterator.of(stub, queryParam);
             queryHandle = iterator;
+            // Ensure query status is initialized
+            iterator.hasNext();
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     iterator, includeCustomerDetail, iterator.getQueryStatus().getQueryId(), sql);
             resultSet =

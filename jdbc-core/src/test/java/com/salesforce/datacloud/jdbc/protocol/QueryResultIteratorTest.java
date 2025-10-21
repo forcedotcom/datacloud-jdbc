@@ -45,6 +45,7 @@ public class QueryResultIteratorTest extends InterceptedHyperTestBase {
                 executeQueryResponse(
                         TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1));
         val iterator = QueryResultIterator.of(stub, params);
+        iterator.hasNext();
 
         assertThat(iterator.getQueryStatus().getQueryId()).isEqualTo(TEST_QUERY_ID);
         assertThat(iterator.hasNext()).isFalse();
@@ -180,6 +181,7 @@ public class QueryResultIteratorTest extends InterceptedHyperTestBase {
                 executeQueryResponse(TEST_QUERY_ID, inputStatus, 1),
                 executeQueryResponseWithData(Collections.emptyList()));
         val iterator = QueryResultIterator.of(stub, params);
+        iterator.hasNext();
 
         if (inputStatus == salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED) {
             assertThat(iterator.getQueryStatus().getCompletionStatus()).isEqualTo(expectedStatus);
@@ -413,11 +415,12 @@ public class QueryResultIteratorTest extends InterceptedHyperTestBase {
                         req.getQuery().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
                 .willReturn(GrpcMock.statusException(Status.CANCELLED)));
         assertThatThrownBy(() -> QueryResultIterator.of(
-                        stub,
-                        QueryParam.newBuilder()
-                                .setQuery(TEST_QUERY)
-                                .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
-                                .build()))
+                                stub,
+                                QueryParam.newBuilder()
+                                        .setQuery(TEST_QUERY)
+                                        .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
+                                        .build())
+                        .hasNext())
                 .isInstanceOf(StatusRuntimeException.class)
                 .hasMessageContaining("CANCELLED");
 

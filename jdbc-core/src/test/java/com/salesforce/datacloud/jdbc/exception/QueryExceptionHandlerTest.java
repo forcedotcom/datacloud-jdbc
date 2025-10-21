@@ -40,8 +40,9 @@ class QueryExceptionHandlerTest {
                                 + "SQLSTATE: 42P01%n"
                                 + "QUERY-ID: %s%n"
                                 + "DETAIL: %s%n"
-                                + "HINT: %s",
-                        stmt.getQueryId(), customerDetail, customerHint);
+                                + "HINT: %s%n"
+                                + "QUERY: %s",
+                        stmt.getQueryId(), customerDetail, customerHint, query);
                 assertEquals(expectedMessage, ex.getMessage());
                 assertEquals(ex.getMessage(), ex.getFullCustomerMessage());
                 assertEquals("42P01", ex.getSQLState());
@@ -96,8 +97,9 @@ class QueryExceptionHandlerTest {
                                 + "SQLSTATE: 42P01%n"
                                 + "QUERY-ID: %s%n"
                                 + "DETAIL: %s%n"
-                                + "HINT: %s",
-                        stmt.getQueryId(), customerDetail, customerHint);
+                                + "HINT: %s%n"
+                                + "QUERY: %s",
+                        stmt.getQueryId(), customerDetail, customerHint, query);
                 assertEquals(expectedMessage, ex.getMessage());
                 assertEquals(expectedFullCustomerMessage, ex.getFullCustomerMessage());
                 assertEquals("42P01", ex.getSQLState());
