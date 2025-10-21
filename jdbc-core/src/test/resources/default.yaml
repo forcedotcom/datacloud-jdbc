@@ -6,6 +6,5 @@ no-password: true
 grpc_persist_results: true
 log_pipelines: true
 experimental_pg_sleep: true
-result_scan_enabled: true
 experimental_hyper_introspection_functions: true
 log_full_context_level: trace

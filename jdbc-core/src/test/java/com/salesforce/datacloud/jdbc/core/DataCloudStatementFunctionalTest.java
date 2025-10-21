@@ -43,9 +43,6 @@ public class DataCloudStatementFunctionalTest {
             stmt.cancel();
             assertThatThrownBy(() -> {
                         conn.waitFor(queryId, QueryStatus::allResultsProduced);
-                        // We need a second try as Hyper sometimes returns results produced in the get query info call
-                        // while cancellation is happening
-                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
                     })
                     .hasMessageContaining("Failed to execute query: canceled by user")
                     .hasMessageContaining("SQLSTATE: 57014");
@@ -69,9 +66,6 @@ public class DataCloudStatementFunctionalTest {
             stmt.cancel();
             assertThatThrownBy(() -> {
                         conn.waitFor(queryId, QueryStatus::allResultsProduced);
-                        // We need a second try as Hyper sometimes returns results produced in the get query info call
-                        // while cancellation is happening
-                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
                     })
                     .hasMessageContaining("Failed to execute query: canceled by user")
                     .hasMessageContaining("SQLSTATE: 57014");
@@ -93,9 +87,6 @@ public class DataCloudStatementFunctionalTest {
 
             conn.cancelQuery(queryId);
             assertThatThrownBy(() -> {
-                        conn.waitFor(queryId, QueryStatus::allResultsProduced);
-                        // We need a second try as Hyper sometimes returns results produced in the get query info call
-                        // while cancellation is happening
                         conn.waitFor(queryId, QueryStatus::allResultsProduced);
                     })
                     .hasMessageContaining("Failed to execute query: canceled by user")

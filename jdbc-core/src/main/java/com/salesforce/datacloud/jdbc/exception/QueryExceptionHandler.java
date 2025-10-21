@@ -71,12 +71,12 @@ public final class QueryExceptionHandler {
                         return new SQLException("Invalid error info for query " + queryId, e);
                     }
 
-                    grpcMessage = status.getMessage();
+                    grpcMessage = status.getMessage().replace("\n", System.lineSeparator());
                     sqlState = errorInfo.getSqlstate();
-                    primaryMessage = errorInfo.getPrimaryMessage();
-                    customerHint = errorInfo.getCustomerHint();
-                    customerDetail = errorInfo.getCustomerDetail();
-                    systemDetail = errorInfo.getSystemDetail();
+                    primaryMessage = errorInfo.getPrimaryMessage().replace("\n", System.lineSeparator());
+                    customerHint = errorInfo.getCustomerHint().replace("\n", System.lineSeparator());
+                    customerDetail = errorInfo.getCustomerDetail().replace("\n", System.lineSeparator());
+                    systemDetail = errorInfo.getSystemDetail().replace("\n", System.lineSeparator());
                 }
             }
         }
