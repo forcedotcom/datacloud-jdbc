@@ -30,7 +30,7 @@ class QueryInfoIteratorTest {
             try (val connection = DataCloudConnection.of(provider, ConnectionProperties.defaultProperties(), "", null);
                     val stmt = connection.createStatement()) {
                 // Submit a long-running query to get query id
-                ((DataCloudStatement) stmt).executeAsyncQuery("SELECT pg_sleep(100000)");
+                ((DataCloudStatement) stmt).executeAsyncQuery("SELECT pg_sleep(10)");
                 val queryId = ((DataCloudStatement) stmt).getQueryId();
 
                 // Create query info iterator
@@ -45,6 +45,7 @@ class QueryInfoIteratorTest {
                 // Status should be RUNNING_OR_UNSPECIFIED since query is still running
                 assertThat(firstInfo.getQueryStatus().getCompletionStatus())
                         .isIn(QueryStatus.CompletionStatus.RUNNING_OR_UNSPECIFIED);
+                stmt.cancel();
             }
         });
     }

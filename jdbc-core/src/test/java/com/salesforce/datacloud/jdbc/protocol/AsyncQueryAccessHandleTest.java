@@ -25,7 +25,7 @@ public class AsyncQueryAccessHandleTest {
             val stub = stubProvider.getStub();
             val param = QueryParam.newBuilder()
                     // Use a huge sleep to ensure that the test is not blocked by query execution
-                    .setQuery("SELECT pg_sleep(100000)")
+                    .setQuery("SELECT pg_sleep(10)")
                     .setTransferMode(QueryParam.TransferMode.ASYNC)
                     .setOutputFormat(OutputFormat.ARROW_IPC)
                     .build();
@@ -40,7 +40,7 @@ public class AsyncQueryAccessHandleTest {
         LocalHyperTestBase.assertWithStubProvider(stubProvider -> {
             val stub = stubProvider.getStub();
             val param = QueryParam.newBuilder()
-                    .setQuery("SELECT pg_sleep(100000)")
+                    .setQuery("SELECT pg_sleep(10)")
                     .setTransferMode(QueryParam.TransferMode.ASYNC)
                     // Also works with JSON as this layer is agnostic of output format
                     .setOutputFormat(OutputFormat.JSON_ARRAY)

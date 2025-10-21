@@ -9,6 +9,9 @@ experimental_pg_sleep: true
 # Hyper has a default of zero threads on Windows
 grpc_threads: 2
 experimental_hyper_introspection_functions: true
+log_resource_usage_mode: 0
+log_file_size_limit: 128M
+log_file_max_count: 3
 log_full_context_level: trace
 # We want to have multiple chunks in the result set.
 # The combination of result_target_chunk_size and arrow_write_buffer_initial_tuple_limit
