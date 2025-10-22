@@ -9,5 +9,6 @@ experimental_pg_sleep: true
 experimental_hyper_introspection_functions: true
 log_resource_usage_mode: 0
 log_full_context_level: trace
+log_file_max_count: 32
 # Hyper has a default of zero threads on Windows
 grpc_threads: 2

@@ -63,8 +63,8 @@ public class HyperServerProcess implements AutoCloseable {
                         + executable.getAbsolutePath() + ", os=" + System.getProperty("os.name"));
         }
         String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy_MM_dd_HH_mm_ss"));
-        String randomSuffix = String.format("%04d", (int)(Math.random() * 10000));
-        String logName = "hyperd_"+timestamp+"_"+randomSuffix;
+        String collisionAvoider = String.format("%04d", (int)(Math.random() * 10000));
+        String logName = "hyperd_"+collisionAvoider+"_"+timestamp;
         val builder = new ProcessBuilder()
                 .command(
                         executable.getAbsolutePath(),
