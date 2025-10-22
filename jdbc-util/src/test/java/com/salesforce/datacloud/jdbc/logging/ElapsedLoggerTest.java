@@ -8,7 +8,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -16,7 +15,6 @@ import static org.mockito.Mockito.verify;
 
 import com.salesforce.datacloud.jdbc.util.NonThrowingJdbcSupplier;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
-import java.lang.reflect.Constructor;
 import java.sql.SQLException;
 import lombok.val;
 import org.junit.jupiter.api.Test;
@@ -39,11 +37,7 @@ public class ElapsedLoggerTest {
         assertThat(result).isEqualTo(expectedResult);
         verify(logger, times(1)).info(eq("Starting name={}"), eq(operationName));
         verify(logger, times(1))
-                .info(
-                        eq("Success name={}, millis={}, duration={}"),
-                        eq(operationName),
-                        anyLong(),
-                        any());
+                .info(eq("Success name={}, millis={}, duration={}"), eq(operationName), anyLong(), any());
     }
 
     @Test
@@ -80,11 +74,7 @@ public class ElapsedLoggerTest {
         assertThat(result).isEqualTo(expectedResult);
         verify(logger, times(1)).info(eq("Starting name={}"), eq(operationName));
         verify(logger, times(1))
-                .info(
-                        eq("Success name={}, millis={}, duration={}"),
-                        eq(operationName),
-                        anyLong(),
-                        any());
+                .info(eq("Success name={}, millis={}, duration={}"), eq(operationName), anyLong(), any());
     }
 
     @Test
@@ -96,8 +86,7 @@ public class ElapsedLoggerTest {
         };
         val operationName = "failing-non-throwing-operation";
 
-        assertThatThrownBy(() ->
-                        ElapsedLogger.logTimedValueNonThrowing(supplier, operationName, logger))
+        assertThatThrownBy(() -> ElapsedLogger.logTimedValueNonThrowing(supplier, operationName, logger))
                 .isEqualTo(expectedException);
 
         verify(logger, times(1)).info(eq("Starting name={}"), eq(operationName));
