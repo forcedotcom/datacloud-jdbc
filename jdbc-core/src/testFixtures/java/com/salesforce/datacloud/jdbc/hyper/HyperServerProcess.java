@@ -62,11 +62,14 @@ public class HyperServerProcess implements AutoCloseable {
                 "hyperd executable couldn't be found, have you run `gradle extractHyper`? expected="
                         + executable.getAbsolutePath() + ", os=" + System.getProperty("os.name"));
         }
-
+        String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy_MM_dd_HH_mm_ss"));
+        String randomSuffix = String.format("%04d", (int)(Math.random() * 10000));
+        String logName = "hyperd_"+timestamp+"_"+randomSuffix;
         val builder = new ProcessBuilder()
                 .command(
                         executable.getAbsolutePath(),
                         config.build().toString(),
+                        "--log-config=file,json,info," + logName+",0",
                         "--config",
                         yaml.getAbsolutePath(),
                         "--no-password",

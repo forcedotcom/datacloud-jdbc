@@ -8,8 +8,6 @@ log_pipelines: true
 experimental_pg_sleep: true
 experimental_hyper_introspection_functions: true
 log_resource_usage_mode: 0
-log_file_size_limit: 128M
-log_file_max_count: 6
 log_full_context_level: trace
 # Hyper has a default of zero threads on Windows
 grpc_threads: 2
