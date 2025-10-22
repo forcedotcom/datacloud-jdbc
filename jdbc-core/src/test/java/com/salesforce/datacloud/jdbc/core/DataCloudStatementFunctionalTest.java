@@ -208,13 +208,13 @@ public class DataCloudStatementFunctionalTest {
             // Use a query that only fails during runtime and not during compilation
             statement.executeQuery("SELECT 1/g FROM generate_series(0,5) g ");
             // Only should fail when requesting the result set
-            val ex = assertThrows(DataCloudJDBCException.class, () -> statement.getResultSet().next());
+            val ex = assertThrows(
+                    DataCloudJDBCException.class, () -> statement.getResultSet().next());
             assertThat(ex)
                     .hasMessageContaining("Failed to execute query: division by zero")
                     .hasFieldOrPropertyWithValue("SQLState", "22012");
         });
     }
-
 
     @Test
     public void testExecuteUpdate() {
