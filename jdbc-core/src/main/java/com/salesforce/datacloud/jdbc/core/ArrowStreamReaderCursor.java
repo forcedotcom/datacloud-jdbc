@@ -80,7 +80,7 @@ class ArrowStreamReaderCursor extends AbstractCursor {
             }
             return next;
         } catch (Exception e) {
-            // This can happen due ti SneakyThrows.
+            // This can happen due to SneakyThrows.
             if (e instanceof SQLException) {
                 throw e;
             } else {

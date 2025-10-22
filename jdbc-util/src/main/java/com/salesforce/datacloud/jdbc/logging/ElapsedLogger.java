@@ -27,7 +27,7 @@ public final class ElapsedLogger {
             return result;
         } catch (SQLException e) {
             val elapsed = System.nanoTime() - start;
-            logger.error("Failed name={}, millis={}, duration={}", name, elapsed, Duration.ofNanos(elapsed), e);
+            logger.info("Failed name={}, millis={}, duration={}", name, elapsed, Duration.ofNanos(elapsed), e);
             throw e;
         }
     }

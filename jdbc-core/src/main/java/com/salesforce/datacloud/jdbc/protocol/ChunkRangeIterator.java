@@ -83,7 +83,7 @@ public class ChunkRangeIterator implements Iterator<QueryResult> {
                 omitSchema = true;
             }
             return true;
-        } else if ((chunkId == 0) && (chunkId < limitChunkId)) {
+        } else if ((chunkId == 1) && (chunkId < limitChunkId)) {
             // In special cases on adaptive timeout Hyper can produce an empty first chunk
             // We thus retry immediately with next chunk in this case
             return hasNext();

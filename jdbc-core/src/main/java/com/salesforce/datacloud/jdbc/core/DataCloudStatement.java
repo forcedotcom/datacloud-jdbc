@@ -89,33 +89,25 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     @Override
     public boolean execute(String sql) throws SQLException {
         log.debug("Entering execute");
-        resultSet = executeAdaptiveQuery(sql);
+        try {
+            executeAdaptiveQuery(sql);
+        } catch (StatusRuntimeException ex) {
+            String queryId = null;
+            if (queryHandle != null && queryHandle.getQueryStatus() != null) {
+                queryId = queryHandle.getQueryStatus().getQueryId();
+            }
+            val includeCustomerDetail = connection.getConnectionProperties().isIncludeCustomerDetailInReason();
+            throw QueryExceptionHandler.createException(includeCustomerDetail, sql, queryId, ex);
+        }
         return true;
     }
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         log.debug("Entering executeQuery");
-        resultSet = executeAdaptiveQuery(sql);
-        return resultSet;
-    }
-
-    private DataCloudResultSet executeAdaptiveQuery(String sql) throws SQLException {
         val includeCustomerDetail = connection.getConnectionProperties().isIncludeCustomerDetailInReason();
         try {
-            val queryTimeout = QueryTimeout.of(
-                    statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
-            val client = getQueryClient(queryTimeout);
-            val queryParam = targetMaxRows > 0
-                    ? client.getAdaptiveRowLimitQueryParams(sql, targetMaxRows, targetMaxBytes)
-                    : client.getAdaptiveQueryParams(sql);
-            val stub = client.getStub()
-                    .withDeadlineAfter(
-                            queryTimeout.getLocalDeadline().getRemaining().toMillis(), TimeUnit.MILLISECONDS);
-            val iterator = QueryResultIterator.of(stub, queryParam);
-            queryHandle = iterator;
-            // Ensure query status is initialized
-            iterator.hasNext();
+            val iterator = executeAdaptiveQuery(sql);
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     iterator, includeCustomerDetail, iterator.getQueryStatus().getQueryId(), sql);
             resultSet =
@@ -131,6 +123,23 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             }
             throw QueryExceptionHandler.createException(includeCustomerDetail, sql, queryId, ex);
         }
+    }
+
+    private QueryResultIterator executeAdaptiveQuery(String sql) throws SQLException {
+        val queryTimeout = QueryTimeout.of(
+                statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
+        val client = getQueryClient(queryTimeout);
+        val queryParam = targetMaxRows > 0
+                ? client.getAdaptiveRowLimitQueryParams(sql, targetMaxRows, targetMaxBytes)
+                : client.getAdaptiveQueryParams(sql);
+        val stub = client.getStub()
+                .withDeadlineAfter(
+                        queryTimeout.getLocalDeadline().getRemaining().toMillis(), TimeUnit.MILLISECONDS);
+        val iterator = QueryResultIterator.of(stub, queryParam);
+        queryHandle = iterator;
+        // Ensure query status is initialized
+        iterator.hasNext();
+        return iterator;
     }
 
     protected void executeAsyncQueryInternal(String sql) throws SQLException {
@@ -188,7 +197,8 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     public void setMaxFieldSize(int max) {}
 
     public void clearResultSetConstraints() throws SQLException {
-        setResultSetConstraints(0, RowRangeIterator.HYPER_MAX_ROW_LIMIT_BYTE_SIZE);
+        targetMaxRows = 0;
+        targetMaxBytes = 0;
     }
 
     /**
