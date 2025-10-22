@@ -54,7 +54,7 @@ public class ElapsedLoggerTest {
 
         verify(logger, times(1)).info(eq("Starting name={}"), eq(operationName));
         verify(logger, times(1))
-                .error(
+                .info(
                         eq("Failed name={}, millis={}, duration={}"),
                         eq(operationName),
                         anyLong(),
