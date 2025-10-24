@@ -1,0 +1,155 @@
+name: Release Notifications
+
+on:
+  release:
+    types: [published]
+  workflow_run:
+    workflows: ["Build, test, and publish to Maven Central"]
+    types: [completed]
+
+jobs:
+  notify-release:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    steps:
+      - name: Get release information
+        id: release_info
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag_name=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            echo "version=${${{ github.event.release.tag_name }}#v}" >> $GITHUB_OUTPUT
+            echo "release_url=${{ github.event.release.html_url }}" >> $GITHUB_OUTPUT
+          else
+            # Extract from workflow run context
+            echo "tag_name=latest" >> $GITHUB_OUTPUT
+            echo "version=latest" >> $GITHUB_OUTPUT
+            echo "release_url=https://github.com/${{ github.repository }}/releases/latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create release announcement
+        id: announcement
+        run: |
+          VERSION="${{ steps.release_info.outputs.version }}"
+          TAG_NAME="${{ steps.release_info.outputs.tag_name }}"
+          RELEASE_URL="${{ steps.release_info.outputs.release_url }}"
+          
+          cat > announcement.md << EOF
+          🚀 **Data Cloud JDBC Driver v$VERSION Released!**
+          
+          A new version of the Data Cloud JDBC Driver has been published to Maven Central.
+          
+          **What's New:**
+          - Check the [release notes]($RELEASE_URL) for detailed changes
+          - All changes follow semantic versioning principles
+          
+          **Installation:**
+          \`\`\`xml
+          <dependency>
+            <groupId>com.salesforce.datacloud</groupId>
+            <artifactId>jdbc</artifactId>
+            <version>$VERSION</version>
+          </dependency>
+          \`\`\`
+          
+          **Resources:**
+          - 📖 [Documentation](https://developer.salesforce.com/docs/data/data-cloud-query-guide/guide/data-cloud-jdbc.html)
+          - 🐛 [Report Issues](https://github.com/forcedotcom/datacloud-jdbc/issues)
+          - 💬 [Discussions](https://github.com/forcedotcom/datacloud-jdbc/discussions)
+          
+          ---
+          *This release was automatically generated and published by our CI/CD pipeline.*
+          EOF
+          
+          echo "announcement<<EOF" >> $GITHUB_OUTPUT
+          cat announcement.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post to GitHub Discussions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const announcement = `${{ steps.announcement.outputs.announcement }}`;
+            
+            try {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
+                body: announcement
+              });
+              
+              console.log('Posted release announcement as commit comment');
+            } catch (error) {
+              console.log('Could not post commit comment:', error.message);
+            }
+
+      - name: Update README with latest version
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.release_info.outputs.version }}';
+            const { data: readme } = await github.rest.repos.getContent({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: 'README.md'
+            });
+            
+            const content = Buffer.from(readme.content, 'base64').toString();
+            
+            // Update version badge if it exists
+            const updatedContent = content.replace(
+              /!\[version\]\(https:\/\/img\.shields\.io\/badge\/version-[^-]+-blue\)/,
+              `![version](https://img.shields.io/badge/version-${version}-blue)`
+            );
+            
+            if (updatedContent !== content) {
+              await github.rest.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: 'README.md',
+                message: `Update version badge to ${version}`,
+                content: Buffer.from(updatedContent).toString('base64'),
+                sha: readme.sha
+              });
+              
+              console.log(`Updated README version badge to ${version}`);
+            }
+
+
+  notify-failure:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Notify release failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workflowRun = context.payload.workflow_run;
+            const issueBody = `## 🚨 Release Failed
+            
+            The automated release process has failed for commit \`${workflowRun.head_sha}\`.
+            
+            **Workflow Details:**
+            - Workflow: ${workflowRun.name}
+            - Run ID: ${workflowRun.id}
+            - Commit: ${workflowRun.head_sha}
+            - Branch: ${workflowRun.head_branch}
+            - [View Logs](${workflowRun.html_url})
+            
+            **Next Steps:**
+            1. Review the workflow logs to identify the issue
+            2. Fix the problem and retry the release
+            3. Close this issue once resolved
+            
+            ---
+            *This issue was automatically created by the release notification workflow.*`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Release failed for commit ${workflowRun.head_sha.substring(0, 7)}`,
+              body: issueBody,
+              labels: ['bug', 'release', 'ci']
+            });
+            
+            console.log('Created failure notification issue');
