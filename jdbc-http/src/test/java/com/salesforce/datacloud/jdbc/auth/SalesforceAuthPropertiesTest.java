@@ -77,7 +77,6 @@ class SalesforceAuthPropertiesTest {
     void parsesPrivateKeyAuthenticationProperties() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
-        props.setProperty("clientSecret", TEST_CLIENT_SECRET);
         props.setProperty("userName", TEST_USER_NAME);
         props.setProperty("privateKey", FAKE_PRIVATE_KEY);
         props.setProperty("dataspace", TEST_DATASPACE);
@@ -88,10 +87,22 @@ class SalesforceAuthPropertiesTest {
         assertThat(authProps.getAuthenticationMode())
                 .isEqualTo(SalesforceAuthProperties.AuthenticationMode.PRIVATE_KEY);
         assertThat(authProps.getClientId()).isEqualTo(TEST_CLIENT_ID);
-        assertThat(authProps.getClientSecret()).isEqualTo(TEST_CLIENT_SECRET);
         assertThat(authProps.getUserName()).isEqualTo(TEST_USER_NAME);
         assertThat(authProps.getPrivateKey()).isNotNull();
         assertThat(authProps.getDataspace()).isEqualTo(TEST_DATASPACE);
+    }
+
+    @Test
+    void rejectsClientSecretForPrivateKeyAuthenticationMode() {
+        Properties props = new Properties();
+        props.setProperty("clientId", TEST_CLIENT_ID);
+        props.setProperty("clientSecret", TEST_CLIENT_SECRET); // clientSecret should NOT be provided
+        props.setProperty("userName", TEST_USER_NAME);
+        props.setProperty("privateKey", FAKE_PRIVATE_KEY);
+
+        assertThatThrownBy(() -> SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("clientSecret is not allowed for PRIVATE_KEY/JWT authentication mode");
     }
 
     @Test
@@ -162,7 +173,6 @@ class SalesforceAuthPropertiesTest {
     void toPropertiesRoundtripPrivateKeyAuthentication() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
-        props.setProperty("clientSecret", TEST_CLIENT_SECRET);
         props.setProperty("userName", TEST_USER_NAME);
         props.setProperty("privateKey", FAKE_PRIVATE_KEY);
         props.setProperty("dataspace", TEST_DATASPACE);
@@ -220,7 +230,6 @@ class SalesforceAuthPropertiesTest {
     void rejectsInvalidPrivateKeyFormat() {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
-        props.setProperty("clientSecret", TEST_CLIENT_SECRET);
         props.setProperty("userName", TEST_USER_NAME);
         props.setProperty("privateKey", "invalid-key-format");
 
@@ -233,7 +242,6 @@ class SalesforceAuthPropertiesTest {
     void rejectsCorruptedPrivateKey() {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
-        props.setProperty("clientSecret", TEST_CLIENT_SECRET);
         props.setProperty("userName", TEST_USER_NAME);
         props.setProperty(
                 "privateKey", "-----BEGIN PRIVATE KEY-----\ninvalid-base64-content\n-----END PRIVATE KEY-----");
@@ -278,7 +286,6 @@ class SalesforceAuthPropertiesTest {
     void privateKeySerializationRoundtrip() throws Exception {
         Properties originalProps = new Properties();
         originalProps.setProperty("clientId", TEST_CLIENT_ID);
-        originalProps.setProperty("clientSecret", TEST_CLIENT_SECRET);
         originalProps.setProperty("userName", TEST_USER_NAME);
         originalProps.setProperty("privateKey", FAKE_PRIVATE_KEY);
 

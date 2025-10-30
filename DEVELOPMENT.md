@@ -77,7 +77,7 @@ In addition, the `salesforce-datacloud` driver supports:
 
 **Authentication Properties:**
 - `clientId`: OAuth client ID (required)
-- `clientSecret`: OAuth client secret (required)
+- `clientSecret`: OAuth client secret (required for password and refresh token auth)
 - `dataspace`: Data space identifier (optional)
 - `userName`: Username for authentication (required for password auth and private key auth)
 - `password`: Password for password authentication (required for password auth)

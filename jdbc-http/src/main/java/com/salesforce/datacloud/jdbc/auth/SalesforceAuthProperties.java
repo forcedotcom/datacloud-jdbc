@@ -37,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
  * - userName: Username for password/private key authentication
  * - password: Password for password authentication
  * - privateKey: Private key for JWT authentication
- * - clientSecret: OAuth client secret (required)
+ * - clientSecret: OAuth client secret (required for PASSWORD and REFRESH_TOKEN modes, not allowed for PRIVATE_KEY/JWT mode)
  * - clientId: OAuth client ID (required)
  * - dataspace: Data space identifier, default is null
  * - refreshToken: Refresh token for token-based authentication
@@ -102,7 +102,6 @@ public class SalesforceAuthProperties {
 
         // Required fields
         builder.clientId(takeRequired(props, AUTH_CLIENT_ID));
-        builder.clientSecret(takeRequired(props, AUTH_CLIENT_SECRET));
 
         // Optional fields
         builder.dataspace(takeOptional(props, AUTH_DATASPACE).orElse(null));
@@ -111,14 +110,23 @@ public class SalesforceAuthProperties {
         if (props.containsKey(AUTH_USER_NAME) && props.containsKey(AUTH_PASSWORD)) {
             builder.authenticationMode(AuthenticationMode.PASSWORD)
                     .userName(takeRequired(props, AUTH_USER_NAME))
-                    .password(takeRequired(props, AUTH_PASSWORD));
+                    .password(takeRequired(props, AUTH_PASSWORD))
+                    .clientSecret(takeRequired(props, AUTH_CLIENT_SECRET));
         } else if (props.containsKey(AUTH_USER_NAME) && props.containsKey(AUTH_PRIVATE_KEY)) {
+            // JWT Bearer Token Flow does not require clientSecret and it should not be provided
+            if (props.containsKey(AUTH_CLIENT_SECRET)) {
+                throw new SQLException(
+                        "clientSecret is not allowed for PRIVATE_KEY/JWT authentication mode. "
+                                + "JWT Bearer Token Flow does not require clientSecret.",
+                        "28000");
+            }
             builder.authenticationMode(AuthenticationMode.PRIVATE_KEY);
             builder.userName(takeRequired(props, AUTH_USER_NAME));
             builder.privateKey(parsePrivateKey(takeRequired(props, AUTH_PRIVATE_KEY)));
         } else if (props.containsKey(AUTH_REFRESH_TOKEN)) {
             builder.authenticationMode(AuthenticationMode.REFRESH_TOKEN);
             builder.refreshToken(takeRequired(props, AUTH_REFRESH_TOKEN));
+            builder.clientSecret(takeRequired(props, AUTH_CLIENT_SECRET));
             // We still accept an optional userName. This might show up
             // in the `DatabaseMetadata.getUserName` call.
             builder.userName(takeOptional(props, AUTH_USER_NAME).orElse(null));
@@ -146,7 +154,6 @@ public class SalesforceAuthProperties {
         Properties props = new Properties();
 
         props.setProperty(AUTH_CLIENT_ID, clientId);
-        props.setProperty(AUTH_CLIENT_SECRET, clientSecret);
 
         if (dataspace != null) {
             props.setProperty(AUTH_DATASPACE, dataspace);
@@ -158,12 +165,14 @@ public class SalesforceAuthProperties {
         switch (authenticationMode) {
             case PASSWORD:
                 props.setProperty(AUTH_PASSWORD, password);
+                props.setProperty(AUTH_CLIENT_SECRET, clientSecret);
                 break;
             case PRIVATE_KEY:
                 props.setProperty(AUTH_PRIVATE_KEY, serializePrivateKey(privateKey));
                 break;
             case REFRESH_TOKEN:
                 props.setProperty(AUTH_REFRESH_TOKEN, refreshToken);
+                props.setProperty(AUTH_CLIENT_SECRET, clientSecret);
                 break;
         }
 

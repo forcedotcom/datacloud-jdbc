@@ -46,7 +46,6 @@ class DataCloudTokenProviderTest {
     static Properties propertiesForPrivateKey(String userName, String privateKey) {
         val properties = new Properties();
         properties.setProperty(SalesforceAuthProperties.AUTH_CLIENT_ID, "clientId");
-        properties.setProperty(SalesforceAuthProperties.AUTH_CLIENT_SECRET, "clientSecret");
         properties.setProperty(SalesforceAuthProperties.AUTH_USER_NAME, userName);
         properties.setProperty(SalesforceAuthProperties.AUTH_PRIVATE_KEY, privateKey);
         return properties;

@@ -101,7 +101,6 @@ Properties properties = new Properties();
 properties.put("user", "${userName}");
 properties.put("privateKey", "${privateKey}");
 properties.put("clientId", "${clientId}");
-properties.put("clientSecret", "${clientSecret}");
 ```
 
 #### refresh token authentication:

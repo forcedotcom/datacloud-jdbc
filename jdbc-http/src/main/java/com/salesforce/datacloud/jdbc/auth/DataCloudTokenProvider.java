@@ -126,7 +126,6 @@ public class DataCloudTokenProvider {
         builder.url(settings.getLoginUrl());
         builder.suffix(AUTHENTICATE_URL);
         builder.bodyEntry("client_id", settings.getClientId());
-        builder.bodyEntry("client_secret", settings.getClientSecret());
 
         switch (settings.getAuthenticationMode()) {
             case PASSWORD:
@@ -134,16 +133,18 @@ public class DataCloudTokenProvider {
                 builder.bodyEntry("grant_type", "password");
                 builder.bodyEntry("username", settings.getUserName());
                 builder.bodyEntry("password", settings.getPassword());
+                builder.bodyEntry("client_secret", settings.getClientSecret());
                 break;
             case PRIVATE_KEY:
-                // https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_jwt_flow.htm
-                builder.bodyEntry("grant_type", "urn:salesforce:grant-type:external:cdp");
+                // https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_jwt_flow.htm&type=5
+                builder.bodyEntry("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
                 builder.bodyEntry("assertion", buildJwt());
                 break;
             case REFRESH_TOKEN:
                 // https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_refresh_token_flow.htm
                 builder.bodyEntry("grant_type", "refresh_token");
                 builder.bodyEntry("refresh_token", settings.getRefreshToken());
+                builder.bodyEntry("client_secret", settings.getClientSecret());
                 break;
         }
 
@@ -161,8 +162,8 @@ public class DataCloudTokenProvider {
                     .issuer(settings.getClientId())
                     .subject(settings.getUserName())
                     .audience()
-                    .add(settings.getLoginUrl().getHost())
-                    .and()
+                    .single(settings.getLoginUrl().getScheme() + "://"
+                            + settings.getLoginUrl().getHost())
                     .issuedAt(Date.from(now))
                     .expiration(Date.from(now.plus(2L, ChronoUnit.MINUTES)))
                     .signWith(settings.getPrivateKey(), Jwts.SIG.RS256)
