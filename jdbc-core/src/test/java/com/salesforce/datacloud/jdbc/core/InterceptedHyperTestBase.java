@@ -107,7 +107,7 @@ public class InterceptedHyperTestBase {
                 HyperServiceGrpc.HyperServiceBlockingStub::getQueryResult);
 
         val conn = DataCloudConnection.of(
-                JdbcDriverStubProvider.of(mocked), ConnectionProperties.defaultProperties(), "", null);
+                JdbcDriverStubProvider.of(mocked), ConnectionProperties.defaultProperties(), null);
         connections.add(conn);
         return conn;
     }

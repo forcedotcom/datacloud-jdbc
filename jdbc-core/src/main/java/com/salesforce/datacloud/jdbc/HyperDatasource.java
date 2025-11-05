@@ -4,8 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc;
 
-import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptional;
-
 import com.salesforce.datacloud.jdbc.core.ConnectionProperties;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.GrpcChannelProperties;
@@ -51,7 +49,7 @@ public class HyperDatasource implements DataSource {
 
     @Override
     public Connection getConnection() throws SQLException {
-        return createConnection(host, port, connectionProperties, grpcChannelProperties, dataspace, /*jdbcUrl=*/ null);
+        return createConnection(host, port, connectionProperties, grpcChannelProperties, /*jdbcUrl=*/ null);
     }
 
     /**
@@ -85,11 +83,10 @@ public class HyperDatasource implements DataSource {
             jdbcUrl.addParametersToProperties(properties);
             val connectionProperties = ConnectionProperties.ofDestructive(properties);
             val grpcChannelProperties = GrpcChannelProperties.ofDestructive(properties);
-            String dataspace = takeOptional(properties, "dataspace").orElse("");
             PropertyParsingUtils.validateRemainingProperties(properties);
 
             // Setup the connection
-            return createConnection(host, port, connectionProperties, grpcChannelProperties, dataspace, jdbcUrl);
+            return createConnection(host, port, connectionProperties, grpcChannelProperties, jdbcUrl);
         } catch (SQLException e) {
             log.error("Failed to connect with URL {}: {}", url, e.getMessage(), e);
             throw e;
@@ -107,14 +104,13 @@ public class HyperDatasource implements DataSource {
             int port,
             @NonNull ConnectionProperties connectionProperties,
             @NonNull GrpcChannelProperties grpcChannelProperties,
-            @NonNull String dataspace,
             JdbcURL jdbcUrl)
             throws SQLException {
         port = port == -1 ? 7483 : port;
         ManagedChannelBuilder<?> builder =
                 ManagedChannelBuilder.forAddress(host, port).usePlaintext();
         JdbcDriverStubProvider stubProvider = JdbcDriverStubProvider.of(builder, grpcChannelProperties);
-        return DataCloudConnection.of(stubProvider, connectionProperties, dataspace, jdbcUrl);
+        return DataCloudConnection.of(stubProvider, connectionProperties, jdbcUrl);
     }
 
     @Override

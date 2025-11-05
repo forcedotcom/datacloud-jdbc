@@ -54,7 +54,6 @@ public class CachedChannelsTest {
             try (DataCloudConnection conn = DataCloudConnection.of(
                     new InterceptorStubProvider(managedChannel, interceptor),
                     ConnectionProperties.ofDestructive(properties),
-                    "",
                     null)) {
                 try (Statement stmt = conn.createStatement()) {
                     ResultSet rs = stmt.executeQuery("SHOW external_client_context");
@@ -73,7 +72,6 @@ public class CachedChannelsTest {
             try (DataCloudConnection conn = DataCloudConnection.of(
                     new InterceptorStubProvider(managedChannel, interceptor2),
                     ConnectionProperties.ofDestructive(properties),
-                    "",
                     null)) {
                 try (Statement stmt = conn.createStatement()) {
                     ResultSet rs = stmt.executeQuery("SHOW external_client_context");

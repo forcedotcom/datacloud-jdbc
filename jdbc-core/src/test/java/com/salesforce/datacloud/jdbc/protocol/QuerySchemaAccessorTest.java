@@ -29,7 +29,7 @@ class QuerySchemaAccessorTest {
     @SneakyThrows
     void getArrowSchema_shouldReturnSchema() {
         LocalHyperTestBase.assertWithStubProvider(provider -> {
-            try (val connection = DataCloudConnection.of(provider, ConnectionProperties.defaultProperties(), "", null);
+            try (val connection = DataCloudConnection.of(provider, ConnectionProperties.defaultProperties(), null);
                     val stmt = connection.createStatement()) {
                 // Submit a query to get query id
                 val result = (DataCloudResultSet) stmt.executeQuery("SELECT 1 as a");

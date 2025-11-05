@@ -19,7 +19,7 @@ public class PropertyBasedHeadersTests {
     public void testEmptyPropertiesOnlyContainsWorkload() throws SQLException {
         val properties = new Properties();
         val connectionProperties = ConnectionProperties.ofDestructive(properties);
-        val metadata = DataCloudConnection.deriveHeadersFromProperties("", connectionProperties);
+        val metadata = DataCloudConnection.deriveHeadersFromProperties(connectionProperties);
         assertThat(metadata.keys()).containsExactly("x-hyperdb-workload");
         assertThat(metadata.get(Metadata.Key.of("x-hyperdb-workload", ASCII_STRING_MARSHALLER)))
                 .isEqualTo("jdbcv3");
@@ -32,13 +32,11 @@ public class PropertyBasedHeadersTests {
         properties.setProperty("externalClientContext", "ctx");
         val connectionProperties = ConnectionProperties.ofDestructive(properties);
 
-        val metadata = DataCloudConnection.deriveHeadersFromProperties("", connectionProperties);
+        val metadata = DataCloudConnection.deriveHeadersFromProperties(connectionProperties);
         assertThat(metadata.keys())
-                .containsAll(ImmutableSet.of("x-hyperdb-workload", "dataspace", "x-hyperdb-external-client-context"));
+                .containsAll(ImmutableSet.of("x-hyperdb-workload", "x-hyperdb-external-client-context"));
         assertThat(metadata.get(Metadata.Key.of("x-hyperdb-workload", ASCII_STRING_MARSHALLER)))
                 .isEqualTo("wl");
-        assertThat(metadata.get(Metadata.Key.of("dataspace", ASCII_STRING_MARSHALLER)))
-                .isEqualTo("ds");
         assertThat(metadata.get(Metadata.Key.of("x-hyperdb-external-client-context", ASCII_STRING_MARSHALLER)))
                 .isEqualTo("ctx");
     }

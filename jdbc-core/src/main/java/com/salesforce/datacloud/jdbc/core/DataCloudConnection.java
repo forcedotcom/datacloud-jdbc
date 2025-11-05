@@ -76,8 +76,6 @@ public class DataCloudConnection implements Connection {
     // Returned by DatabaseMetadata.getUserName().
     private final String userName;
 
-    private final String dataspace;
-
     @NonNull private final ThrowingJdbcSupplier<String> lakehouseSupplier;
 
     @NonNull private final ThrowingJdbcSupplier<List<String>> dataspacesSupplier;
@@ -109,7 +107,6 @@ public class DataCloudConnection implements Connection {
             @NonNull ConnectionProperties properties,
             JdbcURL jdbcUrl,
             @NonNull String userName,
-            @NonNull String dataspace,
             @NonNull ThrowingJdbcSupplier<String> lakehouseSupplier,
             @NonNull ThrowingJdbcSupplier<List<String>> dataspacesSupplier)
             throws SQLException {
@@ -120,7 +117,6 @@ public class DataCloudConnection implements Connection {
                             .connectionProperties(properties)
                             .jdbcUrl(jdbcUrl)
                             .userName(userName)
-                            .dataspace(dataspace)
                             .lakehouseSupplier(lakehouseSupplier)
                             .dataspacesSupplier(dataspacesSupplier)
                             .build();
@@ -133,12 +129,9 @@ public class DataCloudConnection implements Connection {
      * Convenience overload without `userName`, `lakehouseSupplier`, `dataspacesSupplier`.
      */
     public static DataCloudConnection of(
-            @NonNull HyperGrpcStubProvider stubProvider,
-            @NonNull ConnectionProperties properties,
-            @NonNull String dataspace,
-            JdbcURL jdbcUrl)
+            @NonNull HyperGrpcStubProvider stubProvider, @NonNull ConnectionProperties properties, JdbcURL jdbcUrl)
             throws SQLException {
-        return of(stubProvider, properties, jdbcUrl, "", dataspace, () -> "", () -> Arrays.asList());
+        return of(stubProvider, properties, jdbcUrl, "", () -> "", () -> Arrays.asList());
     }
 
     /**
@@ -149,7 +142,7 @@ public class DataCloudConnection implements Connection {
         HyperServiceBlockingStub stub = stubProvider.getStub();
 
         // Attach headers derived from properties to the stub
-        val metadata = deriveHeadersFromProperties(dataspace, connectionProperties);
+        val metadata = deriveHeadersFromProperties(connectionProperties);
         stub = stub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
 
         // The interceptor will enforce the network timeout per gRPC call
@@ -161,7 +154,7 @@ public class DataCloudConnection implements Connection {
         return stub;
     }
 
-    static Metadata deriveHeadersFromProperties(String dataspace, ConnectionProperties connectionProperties) {
+    static Metadata deriveHeadersFromProperties(ConnectionProperties connectionProperties) {
         Metadata metadata = new Metadata();
         metadata.put(Metadata.Key.of("User-Agent", Metadata.ASCII_STRING_MARSHALLER), formatDriverInfo());
         // We always add a workload name, if the property is not set we use the default value
@@ -172,9 +165,6 @@ public class DataCloudConnection implements Connection {
             metadata.put(
                     Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER),
                     connectionProperties.getExternalClientContext());
-        }
-        if (!dataspace.isEmpty()) {
-            metadata.put(Metadata.Key.of("ctx-dataspace-ds_name", Metadata.ASCII_STRING_MARSHALLER), dataspace);
         }
         return metadata;
     }

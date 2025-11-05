@@ -100,7 +100,7 @@ class DataCloudConnectionTest extends InterceptedHyperTestBase {
     @Test
     void testDriverInterceptorsAreAddedWhenStubProviderIsUsed() {
         val stubProvider = new TestStubProvider();
-        val connection = DataCloudConnection.of(stubProvider, ConnectionProperties.defaultProperties(), "", null);
+        val connection = DataCloudConnection.of(stubProvider, ConnectionProperties.defaultProperties(), null);
         connection.getStub();
         // Interceptors should have been added to set the default workload header (x-hyperdb-workload)
         verify(stubProvider.stub).withInterceptors(any(ClientInterceptor[].class));

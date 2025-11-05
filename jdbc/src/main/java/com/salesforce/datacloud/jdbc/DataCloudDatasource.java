@@ -157,7 +157,6 @@ public class DataCloudDatasource implements DataSource {
                 connectionProperties,
                 jdbcUrl,
                 authProperties.getUserName(),
-                authProperties.getDataspace(),
                 tokenProvider::getLakehouseName,
                 dataspaceClient);
     }

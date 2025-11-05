@@ -39,7 +39,7 @@ class DataCloudConnectionHeadersTest {
     @Test
     void deriveHeaders_defaultsOnlyWorkload() throws SQLException {
         ConnectionProperties cp = ConnectionProperties.ofDestructive(new Properties());
-        Metadata md = DataCloudConnection.deriveHeadersFromProperties("", cp);
+        Metadata md = DataCloudConnection.deriveHeadersFromProperties(cp);
         assertThat(md.keys()).containsExactly("user-agent", "x-hyperdb-workload");
     }
 
@@ -50,19 +50,13 @@ class DataCloudConnectionHeadersTest {
         props.setProperty("externalClientContext", "{}");
         ConnectionProperties cp = ConnectionProperties.ofDestructive(props);
 
-        Metadata md = DataCloudConnection.deriveHeadersFromProperties("ds", cp);
+        Metadata md = DataCloudConnection.deriveHeadersFromProperties(cp);
         assertThat(md.keys())
-                .containsExactlyInAnyOrder(
-                        "user-agent",
-                        "x-hyperdb-workload",
-                        "x-hyperdb-external-client-context",
-                        "ctx-dataspace-ds_name");
+                .containsExactlyInAnyOrder("user-agent", "x-hyperdb-workload", "x-hyperdb-external-client-context");
         assertThat(md.get(Metadata.Key.of("x-hyperdb-workload", Metadata.ASCII_STRING_MARSHALLER)))
                 .isEqualTo("wl");
         assertThat(md.get(Metadata.Key.of("x-hyperdb-external-client-context", Metadata.ASCII_STRING_MARSHALLER)))
                 .isEqualTo("{}");
-        assertThat(md.get(Metadata.Key.of("ctx-dataspace-ds_name", Metadata.ASCII_STRING_MARSHALLER)))
-                .isEqualTo("ds");
     }
 
     @Test
@@ -70,7 +64,7 @@ class DataCloudConnectionHeadersTest {
         Properties props = new Properties();
         props.setProperty("workload", "wl");
         try (DataCloudConnection conn =
-                DataCloudConnection.of(new TestStubProvider(), ConnectionProperties.ofDestructive(props), "", null)) {
+                DataCloudConnection.of(new TestStubProvider(), ConnectionProperties.ofDestructive(props), null)) {
             conn.setNetworkTimeout(null, 1000);
             assertThat(conn.getStub()).isNotNull();
         }

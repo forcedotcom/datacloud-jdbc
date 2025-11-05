@@ -220,7 +220,6 @@ public class JDBCLimitsTest {
         try (val connection = DataCloudConnection.of(
                 new LargeHeaderChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), true),
                 ConnectionProperties.defaultProperties(),
-                "dataspace/unused",
                 null)) {
             try (val stmt = connection.createStatement()) {
                 // We just verify that we are able to get a full response
@@ -234,7 +233,6 @@ public class JDBCLimitsTest {
         try (val connection = DataCloudConnection.of(
                 new LargeHeaderChannelConfigStubProvider(server.getPort(), StringUtils.leftPad(" ", 100 * 1024), false),
                 ConnectionProperties.defaultProperties(),
-                "dataspace/unused",
                 null)) {
             try (val stmt = connection.createStatement()) {
                 assertThatExceptionOfType(SQLException.class).isThrownBy(() -> {

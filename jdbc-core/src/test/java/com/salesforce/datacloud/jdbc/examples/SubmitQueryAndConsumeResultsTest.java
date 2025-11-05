@@ -52,7 +52,7 @@ public class SubmitQueryAndConsumeResultsTest {
                 ConnectionProperties.builder().workload("test-workload").build();
 
         // Use the JDBC Driver interface
-        try (DataCloudConnection conn = DataCloudConnection.of(stubProvider, connectionProperties, "", null)) {
+        try (DataCloudConnection conn = DataCloudConnection.of(stubProvider, connectionProperties, null)) {
             try (Statement stmt = conn.createStatement()) {
                 ResultSet rs = stmt.executeQuery("SELECT s FROM generate_series(1,10) s");
                 while (rs.next()) {

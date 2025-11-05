@@ -71,7 +71,7 @@ public class LocalHyperTestBase implements BeforeAllCallback {
                 .intercept(interceptor);
         val stubProvider = JdbcDriverStubProvider.of(channel);
 
-        return DataCloudConnection.of(stubProvider, ConnectionProperties.defaultProperties(), "", null);
+        return DataCloudConnection.of(stubProvider, ConnectionProperties.defaultProperties(), null);
     }
 
     @SneakyThrows

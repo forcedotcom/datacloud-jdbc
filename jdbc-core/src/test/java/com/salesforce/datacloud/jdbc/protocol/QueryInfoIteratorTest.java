@@ -27,7 +27,7 @@ class QueryInfoIteratorTest {
     @SneakyThrows
     void queryInfoIterator_shouldIterateOverQueryInfoMessages() {
         LocalHyperTestBase.assertWithStubProvider(provider -> {
-            try (val connection = DataCloudConnection.of(provider, ConnectionProperties.defaultProperties(), "", null);
+            try (val connection = DataCloudConnection.of(provider, ConnectionProperties.defaultProperties(), null);
                     val stmt = connection.createStatement()) {
                 // Submit a long-running query to get query id
                 ((DataCloudStatement) stmt).executeAsyncQuery("SELECT pg_sleep(10)");
@@ -54,7 +54,7 @@ class QueryInfoIteratorTest {
     @SneakyThrows
     void queryInfoIterator_shouldIterateUntilQueryFinishes() {
         LocalHyperTestBase.assertWithStubProvider(provider -> {
-            try (val connection = DataCloudConnection.of(provider, ConnectionProperties.defaultProperties(), "", null);
+            try (val connection = DataCloudConnection.of(provider, ConnectionProperties.defaultProperties(), null);
                     val stmt = connection.createStatement()) {
                 // Submit a simple query that completes quickly
                 val result = (DataCloudResultSet) stmt.executeQuery("SELECT 1");
