@@ -5,6 +5,8 @@
 With the Salesforce Data 360 JDBC driver you can efficiently query millions of rows of data with low latency, and perform bulk data extractions.
 This driver is read-only, forward-only, and requires Java 8 or greater. It uses the new [Data 360 Query API SQL syntax](https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/dc-sql-reference/data-cloud-sql-context.html).
 
+Download the jar here: [![Maven Central Version](https://img.shields.io/maven-central/v/com.salesforce.datacloud/jdbc)](https://repo1.maven.org/maven2/com/salesforce/datacloud/jdbc/)
+
 ## Example usage
 
 We have a suite of tests that demonstrate preferred usage patterns when using APIs that are outside of the JDBC specification.
