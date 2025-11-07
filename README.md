@@ -1,9 +1,9 @@
-# Salesforce DataCloud JDBC Driver
+# Salesforce Data 360 JDBC Driver
 
 [![codecov](https://codecov.io/github/forcedotcom/datacloud-jdbc/graph/badge.svg?token=FNEAWV3I42)](https://codecov.io/github/forcedotcom/datacloud-jdbc)
 
-With the Salesforce Data Cloud JDBC driver you can efficiently query millions of rows of data with low latency, and perform bulk data extractions.
-This driver is read-only, forward-only, and requires Java 8 or greater. It uses the new [Data Cloud Query API SQL syntax](https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/dc-sql-reference/data-cloud-sql-context.html).
+With the Salesforce Data 360 JDBC driver you can efficiently query millions of rows of data with low latency, and perform bulk data extractions.
+This driver is read-only, forward-only, and requires Java 8 or greater. It uses the new [Data 360 Query API SQL syntax](https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/dc-sql-reference/data-cloud-sql-context.html).
 
 ## Example usage
 
