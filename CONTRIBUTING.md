@@ -66,6 +66,91 @@ Issues labelled `good first contribution`.
 
 > **NOTE**: Be sure to [sync your fork](https://help.github.com/articles/syncing-a-fork/) before making a pull request.
 
+# Commit Message Format
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) to automate versioning and release management. Please format your commit messages accordingly.
+
+## Commit Message Structure
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+- **Type** (required): The type of change (`feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`)
+- **Scope** (optional): The scope of the change (e.g., component name)
+- **Subject** (required): A brief description of the change
+- **Body** (optional): Detailed explanation of the change
+- **Footer** (optional): Issue references
+
+## Commit Types and Version Impact
+
+| Commit Type | Version Bump | Example |
+|------------|--------------|---------|
+| `feat:` | Minor (0.41.0 → 0.42.0) | `feat: add connection pooling` |
+| `fix:` | Patch (0.41.0 → 0.41.1) | `fix: resolve memory leak in query execution` |
+| `feat!:` | Major (0.41.0 → 1.0.0) | `feat!: remove deprecated API` |
+| `docs:`, `chore:`, `style:`, `refactor:`, `test:` | No release | `chore: update dependencies` |
+
+## Examples
+
+```
+feat: add support for batch query execution
+
+fix(jdbc-core): resolve null pointer exception in metadata retrieval
+
+feat!: remove deprecated ResultSet methods
+
+chore: update Gradle to 8.5
+```
+
+# Release Process
+
+This project uses [Release Please](https://github.com/googleapis/release-please) to automate releases based on conventional commits.
+
+## How Releases Work
+
+### 1. Release PR Creation
+When conventional commits are merged to `main`, Release Please automatically creates or updates a **release PR** that includes:
+- Version bump in `gradle.properties` (revision=X.Y.Z)
+- Updated `CHANGELOG.md` with all changes since last release
+- Updated `.release-please-manifest.json`
+
+### 2. Release PR Review and Merge
+- The release PR is labeled with `autorelease: pending`
+- Team reviews the version bump and changelog
+- When merged, Release Please automatically:
+  - Creates a Git tag (e.g., `0.42.0`)
+  - Creates a GitHub release with changelog
+  - Updates version files
+
+### 3. Maven Central Publishing
+- GitHub release triggers the `release.yml` workflow
+- Builds, tests, and publishes to Maven Central via `reusable-build-publish.yml`
+- Updates GitHub release with Maven Central publication status
+
+### 4. Release Announcement
+- `release-notifications.yml` workflow announces the release
+
+## Release Workflow
+
+```
+1. Developer merges PR with conventional commit (e.g., "feat: add feature")
+   ↓
+2. Release Please creates/updates release PR
+   ↓
+3. Team reviews and merges release PR
+   ↓
+4. Release Please creates GitHub release
+   ↓
+5. release.yml publishes to Maven Central
+   ↓
+6. release-notifications.yml announces release
+```
+
 
 # Code of Conduct
 Please follow our [Code of Conduct](CODE_OF_CONDUCT.md).

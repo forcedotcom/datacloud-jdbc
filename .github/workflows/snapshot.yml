@@ -48,7 +48,7 @@ jobs:
               - Status: ${status}
               
               **Next Steps:**
-              - If this commit contains changes that warrant a release, the auto-tag workflow will create a new version
+              - If this commit contains changes that warrant a release, Release Please will create a release PR
               - Check the [releases page](https://github.com/${{ github.repository }}/releases) for the latest release
               
               ---
