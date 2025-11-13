@@ -8,7 +8,7 @@ import static com.google.common.collect.Maps.immutableEntry;
 import static com.salesforce.datacloud.jdbc.config.QueryResources.getColumnsQueryText;
 import static com.salesforce.datacloud.jdbc.config.QueryResources.getSchemasQueryText;
 import static com.salesforce.datacloud.jdbc.config.QueryResources.getTablesQueryText;
-import static com.salesforce.datacloud.jdbc.util.ArrowUtils.convertJDBCMetadataToAvaticaColumns;
+import static com.salesforce.datacloud.jdbc.metadata.SqlType.*;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -19,18 +19,14 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
+
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.calcite.avatica.AvaticaResultSet;
-import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.avatica.Meta;
-import org.apache.calcite.avatica.QueryState;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.commons.lang3.StringUtils;
 
@@ -61,23 +57,24 @@ final class QueryMetadataUtil {
     private static final int AUTO_INCREMENT_INDEX = 22;
     private static final int GENERATED_COLUMN_INDEX = 23;
 
+    //TODO: Determine if this is still needed and whether REAL is a valid type.
     private static final Map<String, String> dbTypeToSql = ImmutableMap.ofEntries(
-            immutableEntry("int2", SqlType.SMALLINT.toString()),
-            immutableEntry("int4", SqlType.INTEGER.toString()),
-            immutableEntry("oid", SqlType.BIGINT.toString()),
-            immutableEntry("int8", SqlType.BIGINT.toString()),
-            immutableEntry("float", SqlType.DOUBLE.toString()),
+            immutableEntry("int2", createSmallInt().toString()),
+            immutableEntry("int4", createInteger().toString()),
+            immutableEntry("oid", createBigInt().toString()),
+            immutableEntry("int8", createBigInt().toString()),
+            immutableEntry("float", createDouble().toString()),
             immutableEntry("float4", SqlType.REAL.toString()),
-            immutableEntry("float8", SqlType.DOUBLE.toString()),
-            immutableEntry("bool", SqlType.BOOLEAN.toString()),
-            immutableEntry("char", SqlType.CHAR.toString()),
-            immutableEntry("text", SqlType.VARCHAR.toString()),
-            immutableEntry("date", SqlType.DATE.toString()),
-            immutableEntry("time", SqlType.TIME.toString()),
-            immutableEntry("timetz", SqlType.TIME.toString()),
-            immutableEntry("timestamp", SqlType.TIMESTAMP.toString()),
-            immutableEntry("timestamptz", SqlType.TIMESTAMP.toString()),
-            immutableEntry("array", SqlType.ARRAY.toString()));
+            immutableEntry("float8", createDouble().toString()),
+            immutableEntry("bool", createBool().toString()),
+            immutableEntry("char", createChar(1).toString()),
+            immutableEntry("text", createVarchar(1).toString()),
+            immutableEntry("date", createDate().toString()),
+            immutableEntry("time", createTime().toString()),
+            immutableEntry("timetz", createTime().toString()),
+            immutableEntry("timestamp", createTimestamp().toString()),
+            immutableEntry("timestamptz", createTimestampTZ().toString()),
+            immutableEntry("array", createArray().toString()));
 
     private QueryMetadataUtil() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
@@ -96,14 +93,9 @@ final class QueryMetadataUtil {
         return getMetadataResultSet(QueryDBMetadata.GET_TABLES, data);
     }
 
-    static AvaticaResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, List<Object> data)
+    static ResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, List<Object> data)
             throws SQLException {
-        QueryResultSetMetadata queryResultSetMetadata = new QueryResultSetMetadata(queryDbMetadata);
-        List<ColumnMetaData> columnMetaData = convertJDBCMetadataToAvaticaColumns(queryResultSetMetadata);
-        Meta.Signature signature = new Meta.Signature(
-                columnMetaData, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
-        return MetadataResultSet.of(
-                null, new QueryState(), signature, queryResultSetMetadata, TimeZone.getDefault(), null, data);
+         return SimpleMetadataResultSet.of(queryDbMetadata, data);
     }
 
     private static List<Object> constructTableData(ResultSet resultSet) throws SQLException {
