@@ -1,15 +1,21 @@
-name: Build, test, and release tag
+name: Build, test, and publish to Maven Central
 
 on:
   release:
-    types: [ "created" ]
+    types: [ "published" ]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name to release'
+        required: true
+        type: string
 
 jobs:
   call-reusable-workflow:
     uses: './.github/workflows/reusable-build-publish.yml'
     with:
       publish: true
-      version: ${{ github.event.release.tag_name }}
+      version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag_name || github.event.release.tag_name }}
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       signing_key: ${{ secrets.GPG_SIGNING_KEY }}
@@ -21,4 +27,32 @@ jobs:
       DATACLOUD_PASSWORD: ${{ secrets.DATACLOUD_PASSWORD }}
       DATACLOUD_CLIENT_ID: ${{ secrets.DATACLOUD_CLIENT_ID }}
       DATACLOUD_CLIENT_SECRET: ${{ secrets.DATACLOUD_CLIENT_SECRET }}
+
+  update-release-status:
+    needs: call-reusable-workflow
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Update release status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tagName = '${{ github.event_name == "workflow_dispatch" && github.event.inputs.tag_name || github.event.release.tag_name }}';
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            const release = releases.find(r => r.tag_name === tagName);
+            if (release) {
+              const status = '${{ needs.call-reusable-workflow.result }}' === 'success' ? 'published' : 'failed';
+              const body = release.body + `\n\n## Maven Central Status\n- Status: ${status === 'published' ? '✅ Published' : '❌ Failed'}\n- Timestamp: ${new Date().toISOString()}`;
+              
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release.id,
+                body: body
+              });
+            }
 
