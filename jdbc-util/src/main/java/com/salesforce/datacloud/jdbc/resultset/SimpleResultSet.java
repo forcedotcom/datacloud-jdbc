@@ -19,14 +19,12 @@ import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.sql.Types;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
 
 import com.salesforce.datacloud.jdbc.metadata.SimpleResultSetMetaData;
-import com.salesforce.datacloud.jdbc.resultset.ColumnAccessor.ThreeValuedBoolean;
 
 import lombok.AllArgsConstructor;
 import lombok.val;
@@ -97,7 +95,7 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
 
     /// Get the accessor for a column
     private ColumnAccessor<SELF> getAccessor(int columnIndex) throws SQLException {
-        if (columnIndex <= 0 || columnIndex >= accessors.length) {
+        if (columnIndex <= 0 || columnIndex > accessors.length) {
             throw new SQLException("Column index " + columnIndex + " out of bounds (" + accessors.length + " columns available)");
         }
         return accessors[columnIndex - 1];
@@ -169,13 +167,13 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
             case Integer:
             case BigInt: {
                 OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
-                wasNull = v.isEmpty();
+                wasNull = !v.isPresent();
                 return v.orElse(0L);
             }
             case Float:
             case Double: {
                 OptionalDouble d = getAccessor(columnIndex).getAnyFloatingPoint(getSubclass());
-                wasNull = d.isEmpty();
+                wasNull = !d.isPresent();
                 double dv = d.orElse(0.0);
                 // The way this condition is written, it will never be true for NaN or Infinity.
                 // This is good because we want to throw an exception for those values.
@@ -223,13 +221,13 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
             case Integer:
             case BigInt: {
                 OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
-                wasNull = v.isEmpty();
+                wasNull = !v.isPresent();
                 return v.orElse(0L);
             }
             case Float:
             case Double: {
                 val v = getAccessor(columnIndex).getAnyFloatingPoint(getSubclass());
-                wasNull = v.isEmpty();
+                wasNull = !v.isPresent();
                 return v.orElse(0.0);
             }
             case Numeric: {
@@ -249,8 +247,8 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
             case Integer:
             case BigInt: {
                 OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
-                wasNull = v.isEmpty();
-                return v.map(BigDecimal::valueOf).orElse(null);
+                wasNull = !v.isPresent();
+                return v.isPresent() ? new BigDecimal(v.getAsLong()) : null;
             }
             // TODO: apparently, PostgreSQL does not support float/decimal conversion. Double-check this with test cases.
             case Numeric: {
