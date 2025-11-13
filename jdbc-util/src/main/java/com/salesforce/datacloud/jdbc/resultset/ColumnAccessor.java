@@ -1,3 +1,7 @@
+/**
+ * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
+ * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
+ */
 package com.salesforce.datacloud.jdbc.resultset;
 
 import java.math.BigDecimal;
@@ -11,19 +15,47 @@ import java.util.OptionalLong;
 
 /**
  * Accessor functions used to read column values from a {@link SimpleResultSet}.
- * 
+ *
  * This interface is optimized for performance, and hence avoids the use of boxed types as much as possible.
  */
 public interface ColumnAccessor<ConcreteResultSet> {
-    default public Boolean getBoolean(ConcreteResultSet resultSet) throws SQLException { throw new UnsupportedOperationException(); }
+    public default Boolean getBoolean(ConcreteResultSet resultSet) throws SQLException {
+        throw new UnsupportedOperationException();
+    }
     /// Get the value of the column as an integer. Used for `getShort`, `getInt`, and `getLong`.
-    default public OptionalLong	getAnyInteger(ConcreteResultSet resultSet) throws SQLException { throw new UnsupportedOperationException(); }
-    default public BigDecimal getBigDecimal(ConcreteResultSet resultSet) throws SQLException { throw new UnsupportedOperationException(); }
-    default public OptionalDouble getAnyFloatingPoint(ConcreteResultSet resultSet) throws SQLException { throw new UnsupportedOperationException(); }
-    default public String getString(ConcreteResultSet resultSet) throws SQLException { throw new UnsupportedOperationException(); }
-    default public byte[] getBytes(ConcreteResultSet resultSet) throws SQLException { throw new UnsupportedOperationException(); }
-    default public Date getDate(ConcreteResultSet resultSet) throws SQLException { throw new UnsupportedOperationException(); }
-    default public Time getTime(ConcreteResultSet resultSet) throws SQLException { throw new UnsupportedOperationException(); }
-    default public Timestamp getTimestamp(ConcreteResultSet resultSet) throws SQLException { throw new UnsupportedOperationException(); }
-    default public Array getArray(ConcreteResultSet resultSet) throws SQLException { throw new UnsupportedOperationException(); }
+    public default OptionalLong getAnyInteger(ConcreteResultSet resultSet) throws SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    public default BigDecimal getBigDecimal(ConcreteResultSet resultSet) throws SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    public default OptionalDouble getAnyFloatingPoint(ConcreteResultSet resultSet) throws SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    public default String getString(ConcreteResultSet resultSet) throws SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    public default byte[] getBytes(ConcreteResultSet resultSet) throws SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    public default Date getDate(ConcreteResultSet resultSet) throws SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    public default Time getTime(ConcreteResultSet resultSet) throws SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    public default Timestamp getTimestamp(ConcreteResultSet resultSet) throws SQLException {
+        throw new UnsupportedOperationException();
+    }
+
+    public default Array getArray(ConcreteResultSet resultSet) throws SQLException {
+        throw new UnsupportedOperationException();
+    }
 }

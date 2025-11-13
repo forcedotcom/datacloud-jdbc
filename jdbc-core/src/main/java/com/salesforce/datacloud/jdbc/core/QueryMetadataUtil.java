@@ -8,7 +8,6 @@ import static com.google.common.collect.Maps.immutableEntry;
 import static com.salesforce.datacloud.jdbc.config.QueryResources.getColumnsQueryText;
 import static com.salesforce.datacloud.jdbc.config.QueryResources.getSchemasQueryText;
 import static com.salesforce.datacloud.jdbc.config.QueryResources.getTablesQueryText;
-import static com.salesforce.datacloud.jdbc.metadata.SqlType.*;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -17,17 +16,15 @@ import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.calcite.avatica.SqlType;
 import org.apache.commons.lang3.StringUtils;
 
 @Slf4j
@@ -57,24 +54,23 @@ final class QueryMetadataUtil {
     private static final int AUTO_INCREMENT_INDEX = 22;
     private static final int GENERATED_COLUMN_INDEX = 23;
 
-    //TODO: Determine if this is still needed and whether REAL is a valid type.
     private static final Map<String, String> dbTypeToSql = ImmutableMap.ofEntries(
-            immutableEntry("int2", createSmallInt().toString()),
-            immutableEntry("int4", createInteger().toString()),
-            immutableEntry("oid", createBigInt().toString()),
-            immutableEntry("int8", createBigInt().toString()),
-            immutableEntry("float", createDouble().toString()),
-            immutableEntry("float4", SqlType.REAL.toString()),
-            immutableEntry("float8", createDouble().toString()),
-            immutableEntry("bool", createBool().toString()),
-            immutableEntry("char", createChar(1).toString()),
-            immutableEntry("text", createVarchar(1).toString()),
-            immutableEntry("date", createDate().toString()),
-            immutableEntry("time", createTime().toString()),
-            immutableEntry("timetz", createTime().toString()),
-            immutableEntry("timestamp", createTimestamp().toString()),
-            immutableEntry("timestamptz", createTimestampTZ().toString()),
-            immutableEntry("array", createArray().toString()));
+            immutableEntry("int2", JDBCType.SMALLINT.toString()),
+            immutableEntry("int4", JDBCType.INTEGER.toString()),
+            immutableEntry("oid", JDBCType.BIGINT.toString()),
+            immutableEntry("int8", JDBCType.BIGINT.toString()),
+            immutableEntry("float", JDBCType.DOUBLE.toString()),
+            immutableEntry("float4", JDBCType.REAL.toString()),
+            immutableEntry("float8", JDBCType.DOUBLE.toString()),
+            immutableEntry("bool", JDBCType.BOOLEAN.toString()),
+            immutableEntry("char", JDBCType.CHAR.toString()),
+            immutableEntry("text", JDBCType.VARCHAR.toString()),
+            immutableEntry("date", JDBCType.DATE.toString()),
+            immutableEntry("time", JDBCType.TIME.toString()),
+            immutableEntry("timetz", JDBCType.TIME.toString()),
+            immutableEntry("timestamp", JDBCType.TIMESTAMP.toString()),
+            immutableEntry("timestamptz", JDBCType.TIMESTAMP_WITH_TIMEZONE.toString()),
+            immutableEntry("array", JDBCType.ARRAY.toString()));
 
     private QueryMetadataUtil() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
@@ -93,9 +89,8 @@ final class QueryMetadataUtil {
         return getMetadataResultSet(QueryDBMetadata.GET_TABLES, data);
     }
 
-    static ResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, List<Object> data)
-            throws SQLException {
-         return SimpleMetadataResultSet.of(queryDbMetadata, data);
+    static ResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, List<Object> data) throws SQLException {
+        return SimpleMetadataResultSet.of(queryDbMetadata, data);
     }
 
     private static List<Object> constructTableData(ResultSet resultSet) throws SQLException {
@@ -201,12 +196,13 @@ final class QueryMetadataUtil {
             String typeName = resultSet.getString("datatype");
             typeName = typeName == null ? StringUtils.EMPTY : typeName;
             if (typeName.toLowerCase().contains("numeric")) {
-                rowData[TYPE_NAME_INDEX] = SqlType.NUMERIC.toString();
-                rowData[DATA_TYPE_INDEX] = SqlType.valueOf(SqlType.NUMERIC.toString()).id;
+                rowData[TYPE_NAME_INDEX] = JDBCType.NUMERIC.toString();
+                rowData[DATA_TYPE_INDEX] = JDBCType.NUMERIC.getVendorTypeNumber();
             } else {
                 rowData[TYPE_NAME_INDEX] = dbTypeToSql.getOrDefault(typeName.toLowerCase(), typeName);
                 dataType = dbTypeToSql.containsKey(typeName.toLowerCase())
-                        ? SqlType.valueOf(dbTypeToSql.get(typeName.toLowerCase())).id
+                        ? JDBCType.valueOf(dbTypeToSql.get(typeName.toLowerCase()))
+                                .getVendorTypeNumber()
                         : (int) resultSet.getLong("atttypid");
                 rowData[DATA_TYPE_INDEX] = dataType;
             }
