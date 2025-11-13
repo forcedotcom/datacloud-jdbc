@@ -29,7 +29,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     /// Get a column by index
     public ColumnMetadata getColumn(int column) throws SQLException {
-        if (column <= 0 || column >= columns.length) {
+        if (column <= 0 || column > columns.length) {
             throw new SQLException("Column index " + column + " out of bounds (" + columns.length + " columns available)");
         }
         // Column indices are 1-based in JDBC
@@ -48,7 +48,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnTypeName(int column) throws SQLException {
-        return getColumn(column).getType().toString();
+        return getColumn(column).getTypeName();
     }
 
     @Override
