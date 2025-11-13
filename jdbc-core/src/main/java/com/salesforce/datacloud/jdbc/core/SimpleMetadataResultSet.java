@@ -5,19 +5,19 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.metadata.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.metadata.ColumnType;
 import com.salesforce.datacloud.jdbc.metadata.SimpleResultSetMetaData;
-import com.salesforce.datacloud.jdbc.metadata.SqlType;
 import com.salesforce.datacloud.jdbc.resultset.ColumnAccessor;
 import com.salesforce.datacloud.jdbc.resultset.SimpleResultSet;
 import java.math.BigDecimal;
 import java.sql.Array;
 import java.sql.Date;
+import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
@@ -32,15 +32,12 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
     private boolean closed = false;
 
     private SimpleMetadataResultSet(
-            SimpleResultSetMetaData metadata,
-            ColumnAccessor<SimpleMetadataResultSet>[] accessors,
-            List<Object> data) {
+            SimpleResultSetMetaData metadata, ColumnAccessor<SimpleMetadataResultSet>[] accessors, List<Object> data) {
         super(metadata, accessors, false);
         this.data = data;
     }
 
-    public static SimpleMetadataResultSet of(QueryDBMetadata queryDbMetadata, List<Object> data)
-            throws SQLException {
+    public static SimpleMetadataResultSet of(QueryDBMetadata queryDbMetadata, List<Object> data) throws SQLException {
         ColumnMetadata[] columns = convertToColumnMetadata(queryDbMetadata);
         SimpleResultSetMetaData metadata = new SimpleResultSetMetaData(columns);
         @SuppressWarnings("unchecked")
@@ -49,7 +46,7 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
             final int columnIndex = i;
             accessors[i] = createAccessor(columns[i], columnIndex);
         }
-        
+
         return new SimpleMetadataResultSet(metadata, accessors, data);
     }
 
@@ -57,62 +54,62 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
         List<String> columnNames = queryDbMetadata.getColumnNames();
         List<Integer> columnTypeIds = queryDbMetadata.getColumnTypeIds();
         List<String> columnTypes = queryDbMetadata.getColumnTypes();
-        
+
         ColumnMetadata[] columns = new ColumnMetadata[columnNames.size()];
         for (int i = 0; i < columnNames.size(); i++) {
             String name = columnNames.get(i);
             String columnType = columnTypes.get(i);
             int jdbcType = columnTypeIds.get(i);
-            SqlType sqlType = jdbcTypeToSqlType(jdbcType);
-            columns[i] = new ColumnMetadata(name, sqlType, columnType);
+            ColumnType columnSqlType = jdbcTypeToSqlType(jdbcType);
+            columns[i] = new ColumnMetadata(name, columnSqlType, columnType);
         }
         return columns;
     }
 
-    private static SqlType jdbcTypeToSqlType(int jdbcType) {
+    private static ColumnType jdbcTypeToSqlType(int jdbcType) {
         switch (jdbcType) {
             case Types.BOOLEAN:
             case Types.BIT:
-                return SqlType.createBool();
+                return new ColumnType(JDBCType.BOOLEAN);
             case Types.SMALLINT:
             case Types.TINYINT:
-                return SqlType.createSmallInt();
+                return new ColumnType(JDBCType.TINYINT);
             case Types.INTEGER:
-                return SqlType.createInteger();
+                return new ColumnType(JDBCType.INTEGER);
             case Types.BIGINT:
-                return SqlType.createBigInt();
+                return new ColumnType(JDBCType.BIGINT);
             case Types.NUMERIC:
             case Types.DECIMAL:
                 // Default precision/scale for metadata queries
-                return SqlType.createNumeric(38, 18);
+                return new ColumnType(JDBCType.NUMERIC, 38, 18);
             case Types.REAL:
             case Types.FLOAT:
-                return SqlType.createFloat();
+                return new ColumnType(JDBCType.FLOAT);
             case Types.DOUBLE:
-                return SqlType.createDouble();
+                return new ColumnType(JDBCType.DOUBLE);
             case Types.CHAR:
-                return SqlType.createChar(255); // Default length
+                return new ColumnType(JDBCType.CHAR, 255, 0);
             case Types.VARCHAR:
             case Types.LONGVARCHAR:
-                return SqlType.createVarchar(0); // Unlimited length
+                return new ColumnType(JDBCType.VARCHAR, 0, 0);
             case Types.BINARY:
             case Types.VARBINARY:
             case Types.LONGVARBINARY:
-                return SqlType.createBytea();
+                return new ColumnType(JDBCType.LONGVARBINARY, 0, 0);
             case Types.DATE:
-                return SqlType.createDate();
+                return new ColumnType(JDBCType.DATE);
             case Types.TIME:
-                return SqlType.createTime();
+                return new ColumnType(JDBCType.TIME);
             case Types.TIMESTAMP:
-                return SqlType.createTimestamp();
+                return new ColumnType(JDBCType.TIMESTAMP);
             case Types.TIMESTAMP_WITH_TIMEZONE:
-                return SqlType.createTimestampTZ();
+                return new ColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE);
             case Types.ARRAY:
                 // For arrays, use VARCHAR as element type (common in metadata)
-                return SqlType.createArray(SqlType.createVarchar(0));
+                return new ColumnType(JDBCType.ARRAY, new ColumnType(JDBCType.VARCHAR, 0, 0));
             default:
                 // Default to VARCHAR for unknown types
-                return SqlType.createVarchar(0);
+                return new ColumnType(JDBCType.VARCHAR, 0, 0);
         }
     }
 
@@ -166,7 +163,8 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                         throw new SQLException("Cannot convert to integer: " + value, e);
                     }
                 }
-                throw new SQLException("Cannot convert to integer: " + value.getClass().getName());
+                throw new SQLException(
+                        "Cannot convert to integer: " + value.getClass().getName());
             }
 
             @Override
@@ -188,7 +186,8 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                         throw new SQLException("Cannot convert to BigDecimal: " + value, e);
                     }
                 }
-                throw new SQLException("Cannot convert to BigDecimal: " + value.getClass().getName());
+                throw new SQLException(
+                        "Cannot convert to BigDecimal: " + value.getClass().getName());
             }
 
             @Override
@@ -207,7 +206,8 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                         throw new SQLException("Cannot convert to floating point: " + value, e);
                     }
                 }
-                throw new SQLException("Cannot convert to floating point: " + value.getClass().getName());
+                throw new SQLException(
+                        "Cannot convert to floating point: " + value.getClass().getName());
             }
 
             @Override
@@ -222,7 +222,8 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                 if (value instanceof String) {
                     return ((String) value).getBytes();
                 }
-                throw new SQLException("Cannot convert to byte array: " + value.getClass().getName());
+                throw new SQLException(
+                        "Cannot convert to byte array: " + value.getClass().getName());
             }
 
             @Override
@@ -244,7 +245,8 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                         throw new SQLException("Cannot convert to Date: " + value, e);
                     }
                 }
-                throw new SQLException("Cannot convert to Date: " + value.getClass().getName());
+                throw new SQLException(
+                        "Cannot convert to Date: " + value.getClass().getName());
             }
 
             @Override
@@ -266,7 +268,8 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                         throw new SQLException("Cannot convert to Time: " + value, e);
                     }
                 }
-                throw new SQLException("Cannot convert to Time: " + value.getClass().getName());
+                throw new SQLException(
+                        "Cannot convert to Time: " + value.getClass().getName());
             }
 
             @Override
@@ -288,7 +291,8 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                         throw new SQLException("Cannot convert to Timestamp: " + value, e);
                     }
                 }
-                throw new SQLException("Cannot convert to Timestamp: " + value.getClass().getName());
+                throw new SQLException(
+                        "Cannot convert to Timestamp: " + value.getClass().getName());
             }
 
             @Override
@@ -304,7 +308,8 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                     // Convert List to Array if needed
                     throw new SQLException("List to Array conversion not yet implemented");
                 }
-                throw new SQLException("Cannot convert to Array: " + value.getClass().getName());
+                throw new SQLException(
+                        "Cannot convert to Array: " + value.getClass().getName());
             }
 
             /**
@@ -320,24 +325,23 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                 if (resultSet.currentRow >= resultSet.data.size()) {
                     throw new SQLException("Row index out of bounds");
                 }
-                
+
                 Object row = resultSet.data.get(resultSet.currentRow);
                 if (!(row instanceof List)) {
                     throw new SQLException("Data row is not a List");
                 }
-                
+
                 @SuppressWarnings("unchecked")
                 List<Object> rowList = (List<Object>) row;
-                
+
                 if (columnIndex >= rowList.size()) {
                     throw new SQLException("Column index " + columnIndex + " out of bounds for row");
                 }
-                
+
                 return rowList.get(columnIndex);
             }
         };
     }
-
 
     @Override
     public boolean next() throws SQLException {
@@ -384,4 +388,3 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
         return false;
     }
 }
-

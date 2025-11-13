@@ -1,5 +1,10 @@
+/**
+ * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
+ * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
+ */
 package com.salesforce.datacloud.jdbc.resultset;
 
+import com.salesforce.datacloud.jdbc.metadata.SimpleResultSetMetaData;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -23,22 +28,21 @@ import java.util.Calendar;
 import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.OptionalLong;
-
-import com.salesforce.datacloud.jdbc.metadata.SimpleResultSetMetaData;
-
 import lombok.AllArgsConstructor;
 import lombok.val;
+
 /**
  * A base class for simple result sets.
- * 
+ *
  * This class provides a basic implementation of the {@link ResultSet} interface,
  * with support for read-only access and forward-only cursors.
- * 
+ *
  * Access to SQL values is provided via {@link ColumnAccessor} instances. This class
  * already takes care of casting from SQL types to the compatible Java types.
  */
 @AllArgsConstructor
-public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, ForwardOnlyResultSet, ResultSetWithPositionalGetters {
+public abstract class SimpleResultSet<SELF>
+        implements ReadOnlyResultSet, ForwardOnlyResultSet, ResultSetWithPositionalGetters {
     /// The metadata for the result set
     protected final SimpleResultSetMetaData metadata;
     /// The accessor functions for the columns
@@ -96,7 +100,8 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
     /// Get the accessor for a column
     private ColumnAccessor<SELF> getAccessor(int columnIndex) throws SQLException {
         if (columnIndex <= 0 || columnIndex > accessors.length) {
-            throw new SQLException("Column index " + columnIndex + " out of bounds (" + accessors.length + " columns available)");
+            throw new SQLException(
+                    "Column index " + columnIndex + " out of bounds (" + accessors.length + " columns available)");
         }
         return accessors[columnIndex - 1];
     }
@@ -131,7 +136,8 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
             return 0;
         }
         if (v < Byte.MIN_VALUE || v > Byte.MAX_VALUE) {
-            throw new SQLException("Column " + getMetaData().getColumnName(columnIndex) + " is out of range for a byte");
+            throw new SQLException(
+                    "Column " + getMetaData().getColumnName(columnIndex) + " is out of range for a byte");
         }
         return (byte) v;
     }
@@ -143,7 +149,8 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
             return 0;
         }
         if (v < Short.MIN_VALUE || v > Short.MAX_VALUE) {
-            throw new SQLException("Column " + getMetaData().getColumnName(columnIndex) + " is out of range for a short");
+            throw new SQLException(
+                    "Column " + getMetaData().getColumnName(columnIndex) + " is out of range for a short");
         }
         return (short) v;
     }
@@ -155,7 +162,8 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
             return 0;
         }
         if (v < Integer.MIN_VALUE || v > Integer.MAX_VALUE) {
-            throw new SQLException("Column " + getMetaData().getColumnName(columnIndex) + " is out of range for an int");
+            throw new SQLException(
+                    "Column " + getMetaData().getColumnName(columnIndex) + " is out of range for an int");
         }
         return (int) v;
     }
@@ -163,15 +171,15 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
     @Override
     public long getLong(int columnIndex) throws SQLException {
         switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case SmallInt:
-            case Integer:
-            case BigInt: {
+            case SMALLINT:
+            case INTEGER:
+            case BIGINT: {
                 OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
                 wasNull = !v.isPresent();
                 return v.orElse(0L);
             }
-            case Float:
-            case Double: {
+            case FLOAT:
+            case DOUBLE: {
                 OptionalDouble d = getAccessor(columnIndex).getAnyFloatingPoint(getSubclass());
                 wasNull = !d.isPresent();
                 double dv = d.orElse(0.0);
@@ -180,9 +188,10 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
                 if (dv >= LONG_MIN_DOUBLE && dv <= LONG_MAX_DOUBLE) {
                     return (long) dv;
                 }
-                throw new SQLException("Column " + getMetaData().getColumnName(columnIndex) + " is out of range for an integer-like type");
+                throw new SQLException("Column " + getMetaData().getColumnName(columnIndex)
+                        + " is out of range for an integer-like type");
             }
-            case Numeric: {
+            case NUMERIC: {
                 BigDecimal v = getBigDecimal(columnIndex);
                 wasNull = v == null;
                 if (wasNull) {
@@ -192,13 +201,15 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
                     int gt = i.compareTo(BigInteger.valueOf(Long.MAX_VALUE));
                     int lt = i.compareTo(BigInteger.valueOf(Long.MIN_VALUE));
                     if (gt > 0 || lt < 0) {
-                        throw new SQLException("Column " + getMetaData().getColumnName(columnIndex) + " is out of range for an integer-like type");
+                        throw new SQLException("Column " + getMetaData().getColumnName(columnIndex)
+                                + " is out of range for an integer-like type");
                     }
                     return v.longValue();
                 }
             }
             default:
-                throw new SQLException("Unsupported column type for integer-like types: " + metadata.getColumn(columnIndex).getType().toString());
+                throw new SQLException("Unsupported column type for integer-like types: "
+                        + metadata.getColumn(columnIndex).getType().toString());
         }
     }
 
@@ -209,7 +220,8 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
     public float getFloat(int columnIndex) throws SQLException {
         double v = getDouble(columnIndex);
         if (v < Float.MIN_VALUE || v > Float.MAX_VALUE) {
-            throw new SQLException("Column " + getMetaData().getColumnName(columnIndex) + " is out of range for a float");
+            throw new SQLException(
+                    "Column " + getMetaData().getColumnName(columnIndex) + " is out of range for a float");
         }
         return (float) v;
     }
@@ -217,47 +229,50 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
     @Override
     public double getDouble(int columnIndex) throws SQLException {
         switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case SmallInt:
-            case Integer:
-            case BigInt: {
+            case SMALLINT:
+            case INTEGER:
+            case BIGINT: {
                 OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
                 wasNull = !v.isPresent();
                 return v.orElse(0L);
             }
-            case Float:
-            case Double: {
+            case FLOAT:
+            case DOUBLE: {
                 val v = getAccessor(columnIndex).getAnyFloatingPoint(getSubclass());
                 wasNull = !v.isPresent();
                 return v.orElse(0.0);
             }
-            case Numeric: {
+            case NUMERIC: {
                 BigDecimal v = getBigDecimal(columnIndex);
                 wasNull = v == null;
                 return v == null ? 0.0 : v.doubleValue();
             }
             default:
-                throw new SQLException("Unsupported column type for floating-point types: " + metadata.getColumn(columnIndex).getType().toString());
+                throw new SQLException("Unsupported column type for floating-point types: "
+                        + metadata.getColumn(columnIndex).getType().toString());
         }
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
         switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case SmallInt:
-            case Integer:
-            case BigInt: {
+            case SMALLINT:
+            case INTEGER:
+            case BIGINT: {
                 OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
                 wasNull = !v.isPresent();
                 return v.isPresent() ? new BigDecimal(v.getAsLong()) : null;
             }
-            // TODO: apparently, PostgreSQL does not support float/decimal conversion. Double-check this with test cases.
-            case Numeric: {
+            // TODO: apparently, PostgreSQL does not support float/decimal conversion. Double-check this with test
+            // cases.
+            case NUMERIC: {
                 val v = getAccessor(columnIndex).getBigDecimal(getSubclass());
                 wasNull = v == null;
                 return v;
             }
             default:
-                throw new SQLException("Unsupported column type for numeric types: " + metadata.getColumn(columnIndex).getType().toString());
+                throw new SQLException("Unsupported column type for numeric types: "
+                        + metadata.getColumn(columnIndex).getType().toString());
         }
     }
 
@@ -324,68 +339,67 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
     @Override
     public Object getObject(int columnIndex) throws SQLException {
         switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case Bool: {
+            case BOOLEAN: {
                 val v = getBoolean(columnIndex);
                 if (wasNull) {
                     return null;
                 }
                 return v;
             }
-            case SmallInt: {
+            case SMALLINT: {
                 val v = getShort(columnIndex);
                 if (wasNull) {
                     return null;
                 }
                 return v;
             }
-            case Integer: {
+            case INTEGER: {
                 val v = getInt(columnIndex);
                 if (wasNull) {
                     return null;
                 }
                 return v;
             }
-            case BigInt: {
+            case BIGINT: {
                 val v = getLong(columnIndex);
                 if (wasNull) {
                     return null;
                 }
                 return v;
             }
-            case Numeric:
+            case NUMERIC:
                 return getBigDecimal(columnIndex);
-            case Float: {
+            case FLOAT: {
                 val v = getFloat(columnIndex);
                 if (wasNull) {
                     return null;
                 }
                 return v;
             }
-            case Double: {
+            case DOUBLE: {
                 val v = getDouble(columnIndex);
                 if (wasNull) {
                     return null;
                 }
                 return v;
             }
-            case Char:
-            case Varchar:
+            case CHAR:
+            case VARCHAR:
                 return getString(columnIndex);
-            case Bytea:
+            case BINARY:
                 return getBytes(columnIndex);
-            case Date:
+            case DATE:
                 return getDate(columnIndex);
-            case Time:
+            case TIME:
                 return getTime(columnIndex);
-            case Timestamp:
-            case TimestampTZ:
+            case TIMESTAMP:
+            case TIMESTAMP_WITH_TIMEZONE:
                 return getTimestamp(columnIndex);
-            case Interval:
-                throw new SQLException("Unsupported column type in `getObject`: " + metadata.getColumn(columnIndex).getType().toString());
-            case Array:
+            case ARRAY:
                 return getArray(columnIndex);
         }
-        throw new SQLException("Unsupported column type in `getObject`: " + metadata.getColumn(columnIndex).getType().toString());
+        throw new SQLException("Unsupported column type in `getObject`: "
+                + metadata.getColumn(columnIndex).getType().toString());
     }
 
     @Override
@@ -397,7 +411,8 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
         if (type.isInstance(v)) {
             return type.cast(v);
         }
-        throw new SQLException("Unsupported column type in `getObject`: " + metadata.getColumn(columnIndex).getType().toString());
+        throw new SQLException("Unsupported column type in `getObject`: "
+                + metadata.getColumn(columnIndex).getType().toString());
     }
 
     @Override
@@ -435,7 +450,7 @@ public abstract class SimpleResultSet<SELF> implements ReadOnlyResultSet, Forwar
     public RowId getRowId(int columnIndex) throws SQLException {
         throw new SQLFeatureNotSupportedException("Retrieving row IDs is not supported");
     }
-    
+
     @Override
     public SQLXML getSQLXML(int columnIndex) throws SQLException {
         throw new SQLFeatureNotSupportedException("Retrieving SQLXML is not supported");
