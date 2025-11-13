@@ -1,3 +1,7 @@
+/**
+ * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
+ * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
+ */
 package com.salesforce.datacloud.jdbc.resultset;
 
 import java.io.InputStream;
@@ -21,7 +25,7 @@ import java.util.Map;
 
 /**
  * Mixin for result sets providing label-based getters.
- * 
+ *
  * The subclasses must implement {@link #findColumn(String)} to map column labels to column indices.
  * The label-based getters are implemented by delegating to the positional getters.
  *
@@ -29,174 +33,174 @@ import java.util.Map;
  */
 interface ResultSetWithPositionalGetters extends ResultSet {
     @Override
-    default public String getString(String columnLabel) throws SQLException {
+    public default String getString(String columnLabel) throws SQLException {
         return getString(findColumn(columnLabel));
     }
 
     @Override
-    default public boolean getBoolean(String columnLabel) throws SQLException {
+    public default boolean getBoolean(String columnLabel) throws SQLException {
         return getBoolean(findColumn(columnLabel));
     }
 
     @Override
-    default public byte getByte(String columnLabel) throws SQLException {
+    public default byte getByte(String columnLabel) throws SQLException {
         return getByte(findColumn(columnLabel));
     }
 
     @Override
-    default public short getShort(String columnLabel) throws SQLException {
+    public default short getShort(String columnLabel) throws SQLException {
         return getShort(findColumn(columnLabel));
     }
 
     @Override
-    default public int getInt(String columnLabel) throws SQLException {
+    public default int getInt(String columnLabel) throws SQLException {
         return getInt(findColumn(columnLabel));
     }
 
     @Override
-    default public long getLong(String columnLabel) throws SQLException {
+    public default long getLong(String columnLabel) throws SQLException {
         return getLong(findColumn(columnLabel));
     }
 
     @Override
-    default public float getFloat(String columnLabel) throws SQLException {
+    public default float getFloat(String columnLabel) throws SQLException {
         return getFloat(findColumn(columnLabel));
     }
 
     @Override
-    default public double getDouble(String columnLabel) throws SQLException {
+    public default double getDouble(String columnLabel) throws SQLException {
         return getDouble(findColumn(columnLabel));
     }
 
     @SuppressWarnings("deprecation")
     @Override
-    default public BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
+    public default BigDecimal getBigDecimal(String columnLabel, int scale) throws SQLException {
         return getBigDecimal(findColumn(columnLabel), scale);
     }
 
     @Override
-    default public byte[] getBytes(String columnLabel) throws SQLException {
+    public default byte[] getBytes(String columnLabel) throws SQLException {
         return getBytes(findColumn(columnLabel));
     }
 
     @Override
-    default public Date getDate(String columnLabel) throws SQLException {
+    public default Date getDate(String columnLabel) throws SQLException {
         return getDate(findColumn(columnLabel));
     }
 
     @Override
-    default public Time getTime(String columnLabel) throws SQLException {
+    public default Time getTime(String columnLabel) throws SQLException {
         return getTime(findColumn(columnLabel));
     }
 
     @Override
-    default public Timestamp getTimestamp(String columnLabel) throws SQLException {
+    public default Timestamp getTimestamp(String columnLabel) throws SQLException {
         return getTimestamp(findColumn(columnLabel));
     }
 
     @Override
-    default public InputStream getAsciiStream(String columnLabel) throws SQLException {
+    public default InputStream getAsciiStream(String columnLabel) throws SQLException {
         return getAsciiStream(findColumn(columnLabel));
     }
 
     @SuppressWarnings("deprecation")
     @Override
-    default public InputStream getUnicodeStream(String columnLabel) throws SQLException {
+    public default InputStream getUnicodeStream(String columnLabel) throws SQLException {
         return getUnicodeStream(findColumn(columnLabel));
     }
 
     @Override
-    default public InputStream getBinaryStream(String columnLabel) throws SQLException {
+    public default InputStream getBinaryStream(String columnLabel) throws SQLException {
         return getBinaryStream(findColumn(columnLabel));
     }
 
     @Override
-    default public Object getObject(String columnLabel) throws SQLException {
+    public default Object getObject(String columnLabel) throws SQLException {
         return getObject(findColumn(columnLabel));
     }
 
     @Override
-    default public Reader getCharacterStream(String columnLabel) throws SQLException {
+    public default Reader getCharacterStream(String columnLabel) throws SQLException {
         return getCharacterStream(findColumn(columnLabel));
     }
 
     @Override
-    default public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
+    public default BigDecimal getBigDecimal(String columnLabel) throws SQLException {
         return getBigDecimal(findColumn(columnLabel));
     }
 
     @Override
-    default public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
+    public default Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
         return getObject(findColumn(columnLabel), map);
     }
 
     @Override
-    default public Ref getRef(String columnLabel) throws SQLException {
+    public default Ref getRef(String columnLabel) throws SQLException {
         return getRef(findColumn(columnLabel));
     }
 
     @Override
-    default public Blob getBlob(String columnLabel) throws SQLException {
+    public default Blob getBlob(String columnLabel) throws SQLException {
         return getBlob(findColumn(columnLabel));
     }
 
     @Override
-    default public Clob getClob(String columnLabel) throws SQLException {
+    public default Clob getClob(String columnLabel) throws SQLException {
         return getClob(findColumn(columnLabel));
     }
 
     @Override
-    default public Array getArray(String columnLabel) throws SQLException {
+    public default Array getArray(String columnLabel) throws SQLException {
         return getArray(findColumn(columnLabel));
     }
 
     @Override
-    default public Date getDate(String columnLabel, Calendar cal) throws SQLException {
+    public default Date getDate(String columnLabel, Calendar cal) throws SQLException {
         return getDate(findColumn(columnLabel), cal);
     }
 
     @Override
-    default public Time getTime(String columnLabel, Calendar cal) throws SQLException {
+    public default Time getTime(String columnLabel, Calendar cal) throws SQLException {
         return getTime(findColumn(columnLabel), cal);
     }
 
     @Override
-    default public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
+    public default Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
         return getTimestamp(findColumn(columnLabel), cal);
     }
 
     @Override
-    default public URL getURL(String columnLabel) throws SQLException {
+    public default URL getURL(String columnLabel) throws SQLException {
         return getURL(findColumn(columnLabel));
     }
 
     @Override
-    default public RowId getRowId(String columnLabel) throws SQLException {
+    public default RowId getRowId(String columnLabel) throws SQLException {
         return getRowId(findColumn(columnLabel));
     }
 
     @Override
-    default public NClob getNClob(String columnLabel) throws SQLException {
+    public default NClob getNClob(String columnLabel) throws SQLException {
         return getNClob(findColumn(columnLabel));
     }
 
     @Override
-    default public SQLXML getSQLXML(String columnLabel) throws SQLException {
+    public default SQLXML getSQLXML(String columnLabel) throws SQLException {
         return getSQLXML(findColumn(columnLabel));
     }
 
     @Override
-    default public String getNString(String columnLabel) throws SQLException {
+    public default String getNString(String columnLabel) throws SQLException {
         return getNString(findColumn(columnLabel));
     }
 
     @Override
-    default public Reader getNCharacterStream(String columnLabel) throws SQLException {
+    public default Reader getNCharacterStream(String columnLabel) throws SQLException {
         return getNCharacterStream(findColumn(columnLabel));
     }
 
     @Override
-    default public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
+    public default <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
         return getObject(findColumn(columnLabel), type);
     }
 }

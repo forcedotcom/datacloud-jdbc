@@ -1,3 +1,7 @@
+/**
+ * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
+ * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
+ */
 package com.salesforce.datacloud.jdbc.metadata;
 
 import java.sql.ResultSetMetaData;
@@ -30,7 +34,8 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
     /// Get a column by index
     public ColumnMetadata getColumn(int column) throws SQLException {
         if (column <= 0 || column > columns.length) {
-            throw new SQLException("Column index " + column + " out of bounds (" + columns.length + " columns available)");
+            throw new SQLException(
+                    "Column index " + column + " out of bounds (" + columns.length + " columns available)");
         }
         // Column indices are 1-based in JDBC
         return columns[column - 1];
@@ -43,7 +48,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int getColumnType(int column) throws SQLException {
-        return getColumn(column).getType().getJdbcType();
+        return getColumn(column).getType().getType().getVendorTypeNumber();
     }
 
     @Override
@@ -63,7 +68,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int getPrecision(int column) throws SQLException {
-        return getColumn(column).getType().getPrecision();
+        return getColumn(column).getType().getPrecisionOrStringLength();
     }
 
     @Override
@@ -73,7 +78,9 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int isNullable(int column) throws SQLException {
-        return getColumn(column).getType().isNullable() ? ResultSetMetaData.columnNullable : ResultSetMetaData.columnNoNulls;
+        return getColumn(column).getType().isNullable()
+                ? ResultSetMetaData.columnNullable
+                : ResultSetMetaData.columnNoNulls;
     }
 
     @Override
@@ -89,7 +96,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
         if (iface.isAssignableFrom(getClass())) {
-        return iface.cast(this);
+            return iface.cast(this);
         }
         throw new SQLException("Cannot unwrap to " + iface.getName());
     }
