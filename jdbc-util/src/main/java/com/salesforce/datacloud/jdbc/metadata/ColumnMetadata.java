@@ -7,4 +7,5 @@ package com.salesforce.datacloud.jdbc.metadata;
 public class ColumnMetadata {
     private final String name;
     private final SqlType type;
+    private final String typeName;
 }
