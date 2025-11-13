@@ -17,6 +17,7 @@ import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import io.grpc.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -130,6 +131,97 @@ public class JDBCLimitsTest {
                     stmt.executeQuery();
                 });
             }
+        });
+    }
+
+    @Test
+    @SneakyThrows
+    public void testLargeParameterCount() {
+        String value = repeat('x', 1024);
+        // 10'000 is the limit in Hyper
+        int prepareCount = 10000;
+        assertWithConnection(connection -> {
+            // Create a VALUES clause with many parameters
+            String values = String.join(", ", Collections.nCopies(prepareCount, "(?)"));
+            val stmt = connection.prepareStatement("SELECT SUM(LENGTH(v)) FROM (VALUES " + values + ") AS t(v)");
+            for (int i = 1; i <= prepareCount; ++i) {
+                stmt.setString(i, value);
+            }
+            val result = stmt.executeQuery();
+            result.next();
+            // Verify we get back the correct count of values
+            assertThat(result.getInt(1)).isEqualTo(prepareCount * value.length());
+        });
+    }
+
+    @Test
+    @SneakyThrows
+    public void testLargeArrayLikeParameter() {
+        // Generate a million unique strings
+        int itemCount = 1000000;
+        String[] values = new String[itemCount];
+        for (int i = 0; i < itemCount; i++) {
+            values[i] = "value" + i;
+        }
+
+        // Create an ARRAY string literal with all values, a direct array parameter is not supported by the JDBC driver
+        // yet
+        String arrayLiteral = "ARRAY['" + String.join("','", values) + "']";
+
+        // Verify that WHERE IN with a large array works
+        assertWithConnection(connection -> {
+            // Use the array in a WHERE IN clause
+            String sql = String.format(
+                    "SELECT COUNT(*) FROM generate_series(%d, %d) g WHERE 'value' || g = ANY(%s::varchar[])",
+                    itemCount - 100, itemCount + 10000, arrayLiteral);
+
+            try (val stmt = connection.createStatement();
+                    val result = stmt.executeQuery(sql)) {
+                result.next();
+                // We should find exactly one match
+                assertThat(result.getInt(1)).isEqualTo(100);
+            }
+        });
+    }
+
+    @Test
+    @SneakyThrows
+    public void testLargeColumnCount() {
+        int columnCount = 100000;
+        String value = "test";
+
+        // Verify that queries with many columns are supported
+        assertWithConnection(connection -> {
+            // Create a SELECT statement with columnCount columns
+            StringBuilder sb = new StringBuilder("SELECT ");
+            // Generate column expressions: 1 as c1, 2 as c2, ..., columnCount as cN
+            for (int i = 1; i <= columnCount; i++) {
+                if (i > 1) {
+                    sb.append(", ");
+                }
+                sb.append(i).append(" as c").append(i);
+            }
+            sb.append(" FROM (VALUES(1)) AS t");
+
+            val stmt = connection.prepareStatement(sb.toString());
+            val result = stmt.executeQuery();
+
+            // Verify the result has the expected number of columns
+            val metaData = result.getMetaData();
+            assertThat(metaData.getColumnCount()).isEqualTo(columnCount);
+
+            // Verify we can read the first row
+            assertThat(result.next()).isTrue();
+
+            // Verify values in the first row
+            for (int i = 1; i <= columnCount; i++) {
+                assertThat(result.getInt(i)).isEqualTo(i);
+                // BUG: Column lookup by string has quadratic runtime in Avatica.
+                // assertThat(result.getInt("c"+Integer.toString(i))).isEqualTo(i);
+            }
+
+            // Verify there's only one row
+            assertThat(result.next()).isFalse();
         });
     }
 

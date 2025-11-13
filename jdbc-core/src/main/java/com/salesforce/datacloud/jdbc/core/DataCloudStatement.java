@@ -33,7 +33,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
 
     protected ResultSet resultSet;
 
-    protected static final String NOT_SUPPORTED_IN_DATACLOUD_QUERY = "Write is not supported in Data Cloud query";
+    protected static final String NOT_SUPPORTED_IN_DATACLOUD_QUERY = "Not supported in Data Cloud query";
     protected static final String BATCH_EXECUTION_IS_NOT_SUPPORTED =
             "Batch execution is not supported in Data Cloud query";
     protected static final String CHANGE_FETCH_DIRECTION_IS_NOT_SUPPORTED = "Changing fetch direction is not supported";
