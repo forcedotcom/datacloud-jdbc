@@ -216,8 +216,8 @@ public class JDBCLimitsTest {
             // Verify values in the first row
             for (int i = 1; i <= columnCount; i++) {
                 assertThat(result.getInt(i)).isEqualTo(i);
-                // BUG: Column lookup by string has quadratic runtime in Avatica.
-                // assertThat(result.getInt("c"+Integer.toString(i))).isEqualTo(i);
+                // With this its suuuuuper slow (before optimization), but should be fast now
+                assertThat(result.getInt("c" + i)).isEqualTo(i);
             }
 
             // Verify there's only one row

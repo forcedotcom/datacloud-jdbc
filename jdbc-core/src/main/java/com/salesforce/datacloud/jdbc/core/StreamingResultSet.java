@@ -31,6 +31,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
     private final ArrowStreamReaderCursor cursor;
     ThrowingJdbcSupplier<QueryStatus> getQueryStatus;
+    private final ColumnNameResolver columnNameResolver;
 
     private StreamingResultSet(
             ArrowStreamReaderCursor cursor,
@@ -45,6 +46,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
         super(statement, state, signature, resultSetMetaData, timeZone, firstFrame);
         this.cursor = cursor;
         this.queryId = queryId;
+        this.columnNameResolver = new ColumnNameResolver(signature.columns);
     }
 
     public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId) throws SQLException {
@@ -84,5 +86,62 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     @Override
     public int getRow() {
         return cursor.getRowsSeen();
+    }
+
+    @Override
+    public int findColumn(String columnLabel) throws SQLException {
+        return columnNameResolver.findColumn(columnLabel);
+    }
+
+    /**
+     * Override getter methods that take String columnLabel to ensure they use our optimized findColumn() method.
+     * This is necessary because Avatica's implementation might use a private method or cache.
+     */
+    @Override
+    public String getString(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getString(columnIndex);
+    }
+
+    @Override
+    public int getInt(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getInt(columnIndex);
+    }
+
+    @Override
+    public long getLong(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getLong(columnIndex);
+    }
+
+    @Override
+    public boolean getBoolean(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getBoolean(columnIndex);
+    }
+
+    @Override
+    public byte getByte(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getByte(columnIndex);
+    }
+
+    @Override
+    public short getShort(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getShort(columnIndex);
+    }
+
+    @Override
+    public float getFloat(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getFloat(columnIndex);
+    }
+
+    @Override
+    public double getDouble(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getDouble(columnIndex);
     }
 }
