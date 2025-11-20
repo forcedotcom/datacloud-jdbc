@@ -4,6 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.util;
 
+import com.salesforce.datacloud.jdbc.metadata.ColumnType;
 import java.sql.JDBCType;
 import java.util.Objects;
 import lombok.val;
