@@ -2,7 +2,7 @@
  * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
  * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
  */
-package com.salesforce.datacloud.jdbc.util;
+package com.salesforce.datacloud.jdbc.metadata;
 
 import java.sql.JDBCType;
 import lombok.Value;
@@ -28,6 +28,9 @@ public class ColumnType {
     /// Unused for other types
     private int scale;
 
+    /// Is this type nullable?
+    private boolean nullable;
+
     // For date/time types use this as placeholder for maximum display size
     private static final int MAX_DATETIME_DISPLAYSIZE = 128;
     // Used for types where we are not expected to return a precision
@@ -40,6 +43,7 @@ public class ColumnType {
         this.arrayElementType = null;
         this.precisionOrStringLength = -1;
         this.scale = 1;
+        nullable = true;
     }
 
     public ColumnType(JDBCType type, ColumnType arrayElementType) {
@@ -47,6 +51,7 @@ public class ColumnType {
         this.arrayElementType = arrayElementType;
         this.precisionOrStringLength = -1;
         this.scale = 1;
+        nullable = true;
     }
 
     public ColumnType(JDBCType type, int precision, int scale) {
@@ -54,6 +59,15 @@ public class ColumnType {
         this.arrayElementType = null;
         this.precisionOrStringLength = precision;
         this.scale = scale;
+        nullable = true;
+    }
+
+    public ColumnType(JDBCType type, boolean nullable) {
+        this.type = type;
+        this.arrayElementType = null;
+        this.precisionOrStringLength = -1;
+        this.scale = 1;
+        this.nullable = nullable;
     }
 
     /**
@@ -250,5 +264,40 @@ public class ColumnType {
             default:
                 return getPrecisionOrStringLength();
         }
+    }
+
+    // See table B.3 from https://download.oracle.com/otn-pub/jcp/jdbc-4_3-mrel3-eval-spec/jdbc4.3-fr-spec.pdf
+    public String getJavaTypeName() {
+        switch (type) {
+            case BOOLEAN:
+                return "java.lang.Boolean";
+            case SMALLINT:
+            case INTEGER:
+                return "java.lang.Integer";
+            case BIGINT:
+                return "java.lang.Long";
+            case NUMERIC:
+                return "java.math.BigDecimal";
+            case FLOAT:
+                return "java.lang.Float";
+            case DOUBLE:
+                return "java.lang.Double";
+            case CHAR:
+            case VARCHAR:
+                return "java.lang.String";
+            case BINARY:
+                return "[B";
+            case DATE:
+                return "java.sql.Date";
+            case TIME:
+                return "java.sql.Time";
+            case TIMESTAMP:
+                return "java.sql.Timestamp";
+            case TIMESTAMP_WITH_TIMEZONE:
+                return "java.sql.Timestamp";
+            case ARRAY:
+                return "java.sql.Array";
+        }
+        throw new IllegalArgumentException("Unsupported type: " + type);
     }
 }
