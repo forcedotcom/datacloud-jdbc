@@ -15,6 +15,7 @@ import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile;
 import io.grpc.ClientInterceptor;
 import io.grpc.ManagedChannelBuilder;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.SneakyThrows;
@@ -76,22 +77,29 @@ public class LocalHyperTestBase implements BeforeAllCallback {
 
     @SneakyThrows
     public static DataCloudConnection getHyperQueryConnection(HyperServerProcess server, Properties properties) {
-        val url = "jdbc:salesforce-hyper://127.0.0.1:" + server.getPort();
+        properties.setProperty("ssl.disabled", "true");
+        String url = "jdbc:salesforce-hyper://127.0.0.1:" + server.getPort();
         return HyperDatasource.connectUsingProperties(url, properties);
     }
 
     @SneakyThrows
     public static DataCloudConnection getHyperQueryConnection(HyperServerProcess server) {
-        val url = "jdbc:salesforce-hyper://127.0.0.1:" + server.getPort();
-        return HyperDatasource.connectUsingProperties(url, null);
+        Properties properties = new Properties();
+        properties.setProperty("ssl.disabled", "true");
+        String url = "jdbc:salesforce-hyper://127.0.0.1:" + server.getPort();
+        return HyperDatasource.connectUsingProperties(url, properties);
     }
 
     public static DataCloudConnection getHyperQueryConnection(Properties properties) {
         return getHyperQueryConnection(HyperServerManager.get(ConfigFile.SMALL_CHUNKS), properties);
     }
 
-    public static DataCloudConnection getHyperQueryConnection() {
-        return getHyperQueryConnection(new Properties());
+    public static DataCloudConnection getHyperQueryConnection() throws SQLException {
+        Properties properties = new Properties();
+        properties.setProperty("ssl.disabled", "true");
+        String url = "jdbc:salesforce-hyper://127.0.0.1:"
+                + HyperServerManager.get(ConfigFile.SMALL_CHUNKS).getPort();
+        return HyperDatasource.connectUsingProperties(url, properties);
     }
 
     @Override
