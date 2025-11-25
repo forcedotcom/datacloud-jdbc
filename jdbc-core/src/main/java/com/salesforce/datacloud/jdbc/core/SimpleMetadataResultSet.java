@@ -4,11 +4,11 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.metadata.ColumnMetadata;
-import com.salesforce.datacloud.jdbc.metadata.ColumnType;
-import com.salesforce.datacloud.jdbc.metadata.SimpleResultSetMetaData;
-import com.salesforce.datacloud.jdbc.resultset.ColumnAccessor;
-import com.salesforce.datacloud.jdbc.resultset.SimpleResultSet;
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnType;
+import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
+import com.salesforce.datacloud.jdbc.core.resultset.ColumnAccessor;
+import com.salesforce.datacloud.jdbc.core.resultset.SimpleResultSet;
 import java.math.BigDecimal;
 import java.sql.Array;
 import java.sql.Date;
