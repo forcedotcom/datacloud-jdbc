@@ -8,8 +8,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.salesforce.datacloud.jdbc.core.resultset.SimpleResultSet;
+import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -57,5 +59,22 @@ class SimpleMetadataResultSetTest {
     @Test
     void isWrapperFor() throws SQLException {
         assertThat(simpleMetadataResultSet.isWrapperFor(SimpleResultSet.class)).isFalse();
+    }
+
+    @Test
+    void getHoldability() throws SQLException {
+        assertThat(simpleMetadataResultSet.getHoldability()).isEqualTo(ResultSet.HOLD_CURSORS_OVER_COMMIT);
+    }
+
+    @Test
+    void getFetchSize() throws SQLException {
+        assertThat(simpleMetadataResultSet.getFetchSize()).isEqualTo(0);
+    }
+
+    @SneakyThrows
+    @Test
+    void getWarnings() {
+        assertThat((Iterable<? extends Throwable>) simpleMetadataResultSet.getWarnings())
+                .isNull();
     }
 }
