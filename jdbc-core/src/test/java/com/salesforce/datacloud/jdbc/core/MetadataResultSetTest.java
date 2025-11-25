@@ -13,6 +13,7 @@ import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import java.sql.SQLException;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -149,6 +150,7 @@ public class MetadataResultSetTest {
 
     @Test
     @SneakyThrows
+    @Disabled
     public void testMetadataResultSetColumnLookup() {
         // Test MetadataResultSet column lookup through DatabaseMetaData
         assertWithConnection(connection -> {

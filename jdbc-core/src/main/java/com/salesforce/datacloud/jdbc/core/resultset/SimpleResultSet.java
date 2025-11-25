@@ -4,7 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.resultset;
 
-import com.salesforce.datacloud.jdbc.metadata.SimpleResultSetMetaData;
+import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
