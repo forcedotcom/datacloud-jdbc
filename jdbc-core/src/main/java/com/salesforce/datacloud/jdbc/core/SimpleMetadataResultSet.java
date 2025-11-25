@@ -115,7 +115,6 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
 
     /**
      * Creates a ColumnAccessor for a specific column.
-     * TODO: Pull out into own class
      */
     private static ColumnAccessor<SimpleMetadataResultSet> createAccessor(ColumnMetadata column, int columnIndex) {
         return new ColumnAccessor<SimpleMetadataResultSet>() {
