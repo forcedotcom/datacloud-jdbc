@@ -7,7 +7,7 @@ package com.salesforce.datacloud.jdbc.util;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
-import com.salesforce.datacloud.jdbc.metadata.ColumnType;
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnType;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
