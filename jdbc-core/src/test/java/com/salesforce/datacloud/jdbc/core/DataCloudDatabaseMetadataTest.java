@@ -1036,7 +1036,8 @@ public class DataCloudDatabaseMetadataTest {
                 StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, connection);
         while (columnResultSet.next()) {
             assertThat(columnResultSet.getString("TYPE_NAME")).isEqualTo("VARCHAR");
-            assertThat(columnResultSet.getString("DATA_TYPE")).isEqualTo("12");
+            assertThat(columnResultSet.getInt("DATA_TYPE")).isEqualTo(12);
+            assertThat(columnResultSet.getBoolean("NULLABLE")).isFalse();
         }
     }
 
