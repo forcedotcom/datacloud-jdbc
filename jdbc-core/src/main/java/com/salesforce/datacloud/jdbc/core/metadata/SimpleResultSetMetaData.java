@@ -4,16 +4,12 @@
  */
 package com.salesforce.datacloud.jdbc.core.metadata;
 
-import com.salesforce.datacloud.jdbc.core.ColumnNameResolver;
-
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 public class SimpleResultSetMetaData implements ResultSetMetaData {
     /// The columns
     private final ColumnMetadata[] columns;
-
-    private final ColumnNameResolver columnNameResolver;
 
     public SimpleResultSetMetaData(ColumnMetadata[] columns) {
         this.columns = columns;
