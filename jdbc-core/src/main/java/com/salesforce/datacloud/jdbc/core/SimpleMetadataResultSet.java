@@ -60,42 +60,43 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
             String name = columnNames.get(i);
             String columnType = columnTypes.get(i);
             int jdbcType = columnTypeIds.get(i);
-            ColumnType columnSqlType = jdbcTypeToSqlType(jdbcType);
+            ColumnType columnSqlType = jdbcTypeToSqlType(jdbcType, name);
             columns[i] = new ColumnMetadata(name, columnSqlType, columnType);
         }
         return columns;
     }
 
-    private static ColumnType jdbcTypeToSqlType(int jdbcType) {
+    private static ColumnType jdbcTypeToSqlType(int jdbcType, String name) {
         switch (jdbcType) {
             case Types.BOOLEAN:
             case Types.BIT:
                 return new ColumnType(JDBCType.BOOLEAN);
             case Types.SMALLINT:
+                return new ColumnType(JDBCType.SMALLINT, 38, 18);
             case Types.TINYINT:
-                return new ColumnType(JDBCType.TINYINT);
+                return new ColumnType(JDBCType.TINYINT, 38, 18);
             case Types.INTEGER:
-                return new ColumnType(JDBCType.INTEGER);
+                return new ColumnType(JDBCType.INTEGER, 38, 18);
             case Types.BIGINT:
-                return new ColumnType(JDBCType.BIGINT);
+                return new ColumnType(JDBCType.BIGINT, 38, 18);
             case Types.NUMERIC:
             case Types.DECIMAL:
                 // Default precision/scale for metadata queries
                 return new ColumnType(JDBCType.NUMERIC, 38, 18);
             case Types.REAL:
             case Types.FLOAT:
-                return new ColumnType(JDBCType.FLOAT);
+                return new ColumnType(JDBCType.FLOAT, 38, 18);
             case Types.DOUBLE:
-                return new ColumnType(JDBCType.DOUBLE);
+                return new ColumnType(JDBCType.DOUBLE, 38, 18);
             case Types.CHAR:
-                return new ColumnType(JDBCType.CHAR, 255, 0);
+                return new ColumnType(JDBCType.CHAR, name.length(), 0);
             case Types.VARCHAR:
             case Types.LONGVARCHAR:
-                return new ColumnType(JDBCType.VARCHAR, 0, 0);
+                return new ColumnType(JDBCType.VARCHAR, name.length(), 0);
             case Types.BINARY:
             case Types.VARBINARY:
             case Types.LONGVARBINARY:
-                return new ColumnType(JDBCType.LONGVARBINARY, 0, 0);
+                return new ColumnType(JDBCType.LONGVARBINARY, name.length(), 0);
             case Types.DATE:
                 return new ColumnType(JDBCType.DATE);
             case Types.TIME:
@@ -109,7 +110,7 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                 return new ColumnType(JDBCType.ARRAY, new ColumnType(JDBCType.VARCHAR, 0, 0));
             default:
                 // Default to VARCHAR for unknown types
-                return new ColumnType(JDBCType.VARCHAR, 0, 0);
+                return new ColumnType(JDBCType.VARCHAR, name.length(), 0);
         }
     }
 

@@ -15,6 +15,7 @@ import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.config.KeywordResources;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -1037,6 +1038,38 @@ public class DataCloudDatabaseMetadataTest {
         while (columnResultSet.next()) {
             assertThat(columnResultSet.getString("TYPE_NAME")).isEqualTo("VARCHAR");
             assertThat(columnResultSet.getInt("DATA_TYPE")).isEqualTo(12);
+            assertThat(columnResultSet.getBoolean("NULLABLE")).isFalse();
+        }
+    }
+
+    @Test
+    public void testMetadataColumnAccessors() throws SQLException {
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
+        Mockito.when(resultSetMock.next()).thenReturn(true).thenReturn(false);
+        Mockito.when(resultSetMock.getString("nspname")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("relname")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("attname")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("attname")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("datatype")).thenReturn("TEXT");
+        Mockito.when(resultSetMock.getBoolean("attnotnull")).thenReturn(true);
+        Mockito.when(resultSetMock.getString("description")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("adsrc")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getInt("attnum")).thenReturn(1);
+        Mockito.when(resultSetMock.getBoolean("attnotnull")).thenReturn(true);
+        Mockito.when(resultSetMock.getString("attidentity")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("adsrc")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("attgenerated")).thenReturn(StringUtils.EMPTY);
+
+        ResultSet columnResultSet = QueryMetadataUtil.createColumnResultSet(
+                StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, connection);
+        while (columnResultSet.next()) {
+            assertThat(columnResultSet.getObject("TYPE_NAME")).isEqualTo("VARCHAR");
+            assertThat(columnResultSet.getObject("DATA_TYPE")).isEqualTo(12);
+            assertThat(columnResultSet.getDouble("DATA_TYPE")).isEqualTo(12);
+            assertThat(columnResultSet.getShort("DATA_TYPE")).isEqualTo(new Short("12"));
+            assertThat(columnResultSet.getFloat("DATA_TYPE")).isEqualTo(12);
+            assertThat(columnResultSet.getBigDecimal("DATA_TYPE")).isEqualTo(new BigDecimal(12));
             assertThat(columnResultSet.getBoolean("NULLABLE")).isFalse();
         }
     }

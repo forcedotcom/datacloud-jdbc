@@ -6,6 +6,7 @@ package com.salesforce.datacloud.jdbc.core.metadata;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import lombok.val;
 
 public class SimpleResultSetMetaData implements ResultSetMetaData {
     /// The columns
@@ -43,7 +44,11 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnLabel(int column) throws SQLException {
-        return getColumn(column).getName();
+        val columnName = getColumn(column).getName();
+        if (columnName == null) {
+            return "C" + (column - 1);
+        }
+        return columnName;
     }
 
     @Override
