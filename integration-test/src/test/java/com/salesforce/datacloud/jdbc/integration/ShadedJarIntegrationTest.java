@@ -68,6 +68,13 @@ public class ShadedJarIntegrationTest {
     /**
      * Test 2: Verify connection and query execution (tests gRPC NameResolver and end-to-end functionality)
      * This is the critical test that would have caught the service file regression
+     *
+     * Note: This test requires credentials to be provided via system properties:
+     * - test.connection.url (optional, defaults to test2.pc-rnd.salesforce.com)
+     * - test.connection.userName
+     * - test.connection.password
+     * - test.connection.clientId
+     * - test.connection.clientSecret
      */
     @Test
     @Order(2)

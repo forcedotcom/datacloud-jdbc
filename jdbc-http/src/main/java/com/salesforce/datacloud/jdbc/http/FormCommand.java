@@ -17,6 +17,7 @@ import lombok.Builder;
 import lombok.NonNull;
 import lombok.Singular;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import okhttp3.FormBody;
 import okhttp3.Headers;
@@ -25,6 +26,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 
+@Slf4j
 @Value
 @Builder(builderClassName = "Builder")
 public class FormCommand {
@@ -76,12 +78,43 @@ public class FormCommand {
             throws SQLException, AuthorizationException {
         try (Response response = client.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                if (response.code() >= 400 && response.code() < 500) {
-                    throw AuthorizationException.builder()
+                int statusCode = response.code();
+                String responseBody = "";
+                try {
+                    val responseBodyObj = response.body();
+                    if (responseBodyObj != null) {
+                        responseBody = responseBodyObj.string();
+                    }
+                } catch (IOException e) {
+                    // If we can't read the body, continue with empty string
+                }
+
+                // Handle 4xx and 5xx errors as AuthorizationException for consistent retry handling
+                if (statusCode >= 400 && statusCode < 600) {
+                    AuthorizationException authEx = AuthorizationException.builder()
                             .message(response.message())
-                            .errorCode(String.valueOf(response.code()))
-                            .errorDescription(response.body().string())
+                            .errorCode(String.valueOf(statusCode))
+                            .errorDescription(responseBody)
                             .build();
+
+                    // Log the error details for debugging
+                    if (authEx.isRetriable()) {
+                        log.warn(
+                                "HTTP {} error from {} (retriable): {} - Response body: {}",
+                                statusCode,
+                                request.url(),
+                                response.message(),
+                                responseBody);
+                    } else {
+                        log.error(
+                                "HTTP {} error from {}: {} - Response body: {}",
+                                statusCode,
+                                request.url(),
+                                response.message(),
+                                responseBody);
+                    }
+
+                    throw authEx;
                 }
                 throw new IOException("Unexpected code " + response);
             }
