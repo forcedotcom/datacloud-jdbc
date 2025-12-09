@@ -10,7 +10,6 @@ jobs:
     uses: './.github/workflows/reusable-build-publish.yml'
     with:
       publish: true
-      version: 'SNAPSHOT'
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       signing_key: ${{ secrets.GPG_SIGNING_KEY }}
