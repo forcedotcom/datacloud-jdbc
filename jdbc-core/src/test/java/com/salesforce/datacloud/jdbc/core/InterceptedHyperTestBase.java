@@ -112,12 +112,8 @@ public class InterceptedHyperTestBase {
         return conn;
     }
 
-    @SneakyThrows
-    protected HyperGrpcClientExecutor getInterceptedGrpcExecutor() {
-        val conn = getInterceptedClientConnection();
-        return HyperGrpcClientExecutor.of(
-                conn.getStub(),
-                conn.getConnectionProperties().getStatementProperties().getQuerySettings());
+    public HyperServiceGrpc.HyperServiceStub getInterceptedStub() {
+        return getInterceptedClientConnection().getStub();
     }
 
     public static <ReqT, RespT> void proxyStreamingMethod(

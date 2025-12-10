@@ -53,8 +53,7 @@ public class QueryResultIteratorFunctionalTest extends InterceptedHyperTestBase 
 
     @Test
     void canHandleJsonOutputFormat() {
-        val executor = getInterceptedGrpcExecutor();
-        val stub = executor.getStub();
+        val stub = getInterceptedStub();
 
         val query = QueryParam.newBuilder()
                 .setQuery("SELECT g FROM generate_series(1,5) g")
@@ -78,9 +77,7 @@ public class QueryResultIteratorFunctionalTest extends InterceptedHyperTestBase 
 
     @Test
     void canHandleAsyncMode() {
-        val executor = getInterceptedGrpcExecutor();
-        val stub = executor.getStub();
-
+        val stub = getInterceptedStub();
         val query = QueryParam.newBuilder()
                 .setQuery("SELECT g FROM generate_series(1,5) g")
                 .setTransferMode(QueryParam.TransferMode.ASYNC)

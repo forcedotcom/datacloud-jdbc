@@ -32,7 +32,7 @@ public class QueryResultIteratorTest extends InterceptedHyperTestBase {
     private static final String TEST_QUERY_ID = "test-query-123";
 
     private HyperServiceGrpc.HyperServiceStub setupStub() {
-        return getInterceptedGrpcExecutor().getStub().withDeadlineAfter(30000, TimeUnit.MILLISECONDS);
+        return getInterceptedStub().withDeadlineAfter(30000, TimeUnit.MILLISECONDS);
     }
 
     @Test

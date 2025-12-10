@@ -78,7 +78,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     }
 
     @Override
-    protected HyperGrpcClientExecutor getQueryClient(QueryTimeout queryTimeout) throws SQLException {
+    protected ExecuteQueryParamBuilder getQueryParamBuilder(QueryTimeout queryTimeout) throws SQLException {
         final byte[] encodedRow;
         try {
             encodedRow = toArrowByteArray(parameterManager.getParameters(), calendar);
@@ -93,7 +93,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
                         .build())
                 .build();
 
-        return super.getQueryClient(queryTimeout).withQueryParams(preparedQueryParams);
+        return super.getQueryParamBuilder(queryTimeout).withQueryParams(preparedQueryParams);
     }
 
     public boolean executeAsyncQuery() throws SQLException {

@@ -9,7 +9,6 @@ import com.salesforce.datacloud.jdbc.util.Unstable;
 import java.util.Map;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
-import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.ResultRange;
 
@@ -20,27 +19,21 @@ import salesforce.cdp.hyperdb.v1.ResultRange;
 @Builder(access = AccessLevel.PRIVATE)
 @Slf4j
 @Unstable
-public class HyperGrpcClientExecutor {
-    @Getter
-    @NonNull private final HyperServiceGrpc.HyperServiceStub stub;
-
+public class ExecuteQueryParamBuilder {
     private final QueryParam settingsQueryParams;
 
     private QueryParam additionalQueryParams;
 
-    public static HyperGrpcClientExecutor of(
-            @NonNull HyperServiceGrpc.HyperServiceStub stub, Map<String, String> querySettings) {
-        val builder = HyperGrpcClientExecutor.builder().stub(stub);
-
+    public static ExecuteQueryParamBuilder of(Map<String, String> querySettings) {
+        val builder = ExecuteQueryParamBuilder.builder();
         if (!querySettings.isEmpty()) {
             builder.settingsQueryParams(
                     QueryParam.newBuilder().putAllSettings(querySettings).build());
         }
-
         return builder.build();
     }
 
-    public HyperGrpcClientExecutor withQueryParams(QueryParam additionalQueryParams) {
+    public ExecuteQueryParamBuilder withQueryParams(QueryParam additionalQueryParams) {
         this.additionalQueryParams = additionalQueryParams;
         return this;
     }

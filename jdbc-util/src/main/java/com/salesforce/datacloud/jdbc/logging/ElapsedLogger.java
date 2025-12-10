@@ -30,6 +30,7 @@ public final class ElapsedLogger {
             throw e;
         }
     }
+
     public static void logStart(Logger logger, String name) {
         logger.info("Starting name={}", name);
     }
