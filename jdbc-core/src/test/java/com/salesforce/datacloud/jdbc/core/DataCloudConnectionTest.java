@@ -87,8 +87,7 @@ class DataCloudConnectionTest extends InterceptedHyperTestBase {
      */
     private static class TestStubProvider implements HyperGrpcStubProvider {
         @Getter
-        public final HyperServiceGrpc.HyperServiceBlockingStub stub =
-                mock(HyperServiceGrpc.HyperServiceBlockingStub.class);
+        public final HyperServiceGrpc.HyperServiceStub stub = mock(HyperServiceGrpc.HyperServiceStub.class);
 
         @Override
         public void close() throws Exception {

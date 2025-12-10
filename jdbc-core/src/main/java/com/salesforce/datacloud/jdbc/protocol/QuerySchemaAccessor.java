@@ -4,15 +4,17 @@
  */
 package com.salesforce.datacloud.jdbc.protocol;
 
-import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValueNonThrowing;
 import static org.apache.arrow.vector.types.pojo.Schema.deserializeMessage;
 
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
+import com.salesforce.datacloud.jdbc.protocol.grpc.util.BufferingStreamIterator;
 import io.grpc.Status;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.arrow.vector.types.pojo.Schema;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
+import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 
 @Slf4j
 public class QuerySchemaAccessor {
@@ -26,30 +28,27 @@ public class QuerySchemaAccessor {
      * @return A new QueryInfoIterator instance
      */
     public static Schema getArrowSchema(@NonNull QueryAccessGrpcClient queryClient) {
-        val binarySchema = logTimedValueNonThrowing(
-                () -> {
-                    val iterator = queryClient
-                            .getStub()
-                            .getQueryInfo(queryClient
-                                    .getQueryInfoParamBuilder()
-                                    .setSchemaOutputFormat(QueryResultArrowStream.OUTPUT_FORMAT)
-                                    .build());
-                    while (true) {
-                        // We always expect a schema message as we requested one
-                        if (!iterator.hasNext()) {
-                            throw Status.fromCode(Status.Code.INTERNAL)
-                                    .withDescription("No schema data available. queryId=" + queryClient.getQueryId())
-                                    .asRuntimeException();
-                        }
-                        val message = iterator.next();
-                        // Identify message with binary schema
-                        if (message.hasBinarySchema()) {
-                            return message.getBinarySchema().getData();
-                        }
-                    }
-                },
-                "getQuerySchema queryId=" + queryClient.getQueryId(),
-                log);
-        return deserializeMessage(binarySchema.asReadOnlyByteBuffer());
+        val request = queryClient
+                .getQueryInfoParamBuilder()
+                .setSchemaOutputFormat(QueryResultArrowStream.OUTPUT_FORMAT)
+                .build();
+        val message = "getQuerySchema queryId=" + queryClient.getQueryId();
+        val iterator = new BufferingStreamIterator<QueryInfoParam, QueryInfo>(message, log);
+        queryClient.getStub().getQueryInfo(request, iterator.getObserver());
+
+        while (true) {
+            // We always expect a schema message as we requested one
+            if (!iterator.hasNext()) {
+                throw Status.fromCode(Status.Code.INTERNAL)
+                        .withDescription("No schema data available. queryId=" + queryClient.getQueryId())
+                        .asRuntimeException();
+            }
+            val info = iterator.next();
+            // Identify message with binary schema
+            if (info.hasBinarySchema()) {
+                iterator.close();
+                return deserializeMessage(info.getBinarySchema().getData().asReadOnlyByteBuffer());
+            }
+        }
     }
 }

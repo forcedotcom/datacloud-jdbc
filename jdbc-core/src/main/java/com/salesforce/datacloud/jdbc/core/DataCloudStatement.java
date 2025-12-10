@@ -132,7 +132,8 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         val queryParam = targetMaxRows > 0
                 ? client.getAdaptiveRowLimitQueryParams(sql, targetMaxRows, targetMaxBytes)
                 : client.getAdaptiveQueryParams(sql);
-        val stub = client.getStub()
+        val stub = connection
+                .getStub()
                 .withDeadlineAfter(
                         queryTimeout.getLocalDeadline().getRemaining().toMillis(), TimeUnit.MILLISECONDS);
         val iterator = QueryResultIterator.of(stub, queryParam);
@@ -149,7 +150,8 @@ public class DataCloudStatement implements Statement, AutoCloseable {
                     statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
             val client = getQueryClient(queryTimeout);
             val request = client.getQueryParams(sql, QueryParam.TransferMode.ASYNC);
-            val stub = client.getStub()
+            val stub = connection
+                    .getStub()
                     .withDeadlineAfter(
                             queryTimeout.getLocalDeadline().getRemaining().toMillis(), TimeUnit.MILLISECONDS);
 

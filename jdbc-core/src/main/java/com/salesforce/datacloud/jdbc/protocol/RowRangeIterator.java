@@ -4,9 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.protocol;
 
-import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValueNonThrowing;
-
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
+import com.salesforce.datacloud.jdbc.protocol.grpc.util.BufferingStreamIterator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import lombok.*;
@@ -59,7 +58,7 @@ public class RowRangeIterator implements Iterator<QueryResult> {
 
     private final OutputFormat outputFormat;
     private boolean omitSchema;
-    private Iterator<QueryResult> iterator;
+    private BufferingStreamIterator<ResultRange, QueryResult> iterator;
 
     @Override
     public boolean hasNext() {
@@ -86,7 +85,8 @@ public class RowRangeIterator implements Iterator<QueryResult> {
         val message = String.format(
                 "getQueryResult queryId=%s, currentOffset=%d, remaining=%d, omitSchema=%s",
                 client.getQueryId(), this.currentOffset, limitRowOffset - currentOffset, omitSchema);
-        iterator = logTimedValueNonThrowing(() -> client.getStub().getQueryResult(param), message, log);
+        iterator = new BufferingStreamIterator<ResultRange, QueryResult>(message, log);
+        client.getStub().getQueryResult(param, iterator.getObserver());
 
         // We only need to fetch the schema for the first result
         if (!omitSchema) {

@@ -4,7 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.logging;
 
-import com.salesforce.datacloud.jdbc.util.NonThrowingJdbcSupplier;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -20,30 +19,26 @@ public final class ElapsedLogger {
             throws SQLException {
         val start = System.nanoTime();
         try {
-            logger.info("Starting name={}", name);
+            logStart(logger, name);
             val result = supplier.get();
             val elapsed = System.nanoTime() - start;
-            logger.info("Success name={}, millis={}, duration={}", name, elapsed, Duration.ofNanos(elapsed));
+            logSuccess(logger, name, elapsed);
             return result;
         } catch (SQLException e) {
             val elapsed = System.nanoTime() - start;
-            logger.info("Failed name={}, millis={}, duration={}", name, elapsed, Duration.ofNanos(elapsed), e);
+            logFailure(logger, name, elapsed, e);
             throw e;
         }
     }
+    public static void logStart(Logger logger, String name) {
+        logger.info("Starting name={}", name);
+    }
 
-    public static <T> T logTimedValueNonThrowing(NonThrowingJdbcSupplier<T> supplier, String name, Logger logger) {
-        val start = System.nanoTime();
-        try {
-            logger.info("Starting name={}", name);
-            val result = supplier.get();
-            val elapsed = System.nanoTime() - start;
-            logger.info("Success name={}, millis={}, duration={}", name, elapsed, Duration.ofNanos(elapsed));
-            return result;
-        } catch (Exception e) {
-            val elapsed = System.nanoTime() - start;
-            logger.info("Failed name={}, millis={}, duration={}", name, elapsed, Duration.ofNanos(elapsed), e);
-            throw e;
-        }
+    public static void logSuccess(Logger logger, String name, long elapsedNanos) {
+        logger.info("Success name={}, millis={}, duration={}", name, elapsedNanos, Duration.ofNanos(elapsedNanos));
+    }
+
+    public static void logFailure(Logger logger, String name, long elapsedNanos, Throwable t) {
+        logger.info("Failed name={}, millis={}, duration={}", name, elapsedNanos, Duration.ofNanos(elapsedNanos), t);
     }
 }

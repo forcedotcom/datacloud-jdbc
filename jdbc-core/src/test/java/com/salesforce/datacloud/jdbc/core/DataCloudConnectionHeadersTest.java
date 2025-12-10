@@ -17,16 +17,16 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 class DataCloudConnectionHeadersTest {
 
     private static class TestStubProvider implements HyperGrpcStubProvider {
-        private final HyperServiceGrpc.HyperServiceBlockingStub stub;
+        private final HyperServiceGrpc.HyperServiceStub stub;
 
         TestStubProvider() {
-            this.stub = HyperServiceGrpc.newBlockingStub(InProcessChannelBuilder.forName("headers-test")
+            this.stub = HyperServiceGrpc.newStub(InProcessChannelBuilder.forName("headers-test")
                     .usePlaintext()
                     .build());
         }
 
         @Override
-        public HyperServiceGrpc.HyperServiceBlockingStub getStub() {
+        public HyperServiceGrpc.HyperServiceStub getStub() {
             return stub;
         }
 

@@ -38,7 +38,7 @@ public class DataCloudQueryPollingTests extends InterceptedHyperTestBase {
         channel = InProcessChannelBuilder.forName(GrpcMock.getGlobalInProcessName())
                 .usePlaintext()
                 .build();
-        queryClient = QueryAccessGrpcClient.of(TEST_QUERY_ID, HyperServiceGrpc.newBlockingStub(channel));
+        queryClient = QueryAccessGrpcClient.of(TEST_QUERY_ID, HyperServiceGrpc.newStub(channel));
     }
 
     @AfterEach

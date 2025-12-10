@@ -60,19 +60,20 @@ public final class DataCloudQueryPolling {
      */
     public QueryStatus waitFor() throws SQLException {
         try {
-            val queryInfos = QueryInfoIterator.of(client);
-            while (queryInfos.hasNext()) {
-                val info = queryInfos.next();
-                // Skip non status messages
-                if (!info.hasQueryStatus()) {
-                    continue;
-                }
+            try (val queryInfos = QueryInfoIterator.of(client)) {
+                while (queryInfos.hasNext()) {
+                    val info = queryInfos.next();
+                    // Skip non status messages
+                    if (!info.hasQueryStatus()) {
+                        continue;
+                    }
 
-                lastStatus = QueryStatus.of(info.getQueryStatus());
-                if (predicate.test(lastStatus)) {
-                    return lastStatus;
-                } else if (lastStatus.isExecutionFinished()) {
-                    throw new SQLException("Predicate was not satisfied when execution finished. " + this, "HYT00");
+                    lastStatus = QueryStatus.of(info.getQueryStatus());
+                    if (predicate.test(lastStatus)) {
+                        return lastStatus;
+                    } else if (lastStatus.isExecutionFinished()) {
+                        throw new SQLException("Predicate was not satisfied when execution finished. " + this, "HYT00");
+                    }
                 }
             }
             // This should never happen, we expect that the iterator will throw an exception if there is a timeout

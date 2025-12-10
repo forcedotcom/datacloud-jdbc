@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
@@ -65,15 +66,16 @@ public class HyperServerProcess implements AutoCloseable {
         String timestamp = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy_MM_dd_HH_mm_ss"));
         String collisionAvoider = String.format("%04d", (int)(Math.random() * 10000));
         String logName = "hyperd_"+collisionAvoider+"_"+timestamp;
+        val command = new ArrayList<String>();
+        command.add(executable.getAbsolutePath());
+        command.addAll(config.build().toArguments());
+        command.add("--log-config=file,json,info," + logName+",0");
+        command.add("--config");
+        command.add(yaml.getAbsolutePath());
+        command.add("--no-password");
+        command.add("run");
         val builder = new ProcessBuilder()
-                .command(
-                        executable.getAbsolutePath(),
-                        config.build().toString(),
-                        "--log-config=file,json,info," + logName+",0",
-                        "--config",
-                        yaml.getAbsolutePath(),
-                        "--no-password",
-                        "run");
+                .command(command);
 
         log.warn("hyper command: {}", builder.command());
         hyperProcess = builder.start();

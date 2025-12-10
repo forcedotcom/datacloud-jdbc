@@ -17,9 +17,9 @@ import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
  */
 public interface HyperGrpcStubProvider extends AutoCloseable {
     /**
-     * Returns a new HyperServiceGrpc.HyperServiceBlockingStub
+     * Returns a new HyperServiceGrpc.HyperServiceStub
      *
      * @return the stub
      */
-    HyperServiceGrpc.HyperServiceBlockingStub getStub();
+    HyperServiceGrpc.HyperServiceStub getStub();
 }

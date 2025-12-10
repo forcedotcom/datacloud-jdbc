@@ -12,11 +12,14 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.hyper.HyperServerConfig;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import io.grpc.*;
+import io.grpc.stub.MetadataUtils;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -290,8 +293,8 @@ public class JDBCLimitsTest {
         }
 
         @Override
-        public HyperServiceGrpc.HyperServiceBlockingStub getStub() {
-            return HyperServiceGrpc.newBlockingStub(channel);
+        public HyperServiceGrpc.HyperServiceStub getStub() {
+            return HyperServiceGrpc.newStub(channel);
         }
 
         @Override
@@ -370,6 +373,57 @@ public class JDBCLimitsTest {
             logMemoryUsage("After ResultSet consumption", rs.getRow());
             log.warn("Peak memory usage during test: {}", formatMemory(maxUsedMemory));
         });
+    }
+
+    /**
+     * This tests a Scenario where the reader was consuming results were slowly and checks that this doesn't lead to
+     * unnoticed data loss. Previously we had a bug where if a client was not consuming the rows of the execute query
+     * fast enough that due to the cancel some message would be missed but the call flow would still continue as
+     * cancel is expected at that point.
+     */
+    @Test
+    public void testSlowReader() throws SQLException, InterruptedException {
+        // The connection properties
+        Properties properties = new Properties();
+
+        // The timeout for cancelling gRPC call to ensure that caller is reading slower than server is cancelling
+        int timeoutMs = 3000;
+
+        // You can bring your own gRPC channels that are set up in the way you like (mTLS / Plaintext / ...) and your
+        // own interceptors as well as executors.
+        ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forAddress(
+                        "127.0.0.1",
+                        HyperServerManager.get(
+                                        HyperServerConfig.builder()
+                                                .grpcRequestTimeoutSeconds(Integer.toString(timeoutMs) + "ms")
+                                                .grpcAdaptiveTimeoutSeconds(Integer.toString(timeoutMs - 1000) + "ms"),
+                                        HyperServerManager.ConfigFile.DEFAULT)
+                                .getPort())
+                .usePlaintext();
+        // Inject adaptive timeout header on all calls
+        Metadata metadata = new Metadata();
+        metadata.put(
+                Metadata.Key.of("x-hyperdb-adaptive-timeout", Metadata.ASCII_STRING_MARSHALLER),
+                Integer.toString(timeoutMs) + "ms");
+        channelBuilder = channelBuilder.intercept(MetadataUtils.newAttachHeadersInterceptor(metadata));
+        // You can set settings for the stub provider
+        val grpcChannelProperties = GrpcChannelProperties.builder().build();
+        val stubProvider = JdbcDriverStubProvider.of(channelBuilder, grpcChannelProperties);
+        // You can also set settings for the connection
+        val connectionProperties = ConnectionProperties.builder().build();
+
+        // Use the JDBC Driver interface
+        try (DataCloudConnection conn = DataCloudConnection.of(stubProvider, connectionProperties, null)) {
+            try (Statement stmt = conn.createStatement()) {
+                ResultSet rs = stmt.executeQuery(
+                        "SELECT s, lpad('X', 1024*1024, 'X') FROM generate_series(1,40) s ORDER BY s ASC");
+                Thread.sleep(timeoutMs + 100);
+                for (int i = 1; i <= 40; ++i) {
+                    rs.next();
+                    assertThat(rs.getLong(1)).isEqualTo(i);
+                }
+            }
+        }
     }
 
     private static String repeat(char c, int length) {

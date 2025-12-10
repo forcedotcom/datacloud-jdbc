@@ -11,10 +11,7 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import salesforce.cdp.hyperdb.v1.CancelQueryParam;
-import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
-import salesforce.cdp.hyperdb.v1.QueryInfoParam;
-import salesforce.cdp.hyperdb.v1.QueryResultParam;
+import salesforce.cdp.hyperdb.v1.*;
 
 /**
  * This class facilitates protocol access to a specific query id. It bundles the query id together with a stub that is
@@ -30,7 +27,7 @@ public class QueryAccessGrpcClient {
      * The stub is cached as a best practice in gRPC see https://grpc.io/docs/guides/performance/
      */
     @Getter
-    private HyperServiceGrpc.HyperServiceBlockingStub stub;
+    private HyperServiceGrpc.HyperServiceStub stub;
     /**
      * The query id that is getting accessed
      */
@@ -47,7 +44,7 @@ public class QueryAccessGrpcClient {
      * @param stub the stub that should be used as base
      * @return a new instance of the access client
      */
-    public static QueryAccessGrpcClient of(String queryId, HyperServiceGrpc.HyperServiceBlockingStub stub) {
+    public static QueryAccessGrpcClient of(String queryId, HyperServiceGrpc.HyperServiceStub stub) {
         Metadata injectedHeader = new Metadata();
         injectedHeader.put(queryIdHeader, queryId);
 
@@ -86,8 +83,7 @@ public class QueryAccessGrpcClient {
      * @param configurator A function that takes the current stub and returns a configured stub
      * @return A new QueryAccessGrpcClient with the configured stub
      */
-    public QueryAccessGrpcClient withStubConfiguration(
-            UnaryOperator<HyperServiceGrpc.HyperServiceBlockingStub> configurator) {
+    public QueryAccessGrpcClient withStubConfiguration(UnaryOperator<HyperServiceGrpc.HyperServiceStub> configurator) {
         return QueryAccessGrpcClient.of(queryId, configurator.apply(stub));
     }
 }

@@ -4,8 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.protocol;
 
-import com.salesforce.datacloud.jdbc.logging.ElapsedLogger;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
+import com.salesforce.datacloud.jdbc.protocol.grpc.util.BufferingStreamIterator;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.util.Iterator;
@@ -17,7 +17,7 @@ import lombok.val;
 import salesforce.cdp.hyperdb.v1.*;
 
 /**
- * See {@link QueryResultIterator#of(HyperServiceGrpc.HyperServiceBlockingStub, QueryParam)}
+ * See {@link QueryResultIterator#of(HyperServiceGrpc.HyperServiceStub, QueryParam)}
  *
  */
 @Slf4j
@@ -25,7 +25,7 @@ import salesforce.cdp.hyperdb.v1.*;
 public class QueryResultIterator implements Iterator<QueryResult>, QueryAccessHandle {
 
     private final Iterator<ExecuteQueryResponse> executeQueryMessages;
-    private final HyperServiceGrpc.HyperServiceBlockingStub executeQueryStub;
+    private final HyperServiceGrpc.HyperServiceStub executeQueryStub;
     private final OutputFormat outputFormat;
     // The query client is initialized when we receive the query id
     private QueryAccessGrpcClient queryClient;
@@ -53,24 +53,20 @@ public class QueryResultIterator implements Iterator<QueryResult>, QueryAccessHa
      * @param executeQueryParam - the query parameters to execute
      * @return a new QueryResultIterator instance
      */
-    public static QueryResultIterator of(HyperServiceGrpc.HyperServiceBlockingStub stub, QueryParam executeQueryParam) {
+    public static QueryResultIterator of(HyperServiceGrpc.HyperServiceStub stub, QueryParam executeQueryParam) {
         val message = "executeQuery. mode=" + executeQueryParam.getTransferMode();
-        return ElapsedLogger.logTimedValueNonThrowing(
-                () -> {
-                    val iterator = new QueryResultIterator(
-                            stub.executeQuery(executeQueryParam),
-                            stub,
-                            executeQueryParam.getOutputFormat(),
-                            null,
-                            null,
-                            null,
-                            null,
-                            executeQueryParam.getTransferMode() == QueryParam.TransferMode.ASYNC ? 0 : 1,
-                            null);
-                    return iterator;
-                },
-                message,
-                log);
+        val iterator = new BufferingStreamIterator<QueryParam, ExecuteQueryResponse>(message, log);
+        stub.executeQuery(executeQueryParam, iterator.getObserver());
+        return new QueryResultIterator(
+                iterator,
+                stub,
+                executeQueryParam.getOutputFormat(),
+                null,
+                null,
+                null,
+                null,
+                executeQueryParam.getTransferMode() == QueryParam.TransferMode.ASYNC ? 0 : 1,
+                null);
     }
 
     /**

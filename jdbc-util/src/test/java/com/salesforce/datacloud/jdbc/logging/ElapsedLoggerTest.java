@@ -13,7 +13,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.salesforce.datacloud.jdbc.util.NonThrowingJdbcSupplier;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.SQLException;
 import lombok.val;
@@ -50,43 +49,6 @@ public class ElapsedLoggerTest {
         val operationName = "failing-operation";
 
         assertThatThrownBy(() -> ElapsedLogger.logTimedValue(supplier, operationName, logger))
-                .isEqualTo(expectedException);
-
-        verify(logger, times(1)).info(eq("Starting name={}"), eq(operationName));
-        verify(logger, times(1))
-                .info(
-                        eq("Failed name={}, millis={}, duration={}"),
-                        eq(operationName),
-                        anyLong(),
-                        any(),
-                        eq(expectedException));
-    }
-
-    @Test
-    void logTimedValueNonThrowingShouldReturnResultAndLogSuccess() {
-        val logger = mock(Logger.class);
-        val expectedResult = 42;
-        NonThrowingJdbcSupplier<Integer> supplier = () -> expectedResult;
-        val operationName = "non-throwing-operation";
-
-        val result = ElapsedLogger.logTimedValueNonThrowing(supplier, operationName, logger);
-
-        assertThat(result).isEqualTo(expectedResult);
-        verify(logger, times(1)).info(eq("Starting name={}"), eq(operationName));
-        verify(logger, times(1))
-                .info(eq("Success name={}, millis={}, duration={}"), eq(operationName), anyLong(), any());
-    }
-
-    @Test
-    void logTimedValueNonThrowingShouldLogFailureAndRethrowException() {
-        val logger = mock(Logger.class);
-        val expectedException = new RuntimeException("test-runtime-error");
-        NonThrowingJdbcSupplier<String> supplier = () -> {
-            throw expectedException;
-        };
-        val operationName = "failing-non-throwing-operation";
-
-        assertThatThrownBy(() -> ElapsedLogger.logTimedValueNonThrowing(supplier, operationName, logger))
                 .isEqualTo(expectedException);
 
         verify(logger, times(1)).info(eq("Starting name={}"), eq(operationName));

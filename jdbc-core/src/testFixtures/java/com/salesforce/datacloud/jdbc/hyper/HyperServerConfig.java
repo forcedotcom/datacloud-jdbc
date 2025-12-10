@@ -7,6 +7,8 @@ package com.salesforce.datacloud.jdbc.hyper;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Builder;
@@ -20,14 +22,17 @@ public class HyperServerConfig {
     @JsonProperty("grpc-adaptive-timeout")
     String grpcAdaptiveTimeoutSeconds = "60s";
 
-    @Override
-    public String toString() {
+    @Builder.Default
+    @JsonProperty("grpc-request-timeout")
+    String grpcRequestTimeoutSeconds = "70s";
+
+    public List<String> toArguments() {
         val mapper = new ObjectMapper();
         val map = mapper.convertValue(this, new TypeReference<Map<String, Object>>() {});
         return map.entrySet().stream()
                 .filter(entry -> entry.getValue() != null)
                 .map(entry -> String.format("--%s=%s", entry.getKey().replace("_", "-"), entry.getValue()))
-                .collect(Collectors.joining(" "));
+                .collect(Collectors.toList());
     }
 
     public HyperServerProcess start() {

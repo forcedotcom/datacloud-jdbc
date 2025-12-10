@@ -4,9 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.protocol;
 
-import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValueNonThrowing;
-
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
+import com.salesforce.datacloud.jdbc.protocol.grpc.util.BufferingStreamIterator;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.util.Iterator;
@@ -17,6 +16,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
+import salesforce.cdp.hyperdb.v1.QueryInfoParam;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 /**
@@ -24,7 +24,7 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  */
 @Slf4j
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class QueryInfoIterator implements Iterator<QueryInfo> {
+public class QueryInfoIterator implements Iterator<QueryInfo>, AutoCloseable {
 
     /**
      * Provides an Iterator over QueryInfo messages of a Query. It'll keep iterating until the query is finished.
@@ -43,7 +43,7 @@ public class QueryInfoIterator implements Iterator<QueryInfo> {
     }
 
     private final QueryAccessGrpcClient client;
-    private Iterator<QueryInfo> iterator;
+    private BufferingStreamIterator<QueryInfoParam, QueryInfo> iterator;
     private boolean isFinished;
 
     /**
@@ -81,14 +81,11 @@ public class QueryInfoIterator implements Iterator<QueryInfo> {
             } else {
                 ++retryCount;
                 // Get a new set of infos
+                val request =
+                        client.getQueryInfoParamBuilder().setStreaming(true).build();
                 val message = String.format("getQueryInfo queryId=%s, streaming=%s", client.getQueryId(), true);
-                iterator = logTimedValueNonThrowing(
-                        () -> client.getStub()
-                                .getQueryInfo(client.getQueryInfoParamBuilder()
-                                        .setStreaming(true)
-                                        .build()),
-                        message,
-                        log);
+                iterator = new BufferingStreamIterator<QueryInfoParam, QueryInfo>(message, log);
+                client.getStub().getQueryInfo(request, iterator.getObserver());
                 // Continue with next iteration of the loop
             }
         }
@@ -105,5 +102,13 @@ public class QueryInfoIterator implements Iterator<QueryInfo> {
             isFinished = (result.getQueryStatus().getCompletionStatus() == QueryStatus.CompletionStatus.FINISHED);
         }
         return result;
+    }
+
+    @Override
+    public void close() {
+        // Close the iterator to ensure that ongoing streaming calls are properly closed
+        if (iterator != null) {
+            iterator.close();
+        }
     }
 }

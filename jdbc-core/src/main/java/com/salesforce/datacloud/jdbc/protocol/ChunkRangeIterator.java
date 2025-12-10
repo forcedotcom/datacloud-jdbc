@@ -4,9 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.protocol;
 
-import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValueNonThrowing;
-
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
+import com.salesforce.datacloud.jdbc.protocol.grpc.util.BufferingStreamIterator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import lombok.AccessLevel;
@@ -16,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.OutputFormat;
 import salesforce.cdp.hyperdb.v1.QueryResult;
+import salesforce.cdp.hyperdb.v1.QueryResultParam;
 
 /**
  * See {@link ChunkRangeIterator#of(QueryAccessGrpcClient, long, long, boolean, OutputFormat)}
@@ -50,7 +50,7 @@ public class ChunkRangeIterator implements Iterator<QueryResult> {
 
     private final OutputFormat outputFormat;
 
-    private Iterator<QueryResult> iterator;
+    private BufferingStreamIterator<QueryResultParam, QueryResult> iterator;
 
     @Override
     public boolean hasNext() {
@@ -64,18 +64,16 @@ public class ChunkRangeIterator implements Iterator<QueryResult> {
         }
 
         // Here we need to fetch a chunk
+        val request = client.getQueryResultParamBuilder()
+                .setChunkId(chunkId++)
+                .setOmitSchema(omitSchema)
+                .setOutputFormat(outputFormat)
+                .build();
         val message = String.format(
                 "getQueryResult queryId=%s, chunkId=%d, limit=%d",
                 client.getQueryId(), chunkId, limitChunkId - chunkId);
-        iterator = logTimedValueNonThrowing(
-                () -> client.getStub()
-                        .getQueryResult(client.getQueryResultParamBuilder()
-                                .setChunkId(chunkId++)
-                                .setOmitSchema(omitSchema)
-                                .setOutputFormat(outputFormat)
-                                .build()),
-                message,
-                log);
+        iterator = new BufferingStreamIterator<QueryResultParam, QueryResult>(message, log);
+        client.getStub().getQueryResult(request, iterator.getObserver());
 
         if (iterator.hasNext()) {
             // Even if omitSchema was initially false we only need the schema for the first chunk in the result stream.

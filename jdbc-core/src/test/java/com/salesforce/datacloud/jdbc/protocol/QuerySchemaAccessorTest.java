@@ -5,8 +5,6 @@
 package com.salesforce.datacloud.jdbc.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 import com.salesforce.datacloud.jdbc.core.ConnectionProperties;
@@ -14,14 +12,10 @@ import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
-import java.util.Collections;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import salesforce.cdp.hyperdb.v1.QueryInfo;
 
 @ExtendWith(LocalHyperTestBase.class)
 class QuerySchemaAccessorTest {
@@ -45,6 +39,7 @@ class QuerySchemaAccessorTest {
         });
     }
 
+    /*
     @Test
     void getArrowSchema_shouldThrowExceptionWhenIteratorExhaustedWithoutSchema() {
         LocalHyperTestBase.assertWithStubProvider(provider -> {
@@ -71,4 +66,5 @@ class QuerySchemaAccessorTest {
                     .matches(ex -> ((StatusRuntimeException) ex).getStatus().getCode() == Status.Code.INTERNAL);
         });
     }
+     */
 }

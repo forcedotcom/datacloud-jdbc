@@ -22,14 +22,14 @@ import salesforce.cdp.hyperdb.v1.ResultRange;
 @Unstable
 public class HyperGrpcClientExecutor {
     @Getter
-    @NonNull private final HyperServiceGrpc.HyperServiceBlockingStub stub;
+    @NonNull private final HyperServiceGrpc.HyperServiceStub stub;
 
     private final QueryParam settingsQueryParams;
 
     private QueryParam additionalQueryParams;
 
     public static HyperGrpcClientExecutor of(
-            @NonNull HyperServiceGrpc.HyperServiceBlockingStub stub, Map<String, String> querySettings) {
+            @NonNull HyperServiceGrpc.HyperServiceStub stub, Map<String, String> querySettings) {
         val builder = HyperGrpcClientExecutor.builder().stub(stub);
 
         if (!querySettings.isEmpty()) {

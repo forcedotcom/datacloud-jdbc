@@ -25,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
-import salesforce.cdp.hyperdb.v1.HyperServiceGrpc.HyperServiceBlockingStub;
 
 @Slf4j
 @ExtendWith(LocalHyperTestBase.class)
@@ -105,8 +104,8 @@ public class CachedChannelsTest {
 
         /** Returns a stub with the configured interceptors applied. */
         @Override
-        public HyperServiceBlockingStub getStub() {
-            return HyperServiceGrpc.newBlockingStub(channel).withInterceptors(interceptors);
+        public HyperServiceGrpc.HyperServiceStub getStub() {
+            return HyperServiceGrpc.newStub(channel).withInterceptors(interceptors);
         }
 
         @Override

@@ -18,6 +18,7 @@ import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
 import com.salesforce.datacloud.jdbc.protocol.QuerySchemaAccessor;
 import com.salesforce.datacloud.jdbc.protocol.RowRangeIterator;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
+import com.salesforce.datacloud.jdbc.protocol.grpc.util.BufferingStreamIterator;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
@@ -61,7 +62,8 @@ import lombok.val;
 import org.apache.calcite.avatica.AvaticaResultSetMetaData;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
-import salesforce.cdp.hyperdb.v1.HyperServiceGrpc.HyperServiceBlockingStub;
+import salesforce.cdp.hyperdb.v1.CancelQueryParam;
+import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 @Slf4j
 @Builder(access = AccessLevel.PRIVATE)
@@ -138,8 +140,8 @@ public class DataCloudConnection implements Connection {
      * Initializes a stub with the appropriate interceptors based on the properties and timeout configured in the JDBC Connection.
      * @return the initialized stub
      */
-    HyperServiceBlockingStub getStub() {
-        HyperServiceBlockingStub stub = stubProvider.getStub();
+    HyperServiceGrpc.HyperServiceStub getStub() {
+        HyperServiceGrpc.HyperServiceStub stub = stubProvider.getStub();
 
         // Attach headers derived from properties to the stub
         val metadata = deriveHeadersFromProperties(connectionProperties);
@@ -343,14 +345,12 @@ public class DataCloudConnection implements Connection {
      */
     public void cancelQuery(String queryId) throws SQLException {
         try {
-            logTimedValue(
-                    () -> {
-                        val client = QueryAccessGrpcClient.of(queryId, getStub());
-                        return client.getStub()
-                                .cancelQuery(client.getCancelQueryParamBuilder().build());
-                    },
-                    "cancel queryId=" + queryId,
-                    log);
+            val client = QueryAccessGrpcClient.of(queryId, getStub());
+            val message = "cancel queryId=" + queryId;
+            val iterator = new BufferingStreamIterator<CancelQueryParam, com.google.protobuf.Empty>(message, log);
+            client.getStub().cancelQuery(client.getCancelQueryParamBuilder().build(), iterator.getObserver());
+            // Check hasNext to ensure that the call completes
+            val ignored = iterator.hasNext();
         } catch (Exception ex) {
             throw new SQLException("Failed to cancel query, queryId=" + queryId, ex);
         }

@@ -43,8 +43,8 @@ public class JdbcDriverStubProvider implements HyperGrpcStubProvider {
      * Returns a new HyperServiceGrpc.HyperServiceBlockingStub using the configured channel.
      */
     @Override
-    public HyperServiceGrpc.HyperServiceBlockingStub getStub() {
-        return HyperServiceGrpc.newBlockingStub(channel);
+    public HyperServiceGrpc.HyperServiceStub getStub() {
+        return HyperServiceGrpc.newStub(channel);
     }
 
     @Override
