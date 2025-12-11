@@ -49,7 +49,7 @@ public abstract class ClosableCancellingStreamObserver<ReqT, RespT> implements C
         callStream.disableAutoRequestWithInitial(16);
         if (closeRequested) {
             // If close was requested before the call started, immediately cancel this stream.
-            callStream.cancel("The stream is getting closed by the client.", null);
+            callStream.cancel("Call got closed by the client.", null);
         }
     }
 
@@ -62,7 +62,7 @@ public abstract class ClosableCancellingStreamObserver<ReqT, RespT> implements C
     public void close() {
         closeRequested = true;
         if (callStream != null) {
-            callStream.cancel("The stream is getting closed by the client.", null);
+            callStream.cancel("Call got closed by the client.", null);
             // After this the ClientCallStreamObserver will not process any further messages and the server is informed
             // of the cancellation.
             // The ClientResponseObserver methods will still get called with at least the onError method.
