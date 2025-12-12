@@ -4,6 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.protocol.grpc.util;
 
+import com.google.protobuf.AbstractMessage;
 import io.grpc.stub.ClientResponseObserver;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -26,7 +27,7 @@ import org.slf4j.Logger;
  * @param <ReqT> the request message type
  * @param <RespT> the response message type
  */
-public class BufferingStreamIterator<ReqT, RespT> implements Iterator<RespT> {
+public class BufferingStreamIterator<ReqT, RespT extends AbstractMessage> implements Iterator<RespT> {
     private final BlockingQueue<StreamProgress<RespT>> queue;
     private final BufferingStreamObserver<ReqT, RespT> observer;
     private StreamProgress<RespT> next;

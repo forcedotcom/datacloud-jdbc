@@ -4,6 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.protocol.grpc.util;
 
+import com.google.protobuf.AbstractMessage;
 import com.salesforce.datacloud.jdbc.logging.ElapsedLogger;
 import java.util.Queue;
 import lombok.NonNull;
@@ -27,11 +28,13 @@ import org.slf4j.Logger;
  * @param <ReqT> The request type
  * @param <RespT> The response type
  */
-public class BufferingStreamObserver<ReqT, RespT> extends ClosableCancellingStreamObserver<ReqT, RespT> {
+public class BufferingStreamObserver<ReqT, RespT extends AbstractMessage>
+        extends ClosableCancellingStreamObserver<ReqT, RespT> {
     private final Queue<StreamProgress<RespT>> queue;
     private final Logger logger;
     private final String timingName;
     private final long startNanos;
+    private long totalResponseSize = 0;
 
     /**
      * Create a buffering observer with optional timing/logging.
@@ -54,6 +57,7 @@ public class BufferingStreamObserver<ReqT, RespT> extends ClosableCancellingStre
 
     @Override
     public void onNext(RespT value) {
+        totalResponseSize += value.getSerializedSize();
         queue.offer(StreamProgress.success(value));
         // We have to manually request the next message as ClosableCancellingStreamObserver has manual flow control.
         callStream.request(1);
@@ -62,14 +66,15 @@ public class BufferingStreamObserver<ReqT, RespT> extends ClosableCancellingStre
     @Override
     public void onError(Throwable t) {
         long elapsed = System.nanoTime() - startNanos;
-        ElapsedLogger.logFailure(logger, timingName, elapsed, t);
+        ElapsedLogger.logFailure(
+                logger, timingName + ", responseSizeMb=" + totalResponseSize / 1_000_000.0, elapsed, t);
         queue.offer(StreamProgress.failure(t));
     }
 
     @Override
     public void onCompleted() {
         long elapsed = System.nanoTime() - startNanos;
-        ElapsedLogger.logSuccess(logger, timingName, elapsed);
+        ElapsedLogger.logSuccess(logger, timingName + ", responseSizeMb=" + totalResponseSize / 1_000_000.0, elapsed);
         queue.offer(StreamProgress.completed());
     }
 }

@@ -36,10 +36,19 @@ public final class ElapsedLogger {
     }
 
     public static void logSuccess(Logger logger, String name, long elapsedNanos) {
-        logger.info("Success name={}, millis={}, duration={}", name, elapsedNanos, Duration.ofNanos(elapsedNanos));
+        logger.info(
+                "Success name={}, millis={}, duration={}",
+                name,
+                Duration.ofNanos(elapsedNanos).toMillis(),
+                Duration.ofNanos(elapsedNanos));
     }
 
     public static void logFailure(Logger logger, String name, long elapsedNanos, Throwable t) {
-        logger.info("Failed name={}, millis={}, duration={}", name, elapsedNanos, Duration.ofNanos(elapsedNanos), t);
+        logger.info(
+                "Failed name={}, millis={}, duration={}",
+                name,
+                Duration.ofNanos(elapsedNanos).toMillis(),
+                Duration.ofNanos(elapsedNanos),
+                t);
     }
 }
