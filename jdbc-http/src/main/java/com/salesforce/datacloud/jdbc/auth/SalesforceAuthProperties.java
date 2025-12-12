@@ -108,10 +108,10 @@ public class SalesforceAuthProperties {
 
         // Determine authentication mode and set credentials
         if (props.containsKey(AUTH_USER_NAME) && props.containsKey(AUTH_PASSWORD)) {
-            builder.authenticationMode(AuthenticationMode.PASSWORD)
-                    .userName(takeRequired(props, AUTH_USER_NAME))
-                    .password(takeRequired(props, AUTH_PASSWORD))
-                    .clientSecret(takeRequired(props, AUTH_CLIENT_SECRET));
+            builder.authenticationMode(AuthenticationMode.PASSWORD);
+            builder.userName(takeRequired(props, AUTH_USER_NAME));
+            builder.password(takeRequired(props, AUTH_PASSWORD));
+            builder.clientSecret(takeRequired(props, AUTH_CLIENT_SECRET));
         } else if (props.containsKey(AUTH_USER_NAME) && props.containsKey(AUTH_PRIVATE_KEY)) {
             // JWT Bearer Token Flow does not require clientSecret and it should not be provided
             if (props.containsKey(AUTH_CLIENT_SECRET)) {
