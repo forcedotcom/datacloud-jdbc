@@ -9,17 +9,11 @@ import com.salesforce.datacloud.jdbc.core.metadata.ColumnType;
 import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.resultset.ColumnAccessor;
 import com.salesforce.datacloud.jdbc.core.resultset.SimpleResultSet;
-import java.math.BigDecimal;
-import java.sql.Array;
-import java.sql.Date;
 import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.List;
-import java.util.OptionalDouble;
 import java.util.OptionalLong;
 
 /**
@@ -68,46 +62,17 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
 
     private static ColumnType jdbcTypeToSqlType(int jdbcType, String name) {
         switch (jdbcType) {
-            case Types.BOOLEAN:
-            case Types.BIT:
-                return new ColumnType(JDBCType.BOOLEAN);
             case Types.SMALLINT:
                 return new ColumnType(JDBCType.SMALLINT, 38, 18);
             case Types.TINYINT:
                 return new ColumnType(JDBCType.TINYINT, 38, 18);
             case Types.INTEGER:
                 return new ColumnType(JDBCType.INTEGER, 38, 18);
-            case Types.BIGINT:
-                return new ColumnType(JDBCType.BIGINT, 38, 18);
-            case Types.NUMERIC:
-            case Types.DECIMAL:
-                // Default precision/scale for metadata queries
-                return new ColumnType(JDBCType.NUMERIC, 38, 18);
-            case Types.REAL:
-            case Types.FLOAT:
-                return new ColumnType(JDBCType.FLOAT, 38, 18);
-            case Types.DOUBLE:
-                return new ColumnType(JDBCType.DOUBLE, 38, 18);
             case Types.CHAR:
                 return new ColumnType(JDBCType.CHAR, name.length(), 0);
             case Types.VARCHAR:
             case Types.LONGVARCHAR:
                 return new ColumnType(JDBCType.VARCHAR, name.length(), 0);
-            case Types.BINARY:
-            case Types.VARBINARY:
-            case Types.LONGVARBINARY:
-                return new ColumnType(JDBCType.LONGVARBINARY, name.length(), 0);
-            case Types.DATE:
-                return new ColumnType(JDBCType.DATE);
-            case Types.TIME:
-                return new ColumnType(JDBCType.TIME);
-            case Types.TIMESTAMP:
-                return new ColumnType(JDBCType.TIMESTAMP);
-            case Types.TIMESTAMP_WITH_TIMEZONE:
-                return new ColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE);
-            case Types.ARRAY:
-                // For arrays, use VARCHAR as element type (common in metadata)
-                return new ColumnType(JDBCType.ARRAY, new ColumnType(JDBCType.VARCHAR, 0, 0));
             default:
                 // Default to VARCHAR for unknown types
                 return new ColumnType(JDBCType.VARCHAR, name.length(), 0);
@@ -165,151 +130,6 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                 }
                 throw new SQLException(
                         "Cannot convert to integer: " + value.getClass().getName());
-            }
-
-            @Override
-            public BigDecimal getBigDecimal(SimpleMetadataResultSet resultSet) throws SQLException {
-                Object value = getValue(resultSet, columnIndex);
-                if (value == null) {
-                    return null;
-                }
-                if (value instanceof BigDecimal) {
-                    return (BigDecimal) value;
-                }
-                if (value instanceof Number) {
-                    return BigDecimal.valueOf(((Number) value).doubleValue());
-                }
-                if (value instanceof String) {
-                    try {
-                        return new BigDecimal((String) value);
-                    } catch (NumberFormatException e) {
-                        throw new SQLException("Cannot convert to BigDecimal: " + value, e);
-                    }
-                }
-                throw new SQLException(
-                        "Cannot convert to BigDecimal: " + value.getClass().getName());
-            }
-
-            @Override
-            public OptionalDouble getAnyFloatingPoint(SimpleMetadataResultSet resultSet) throws SQLException {
-                Object value = getValue(resultSet, columnIndex);
-                if (value == null) {
-                    return OptionalDouble.empty();
-                }
-                if (value instanceof Number) {
-                    return OptionalDouble.of(((Number) value).doubleValue());
-                }
-                if (value instanceof String) {
-                    try {
-                        return OptionalDouble.of(Double.parseDouble((String) value));
-                    } catch (NumberFormatException e) {
-                        throw new SQLException("Cannot convert to floating point: " + value, e);
-                    }
-                }
-                throw new SQLException(
-                        "Cannot convert to floating point: " + value.getClass().getName());
-            }
-
-            @Override
-            public byte[] getBytes(SimpleMetadataResultSet resultSet) throws SQLException {
-                Object value = getValue(resultSet, columnIndex);
-                if (value == null) {
-                    return null;
-                }
-                if (value instanceof byte[]) {
-                    return (byte[]) value;
-                }
-                if (value instanceof String) {
-                    return ((String) value).getBytes();
-                }
-                throw new SQLException(
-                        "Cannot convert to byte array: " + value.getClass().getName());
-            }
-
-            @Override
-            public Date getDate(SimpleMetadataResultSet resultSet) throws SQLException {
-                Object value = getValue(resultSet, columnIndex);
-                if (value == null) {
-                    return null;
-                }
-                if (value instanceof Date) {
-                    return (Date) value;
-                }
-                if (value instanceof java.util.Date) {
-                    return new Date(((java.util.Date) value).getTime());
-                }
-                if (value instanceof String) {
-                    try {
-                        return Date.valueOf((String) value);
-                    } catch (IllegalArgumentException e) {
-                        throw new SQLException("Cannot convert to Date: " + value, e);
-                    }
-                }
-                throw new SQLException(
-                        "Cannot convert to Date: " + value.getClass().getName());
-            }
-
-            @Override
-            public Time getTime(SimpleMetadataResultSet resultSet) throws SQLException {
-                Object value = getValue(resultSet, columnIndex);
-                if (value == null) {
-                    return null;
-                }
-                if (value instanceof Time) {
-                    return (Time) value;
-                }
-                if (value instanceof java.util.Date) {
-                    return new Time(((java.util.Date) value).getTime());
-                }
-                if (value instanceof String) {
-                    try {
-                        return Time.valueOf((String) value);
-                    } catch (IllegalArgumentException e) {
-                        throw new SQLException("Cannot convert to Time: " + value, e);
-                    }
-                }
-                throw new SQLException(
-                        "Cannot convert to Time: " + value.getClass().getName());
-            }
-
-            @Override
-            public Timestamp getTimestamp(SimpleMetadataResultSet resultSet) throws SQLException {
-                Object value = getValue(resultSet, columnIndex);
-                if (value == null) {
-                    return null;
-                }
-                if (value instanceof Timestamp) {
-                    return (Timestamp) value;
-                }
-                if (value instanceof java.util.Date) {
-                    return new Timestamp(((java.util.Date) value).getTime());
-                }
-                if (value instanceof String) {
-                    try {
-                        return Timestamp.valueOf((String) value);
-                    } catch (IllegalArgumentException e) {
-                        throw new SQLException("Cannot convert to Timestamp: " + value, e);
-                    }
-                }
-                throw new SQLException(
-                        "Cannot convert to Timestamp: " + value.getClass().getName());
-            }
-
-            @Override
-            public Array getArray(SimpleMetadataResultSet resultSet) throws SQLException {
-                Object value = getValue(resultSet, columnIndex);
-                if (value == null) {
-                    return null;
-                }
-                if (value instanceof Array) {
-                    return (Array) value;
-                }
-                if (value instanceof List) {
-                    // Convert List to Array if needed
-                    throw new SQLException("List to Array conversion not yet implemented");
-                }
-                throw new SQLException(
-                        "Cannot convert to Array: " + value.getClass().getName());
             }
 
             /**

@@ -41,6 +41,14 @@ class SimpleResultSetTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getBinaryStream(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getCharacterStream(1));
 
+        // Test un-implemented methods from SimpleResultSet that throw UnsupportedOperationException
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate(1));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTimestamp(1));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTime(1));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate(1, null));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTimestamp(1, null));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTime(1, null));
+
         // Test methods from ForwardOnlyResultSet interface
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.setFetchDirection(ResultSet.FETCH_REVERSE));
         assertThrows(SQLFeatureNotSupportedException.class, resultSet::isBeforeFirst);
