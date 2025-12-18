@@ -50,6 +50,9 @@ class SimpleResultSetTest {
         assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate(1, null));
         assertThrows(UnsupportedOperationException.class, () -> resultSet.getTimestamp(1, null));
         assertThrows(UnsupportedOperationException.class, () -> resultSet.getTime(1, null));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getBigDecimal(1, 1));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getBytes(1));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getArray(1));
 
         // Test methods from ForwardOnlyResultSet interface
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.setFetchDirection(ResultSet.FETCH_REVERSE));
