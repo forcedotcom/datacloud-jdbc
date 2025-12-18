@@ -22,6 +22,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
@@ -1078,6 +1079,7 @@ public class DataCloudDatabaseMetadataTest {
 
             assertThat(columnResultSet.getObject("TYPE_NAME")).isEqualTo("VARCHAR");
             assertThat(columnResultSet.getObject("DATA_TYPE")).isEqualTo(12);
+            assertThat(columnResultSet.getObject("DATA_TYPE", new HashMap<>())).isEqualTo(12);
             assertThat(columnResultSet.getObject("TYPE_NAME", String.class)).isEqualTo("VARCHAR");
 
             assertThrows(SQLException.class, () -> columnResultSet.getObject("ORDINAL_POSITION", Boolean.class));

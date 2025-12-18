@@ -151,11 +151,7 @@ class SimpleResultSetMetaDataTest {
     @Test
     public void getColumnClassName() throws SQLException {
         assertThat(simpleResultSetMetaData.getColumnClassName(1)).isEqualTo("java.lang.String");
-    }
-
-    @Test
-    public void getWarnings() throws SQLException {
-        assertThat(simpleResultSetMetaData.getColumnClassName(1)).isEqualTo("java.lang.String");
+        assertThat(simpleResultSetMetaData.getColumnClassName(17)).isEqualTo("java.lang.Integer");
     }
 
     @Test
