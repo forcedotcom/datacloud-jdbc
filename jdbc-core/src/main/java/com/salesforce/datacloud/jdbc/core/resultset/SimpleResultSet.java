@@ -8,7 +8,6 @@ import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.net.URL;
 import java.sql.Array;
 import java.sql.Blob;
@@ -26,7 +25,6 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
-import java.util.OptionalDouble;
 import java.util.OptionalLong;
 import lombok.AllArgsConstructor;
 import lombok.val;
@@ -86,7 +84,7 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public void clearWarnings() throws SQLException {
-        // No-op, since we don't support warnings
+        throw new SQLFeatureNotSupportedException("clearWarnings is not supported");
     }
 
     @Override
@@ -178,35 +176,6 @@ public abstract class SimpleResultSet<SELF>
                 wasNull = !v.isPresent();
                 return v.orElse(0L);
             }
-            case FLOAT:
-            case DOUBLE: {
-                OptionalDouble d = getAccessor(columnIndex).getAnyFloatingPoint(getSubclass());
-                wasNull = !d.isPresent();
-                double dv = d.orElse(0.0);
-                // The way this condition is written, it will never be true for NaN or Infinity.
-                // This is good because we want to throw an exception for those values.
-                if (dv >= LONG_MIN_DOUBLE && dv <= LONG_MAX_DOUBLE) {
-                    return (long) dv;
-                }
-                throw new SQLException("Column " + getMetaData().getColumnName(columnIndex)
-                        + " is out of range for an integer-like type");
-            }
-            case NUMERIC: {
-                BigDecimal v = getBigDecimal(columnIndex);
-                wasNull = v == null;
-                if (wasNull) {
-                    return 0L;
-                } else {
-                    BigInteger i = v.toBigInteger();
-                    int gt = i.compareTo(BigInteger.valueOf(Long.MAX_VALUE));
-                    int lt = i.compareTo(BigInteger.valueOf(Long.MIN_VALUE));
-                    if (gt > 0 || lt < 0) {
-                        throw new SQLException("Column " + getMetaData().getColumnName(columnIndex)
-                                + " is out of range for an integer-like type");
-                    }
-                    return v.longValue();
-                }
-            }
             default:
                 throw new SQLException("Unsupported column type for integer-like types: "
                         + metadata.getColumn(columnIndex).getType().toString());
@@ -236,17 +205,6 @@ public abstract class SimpleResultSet<SELF>
                 wasNull = !v.isPresent();
                 return v.orElse(0L);
             }
-            case FLOAT:
-            case DOUBLE: {
-                val v = getAccessor(columnIndex).getAnyFloatingPoint(getSubclass());
-                wasNull = !v.isPresent();
-                return v.orElse(0.0);
-            }
-            case NUMERIC: {
-                BigDecimal v = getBigDecimal(columnIndex);
-                wasNull = v == null;
-                return v == null ? 0.0 : v.doubleValue();
-            }
             default:
                 throw new SQLException("Unsupported column type for floating-point types: "
                         + metadata.getColumn(columnIndex).getType().toString());
@@ -265,11 +223,6 @@ public abstract class SimpleResultSet<SELF>
             }
             // TODO: apparently, PostgreSQL does not support float/decimal conversion. Double-check this with test
             // cases.
-            case NUMERIC: {
-                val v = getAccessor(columnIndex).getBigDecimal(getSubclass());
-                wasNull = v == null;
-                return v;
-            }
             default:
                 throw new SQLException("Unsupported column type for numeric types: "
                         + metadata.getColumn(columnIndex).getType().toString());
@@ -278,22 +231,14 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex, int scale) throws SQLException {
-        val v = getBigDecimal(columnIndex);
-        if (wasNull) {
-            return null;
-        }
-        try {
-            return v.setScale(scale);
-        } catch (ArithmeticException e) {
-            throw new SQLException("Bad value for type BigDecimal: " + v);
-        }
+        // TODO implement this
+        throw new UnsupportedOperationException("Unimplemented method 'getBigDecimal'");
     }
 
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
-        val v = getAccessor(columnIndex).getBytes(getSubclass());
-        wasNull = v == null;
-        return v;
+        // TODO implement this
+        throw new UnsupportedOperationException("Unimplemented method 'getBytes'");
     }
 
     @Override
@@ -331,53 +276,15 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public Array getArray(int columnIndex) throws SQLException {
-        val v = getAccessor(columnIndex).getArray(getSubclass());
-        wasNull = v == null;
-        return v;
+        // TODO implement this
+        throw new UnsupportedOperationException("Unimplemented method 'getArray'");
     }
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
         switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case BOOLEAN: {
-                val v = getBoolean(columnIndex);
-                if (wasNull) {
-                    return null;
-                }
-                return v;
-            }
-            case SMALLINT: {
-                val v = getShort(columnIndex);
-                if (wasNull) {
-                    return null;
-                }
-                return v;
-            }
             case INTEGER: {
                 val v = getInt(columnIndex);
-                if (wasNull) {
-                    return null;
-                }
-                return v;
-            }
-            case BIGINT: {
-                val v = getLong(columnIndex);
-                if (wasNull) {
-                    return null;
-                }
-                return v;
-            }
-            case NUMERIC:
-                return getBigDecimal(columnIndex);
-            case FLOAT: {
-                val v = getFloat(columnIndex);
-                if (wasNull) {
-                    return null;
-                }
-                return v;
-            }
-            case DOUBLE: {
-                val v = getDouble(columnIndex);
                 if (wasNull) {
                     return null;
                 }
@@ -386,17 +293,6 @@ public abstract class SimpleResultSet<SELF>
             case CHAR:
             case VARCHAR:
                 return getString(columnIndex);
-            case BINARY:
-                return getBytes(columnIndex);
-            case DATE:
-                return getDate(columnIndex);
-            case TIME:
-                return getTime(columnIndex);
-            case TIMESTAMP:
-            case TIMESTAMP_WITH_TIMEZONE:
-                return getTimestamp(columnIndex);
-            case ARRAY:
-                return getArray(columnIndex);
         }
         throw new SQLException("Unsupported column type in `getObject`: "
                 + metadata.getColumn(columnIndex).getType().toString());

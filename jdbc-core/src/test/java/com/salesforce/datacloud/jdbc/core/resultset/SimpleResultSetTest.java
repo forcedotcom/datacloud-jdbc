@@ -27,9 +27,11 @@ class SimpleResultSetTest {
         SimpleResultSet resultSet = Mockito.mock(SimpleResultSet.class, Mockito.CALLS_REAL_METHODS);
 
         // Test methods from SimpleResultSet that throw SQLFeatureNotSupportedException
+        assertThrows(SQLFeatureNotSupportedException.class, resultSet::clearWarnings);
         assertThrows(SQLFeatureNotSupportedException.class, resultSet::getCursorName);
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getBlob(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getClob(1));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNClob(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getRef(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getURL(1));
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getRowId(1));
@@ -228,6 +230,5 @@ class SimpleResultSetTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.updateNClob(1, Mockito.mock(Reader.class)));
         assertThrows(
                 SQLFeatureNotSupportedException.class, () -> resultSet.updateNClob("col", Mockito.mock(Reader.class)));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNClob(1));
     }
 }
