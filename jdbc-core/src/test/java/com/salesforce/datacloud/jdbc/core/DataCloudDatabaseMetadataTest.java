@@ -15,11 +15,14 @@ import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.config.KeywordResources;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
@@ -1015,6 +1018,7 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testTestTest() throws SQLException {
+        Integer ordinalValue = 5;
         Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
         Mockito.when(connection.createStatement()).thenReturn(statement);
         Mockito.when(resultSetMock.next()).thenReturn(true).thenReturn(false);
@@ -1026,7 +1030,7 @@ public class DataCloudDatabaseMetadataTest {
         Mockito.when(resultSetMock.getBoolean("attnotnull")).thenReturn(true);
         Mockito.when(resultSetMock.getString("description")).thenReturn(StringUtils.EMPTY);
         Mockito.when(resultSetMock.getString("adsrc")).thenReturn(StringUtils.EMPTY);
-        Mockito.when(resultSetMock.getInt("attnum")).thenReturn(1);
+        Mockito.when(resultSetMock.getInt("attnum")).thenReturn(ordinalValue);
         Mockito.when(resultSetMock.getBoolean("attnotnull")).thenReturn(true);
         Mockito.when(resultSetMock.getString("attidentity")).thenReturn(StringUtils.EMPTY);
         Mockito.when(resultSetMock.getString("adsrc")).thenReturn(StringUtils.EMPTY);
@@ -1036,7 +1040,82 @@ public class DataCloudDatabaseMetadataTest {
                 StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, connection);
         while (columnResultSet.next()) {
             assertThat(columnResultSet.getString("TYPE_NAME")).isEqualTo("VARCHAR");
-            assertThat(columnResultSet.getString("DATA_TYPE")).isEqualTo("12");
+            assertThat(columnResultSet.getInt("DATA_TYPE")).isEqualTo(12);
+            assertThat(columnResultSet.getBoolean("NULLABLE")).isFalse();
+            assertThat(columnResultSet.getInt("ORDINAL_POSITION")).isEqualTo(ordinalValue);
+            assertThat(columnResultSet.getByte("ORDINAL_POSITION")).isEqualTo(ordinalValue.byteValue());
+        }
+    }
+
+    @Test
+    public void testMetadataColumnAccessors() throws SQLException {
+        Integer ordinalValue = 500;
+        String test = "12345678900835413263839";
+        Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
+        Mockito.when(connection.createStatement()).thenReturn(statement);
+        Mockito.when(resultSetMock.next()).thenReturn(true).thenReturn(false);
+        Mockito.when(resultSetMock.getString("nspname")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("relname")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("attname")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("attname")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("datatype")).thenReturn("TEXT");
+        Mockito.when(resultSetMock.getBoolean("attnotnull")).thenReturn(true);
+        Mockito.when(resultSetMock.getString("description")).thenReturn(test);
+        Mockito.when(resultSetMock.getString("adsrc")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getInt("attnum")).thenReturn(ordinalValue);
+        Mockito.when(resultSetMock.getBoolean("attnotnull")).thenReturn(true);
+        Mockito.when(resultSetMock.getString("attidentity")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("adsrc")).thenReturn(StringUtils.EMPTY);
+        Mockito.when(resultSetMock.getString("attgenerated")).thenReturn(StringUtils.EMPTY);
+
+        ResultSet columnResultSet = QueryMetadataUtil.createColumnResultSet(
+                StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, connection);
+        while (columnResultSet.next()) {
+            assertThat(columnResultSet.getDouble("DATA_TYPE")).isEqualTo(12);
+            assertThat(columnResultSet.getShort("DATA_TYPE")).isEqualTo(new Short("12"));
+            assertThat(columnResultSet.getFloat("DATA_TYPE")).isEqualTo(12);
+            assertThat(columnResultSet.getBigDecimal("DATA_TYPE")).isEqualTo(new BigDecimal(12));
+            assertThat(columnResultSet.getLong("DATA_TYPE")).isEqualTo(12);
+
+            assertThat(columnResultSet.getObject("TYPE_NAME")).isEqualTo("VARCHAR");
+            assertThat(columnResultSet.getObject("DATA_TYPE")).isEqualTo(12);
+            assertThat(columnResultSet.getObject("DATA_TYPE", new HashMap<>())).isEqualTo(12);
+            assertThat(columnResultSet.getObject("TYPE_NAME", String.class)).isEqualTo("VARCHAR");
+
+            assertThrows(SQLException.class, () -> columnResultSet.getObject("ORDINAL_POSITION", Boolean.class));
+            assertThrows(SQLException.class, () -> columnResultSet.getBigDecimal("TYPE_NAME"));
+            assertThrows(SQLException.class, () -> columnResultSet.getDouble("TYPE_NAME"));
+            assertThrows(SQLException.class, () -> columnResultSet.getLong("TYPE_NAME"));
+            assertThrows(SQLException.class, () -> columnResultSet.getInt("TYPE_NAME"));
+            assertThrows(SQLException.class, () -> columnResultSet.getByte("ORDINAL_POSITION"));
+
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getDate("ORDINAL_POSITION"));
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTime("ORDINAL_POSITION"));
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getDate("ORDINAL_POSITION", null));
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTime("ORDINAL_POSITION", null));
+
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getBlob("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getClob("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getNClob("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getRef("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getURL("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getRowId("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getSQLXML("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getNString("ORDINAL_POSITION"));
+            assertThrows(
+                    SQLFeatureNotSupportedException.class,
+                    () -> columnResultSet.getNCharacterStream("ORDINAL_POSITION"));
+            assertThrows(
+                    SQLFeatureNotSupportedException.class, () -> columnResultSet.getAsciiStream("ORDINAL_POSITION"));
+            assertThrows(
+                    SQLFeatureNotSupportedException.class, () -> columnResultSet.getUnicodeStream("ORDINAL_POSITION"));
+            assertThrows(
+                    SQLFeatureNotSupportedException.class, () -> columnResultSet.getBinaryStream("ORDINAL_POSITION"));
+            assertThrows(
+                    SQLFeatureNotSupportedException.class,
+                    () -> columnResultSet.getCharacterStream("ORDINAL_POSITION"));
         }
     }
 
