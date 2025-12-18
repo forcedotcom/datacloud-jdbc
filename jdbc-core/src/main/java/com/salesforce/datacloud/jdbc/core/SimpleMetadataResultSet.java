@@ -64,12 +64,8 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
         switch (jdbcType) {
             case Types.SMALLINT:
                 return new ColumnType(JDBCType.SMALLINT, 38, 18);
-            case Types.TINYINT:
-                return new ColumnType(JDBCType.TINYINT, 38, 18);
             case Types.INTEGER:
                 return new ColumnType(JDBCType.INTEGER, 38, 18);
-            case Types.CHAR:
-                return new ColumnType(JDBCType.CHAR, name.length(), 0);
             case Types.VARCHAR:
             case Types.LONGVARCHAR:
                 return new ColumnType(JDBCType.VARCHAR, name.length(), 0);

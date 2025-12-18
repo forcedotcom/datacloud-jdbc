@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.UUID;
@@ -1085,6 +1086,34 @@ public class DataCloudDatabaseMetadataTest {
             assertThrows(SQLException.class, () -> columnResultSet.getLong("TYPE_NAME"));
             assertThrows(SQLException.class, () -> columnResultSet.getInt("TYPE_NAME"));
             assertThrows(SQLException.class, () -> columnResultSet.getByte("ORDINAL_POSITION"));
+
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getDate("ORDINAL_POSITION"));
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTime("ORDINAL_POSITION"));
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getDate("ORDINAL_POSITION", null));
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
+            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTime("ORDINAL_POSITION", null));
+
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getBlob("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getClob("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getNClob("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getRef("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getURL("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getRowId("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getSQLXML("ORDINAL_POSITION"));
+            assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getNString("ORDINAL_POSITION"));
+            assertThrows(
+                    SQLFeatureNotSupportedException.class,
+                    () -> columnResultSet.getNCharacterStream("ORDINAL_POSITION"));
+            assertThrows(
+                    SQLFeatureNotSupportedException.class, () -> columnResultSet.getAsciiStream("ORDINAL_POSITION"));
+            assertThrows(
+                    SQLFeatureNotSupportedException.class, () -> columnResultSet.getUnicodeStream("ORDINAL_POSITION"));
+            assertThrows(
+                    SQLFeatureNotSupportedException.class, () -> columnResultSet.getBinaryStream("ORDINAL_POSITION"));
+            assertThrows(
+                    SQLFeatureNotSupportedException.class,
+                    () -> columnResultSet.getCharacterStream("ORDINAL_POSITION"));
         }
     }
 
