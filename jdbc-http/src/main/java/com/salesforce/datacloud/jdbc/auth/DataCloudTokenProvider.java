@@ -200,10 +200,31 @@ public class DataCloudTokenProvider {
         try {
             return Failsafe.with(this.exponentialBackOffPolicy).get(response);
         } catch (FailsafeException ex) {
-            if (ex.getCause() != null) {
-                throw new SQLException(ex.getCause().getMessage(), "28000", ex);
+            Throwable cause = ex.getCause();
+            if (cause instanceof AuthorizationException) {
+                AuthorizationException authEx = (AuthorizationException) cause;
+                String errorMessage = authEx.getMessage();
+                log.error(
+                        "Authorization failed - Error Code: {}, Error Description: {}, Message: {}",
+                        authEx.getErrorCode(),
+                        authEx.getErrorDescription(),
+                        errorMessage);
+                throw new SQLException(errorMessage, "28000", authEx);
+            } else if (cause != null) {
+                String causeMessage = cause.getMessage();
+                if (causeMessage == null || causeMessage.isEmpty()) {
+                    causeMessage = cause.getClass().getSimpleName() + " occurred during authentication";
+                }
+                log.error("Authentication failed: {}", causeMessage, cause);
+                throw new SQLException(causeMessage, "28000", cause);
+            } else {
+                String exMessage = ex.getMessage();
+                if (exMessage == null || exMessage.isEmpty()) {
+                    exMessage = "Authentication failed with unknown error";
+                }
+                log.error("Authentication failed: {}", exMessage, ex);
+                throw new SQLException(exMessage, "28000", ex);
             }
-            throw new SQLException(ex.getMessage(), "28000", ex);
         }
     }
 
@@ -211,7 +232,52 @@ public class DataCloudTokenProvider {
         return RetryPolicy.<AuthenticationResponseWithError>builder()
                 .withMaxRetries(maxRetries)
                 .withBackoff(1, 30, ChronoUnit.SECONDS)
-                .handleIf(e -> !(e instanceof AuthorizationException))
+                .handleIf(e -> {
+                    // Retry on AuthorizationException only if it's retriable (transient errors)
+                    if (e instanceof AuthorizationException) {
+                        return ((AuthorizationException) e).isRetriable();
+                    }
+                    // Retry on other exceptions (IOExceptions, etc.)
+                    return true;
+                })
+                .onRetry(event -> {
+                    Throwable lastException = event.getLastException();
+                    if (lastException != null) {
+                        if (lastException instanceof AuthorizationException) {
+                            AuthorizationException authEx = (AuthorizationException) lastException;
+                            log.warn(
+                                    "Authentication retry attempt {}/{} for HTTP {} error: {}",
+                                    event.getAttemptCount(),
+                                    maxRetries + 1,
+                                    authEx.getErrorCode(),
+                                    authEx.getErrorDescription());
+                        } else {
+                            log.warn(
+                                    "Authentication retry attempt {}/{} for error: {}",
+                                    event.getAttemptCount(),
+                                    maxRetries + 1,
+                                    lastException.getMessage());
+                        }
+                    }
+                })
+                .onRetriesExceeded(event -> {
+                    Throwable lastException = event.getException();
+                    if (lastException != null) {
+                        if (lastException instanceof AuthorizationException) {
+                            AuthorizationException authEx = (AuthorizationException) lastException;
+                            log.error(
+                                    "Authentication failed after {} retry attempts. HTTP {} error: {}",
+                                    maxRetries,
+                                    authEx.getErrorCode(),
+                                    authEx.getErrorDescription());
+                        } else {
+                            log.error(
+                                    "Authentication failed after {} retry attempts. Error: {}",
+                                    maxRetries,
+                                    lastException.getMessage());
+                        }
+                    }
+                })
                 .build();
     }
 }

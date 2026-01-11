@@ -10,6 +10,7 @@ import static org.junit.Assert.assertThrows;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.salesforce.datacloud.jdbc.auth.errors.AuthorizationException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -164,6 +165,61 @@ class FormCommandTest {
                 .map(p -> p.split("="))
                 .filter(t -> t.length == 2)
                 .collect(Collectors.toMap(arr -> arr[0], arr -> arr[1]));
+    }
+
+    @Test
+    @SneakyThrows
+    void postThrowsAuthorizationExceptionOn5xxError() {
+        val command = new FormCommand(
+                new URI(server.url("").toString()),
+                new URI("foo"),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of());
+
+        server.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
+
+        val ex = assertThrows(
+                AuthorizationException.class, () -> FormCommand.post(client, command, FakeCommandResp.class));
+        assertThat(ex.getErrorCode()).isEqualTo("500");
+        assertThat(ex.getErrorDescription()).isEqualTo("Internal Server Error");
+        assertThat(ex.isRetriable()).isTrue();
+    }
+
+    @Test
+    @SneakyThrows
+    void postThrowsAuthorizationExceptionOn4xxError() {
+        val command = new FormCommand(
+                new URI(server.url("").toString()),
+                new URI("foo"),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of());
+
+        server.enqueue(new MockResponse().setResponseCode(400).setBody("{\"error\":\"invalid_request\"}"));
+
+        val ex = assertThrows(
+                AuthorizationException.class, () -> FormCommand.post(client, command, FakeCommandResp.class));
+        assertThat(ex.getErrorCode()).isEqualTo("400");
+        assertThat(ex.getErrorDescription()).isEqualTo("{\"error\":\"invalid_request\"}");
+    }
+
+    @Test
+    @SneakyThrows
+    void postThrowsAuthorizationExceptionOn503Error() {
+        val command = new FormCommand(
+                new URI(server.url("").toString()),
+                new URI("foo"),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of());
+
+        server.enqueue(new MockResponse().setResponseCode(503).setBody("Service Unavailable"));
+
+        val ex = assertThrows(
+                AuthorizationException.class, () -> FormCommand.post(client, command, FakeCommandResp.class));
+        assertThat(ex.getErrorCode()).isEqualTo("503");
+        assertThat(ex.isRetriable()).isTrue();
     }
 
     @Data
