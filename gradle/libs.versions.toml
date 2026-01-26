@@ -22,7 +22,7 @@ org-apache-calcite-avatica-core = "1.26.0"
 org-apache-commons-commons-lang3 = "3.19.0"
 # This is soft pinned to 3.* (as the driver is targetting in Spark 3) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 org-apache-spark = "3.5.7"
-org-assertj-assertj-core = "3.27.6"
+org-assertj-assertj-core = "3.27.7"
 org-grpcmock-grpcmock-junit5 = "0.16.0"
 # This is soft pinned to 5.* (as 6 is not Java 8 compatible) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 org-junit-bom = "5.14.0"
