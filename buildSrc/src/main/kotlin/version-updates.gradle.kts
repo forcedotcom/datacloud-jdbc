@@ -28,6 +28,10 @@ versionCatalogUpdate {
         } else if ("org.mockito" in it.candidate.group && !candidateVersion.startsWith("4.")) {
             //This is soft pinned to 4.* (as 5 is not Java 8 compatible)
             false
+        } else if ("io.netty" in it.candidate.group && "netty-codec" in it.candidate.module && !candidateVersion.startsWith("4.1.")) {
+            // netty-codec is soft pinned to 4.1.* (as 4.2+ may have compatibility issues)
+            // This restriction applies only to the netty-codec version entry, not other netty libraries
+            false
         } else {
             stableKeyword || regex.matches(candidateVersion)
         }
