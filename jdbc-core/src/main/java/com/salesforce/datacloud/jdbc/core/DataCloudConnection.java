@@ -9,6 +9,7 @@ import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.crea
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
 
+import com.google.protobuf.Empty;
 import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
@@ -17,8 +18,9 @@ import com.salesforce.datacloud.jdbc.protocol.ChunkRangeIterator;
 import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
 import com.salesforce.datacloud.jdbc.protocol.QuerySchemaAccessor;
 import com.salesforce.datacloud.jdbc.protocol.RowRangeIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.util.AsyncStreamObserverIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.util.SyncIteratorAdapter;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
-import com.salesforce.datacloud.jdbc.protocol.grpc.util.BufferingStreamIterator;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
@@ -347,8 +349,9 @@ public class DataCloudConnection implements Connection {
         try {
             val client = QueryAccessGrpcClient.of(queryId, getStub());
             val message = "cancel queryId=" + queryId;
-            val iterator = new BufferingStreamIterator<CancelQueryParam, com.google.protobuf.Empty>(message, log);
-            client.getStub().cancelQuery(client.getCancelQueryParamBuilder().build(), iterator.getObserver());
+            val asyncIterator = new AsyncStreamObserverIterator<CancelQueryParam, Empty>(message, log);
+            client.getStub().cancelQuery(client.getCancelQueryParamBuilder().build(), asyncIterator.getObserver());
+            val iterator = new SyncIteratorAdapter<>(asyncIterator);
             // Check hasNext to ensure that the call completes
             val ignored = iterator.hasNext();
         } catch (Exception ex) {
