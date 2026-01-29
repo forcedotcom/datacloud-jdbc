@@ -4,7 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.protocol;
 
-import com.salesforce.datacloud.jdbc.protocol.grpc.util.BufferingStreamIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.util.AsyncStreamObserverIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.util.SyncIteratorAdapter;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +24,9 @@ public class AsyncQueryAccessHandle implements QueryAccessHandle {
     public static AsyncQueryAccessHandle of(HyperServiceGrpc.HyperServiceStub stub, QueryParam param) {
         val message = "executeQuery. mode=" + param.getTransferMode();
         // Submit request to start feeding the iterator
-        val messages = new BufferingStreamIterator<QueryParam, ExecuteQueryResponse>(message, log);
-        stub.executeQuery(param, messages.getObserver());
+        val asyncIterator = new AsyncStreamObserverIterator<QueryParam, ExecuteQueryResponse>(message, log);
+        stub.executeQuery(param, asyncIterator.getObserver());
+        val messages = new SyncIteratorAdapter<>(asyncIterator);
 
         // The protocol guarantees that the first message is a Query Status message with a Query Id.
         val queryStatus = messages.next().getQueryInfo().getQueryStatus();

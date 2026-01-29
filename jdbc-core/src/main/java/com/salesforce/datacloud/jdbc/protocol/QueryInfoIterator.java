@@ -4,27 +4,27 @@
  */
 package com.salesforce.datacloud.jdbc.protocol;
 
+import com.salesforce.datacloud.jdbc.protocol.async.AsyncQueryInfoIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.util.SyncIteratorAdapter;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
-import com.salesforce.datacloud.jdbc.protocol.grpc.util.BufferingStreamIterator;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryInfo;
-import salesforce.cdp.hyperdb.v1.QueryInfoParam;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 /**
- * See {@link QueryInfoIterator#of(QueryAccessGrpcClient)}.
+ * Synchronous iterator over QueryInfo messages of a Query.
+ *
+ * <p>This extends {@link SyncIteratorAdapter} wrapping {@link AsyncQueryInfoIterator} to provide
+ * a blocking iterator interface for backward compatibility.</p>
+ *
+ * <p>Note: To set a timeout configure the stub in the client accordingly.</p>
+ * <p>Attention: This iterator might throw {@link io.grpc.StatusRuntimeException} exceptions during
+ * {@link QueryInfoIterator#hasNext()} and {@link QueryInfoIterator#next()} calls.</p>
+ *
+ * @see AsyncQueryInfoIterator
  */
 @Slf4j
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class QueryInfoIterator implements Iterator<QueryInfo>, AutoCloseable {
+public class QueryInfoIterator extends SyncIteratorAdapter<QueryInfo> {
 
     /**
      * Provides an Iterator over QueryInfo messages of a Query. It'll keep iterating until the query is finished.
@@ -39,76 +39,10 @@ public class QueryInfoIterator implements Iterator<QueryInfo>, AutoCloseable {
      * @return A new QueryInfoIterator instance
      */
     public static QueryInfoIterator of(@NonNull QueryAccessGrpcClient queryClient) {
-        return new QueryInfoIterator(queryClient, null, false);
+        return new QueryInfoIterator(AsyncQueryInfoIterator.of(queryClient));
     }
 
-    private final QueryAccessGrpcClient client;
-    private BufferingStreamIterator<QueryInfoParam, QueryInfo> iterator;
-    private boolean isFinished;
-
-    /**
-     * This extends the normal hasNext() logic with graceful handling of the CANCELLED error code which indicates
-     * that the stream has finished and that a new stream should be started.
-     * @return whether there is a next element
-     */
-    private boolean hasNextFromIterator(int retryCount) {
-        try {
-            return iterator.hasNext();
-        } catch (StatusRuntimeException ex) {
-            if (ex.getStatus().getCode() == Status.Code.CANCELLED && (retryCount < 2)) {
-                return false;
-            }
-            throw ex;
-        }
-    }
-
-    @Override
-    public boolean hasNext() {
-        // Failsafe if cancelled happens too many times sequentially without an info message in-between. Every
-        // call should have at least one info returned.
-        int retryCount = 0;
-        while (true) {
-            // We have an iterator that still has infos
-            if ((iterator != null) && (hasNextFromIterator(retryCount))) {
-                retryCount = 0;
-                return true;
-            } else if (isFinished) {
-                // We have observed a query finish and thus have all query info objects. This check is consciously after
-                // the
-                // hasNext() check on an existing iterator to allow consumption of all QueryInfo events that might still
-                // trigger after a query finish.
-                return false;
-            } else {
-                ++retryCount;
-                // Get a new set of infos
-                val request =
-                        client.getQueryInfoParamBuilder().setStreaming(true).build();
-                val message = String.format("getQueryInfo queryId=%s, streaming=%s", client.getQueryId(), true);
-                iterator = new BufferingStreamIterator<QueryInfoParam, QueryInfo>(message, log);
-                client.getStub().getQueryInfo(request, iterator.getObserver());
-                // Continue with next iteration of the loop
-            }
-        }
-    }
-
-    @Override
-    public QueryInfo next() {
-        if (!hasNext()) {
-            throw new NoSuchElementException();
-        }
-
-        val result = iterator.next();
-        if (result.hasQueryStatus()) {
-            isFinished = (result.getQueryStatus().getCompletionStatus() == QueryStatus.CompletionStatus.FINISHED);
-        }
-        return result;
-    }
-
-    @Override
-    public void close() {
-        // Close the iterator to ensure that ongoing streaming calls are properly closed
-        if (iterator != null) {
-            iterator.close();
-        }
+    private QueryInfoIterator(AsyncQueryInfoIterator asyncIterator) {
+        super(asyncIterator);
     }
 }

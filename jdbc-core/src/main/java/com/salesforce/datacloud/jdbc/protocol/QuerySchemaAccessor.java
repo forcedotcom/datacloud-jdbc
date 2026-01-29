@@ -6,8 +6,9 @@ package com.salesforce.datacloud.jdbc.protocol;
 
 import static org.apache.arrow.vector.types.pojo.Schema.deserializeMessage;
 
+import com.salesforce.datacloud.jdbc.protocol.async.util.AsyncStreamObserverIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.util.SyncIteratorAdapter;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
-import com.salesforce.datacloud.jdbc.protocol.grpc.util.BufferingStreamIterator;
 import io.grpc.Status;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -22,10 +23,10 @@ public class QuerySchemaAccessor {
      * Provides the Arrow schema for a specific query id.
      *
      * <p>Note: To set a timeout configure the stub in the client accordingly.</p>
-     * <p>Attention: This iterator might throw {@link io.grpc.StatusRuntimeException} exceptions</p>
+     * <p>Attention: This method might throw {@link io.grpc.StatusRuntimeException} exceptions</p>
      *
      * @param queryClient The client for a specific query id
-     * @return A new QueryInfoIterator instance
+     * @return The Arrow schema for the query
      */
     public static Schema getArrowSchema(@NonNull QueryAccessGrpcClient queryClient) {
         val request = queryClient
@@ -33,8 +34,9 @@ public class QuerySchemaAccessor {
                 .setSchemaOutputFormat(QueryResultArrowStream.OUTPUT_FORMAT)
                 .build();
         val message = "getQuerySchema queryId=" + queryClient.getQueryId();
-        val iterator = new BufferingStreamIterator<QueryInfoParam, QueryInfo>(message, log);
-        queryClient.getStub().getQueryInfo(request, iterator.getObserver());
+        val asyncIterator = new AsyncStreamObserverIterator<QueryInfoParam, QueryInfo>(message, log);
+        queryClient.getStub().getQueryInfo(request, asyncIterator.getObserver());
+        val iterator = new SyncIteratorAdapter<>(asyncIterator);
 
         while (true) {
             // We always expect a schema message as we requested one
