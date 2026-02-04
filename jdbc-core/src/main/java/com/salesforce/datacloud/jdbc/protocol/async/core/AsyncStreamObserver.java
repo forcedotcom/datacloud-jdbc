@@ -185,5 +185,7 @@ public class AsyncStreamObserver<ReqT, RespT extends AbstractMessage> implements
         if (stream != null) {
             stream.cancel("Call got closed by the client.", null);
         }
+        // We don't check if the pendingFuture is sethere intentionally. The close propagates through the gRPC layer
+        // and the pendingFuture will be completed with an error in the onError callback.
     }
 }

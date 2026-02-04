@@ -167,18 +167,9 @@ public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, Que
                     return pollForMoreChunks();
                 }
             }
-            // Info stream ended, check if we're done
-            boolean queryIsDone = queryStatus != null
-                    && ((queryStatus.getCompletionStatus() == QueryStatus.CompletionStatus.FINISHED)
-                            || (queryStatus.getCompletionStatus() == QueryStatus.CompletionStatus.RESULTS_PRODUCED));
-            boolean allChunksConsumed =
-                    (queryStatus == null || nextChunk >= queryStatus.getChunkCount()) && (chunkIterator == null);
 
-            if (queryIsDone && allChunksConsumed) {
-                return CompletableFuture.completedFuture(Optional.empty());
-            }
-
-            // This should never happen
+            // This should never happen, callers of pollForMoreChunks should not call it when the query is already
+            // finished
             CompletableFuture<Optional<QueryResult>> future = new CompletableFuture<>();
             future.completeExceptionally(new RuntimeException("Unexpected end in next()"));
             return future;
