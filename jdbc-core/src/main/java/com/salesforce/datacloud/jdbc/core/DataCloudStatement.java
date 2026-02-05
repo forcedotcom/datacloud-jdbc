@@ -25,6 +25,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.QueryParam;
+import salesforce.cdp.hyperdb.v1.ResultRange;
 
 @Slf4j
 public class DataCloudStatement implements Statement, AutoCloseable {
@@ -58,13 +59,23 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         this.statementProperties = connection.getConnectionProperties().getStatementProperties();
     }
 
-    protected ExecuteQueryParamBuilder getQueryParamBuilder(QueryTimeout queryTimeout) throws SQLException {
+    protected QueryParam.Builder getQueryParamBuilder(
+            String sql, QueryTimeout queryTimeout, QueryParam.TransferMode transferMode) throws SQLException {
+        val builder = QueryParam.newBuilder()
+                .setQuery(sql)
+                .setOutputFormat(QueryResultArrowStream.OUTPUT_FORMAT)
+                .setTransferMode(transferMode);
+
         val querySettings = new HashMap<>(statementProperties.getQuerySettings());
         if (!queryTimeout.getServerQueryTimeout().isZero()) {
             querySettings.put(
                     "query_timeout", queryTimeout.getServerQueryTimeout().toMillis() + "ms");
         }
-        return ExecuteQueryParamBuilder.of(querySettings);
+        if (!querySettings.isEmpty()) {
+            builder.putAllSettings(querySettings);
+        }
+
+        return builder;
     }
 
     @Getter
@@ -127,10 +138,14 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     private QueryResultIterator executeAdaptiveQuery(String sql) throws SQLException {
         val queryTimeout = QueryTimeout.of(
                 statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
-        val paramBuilder = getQueryParamBuilder(queryTimeout);
-        val queryParam = targetMaxRows > 0
-                ? paramBuilder.getAdaptiveRowLimitQueryParams(sql, targetMaxRows, targetMaxBytes)
-                : paramBuilder.getAdaptiveQueryParams(sql);
+        val paramBuilder = getQueryParamBuilder(sql, queryTimeout, QueryParam.TransferMode.ADAPTIVE);
+        if (targetMaxRows > 0) {
+            val range = ResultRange.newBuilder().setRowLimit(targetMaxRows).setByteLimit(targetMaxBytes);
+            paramBuilder.setResultRange(range);
+            log.info("setting row limit query. maxRows={}, maxBytes={}", (long) targetMaxRows, (long) targetMaxBytes);
+        }
+        QueryParam queryParam = paramBuilder.build();
+
         val stub = connection
                 .getStub()
                 .withDeadlineAfter(
@@ -147,8 +162,8 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         try {
             val queryTimeout = QueryTimeout.of(
                     statementProperties.getQueryTimeout(), statementProperties.getQueryTimeoutLocalEnforcementDelay());
-            val paramBuilder = getQueryParamBuilder(queryTimeout);
-            val request = paramBuilder.getQueryParams(sql, QueryParam.TransferMode.ASYNC);
+            val paramBuilder = getQueryParamBuilder(sql, queryTimeout, QueryParam.TransferMode.ASYNC);
+            QueryParam queryParam = paramBuilder.build();
             val stub = connection
                     .getStub()
                     .withDeadlineAfter(
@@ -157,7 +172,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             // We set the deadline based off the query timeout here as the server-side doesn't properly enforce
             // the query timeout during the initial compilation phase. By setting the deadline, we can ensure
             // that the query timeout is enforced also when the server hangs during compilation.
-            queryHandle = AsyncQueryAccessHandle.of(stub, request);
+            queryHandle = AsyncQueryAccessHandle.of(stub, queryParam);
             log.info(
                     "executeAsyncQuery completed. queryId={}",
                     queryHandle.getQueryStatus().getQueryId());
@@ -185,6 +200,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         log.debug("Entering close");
         if (resultSet != null) {
             resultSet.close();
+            resultSet = null;
         }
         log.debug("Exiting close");
     }

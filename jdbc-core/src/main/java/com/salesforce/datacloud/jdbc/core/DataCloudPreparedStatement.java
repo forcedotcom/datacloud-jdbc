@@ -49,6 +49,9 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     private String sql;
     private final ParameterManager parameterManager;
     private final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+    // True if we are currently fetching metadata from the server, this influences the query param generation
+    // to not return any data.
+    private boolean fetchingMetadata = false;
 
     DataCloudPreparedStatement(DataCloudConnection connection, ParameterManager parameterManager) {
         super(connection);
@@ -78,7 +81,10 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     }
 
     @Override
-    protected ExecuteQueryParamBuilder getQueryParamBuilder(QueryTimeout queryTimeout) throws SQLException {
+    protected QueryParam.Builder getQueryParamBuilder(
+            String sql, QueryTimeout queryTimeout, QueryParam.TransferMode transferMode) throws SQLException {
+        val builder = super.getQueryParamBuilder(sql, queryTimeout, transferMode);
+
         final byte[] encodedRow;
         try {
             encodedRow = toArrowByteArray(parameterManager.getParameters(), calendar);
@@ -86,14 +92,15 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
             throw new SQLException("Failed to encode parameters on prepared statement", e);
         }
 
-        val preparedQueryParams = QueryParam.newBuilder()
-                .setParamStyle(QueryParam.ParameterStyle.QUESTION_MARK)
+        if (fetchingMetadata) {
+            // Submit the query as metadata only query, with limit 0 Hyper will skip execution.
+            builder.setQueryRowLimit(0);
+        }
+
+        return builder.setParamStyle(QueryParam.ParameterStyle.QUESTION_MARK)
                 .setArrowParameters(QueryParameterArrow.newBuilder()
                         .setData(ByteString.copyFrom(encodedRow))
-                        .build())
-                .build();
-
-        return super.getQueryParamBuilder(queryTimeout).withQueryParams(preparedQueryParams);
+                        .build());
     }
 
     public boolean executeAsyncQuery() throws SQLException {
@@ -265,7 +272,18 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+        if ((resultSet != null) && !resultSet.isClosed()) {
+            return resultSet.getMetaData();
+        }
+        try {
+            fetchingMetadata = true;
+            val result = super.executeQuery(sql);
+            val metadata = result.getMetaData();
+            result.close();
+            return metadata;
+        } finally {
+            fetchingMetadata = false;
+        }
     }
 
     @Override

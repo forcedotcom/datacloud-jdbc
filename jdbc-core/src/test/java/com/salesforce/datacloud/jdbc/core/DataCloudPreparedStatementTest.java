@@ -261,7 +261,6 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
                 impl("executeUpdate", s -> s.executeUpdate("", Statement.RETURN_GENERATED_KEYS)),
                 impl("executeUpdate", s -> s.executeUpdate("", new int[] {})),
                 impl("executeUpdate", s -> s.executeUpdate("", new String[] {})),
-                impl("getMetaData", DataCloudPreparedStatement::getMetaData),
                 impl("getParameterMetaData", DataCloudPreparedStatement::getParameterMetaData));
     }
 
