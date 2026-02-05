@@ -32,12 +32,16 @@ jobs:
     needs: call-reusable-workflow
     runs-on: ubuntu-latest
     if: always()
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag_name || github.event.release.tag_name }}
     steps:
       - name: Update release status
         uses: actions/github-script@v7
+        env:
+          TAG_NAME: ${{ env.RELEASE_TAG }}
         with:
           script: |
-            const tagName = '${{ github.event_name == "workflow_dispatch" && github.event.inputs.tag_name || github.event.release.tag_name }}';
+            const tagName = process.env.TAG_NAME;
             const { data: releases } = await github.rest.repos.listReleases({
               owner: context.repo.owner,
               repo: context.repo.repo
