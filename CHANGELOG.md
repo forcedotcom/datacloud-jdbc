@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.42.1](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.0...v0.42.1) (2026-02-06)
+
+
+### Bug Fixes
+
+* Remove comments from JDBC driver version ([#153](https://github.com/forcedotcom/datacloud-jdbc/issues/153)) ([32f7216](https://github.com/forcedotcom/datacloud-jdbc/commit/32f7216bac41cdf6c2621d079f8c8fd77cd49a16))
+* resolve release workflow validation error for tag expression ([#156](https://github.com/forcedotcom/datacloud-jdbc/issues/156)) ([449ce0d](https://github.com/forcedotcom/datacloud-jdbc/commit/449ce0d5ba517e42f6f49eaaaeafcb1712b286b8))
+
 ## [0.42.0](https://github.com/forcedotcom/datacloud-jdbc/compare/0.41.0...v0.42.0) (2026-02-05)
 
 
