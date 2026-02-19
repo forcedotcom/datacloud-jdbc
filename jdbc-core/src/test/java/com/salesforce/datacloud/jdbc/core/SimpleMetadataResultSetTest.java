@@ -11,6 +11,7 @@ import com.salesforce.datacloud.jdbc.core.resultset.SimpleResultSet;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,11 @@ class SimpleMetadataResultSetTest {
     @Test
     void getFetchSize() throws SQLException {
         assertThat(simpleMetadataResultSet.getFetchSize()).isEqualTo(0);
+    }
+
+    @Test
+    void setFetchSize() {
+        assertThrows(SQLFeatureNotSupportedException.class, () -> simpleMetadataResultSet.setFetchSize(0));
     }
 
     @SneakyThrows

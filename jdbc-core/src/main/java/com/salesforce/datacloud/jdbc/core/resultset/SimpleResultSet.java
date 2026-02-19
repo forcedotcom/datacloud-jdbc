@@ -66,7 +66,7 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public void setFetchSize(int rows) throws SQLException {
-        // No-op, since this is just a hint
+        throw new SQLFeatureNotSupportedException("setFetchSize is not supported");
     }
 
     @Override

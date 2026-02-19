@@ -4,7 +4,11 @@
  */
 package com.salesforce.datacloud.jdbc.core.resultset;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.salesforce.datacloud.jdbc.core.QueryDBMetadata;
 import com.salesforce.datacloud.jdbc.core.SimpleMetadataResultSet;
@@ -20,8 +24,10 @@ import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLXML;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -239,6 +245,20 @@ class SimpleResultSetTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.updateNClob(1, Mockito.mock(Reader.class)));
         assertThrows(
                 SQLFeatureNotSupportedException.class, () -> resultSet.updateNClob("col", Mockito.mock(Reader.class)));
+    }
+
+    @Test
+    void wasNullReflectsNullAndNonNullColumnValues() throws SQLException {
+        List<Object> data = Arrays.asList(Collections.singletonList("TABLE"), Collections.singletonList(null));
+        SimpleResultSet<?> resultSet = SimpleMetadataResultSet.of(QueryDBMetadata.GET_TABLE_TYPES, data);
+
+        assertTrue(resultSet.next());
+        assertEquals("TABLE", resultSet.getString(1));
+        assertFalse(resultSet.wasNull());
+
+        assertTrue(resultSet.next());
+        assertNull(resultSet.getString(1));
+        assertTrue(resultSet.wasNull());
     }
 
     /**
