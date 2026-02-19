@@ -83,4 +83,19 @@ class SimpleMetadataResultSetTest {
         assertThat((Iterable<? extends Throwable>) simpleMetadataResultSet.getWarnings())
                 .isNull();
     }
+
+    @Test
+    void getConcurrency() throws SQLException {
+        assertThat(simpleMetadataResultSet.getConcurrency()).isEqualTo(ResultSet.CONCUR_READ_ONLY);
+    }
+
+    @Test
+    void getType() throws SQLException {
+        assertThat(simpleMetadataResultSet.getType()).isEqualTo(ResultSet.TYPE_FORWARD_ONLY);
+    }
+
+    @Test
+    void getFetchDirection() throws SQLException {
+        assertThat(simpleMetadataResultSet.getFetchDirection()).isEqualTo(ResultSet.FETCH_FORWARD);
+    }
 }
