@@ -150,8 +150,44 @@ class SimpleResultSetMetaDataTest {
 
     @Test
     public void getColumnClassName() throws SQLException {
+        // From GET_COLUMNS: column 1 is VARCHAR, column 17 is INTEGER
         assertThat(simpleResultSetMetaData.getColumnClassName(1)).isEqualTo("java.lang.String");
         assertThat(simpleResultSetMetaData.getColumnClassName(17)).isEqualTo("java.lang.Integer");
+
+        // Cover remaining Java types from ColumnType.getJavaTypeName() switch
+        assertThat(metaDataWithColumnType(JDBCType.BOOLEAN).getColumnClassName(1))
+                .isEqualTo("java.lang.Boolean");
+        assertThat(metaDataWithColumnType(JDBCType.SMALLINT).getColumnClassName(1))
+                .isEqualTo("java.lang.Integer");
+        assertThat(metaDataWithColumnType(JDBCType.BIGINT).getColumnClassName(1))
+                .isEqualTo("java.lang.Long");
+        assertThat(metaDataWithColumnType(JDBCType.NUMERIC).getColumnClassName(1))
+                .isEqualTo("java.math.BigDecimal");
+        assertThat(metaDataWithColumnType(JDBCType.FLOAT).getColumnClassName(1)).isEqualTo("java.lang.Float");
+        assertThat(metaDataWithColumnType(JDBCType.DOUBLE).getColumnClassName(1))
+                .isEqualTo("java.lang.Double");
+        assertThat(metaDataWithColumnType(JDBCType.CHAR).getColumnClassName(1)).isEqualTo("java.lang.String");
+        assertThat(metaDataWithColumnType(JDBCType.BINARY).getColumnClassName(1))
+                .isEqualTo("[B");
+        assertThat(metaDataWithColumnType(JDBCType.DATE).getColumnClassName(1)).isEqualTo("java.sql.Date");
+        assertThat(metaDataWithColumnType(JDBCType.TIME).getColumnClassName(1)).isEqualTo("java.sql.Time");
+        assertThat(metaDataWithColumnType(JDBCType.TIMESTAMP).getColumnClassName(1))
+                .isEqualTo("java.sql.Timestamp");
+        assertThat(metaDataWithColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE).getColumnClassName(1))
+                .isEqualTo("java.sql.Timestamp");
+        assertThat(metaDataWithColumnType(JDBCType.ARRAY, new ColumnType(JDBCType.VARCHAR))
+                        .getColumnClassName(1))
+                .isEqualTo("java.sql.Array");
+    }
+
+    private static SimpleResultSetMetaData metaDataWithColumnType(JDBCType jdbcType) {
+        return metaDataWithColumnType(jdbcType, null);
+    }
+
+    private static SimpleResultSetMetaData metaDataWithColumnType(JDBCType jdbcType, ColumnType arrayElementType) {
+        ColumnType columnType =
+                arrayElementType != null ? new ColumnType(jdbcType, arrayElementType) : new ColumnType(jdbcType);
+        return new SimpleResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", columnType, "TEXT")});
     }
 
     @Test
