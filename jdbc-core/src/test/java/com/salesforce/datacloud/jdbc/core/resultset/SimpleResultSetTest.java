@@ -254,6 +254,9 @@ class SimpleResultSetTest {
 
         // UnsupportedOperationException from SimpleResultSet positional implementations
         assertThrows(UnsupportedOperationException.class, () -> resultSet.getBytes(col));
+        // Cover getDate(int) and getDate(int, Calendar) via direct positional calls
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate(1));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate(1, null));
         assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate(col));
         assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate(col, (Calendar) null));
         assertThrows(UnsupportedOperationException.class, () -> resultSet.getTime(col));
