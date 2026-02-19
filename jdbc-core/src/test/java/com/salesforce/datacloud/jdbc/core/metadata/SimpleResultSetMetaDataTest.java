@@ -180,6 +180,20 @@ class SimpleResultSetMetaDataTest {
                 .isEqualTo("java.sql.Array");
     }
 
+    @Test
+    public void columnTypeWithNullableConstructor() throws SQLException {
+        // Covers ColumnType(JDBCType type, boolean nullable)
+        ColumnType nonNullable = new ColumnType(JDBCType.VARCHAR, false);
+        ColumnType nullable = new ColumnType(JDBCType.INTEGER, true);
+        SimpleResultSetMetaData metaNonNullable =
+                new SimpleResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nonNullable, "TEXT")});
+        SimpleResultSetMetaData metaNullable =
+                new SimpleResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nullable, "INTEGER")});
+
+        assertThat(metaNonNullable.isNullable(1)).isEqualTo(ResultSetMetaData.columnNoNulls);
+        assertThat(metaNullable.isNullable(1)).isEqualTo(ResultSetMetaData.columnNullable);
+    }
+
     private static SimpleResultSetMetaData metaDataWithColumnType(JDBCType jdbcType) {
         return metaDataWithColumnType(jdbcType, null);
     }
