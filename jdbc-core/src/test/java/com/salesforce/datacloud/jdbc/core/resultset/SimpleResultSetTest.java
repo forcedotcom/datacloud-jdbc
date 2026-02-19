@@ -17,6 +17,9 @@ import java.sql.ResultSet;
 import java.sql.RowId;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLXML;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -233,5 +236,54 @@ class SimpleResultSetTest {
         assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.updateNClob(1, Mockito.mock(Reader.class)));
         assertThrows(
                 SQLFeatureNotSupportedException.class, () -> resultSet.updateNClob("col", Mockito.mock(Reader.class)));
+    }
+
+    /**
+     * Exercises the label-based getters from {@link ResultSetWithPositionalGetters} so that the
+     * interface default methods (which delegate via findColumn) are covered. The underlying
+     * positional getters still throw; this test only ensures the label→index delegation is executed.
+     */
+    @Test
+    void resultSetWithPositionalGetters_labelBasedGetters_delegateAndThrow() throws Exception {
+        SimpleResultSet<?> resultSet = Mockito.mock(SimpleResultSet.class, Mockito.CALLS_REAL_METHODS);
+        // Stub findColumn so label-based default methods can delegate. Use doReturn so stub setup
+        // does not invoke real findColumn (which would NPE on null metadata).
+        Mockito.doReturn(1).when(resultSet).findColumn(Mockito.eq("col"));
+
+        // UnsupportedOperationException from SimpleResultSet positional implementations
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getBytes("col"));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate("col"));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate("col", (Calendar) null));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTime("col"));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTime("col", (Calendar) null));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTimestamp("col"));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTimestamp("col", (Calendar) null));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getBigDecimal("col", 1));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getArray("col"));
+
+        // SQLFeatureNotSupportedException from SimpleResultSet positional implementations
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getAsciiStream("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getUnicodeStream("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getBinaryStream("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getCharacterStream("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getRef("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getBlob("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getClob("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getURL("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getRowId("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNClob("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getSQLXML("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNString("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNCharacterStream("col"));
+
+        // getObject(String, Map) -> UnsupportedOperationException (use non-empty map so implementation
+        // doesn't delegate to getObject(index), which would NPE on null metadata)
+        Map<String, Class<?>> map = Collections.singletonMap("key", String.class);
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getObject("col", map));
+
+        // These delegate to positional getters that use accessors (null on mock), so they throw
+        assertThrows(Exception.class, () -> resultSet.getObject("col"));
+        assertThrows(Exception.class, () -> resultSet.getObject("col", String.class));
+        assertThrows(Exception.class, () -> resultSet.getBigDecimal("col"));
     }
 }
