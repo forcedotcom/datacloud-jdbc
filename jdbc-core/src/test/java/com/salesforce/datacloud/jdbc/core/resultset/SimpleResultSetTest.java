@@ -248,9 +248,8 @@ class SimpleResultSetTest {
      * interface and Codecov reports coverage for ResultSetWithPositionalGetters.
      */
     @Test
-    void resultSetWithPositionalGetters_labelBasedGetters_delegateAndThrow() throws SQLException {
-        ResultSetWithPositionalGetters resultSet =
-                SimpleMetadataResultSet.of(QueryDBMetadata.GET_TABLE_TYPES, null);
+    void resultSetWithPositionalGettersDelegateAndThrow() throws SQLException {
+        ResultSetWithPositionalGetters resultSet = SimpleMetadataResultSet.of(QueryDBMetadata.GET_TABLE_TYPES, null);
         String col = "TABLE_TYPE"; // single column from GET_TABLE_TYPES
 
         // UnsupportedOperationException from SimpleResultSet positional implementations
