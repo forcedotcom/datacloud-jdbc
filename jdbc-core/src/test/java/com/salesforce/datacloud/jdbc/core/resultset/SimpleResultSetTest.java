@@ -6,6 +6,8 @@ package com.salesforce.datacloud.jdbc.core.resultset;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.salesforce.datacloud.jdbc.core.QueryDBMetadata;
+import com.salesforce.datacloud.jdbc.core.SimpleMetadataResultSet;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -15,6 +17,7 @@ import java.sql.NClob;
 import java.sql.Ref;
 import java.sql.ResultSet;
 import java.sql.RowId;
+import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLXML;
 import java.util.Calendar;
@@ -240,50 +243,49 @@ class SimpleResultSetTest {
 
     /**
      * Exercises the label-based getters from {@link ResultSetWithPositionalGetters} so that the
-     * interface default methods (which delegate via findColumn) are covered. The underlying
-     * positional getters still throw; this test only ensures the label→index delegation is executed.
+     * interface default methods (which delegate via findColumn) are covered. Uses a real
+     * {@link SimpleMetadataResultSet} (not a mock) so JaCoCo attributes execution to the
+     * interface and Codecov reports coverage for ResultSetWithPositionalGetters.
      */
     @Test
-    void resultSetWithPositionalGetters_labelBasedGetters_delegateAndThrow() throws Exception {
-        SimpleResultSet<?> resultSet = Mockito.mock(SimpleResultSet.class, Mockito.CALLS_REAL_METHODS);
-        // Stub findColumn so label-based default methods can delegate. Use doReturn so stub setup
-        // does not invoke real findColumn (which would NPE on null metadata).
-        Mockito.doReturn(1).when(resultSet).findColumn(Mockito.eq("col"));
+    void resultSetWithPositionalGetters_labelBasedGetters_delegateAndThrow() throws SQLException {
+        ResultSetWithPositionalGetters resultSet =
+                SimpleMetadataResultSet.of(QueryDBMetadata.GET_TABLE_TYPES, null);
+        String col = "TABLE_TYPE"; // single column from GET_TABLE_TYPES
 
         // UnsupportedOperationException from SimpleResultSet positional implementations
-        assertThrows(UnsupportedOperationException.class, () -> resultSet.getBytes("col"));
-        assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate("col"));
-        assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate("col", (Calendar) null));
-        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTime("col"));
-        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTime("col", (Calendar) null));
-        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTimestamp("col"));
-        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTimestamp("col", (Calendar) null));
-        assertThrows(UnsupportedOperationException.class, () -> resultSet.getBigDecimal("col", 1));
-        assertThrows(UnsupportedOperationException.class, () -> resultSet.getArray("col"));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getBytes(col));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate(col));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getDate(col, (Calendar) null));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTime(col));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTime(col, (Calendar) null));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTimestamp(col));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getTimestamp(col, (Calendar) null));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getBigDecimal(col, 1));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getArray(col));
 
         // SQLFeatureNotSupportedException from SimpleResultSet positional implementations
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getAsciiStream("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getUnicodeStream("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getBinaryStream("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getCharacterStream("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getRef("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getBlob("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getClob("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getURL("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getRowId("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNClob("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getSQLXML("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNString("col"));
-        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNCharacterStream("col"));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getAsciiStream(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getUnicodeStream(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getBinaryStream(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getCharacterStream(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getRef(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getBlob(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getClob(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getURL(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getRowId(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNClob(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getSQLXML(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNString(col));
+        assertThrows(SQLFeatureNotSupportedException.class, () -> resultSet.getNCharacterStream(col));
 
-        // getObject(String, Map) -> UnsupportedOperationException (use non-empty map so implementation
-        // doesn't delegate to getObject(index), which would NPE on null metadata)
+        // getObject(String, Map) -> UnsupportedOperationException (non-empty map)
         Map<String, Class<?>> map = Collections.singletonMap("key", String.class);
-        assertThrows(UnsupportedOperationException.class, () -> resultSet.getObject("col", map));
+        assertThrows(UnsupportedOperationException.class, () -> resultSet.getObject(col, map));
 
-        // These delegate to positional getters that use accessors (null on mock), so they throw
-        assertThrows(Exception.class, () -> resultSet.getObject("col"));
-        assertThrows(Exception.class, () -> resultSet.getObject("col", String.class));
-        assertThrows(Exception.class, () -> resultSet.getBigDecimal("col"));
+        // No current row: delegate to positional getters which throw SQLException
+        assertThrows(SQLException.class, () -> resultSet.getObject(col));
+        assertThrows(SQLException.class, () -> resultSet.getObject(col, String.class));
+        assertThrows(SQLException.class, () -> resultSet.getBigDecimal(col));
     }
 }
