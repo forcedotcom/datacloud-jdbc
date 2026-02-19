@@ -98,13 +98,6 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                 if (value instanceof Boolean) {
                     return (Boolean) value;
                 }
-                if (value instanceof String) {
-                    String str = ((String) value).trim().toLowerCase();
-                    return "true".equals(str) || "yes".equals(str) || "1".equals(str);
-                }
-                if (value instanceof Number) {
-                    return ((Number) value).intValue() != 0;
-                }
                 return false;
             }
 
@@ -116,13 +109,6 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
                 }
                 if (value instanceof Number) {
                     return OptionalLong.of(((Number) value).longValue());
-                }
-                if (value instanceof String) {
-                    try {
-                        return OptionalLong.of(Long.parseLong((String) value));
-                    } catch (NumberFormatException e) {
-                        throw new SQLException("Cannot convert to integer: " + value, e);
-                    }
                 }
                 throw new SQLException(
                         "Cannot convert to integer: " + value.getClass().getName());

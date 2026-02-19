@@ -270,7 +270,7 @@ class SimpleResultSetTest {
      * only integer/varchar columns.)
      */
     @Test
-    void getNumericNarrowTypes_throwWhenValueOutOfRange() throws SQLException {
+    void getNumericTypesThrowWhenValueOutOfRange() throws SQLException {
         // GET_COLUMNS: column 5 (1-based) is DATA_TYPE (INTEGER)
         int col = 5;
 
