@@ -24,12 +24,14 @@ import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLXML;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
 
 class SimpleResultSetTest {
@@ -259,6 +261,60 @@ class SimpleResultSetTest {
         assertTrue(resultSet.next());
         assertNull(resultSet.getString(1));
         assertTrue(resultSet.wasNull());
+    }
+
+    /**
+     * Covers the out-of-range branches in SimpleResultSet for getByte, getShort, and getInt: when
+     * the long value is outside the target type's range, the getter throws SQLException. (getFloat
+     * uses getDouble and would need a double column to trigger out-of-range; current metadata has
+     * only integer/varchar columns.)
+     */
+    @Test
+    void getNumericNarrowTypes_throwWhenValueOutOfRange() throws SQLException {
+        // GET_COLUMNS: column 5 (1-based) is DATA_TYPE (INTEGER)
+        int col = 5;
+
+        SimpleResultSet<?> resultSet = SimpleMetadataResultSet.of(
+                QueryDBMetadata.GET_COLUMNS,
+                Arrays.asList(
+                        rowWithLongAt(col, (long) Byte.MAX_VALUE + 1),
+                        rowWithLongAt(col, (long) Byte.MIN_VALUE - 1),
+                        rowWithLongAt(col, (long) Short.MAX_VALUE + 1),
+                        rowWithLongAt(col, (long) Short.MIN_VALUE - 1),
+                        rowWithLongAt(col, (long) Integer.MAX_VALUE + 1),
+                        rowWithLongAt(col, (long) Integer.MIN_VALUE - 1)));
+
+        // getByte: above and below byte range
+        assertTrue(resultSet.next());
+        assertThrowsOutOfRange("byte", () -> resultSet.getByte(col));
+        assertTrue(resultSet.next());
+        assertThrowsOutOfRange("byte", () -> resultSet.getByte(col));
+
+        // getShort: above and below short range
+        assertTrue(resultSet.next());
+        assertThrowsOutOfRange("short", () -> resultSet.getShort(col));
+        assertTrue(resultSet.next());
+        assertThrowsOutOfRange("short", () -> resultSet.getShort(col));
+
+        // getInt: above and below int range
+        assertTrue(resultSet.next());
+        assertThrowsOutOfRange("int", () -> resultSet.getInt(col));
+        assertTrue(resultSet.next());
+        assertThrowsOutOfRange("int", () -> resultSet.getInt(col));
+
+        assertFalse(resultSet.next());
+    }
+
+    private static List<Object> rowWithLongAt(int oneBasedColumnIndex, long value) {
+        List<Object> row = new ArrayList<>(Collections.nCopies(24, null));
+        row.set(oneBasedColumnIndex - 1, value);
+        return row;
+    }
+
+    private static void assertThrowsOutOfRange(String typeName, Executable executable) {
+        SQLException ex = assertThrows(SQLException.class, executable);
+        String suffix = "byte".equals(typeName) || "short".equals(typeName) ? "a " + typeName : "an " + typeName;
+        assertTrue(ex.getMessage().contains("out of range for " + suffix), "message: " + ex.getMessage());
     }
 
     /**
