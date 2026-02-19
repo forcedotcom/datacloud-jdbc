@@ -264,6 +264,48 @@ class SimpleResultSetTest {
     }
 
     /**
+     * Covers branches in SimpleMetadataResultSet's private getValue (invoked via getString/getInt
+     * etc.): closed result set, no current row, row index out of bounds, row not a List, column
+     * index out of bounds for row.
+     */
+    @Test
+    void simpleMetadataResultSetGetValue_branches() throws SQLException {
+        // 1. ResultSet is closed
+        SimpleResultSet<?> rs = SimpleMetadataResultSet.of(
+                QueryDBMetadata.GET_TABLE_TYPES, Arrays.asList(Collections.singletonList("x")));
+        rs.close();
+        SQLException ex = assertThrows(SQLException.class, () -> rs.getString(1));
+        assertTrue(ex.getMessage().contains("ResultSet is closed"), "message: " + ex.getMessage());
+
+        // 2. No current row (get before next())
+        SimpleResultSet<?> rs2 = SimpleMetadataResultSet.of(
+                QueryDBMetadata.GET_TABLE_TYPES, Arrays.asList(Collections.singletonList("x")));
+        ex = assertThrows(SQLException.class, () -> rs2.getString(1));
+        assertTrue(ex.getMessage().contains("No current row"), "message: " + ex.getMessage());
+
+        // 3. Row index out of bounds (past last row)
+        SimpleResultSet<?> rs3 = SimpleMetadataResultSet.of(
+                QueryDBMetadata.GET_TABLE_TYPES, Arrays.asList(Collections.singletonList("x")));
+        assertTrue(rs3.next());
+        assertFalse(rs3.next());
+        ex = assertThrows(SQLException.class, () -> rs3.getString(1));
+        assertTrue(ex.getMessage().contains("Row index out of bounds"), "message: " + ex.getMessage());
+
+        // 4. Data row is not a List
+        SimpleResultSet<?> rs4 = SimpleMetadataResultSet.of(QueryDBMetadata.GET_TABLE_TYPES, Arrays.asList(123));
+        assertTrue(rs4.next());
+        ex = assertThrows(SQLException.class, () -> rs4.getString(1));
+        assertTrue(ex.getMessage().contains("Data row is not a List"), "message: " + ex.getMessage());
+
+        // 5. Column index out of bounds for row (row has fewer columns than requested)
+        SimpleResultSet<?> rs5 = SimpleMetadataResultSet.of(
+                QueryDBMetadata.GET_COLUMNS, Arrays.asList(Collections.singletonList("only one")));
+        assertTrue(rs5.next());
+        ex = assertThrows(SQLException.class, () -> rs5.getString(5));
+        assertTrue(ex.getMessage().contains("out of bounds for row"), "message: " + ex.getMessage());
+    }
+
+    /**
      * Covers the out-of-range branches in SimpleResultSet for getByte, getShort, and getInt: when
      * the long value is outside the target type's range, the getter throws SQLException. (getFloat
      * uses getDouble and would need a double column to trigger out-of-range; current metadata has
