@@ -16,14 +16,12 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.arrow.memory.RootAllocator;
@@ -73,55 +71,6 @@ public final class ArrowUtils {
                                 .setWritable(false);
                         return ColumnMetaData.fromProto(builder.build());
                     } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .collect(Collectors.toList());
-    }
-
-    /** Converts from JDBC metadata to Avatica columns. */
-    public static List<ColumnMetaData> convertJDBCMetadataToAvaticaColumns(ResultSetMetaData metaData) {
-        if (metaData == null) {
-            return Collections.emptyList();
-        }
-
-        int columnCount;
-        try {
-            columnCount = metaData.getColumnCount();
-        } catch (SQLException e) {
-            log.error("Error getting column count", e);
-            throw new RuntimeException(e);
-        }
-
-        return Stream.iterate(1, i -> i + 1)
-                .limit(columnCount)
-                .map(i -> {
-                    try {
-                        val columnType = new ColumnType(JDBCType.valueOf(metaData.getColumnType(i)), true);
-                        val avaticaType = getAvaticaType(columnType);
-                        return new ColumnMetaData(
-                                i - 1,
-                                metaData.isAutoIncrement(i),
-                                metaData.isCaseSensitive(i),
-                                metaData.isSearchable(i),
-                                metaData.isCurrency(i),
-                                metaData.isNullable(i),
-                                metaData.isSigned(i),
-                                metaData.getColumnDisplaySize(i),
-                                metaData.getColumnLabel(i),
-                                metaData.getColumnName(i),
-                                metaData.getSchemaName(i),
-                                metaData.getPrecision(i),
-                                metaData.getScale(i),
-                                metaData.getTableName(i),
-                                metaData.getCatalogName(i),
-                                avaticaType,
-                                metaData.isReadOnly(i),
-                                metaData.isWritable(i),
-                                metaData.isDefinitelyWritable(i),
-                                metaData.getColumnClassName(i));
-                    } catch (SQLException e) {
-                        log.error("Error converting JDBC Metadata to Avatica Columns");
                         throw new RuntimeException(e);
                     }
                 })

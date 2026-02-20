@@ -9,13 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.google.common.collect.ImmutableList;
-import com.salesforce.datacloud.jdbc.core.QueryResultSetMetadata;
 import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.JDBCType;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -150,34 +147,6 @@ class ArrowUtilsTest {
                         .getType()
                         .getVendorTypeNumber())
                 .isEqualTo(expectedSqlType);
-    }
-
-    @Test
-    void testConvertJDBCMetadataToAvaticaColumns() throws SQLException {
-        ResultSetMetaData resultSetMetaData = mockResultSetMetadata();
-        List<ColumnMetaData> columnMetaDataList = ArrowUtils.convertJDBCMetadataToAvaticaColumns(resultSetMetaData);
-
-        for (int i = 0; i < columnMetaDataList.size(); i++) {
-            val actual = columnMetaDataList.get(i);
-
-            softly.assertThat(actual.type.id).isEqualTo(resultSetMetaData.getColumnType(i + 1));
-            softly.assertThat(actual.columnName).isEqualTo(resultSetMetaData.getColumnName(i + 1));
-            softly.assertThat(actual.type.name).isEqualTo(resultSetMetaData.getColumnTypeName(i + 1));
-        }
-    }
-
-    @Test
-    void testConvertJDBCMetadataToAvaticaColumnsEmptyMetadata() {
-        assertThat(ArrowUtils.convertJDBCMetadataToAvaticaColumns(null)).isEmpty();
-    }
-
-    private ResultSetMetaData mockResultSetMetadata() {
-        String[] columnNames = {"col1", "col2", "col3", "col4"};
-        String[] columnTypes = {"INTEGER", "VARCHAR", "DECIMAL", "TIMESTAMP"};
-        Integer[] columnTypeIds = {4, 12, 3, 93};
-
-        return new QueryResultSetMetadata(
-                Arrays.asList(columnNames), Arrays.asList(columnTypes), Arrays.asList(columnTypeIds));
     }
 
     @Test

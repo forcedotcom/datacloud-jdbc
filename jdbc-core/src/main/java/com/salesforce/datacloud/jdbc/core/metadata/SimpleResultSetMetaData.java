@@ -4,8 +4,11 @@
  */
 package com.salesforce.datacloud.jdbc.core.metadata;
 
+import com.salesforce.datacloud.jdbc.core.QueryDBMetadata;
+import java.sql.JDBCType;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.stream.IntStream;
 import lombok.val;
 
 public class SimpleResultSetMetaData implements ResultSetMetaData {
@@ -14,6 +17,16 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     public SimpleResultSetMetaData(ColumnMetadata[] columns) {
         this.columns = columns;
+    }
+
+    public SimpleResultSetMetaData(QueryDBMetadata metadata) {
+        this.columns = IntStream.range(0, metadata.getColumnTypes().size())
+                .mapToObj(i -> new ColumnMetadata(
+                        metadata.getColumnNames().get(i),
+                        new ColumnType(
+                                JDBCType.valueOf(metadata.getColumnTypeIds().get(i)), true),
+                        metadata.getColumnTypes().get(i)))
+                .toArray(ColumnMetadata[]::new);
     }
 
     /// Find a column by label
