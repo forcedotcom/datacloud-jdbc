@@ -63,7 +63,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnClassName(int column) throws SQLException {
-        return getColumn(column).getType().getJavaTypeName();
+        return getColumn(column).getType().getJavaType().getName();
     }
 
     @Override

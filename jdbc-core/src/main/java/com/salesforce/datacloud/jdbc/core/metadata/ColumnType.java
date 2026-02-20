@@ -4,7 +4,12 @@
  */
 package com.salesforce.datacloud.jdbc.core.metadata;
 
+import java.math.BigDecimal;
+import java.sql.Array;
+import java.sql.Date;
 import java.sql.JDBCType;
+import java.sql.Time;
+import java.sql.Timestamp;
 import lombok.Value;
 
 /**
@@ -258,36 +263,36 @@ public class ColumnType {
     }
 
     // See table B.3 from https://download.oracle.com/otn-pub/jcp/jdbc-4_3-mrel3-eval-spec/jdbc4.3-fr-spec.pdf
-    public String getJavaTypeName() {
+    public Class<?> getJavaType() {
         switch (type) {
             case BOOLEAN:
-                return "java.lang.Boolean";
+                return Boolean.class;
             case SMALLINT:
             case INTEGER:
-                return "java.lang.Integer";
+                return Integer.class;
             case BIGINT:
-                return "java.lang.Long";
+                return Long.class;
             case NUMERIC:
-                return "java.math.BigDecimal";
+                return BigDecimal.class;
             case FLOAT:
-                return "java.lang.Float";
+                return Float.class;
             case DOUBLE:
-                return "java.lang.Double";
+                return Double.class;
             case CHAR:
             case VARCHAR:
-                return "java.lang.String";
+                return String.class;
             case BINARY:
-                return "[B";
+                return byte[].class;
             case DATE:
-                return "java.sql.Date";
+                return Date.class;
             case TIME:
-                return "java.sql.Time";
+                return Time.class;
             case TIMESTAMP:
-                return "java.sql.Timestamp";
+                return Timestamp.class;
             case TIMESTAMP_WITH_TIMEZONE:
-                return "java.sql.Timestamp";
+                return Timestamp.class;
             case ARRAY:
-                return "java.sql.Array";
+                return Array.class;
         }
         throw new IllegalArgumentException("Unsupported type: " + type);
     }
