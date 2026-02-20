@@ -63,15 +63,15 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
     private static ColumnType jdbcTypeToSqlType(int jdbcType, String name) {
         switch (jdbcType) {
             case Types.SMALLINT:
-                return new ColumnType(JDBCType.SMALLINT, 38, 18);
+                return new ColumnType(JDBCType.SMALLINT, 38, 18, true);
             case Types.INTEGER:
-                return new ColumnType(JDBCType.INTEGER, 38, 18);
+                return new ColumnType(JDBCType.INTEGER, 38, 18, true);
             case Types.VARCHAR:
             case Types.LONGVARCHAR:
-                return new ColumnType(JDBCType.VARCHAR, name.length(), 0);
+                return new ColumnType(JDBCType.VARCHAR, name.length(), 0, true);
             default:
                 // Default to VARCHAR for unknown types
-                return new ColumnType(JDBCType.VARCHAR, name.length(), 0);
+                return new ColumnType(JDBCType.VARCHAR, name.length(), 0, true);
         }
     }
 

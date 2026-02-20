@@ -27,7 +27,6 @@ public class ColumnType {
     /// For Numerics: the NUMERIC(precision, scale)
     /// Unused for other types
     private int scale;
-
     /// Is this type nullable?
     private boolean nullable;
 
@@ -38,28 +37,20 @@ public class ColumnType {
     // Used for types where we are not expected to return a scale
     private static final int UNKNOWN_SCALE = 0;
 
-    public ColumnType(JDBCType type) {
-        this.type = type;
-        this.arrayElementType = null;
-        this.precisionOrStringLength = -1;
-        this.scale = 1;
-        nullable = true;
-    }
-
-    public ColumnType(JDBCType type, ColumnType arrayElementType) {
+    public ColumnType(JDBCType type, ColumnType arrayElementType, boolean nullable) {
         this.type = type;
         this.arrayElementType = arrayElementType;
         this.precisionOrStringLength = -1;
         this.scale = 1;
-        nullable = true;
+        this.nullable = nullable;
     }
 
-    public ColumnType(JDBCType type, int precision, int scale) {
+    public ColumnType(JDBCType type, int precision, int scale, boolean nullable) {
         this.type = type;
         this.arrayElementType = null;
         this.precisionOrStringLength = precision;
         this.scale = scale;
-        nullable = true;
+        this.nullable = nullable;
     }
 
     public ColumnType(JDBCType type, boolean nullable) {

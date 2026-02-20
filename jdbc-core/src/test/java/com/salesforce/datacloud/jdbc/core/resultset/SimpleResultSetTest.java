@@ -269,7 +269,7 @@ class SimpleResultSetTest {
      * index out of bounds for row.
      */
     @Test
-    void simpleMetadataResultSetGetValue_branches() throws SQLException {
+    void simpleMetadataResultSetStatusValue() throws SQLException {
         // 1. ResultSet is closed
         SimpleResultSet<?> rs = SimpleMetadataResultSet.of(
                 QueryDBMetadata.GET_TABLE_TYPES, Arrays.asList(Collections.singletonList("x")));

@@ -97,7 +97,7 @@ public final class ArrowUtils {
                 .limit(columnCount)
                 .map(i -> {
                     try {
-                        val columnType = new ColumnType(JDBCType.valueOf(metaData.getColumnType(i)));
+                        val columnType = new ColumnType(JDBCType.valueOf(metaData.getColumnType(i)), true);
                         val avaticaType = getAvaticaType(columnType);
                         return new ColumnMetaData(
                                 i - 1,

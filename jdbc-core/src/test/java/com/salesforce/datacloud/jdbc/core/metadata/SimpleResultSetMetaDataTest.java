@@ -77,7 +77,7 @@ class SimpleResultSetMetaDataTest {
 
     @Test
     public void testGetColumnLabelWithNullColumnNameReturnsDefaultValue() throws SQLException {
-        ColumnMetadata columnMetadata = new ColumnMetadata(null, new ColumnType(JDBCType.VARCHAR), "TEXT");
+        ColumnMetadata columnMetadata = new ColumnMetadata(null, new ColumnType(JDBCType.VARCHAR, true), "TEXT");
         simpleResultSetMetaData = new SimpleResultSetMetaData(new ColumnMetadata[] {columnMetadata});
         assertThat(simpleResultSetMetaData.getColumnLabel(1)).isEqualTo("C0");
     }
@@ -175,7 +175,7 @@ class SimpleResultSetMetaDataTest {
                 .isEqualTo("java.sql.Timestamp");
         assertThat(metaDataWithColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE).getColumnClassName(1))
                 .isEqualTo("java.sql.Timestamp");
-        assertThat(metaDataWithColumnType(JDBCType.ARRAY, new ColumnType(JDBCType.VARCHAR))
+        assertThat(metaDataWithColumnType(JDBCType.ARRAY, new ColumnType(JDBCType.VARCHAR, true))
                         .getColumnClassName(1))
                 .isEqualTo("java.sql.Array");
     }
@@ -199,8 +199,9 @@ class SimpleResultSetMetaDataTest {
     }
 
     private static SimpleResultSetMetaData metaDataWithColumnType(JDBCType jdbcType, ColumnType arrayElementType) {
-        ColumnType columnType =
-                arrayElementType != null ? new ColumnType(jdbcType, arrayElementType) : new ColumnType(jdbcType);
+        ColumnType columnType = arrayElementType != null
+                ? new ColumnType(jdbcType, arrayElementType, true)
+                : new ColumnType(jdbcType, true);
         return new SimpleResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", columnType, "TEXT")});
     }
 

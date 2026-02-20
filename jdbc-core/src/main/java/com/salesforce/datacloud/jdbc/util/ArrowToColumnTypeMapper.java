@@ -36,7 +36,7 @@ public final class ArrowToColumnTypeMapper {
 
         @Override
         public ColumnType visit(ArrowType.Null aNull) {
-            return new ColumnType(JDBCType.NULL);
+            return new ColumnType(JDBCType.NULL, true);
         }
 
         @Override
@@ -47,7 +47,7 @@ public final class ArrowToColumnTypeMapper {
         @Override
         public ColumnType visit(ArrowType.List list) {
             val elementField = field.getChildren().get(0);
-            return new ColumnType(JDBCType.ARRAY, toColumnType(elementField));
+            return new ColumnType(JDBCType.ARRAY, toColumnType(elementField), true);
         }
 
         @Override
@@ -74,13 +74,13 @@ public final class ArrowToColumnTypeMapper {
         public ColumnType visit(ArrowType.Int anInt) {
             switch (anInt.getBitWidth()) {
                 case 8:
-                    return new ColumnType(JDBCType.TINYINT);
+                    return new ColumnType(JDBCType.TINYINT, true);
                 case 16:
-                    return new ColumnType(JDBCType.SMALLINT);
+                    return new ColumnType(JDBCType.SMALLINT, true);
                 case 32:
-                    return new ColumnType(JDBCType.INTEGER);
+                    return new ColumnType(JDBCType.INTEGER, true);
                 case 64:
-                    return new ColumnType(JDBCType.BIGINT);
+                    return new ColumnType(JDBCType.BIGINT, true);
                 default:
                     throw unsupportedTypeException();
             }
@@ -90,9 +90,9 @@ public final class ArrowToColumnTypeMapper {
         public ColumnType visit(ArrowType.FloatingPoint floatingPoint) {
             switch (floatingPoint.getPrecision()) {
                 case SINGLE:
-                    return new ColumnType(JDBCType.REAL);
+                    return new ColumnType(JDBCType.REAL, true);
                 case DOUBLE:
-                    return new ColumnType(JDBCType.DOUBLE);
+                    return new ColumnType(JDBCType.DOUBLE, true);
                 case HALF:
                     break;
             }
@@ -105,16 +105,16 @@ public final class ArrowToColumnTypeMapper {
             if (metadata != null) {
                 if ("Char".equals(metadata.get("hyper:type"))) {
                     int precision = Integer.parseInt(metadata.get("hyper:max_string_length"));
-                    return new ColumnType(JDBCType.CHAR, precision, 0);
+                    return new ColumnType(JDBCType.CHAR, precision, 0, true);
                 } else if ("Char1".equals(metadata.get("hyper:type"))) {
-                    return new ColumnType(JDBCType.CHAR, 1, 0);
+                    return new ColumnType(JDBCType.CHAR, 1, 0, true);
                 } else if (metadata.containsKey("hyper:max_string_length")) {
                     int precision = Integer.parseInt(metadata.get("hyper:max_string_length"));
-                    return new ColumnType(JDBCType.VARCHAR, precision, 0);
+                    return new ColumnType(JDBCType.VARCHAR, precision, 0, true);
                 }
             }
             // When the varchar has no explicit bounds it is "unlimited", thus MAX_VLAUE
-            return new ColumnType(JDBCType.VARCHAR, Integer.MAX_VALUE, 0);
+            return new ColumnType(JDBCType.VARCHAR, Integer.MAX_VALUE, 0, true);
         }
 
         @Override
@@ -129,7 +129,7 @@ public final class ArrowToColumnTypeMapper {
 
         @Override
         public ColumnType visit(ArrowType.Binary binary) {
-            return new ColumnType(JDBCType.VARBINARY);
+            return new ColumnType(JDBCType.VARBINARY, true);
         }
 
         @Override
@@ -144,35 +144,35 @@ public final class ArrowToColumnTypeMapper {
 
         @Override
         public ColumnType visit(ArrowType.FixedSizeBinary fixedSizeBinary) {
-            return new ColumnType(JDBCType.BINARY);
+            return new ColumnType(JDBCType.BINARY, true);
         }
 
         @Override
         public ColumnType visit(ArrowType.Bool bool) {
-            return new ColumnType(JDBCType.BOOLEAN);
+            return new ColumnType(JDBCType.BOOLEAN, true);
         }
 
         @Override
         public ColumnType visit(ArrowType.Decimal decimal) {
-            return new ColumnType(JDBCType.DECIMAL, decimal.getPrecision(), decimal.getScale());
+            return new ColumnType(JDBCType.DECIMAL, decimal.getPrecision(), decimal.getScale(), true);
         }
 
         @Override
         public ColumnType visit(ArrowType.Date date) {
-            return new ColumnType(JDBCType.DATE);
+            return new ColumnType(JDBCType.DATE, true);
         }
 
         @Override
         public ColumnType visit(ArrowType.Time time) {
-            return new ColumnType(JDBCType.TIME);
+            return new ColumnType(JDBCType.TIME, true);
         }
 
         @Override
         public ColumnType visit(ArrowType.Timestamp timestamp) {
             if (timestamp.getTimezone() != null) {
-                return new ColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE);
+                return new ColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE, true);
             } else {
-                return new ColumnType(JDBCType.TIMESTAMP);
+                return new ColumnType(JDBCType.TIMESTAMP, true);
             }
         }
 

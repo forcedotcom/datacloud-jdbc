@@ -11,5 +11,6 @@ package com.salesforce.datacloud.jdbc.core.metadata;
 public class ColumnMetadata {
     private final String name;
     private final ColumnType type;
+    // Database-specific type name (e.g. "TEXT", "INTEGER")
     private final String typeName;
 }
