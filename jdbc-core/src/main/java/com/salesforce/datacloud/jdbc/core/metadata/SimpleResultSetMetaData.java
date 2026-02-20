@@ -171,7 +171,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public boolean isCaseSensitive(int column) throws SQLException {
-        return true;
+        return getColumn(column).getType().isCaseSensitive();
     }
 
     @Override
