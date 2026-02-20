@@ -22,7 +22,8 @@ class SimpleResultSetMetaDataTest {
 
     @BeforeEach
     public void init() throws SQLException {
-        SimpleMetadataResultSet simpleMetadataResultSet = SimpleMetadataResultSet.of(queryDBMetadata, null);
+        SimpleMetadataResultSet simpleMetadataResultSet =
+                SimpleMetadataResultSet.of(new SimpleResultSetMetaData(queryDBMetadata), null);
         simpleResultSetMetaData = simpleMetadataResultSet.getMetaData();
     }
 

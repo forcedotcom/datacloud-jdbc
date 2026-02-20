@@ -8,7 +8,8 @@ import com.salesforce.datacloud.jdbc.core.QueryDBMetadata;
 import java.sql.JDBCType;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.stream.IntStream;
+import java.sql.Types;
+import java.util.List;
 import lombok.val;
 
 public class SimpleResultSetMetaData implements ResultSetMetaData {
@@ -20,15 +21,39 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
     }
 
     public SimpleResultSetMetaData(QueryDBMetadata metadata) {
-        this.columns = IntStream.range(0, metadata.getColumnTypes().size())
-                .mapToObj(i -> new ColumnMetadata(
-                        metadata.getColumnNames().get(i),
-                        new ColumnType(
-                                JDBCType.valueOf(metadata.getColumnTypeIds().get(i)), true),
-                        metadata.getColumnTypes().get(i)))
-                .toArray(ColumnMetadata[]::new);
+        this.columns = convertToColumnMetadata(metadata);
     }
 
+    private static ColumnMetadata[] convertToColumnMetadata(QueryDBMetadata queryDbMetadata) {
+        List<String> columnNames = queryDbMetadata.getColumnNames();
+        List<Integer> columnTypeIds = queryDbMetadata.getColumnTypeIds();
+        List<String> columnTypes = queryDbMetadata.getColumnTypes();
+
+        ColumnMetadata[] columns = new ColumnMetadata[columnNames.size()];
+        for (int i = 0; i < columnNames.size(); i++) {
+            String name = columnNames.get(i);
+            String columnType = columnTypes.get(i);
+            int jdbcType = columnTypeIds.get(i);
+            ColumnType columnSqlType = jdbcTypeToSqlType(jdbcType, name);
+            columns[i] = new ColumnMetadata(name, columnSqlType, columnType);
+        }
+        return columns;
+    }
+
+    private static ColumnType jdbcTypeToSqlType(int jdbcType, String name) {
+        switch (jdbcType) {
+            case Types.SMALLINT:
+                return new ColumnType(JDBCType.SMALLINT, 38, 18, true);
+            case Types.INTEGER:
+                return new ColumnType(JDBCType.INTEGER, 38, 18, true);
+            case Types.VARCHAR:
+            case Types.LONGVARCHAR:
+                return new ColumnType(JDBCType.VARCHAR, name.length(), 0, true);
+            default:
+                // Default to VARCHAR for unknown types
+                return new ColumnType(JDBCType.VARCHAR, name.length(), 0, true);
+        }
+    }
     /// Find a column by label
     /// Proprietary extension to the JDBC API
     public int findColumn(String columnLabel) throws SQLException {

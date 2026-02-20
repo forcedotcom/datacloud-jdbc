@@ -12,6 +12,7 @@ import static com.salesforce.datacloud.jdbc.config.QueryResources.getTablesQuery
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
@@ -90,7 +91,7 @@ final class QueryMetadataUtil {
     }
 
     static ResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, List<Object> data) throws SQLException {
-        return SimpleMetadataResultSet.of(queryDbMetadata, data);
+        return SimpleMetadataResultSet.of(new SimpleResultSetMetaData(queryDbMetadata), data);
     }
 
     private static List<Object> constructTableData(ResultSet resultSet) throws SQLException {

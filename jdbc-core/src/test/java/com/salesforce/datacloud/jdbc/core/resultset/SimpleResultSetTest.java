@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.salesforce.datacloud.jdbc.core.QueryDBMetadata;
 import com.salesforce.datacloud.jdbc.core.SimpleMetadataResultSet;
+import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -252,7 +253,8 @@ class SimpleResultSetTest {
     @Test
     void wasNullReflectsNullAndNonNullColumnValues() throws SQLException {
         List<Object> data = Arrays.asList(Collections.singletonList("TABLE"), Collections.singletonList(null));
-        SimpleResultSet<?> resultSet = SimpleMetadataResultSet.of(QueryDBMetadata.GET_TABLE_TYPES, data);
+        SimpleResultSet<?> resultSet =
+                SimpleMetadataResultSet.of(new SimpleResultSetMetaData(QueryDBMetadata.GET_TABLE_TYPES), data);
 
         assertTrue(resultSet.next());
         assertEquals("TABLE", resultSet.getString(1));
@@ -272,34 +274,39 @@ class SimpleResultSetTest {
     void simpleMetadataResultSetStatusValue() throws SQLException {
         // 1. ResultSet is closed
         SimpleResultSet<?> rs = SimpleMetadataResultSet.of(
-                QueryDBMetadata.GET_TABLE_TYPES, Arrays.asList(Collections.singletonList("x")));
+                new SimpleResultSetMetaData(QueryDBMetadata.GET_TABLE_TYPES),
+                Arrays.asList(Collections.singletonList("x")));
         rs.close();
         SQLException ex = assertThrows(SQLException.class, () -> rs.getString(1));
         assertTrue(ex.getMessage().contains("ResultSet is closed"), "message: " + ex.getMessage());
 
         // 2. No current row (get before next())
         SimpleResultSet<?> rs2 = SimpleMetadataResultSet.of(
-                QueryDBMetadata.GET_TABLE_TYPES, Arrays.asList(Collections.singletonList("x")));
+                new SimpleResultSetMetaData(QueryDBMetadata.GET_TABLE_TYPES),
+                Arrays.asList(Collections.singletonList("x")));
         ex = assertThrows(SQLException.class, () -> rs2.getString(1));
         assertTrue(ex.getMessage().contains("No current row"), "message: " + ex.getMessage());
 
         // 3. Row index out of bounds (past last row)
         SimpleResultSet<?> rs3 = SimpleMetadataResultSet.of(
-                QueryDBMetadata.GET_TABLE_TYPES, Arrays.asList(Collections.singletonList("x")));
+                new SimpleResultSetMetaData(QueryDBMetadata.GET_TABLE_TYPES),
+                Arrays.asList(Collections.singletonList("x")));
         assertTrue(rs3.next());
         assertFalse(rs3.next());
         ex = assertThrows(SQLException.class, () -> rs3.getString(1));
         assertTrue(ex.getMessage().contains("Row index out of bounds"), "message: " + ex.getMessage());
 
         // 4. Data row is not a List
-        SimpleResultSet<?> rs4 = SimpleMetadataResultSet.of(QueryDBMetadata.GET_TABLE_TYPES, Arrays.asList(123));
+        SimpleResultSet<?> rs4 = SimpleMetadataResultSet.of(
+                new SimpleResultSetMetaData(QueryDBMetadata.GET_TABLE_TYPES), Arrays.asList(123));
         assertTrue(rs4.next());
         ex = assertThrows(SQLException.class, () -> rs4.getString(1));
         assertTrue(ex.getMessage().contains("Data row is not a List"), "message: " + ex.getMessage());
 
         // 5. Column index out of bounds for row (row has fewer columns than requested)
         SimpleResultSet<?> rs5 = SimpleMetadataResultSet.of(
-                QueryDBMetadata.GET_COLUMNS, Arrays.asList(Collections.singletonList("only one")));
+                new SimpleResultSetMetaData(QueryDBMetadata.GET_COLUMNS),
+                Arrays.asList(Collections.singletonList("only one")));
         assertTrue(rs5.next());
         ex = assertThrows(SQLException.class, () -> rs5.getString(5));
         assertTrue(ex.getMessage().contains("out of bounds for row"), "message: " + ex.getMessage());
@@ -317,7 +324,7 @@ class SimpleResultSetTest {
         int col = 5;
 
         SimpleResultSet<?> resultSet = SimpleMetadataResultSet.of(
-                QueryDBMetadata.GET_COLUMNS,
+                new SimpleResultSetMetaData(QueryDBMetadata.GET_COLUMNS),
                 Arrays.asList(
                         rowWithLongAt(col, (long) Byte.MAX_VALUE + 1),
                         rowWithLongAt(col, (long) Byte.MIN_VALUE - 1),
@@ -367,7 +374,8 @@ class SimpleResultSetTest {
      */
     @Test
     void resultSetWithPositionalGettersDelegateAndThrow() throws SQLException {
-        ResultSetWithPositionalGetters resultSet = SimpleMetadataResultSet.of(QueryDBMetadata.GET_TABLE_TYPES, null);
+        ResultSetWithPositionalGetters resultSet =
+                SimpleMetadataResultSet.of(new SimpleResultSetMetaData(QueryDBMetadata.GET_TABLE_TYPES), null);
         String col = "TABLE_TYPE"; // single column from GET_TABLE_TYPES
 
         // UnsupportedOperationException from SimpleResultSet positional implementations

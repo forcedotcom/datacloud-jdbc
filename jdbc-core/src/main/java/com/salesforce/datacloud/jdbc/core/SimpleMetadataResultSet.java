@@ -5,14 +5,11 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnType;
 import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.resultset.ColumnAccessor;
 import com.salesforce.datacloud.jdbc.core.resultset.SimpleResultSet;
-import java.sql.JDBCType;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Types;
 import java.util.List;
 import java.util.OptionalLong;
 
@@ -31,48 +28,15 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
         this.data = data;
     }
 
-    public static SimpleMetadataResultSet of(QueryDBMetadata queryDbMetadata, List<Object> data) throws SQLException {
-        ColumnMetadata[] columns = convertToColumnMetadata(queryDbMetadata);
-        SimpleResultSetMetaData metadata = new SimpleResultSetMetaData(columns);
+    public static SimpleMetadataResultSet of(SimpleResultSetMetaData metadata, List<Object> data) throws SQLException {
         @SuppressWarnings("unchecked")
-        ColumnAccessor<SimpleMetadataResultSet>[] accessors = new ColumnAccessor[columns.length];
-        for (int i = 0; i < columns.length; i++) {
+        ColumnAccessor<SimpleMetadataResultSet>[] accessors = new ColumnAccessor[metadata.getColumnCount()];
+        for (int i = 0; i < metadata.getColumnCount(); i++) {
             final int columnIndex = i;
-            accessors[i] = createAccessor(columns[i], columnIndex);
+            accessors[i] = createAccessor(metadata.getColumn(i + 1), columnIndex);
         }
 
         return new SimpleMetadataResultSet(metadata, accessors, data);
-    }
-
-    private static ColumnMetadata[] convertToColumnMetadata(QueryDBMetadata queryDbMetadata) {
-        List<String> columnNames = queryDbMetadata.getColumnNames();
-        List<Integer> columnTypeIds = queryDbMetadata.getColumnTypeIds();
-        List<String> columnTypes = queryDbMetadata.getColumnTypes();
-
-        ColumnMetadata[] columns = new ColumnMetadata[columnNames.size()];
-        for (int i = 0; i < columnNames.size(); i++) {
-            String name = columnNames.get(i);
-            String columnType = columnTypes.get(i);
-            int jdbcType = columnTypeIds.get(i);
-            ColumnType columnSqlType = jdbcTypeToSqlType(jdbcType, name);
-            columns[i] = new ColumnMetadata(name, columnSqlType, columnType);
-        }
-        return columns;
-    }
-
-    private static ColumnType jdbcTypeToSqlType(int jdbcType, String name) {
-        switch (jdbcType) {
-            case Types.SMALLINT:
-                return new ColumnType(JDBCType.SMALLINT, 38, 18, true);
-            case Types.INTEGER:
-                return new ColumnType(JDBCType.INTEGER, 38, 18, true);
-            case Types.VARCHAR:
-            case Types.LONGVARCHAR:
-                return new ColumnType(JDBCType.VARCHAR, name.length(), 0, true);
-            default:
-                // Default to VARCHAR for unknown types
-                return new ColumnType(JDBCType.VARCHAR, name.length(), 0, true);
-        }
     }
 
     /**

@@ -7,6 +7,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.resultset.SimpleResultSet;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -23,7 +24,7 @@ class SimpleMetadataResultSetTest {
 
     @BeforeEach
     public void init() throws SQLException {
-        simpleMetadataResultSet = SimpleMetadataResultSet.of(queryDBMetadata, null);
+        simpleMetadataResultSet = SimpleMetadataResultSet.of(new SimpleResultSetMetaData(queryDBMetadata), null);
     }
 
     @Test
