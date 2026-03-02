@@ -110,7 +110,7 @@ public class DataCloudConnection implements Connection {
             @NonNull HyperGrpcStubProvider stubProvider,
             @NonNull ConnectionProperties properties,
             JdbcURL jdbcUrl,
-            @NonNull String userName,
+            String userName,
             @NonNull ThrowingJdbcSupplier<String> lakehouseSupplier,
             @NonNull ThrowingJdbcSupplier<List<String>> dataspacesSupplier)
             throws SQLException {
