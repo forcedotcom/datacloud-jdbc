@@ -16,7 +16,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
+import java.time.DateTimeException;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 import lombok.AccessLevel;
@@ -57,6 +59,38 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     public DataCloudStatement(@NonNull DataCloudConnection connection) {
         this.connection = connection;
         this.statementProperties = connection.getConnectionProperties().getStatementProperties();
+    }
+
+    /**
+     * Resolves the session timezone from query settings.
+     * Uses PostgreSQL standard time zone ID format (e.g., "America/New_York", "Asia/Tokyo").
+     *
+     * Precedence:
+     * 1. Query setting "time_zone" if present
+     * 2. System default as fallback
+     *
+     * @return The resolved ZoneId for this session, never null
+     */
+    protected ZoneId resolveSessionTimeZone() {
+        val querySettings = statementProperties.getQuerySettings();
+        if (querySettings == null) {
+            return ZoneId.systemDefault();
+        }
+
+        String timezoneSetting = querySettings.get("time_zone");
+        if (timezoneSetting != null && !timezoneSetting.trim().isEmpty()) {
+            try {
+                return ZoneId.of(timezoneSetting);
+            } catch (DateTimeException e) {
+                log.warn(
+                        "Invalid timezone setting '{}': {}. Falling back to system default '{}'",
+                        timezoneSetting,
+                        e.getMessage(),
+                        ZoneId.systemDefault());
+            }
+        }
+
+        return ZoneId.systemDefault();
     }
 
     protected QueryParam.Builder getQueryParamBuilder(
@@ -117,14 +151,16 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         log.debug("Entering executeQuery");
         val includeCustomerDetail = connection.getConnectionProperties().isIncludeCustomerDetailInReason();
         try {
+            val sessionZone = resolveSessionTimeZone();
             val iterator = executeAdaptiveQuery(sql);
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     iterator, includeCustomerDetail, iterator.getQueryStatus().getQueryId(), sql);
             resultSet =
-                    StreamingResultSet.of(arrowStream, iterator.getQueryStatus().getQueryId());
+                    StreamingResultSet.of(arrowStream, iterator.getQueryStatus().getQueryId(), sessionZone);
             log.info(
-                    "executeAdaptiveQuery completed. queryId={}",
-                    queryHandle.getQueryStatus().getQueryId());
+                    "executeAdaptiveQuery completed. queryId={}, sessionZone={}",
+                    queryHandle.getQueryStatus().getQueryId(),
+                    sessionZone);
             return resultSet;
         } catch (StatusRuntimeException ex) {
             String queryId = null;
@@ -318,6 +354,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         assertQueryExecuted();
         val includeCustomerDetail = connection.getConnectionProperties().isIncludeCustomerDetailInReason();
         try {
+            val sessionZone = resolveSessionTimeZone();
             return logTimedValue(
                     () -> {
                         if (resultSet == null && queryHandle instanceof QueryResultIterator) {
@@ -328,7 +365,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
                                     adaptiveIter.getQueryStatus().getQueryId(),
                                     null);
                             resultSet = StreamingResultSet.of(
-                                    arrowStream, adaptiveIter.getQueryStatus().getQueryId());
+                                    arrowStream, adaptiveIter.getQueryStatus().getQueryId(), sessionZone);
                         } else if (resultSet == null) {
                             log.warn(
                                     "Prefer acquiring async result sets from helper methods DataCloudConnection::getChunkBasedResultSet and DataCloudConnection::getRowBasedResultSet. We will wait for the query's results to be produced in their entirety before returning a result set.");

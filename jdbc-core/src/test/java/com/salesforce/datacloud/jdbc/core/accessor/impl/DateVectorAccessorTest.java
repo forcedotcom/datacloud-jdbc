@@ -68,7 +68,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = appendDates(values, extension.createDateDayVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Date.class);
@@ -83,7 +83,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = appendDates(values, extension.createDateMilliVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Date.class);
@@ -98,7 +98,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = appendDates(values, extension.createDateDayVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -149,7 +149,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = appendDates(values, extension.createDateMilliVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -200,7 +200,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = appendDates(values, extension.createDateDayVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -231,7 +231,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = appendDates(values, extension.createDateMilliVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -262,7 +262,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = appendDates(values, extension.createDateDayVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -311,7 +311,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = appendDates(values, extension.createDateMilliVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -359,7 +359,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = appendDates(values, extension.createDateMilliVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -378,7 +378,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = appendDates(values, extension.createDateDayVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -397,7 +397,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = nulledOutVector(appendDates(values, extension.createDateDayVector()))) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
 
@@ -421,7 +421,7 @@ public class DateVectorAccessorTest {
 
         try (val vector = nulledOutVector(appendDates(values, extension.createDateMilliVector()))) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
 
