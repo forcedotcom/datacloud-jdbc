@@ -58,7 +58,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeNanoVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Time.class);
@@ -75,7 +75,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeMicroVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Time.class);
@@ -92,7 +92,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeMilliVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Time.class);
@@ -109,7 +109,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeSecVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Time.class);
@@ -131,7 +131,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeNanoVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.NANOSECONDS.toMillis(values.get(i.get())));
@@ -178,7 +178,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeMicroVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.MICROSECONDS.toMillis(values.get(i.get())));
@@ -225,7 +225,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeMilliVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(values.get(i.get()));
@@ -272,7 +272,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeSecVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.SECONDS.toMillis(values.get(i.get())));
@@ -316,7 +316,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeNanoVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.NANOSECONDS.toMillis(values.get(i.get())));
@@ -349,7 +349,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeMicroVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.MICROSECONDS.toMillis(values.get(i.get())));
@@ -382,7 +382,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeMilliVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(values.get(i.get()));
@@ -415,7 +415,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeSecVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.SECONDS.toMillis(values.get(i.get())));
@@ -448,7 +448,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeNanoVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.NANOSECONDS.toMillis(values.get(i.get())));
@@ -480,7 +480,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeMicroVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.MICROSECONDS.toMillis(values.get(i.get())));
@@ -512,7 +512,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeMilliVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(values.get(i.get()));
@@ -544,7 +544,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeSecVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.SECONDS.toMillis(values.get(i.get())));
@@ -576,7 +576,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeNanoVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -599,7 +599,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeMicroVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -622,7 +622,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeMilliVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -645,7 +645,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = extension.createTimeSecVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -666,7 +666,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = nulledOutVector(extension.createTimeNanoVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
             Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
@@ -691,7 +691,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = nulledOutVector(extension.createTimeMicroVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
             Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
@@ -716,7 +716,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = nulledOutVector(extension.createTimeMilliVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
             Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
@@ -741,7 +741,7 @@ public class TimeVectorAccessorTest {
 
         try (val vector = nulledOutVector(extension.createTimeSecVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
             Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
             Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());

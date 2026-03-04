@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.TimeZone;
 import lombok.Getter;
@@ -47,15 +48,30 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     }
 
     public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId) throws SQLException {
+        return of(resultStream, queryId, ZoneId.systemDefault());
+    }
+
+    /**
+     * Creates a StreamingResultSet with a specified session timezone.
+     *
+     * @param resultStream The Arrow stream containing query results
+     * @param queryId The query identifier
+     * @param sessionZone The session timezone to use for timestamp conversions
+     * @return A new StreamingResultSet
+     * @throws SQLException If an error occurs during ResultSet creation
+     */
+    public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId, ZoneId sessionZone)
+            throws SQLException {
         try {
             val schemaRoot = resultStream.getVectorSchemaRoot();
             val columns = toColumnMetaData(schemaRoot.getSchema().getFields());
-            val timezone = TimeZone.getDefault();
+            // Convert ZoneId to TimeZone for Avatica compatibility
+            val timezone = TimeZone.getTimeZone(sessionZone);
             val state = new QueryState();
             val signature = new Meta.Signature(
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
-            val cursor = new ArrowStreamReaderCursor(resultStream);
+            val cursor = new ArrowStreamReaderCursor(resultStream, sessionZone);
             val result = new StreamingResultSet(cursor, queryId, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
 

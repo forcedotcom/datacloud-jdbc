@@ -9,11 +9,11 @@ import static com.salesforce.datacloud.jdbc.util.ThrowingFunction.rethrowFunctio
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -24,18 +24,38 @@ import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.util.AbstractCursor;
 import org.apache.calcite.avatica.util.ArrayImpl;
 
-@RequiredArgsConstructor
 @Slf4j
 class ArrowStreamReaderCursor extends AbstractCursor {
 
     private static final int INIT_ROW_NUMBER = -1;
 
     private final ArrowStreamReader reader;
+    private final ZoneId sessionZone;
 
     @lombok.Getter
     private int rowsSeen = 0;
 
     private final AtomicInteger currentIndex = new AtomicInteger(INIT_ROW_NUMBER);
+
+    /**
+     * Creates a cursor with system default timezone.
+     * @deprecated Use constructor with explicit ZoneId parameter
+     */
+    @Deprecated
+    ArrowStreamReaderCursor(ArrowStreamReader reader) {
+        this(reader, ZoneId.systemDefault());
+    }
+
+    /**
+     * Creates a cursor with specified session timezone.
+     *
+     * @param reader The Arrow stream reader
+     * @param sessionZone The session timezone for timestamp conversions
+     */
+    ArrowStreamReaderCursor(ArrowStreamReader reader, ZoneId sessionZone) {
+        this.reader = reader;
+        this.sessionZone = sessionZone;
+    }
 
     private void wasNullConsumer(boolean wasNull) {
         this.wasNull[0] = wasNull;
@@ -56,7 +76,7 @@ class ArrowStreamReaderCursor extends AbstractCursor {
     }
 
     private Accessor createAccessor(FieldVector vector) throws SQLException {
-        return QueryJDBCAccessorFactory.createAccessor(vector, currentIndex::get, this::wasNullConsumer);
+        return QueryJDBCAccessorFactory.createAccessor(vector, currentIndex::get, this::wasNullConsumer, sessionZone);
     }
 
     private boolean loadNextBatch() throws IOException {

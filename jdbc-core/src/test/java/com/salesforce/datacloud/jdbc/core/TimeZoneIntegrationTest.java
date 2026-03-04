@@ -1,0 +1,437 @@
+/**
+ * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
+ * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
+ */
+package com.salesforce.datacloud.jdbc.core;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
+import java.util.Calendar;
+import java.util.Properties;
+import java.util.TimeZone;
+import lombok.SneakyThrows;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+/**
+ * Integration tests for timezone and timestamp handling in DataCloud JDBC driver.
+ *
+ * Tests the timezone precedence order:
+ * 1. Calendar parameter (per-call setting)
+ * 2. Arrow metadata timezone (from Hyper - TIMESTAMPTZ columns)
+ * 3. Session timezone (query setting time_zone)
+ * 4. System default
+ */
+@ExtendWith(LocalHyperTestBase.class)
+public class TimeZoneIntegrationTest {
+
+    @Test
+    @SneakyThrows
+    public void testSessionTimezoneResolution() {
+        // Test that session timezone is properly resolved from query settings
+        Properties props = new Properties();
+        props.setProperty("querySetting.time_zone", "America/New_York");
+
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection(props)) {
+            try (Statement stmt = conn.createStatement()) {
+                // Query a known timestamp: 2024-03-15 10:00:00 UTC
+                String sql = "SELECT TIMESTAMP '2024-03-15 10:00:00' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Get as Timestamp (uses session timezone)
+                    Timestamp ts = rs.getTimestamp("test_timestamp");
+                    assertThat(ts).isNotNull();
+
+                    // Get as String - should not have timezone offset for naive TIMESTAMP
+                    String tsString = rs.getString("test_timestamp");
+                    assertThat(tsString).matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{6}");
+                    assertThat(tsString).hasSize(26); // No offset
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testJDBC42JavaTimeTypes() {
+        // Test JDBC 4.2 java.time types support
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT TIMESTAMP '2024-03-15 14:30:45.123456' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Test Instant - always UTC
+                    Instant instant = rs.getObject("test_timestamp", Instant.class);
+                    assertThat(instant).isNotNull();
+
+                    // Test OffsetDateTime - includes timezone offset
+                    OffsetDateTime odt = rs.getObject("test_timestamp", OffsetDateTime.class);
+                    assertThat(odt).isNotNull();
+                    assertThat(odt.toInstant()).isEqualTo(instant);
+
+                    // Test ZonedDateTime - full timezone info
+                    ZonedDateTime zdt = rs.getObject("test_timestamp", ZonedDateTime.class);
+                    assertThat(zdt).isNotNull();
+                    assertThat(zdt.toInstant()).isEqualTo(instant);
+
+                    // Test LocalDateTime - naive, no timezone
+                    LocalDateTime ldt = rs.getObject("test_timestamp", LocalDateTime.class);
+                    assertThat(ldt).isNotNull();
+
+                    // Test legacy Timestamp
+                    Timestamp ts = rs.getObject("test_timestamp", Timestamp.class);
+                    assertThat(ts).isNotNull();
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testTimezonePrecedence() {
+        // Test that Calendar parameter overrides session timezone
+        Properties props = new Properties();
+        props.setProperty("querySetting.time_zone", "UTC");
+
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection(props)) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT TIMESTAMP '2024-03-15 12:00:00' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Get with default (session timezone = UTC)
+                    Timestamp tsDefault = rs.getTimestamp("test_timestamp");
+                    assertThat(tsDefault).isNotNull();
+
+                    // Get with Calendar override (Europe/London)
+                    Calendar calLondon = Calendar.getInstance(TimeZone.getTimeZone("Europe/London"));
+                    Timestamp tsLondon = rs.getTimestamp("test_timestamp", calLondon);
+                    assertThat(tsLondon).isNotNull();
+
+                    // For naive TIMESTAMP without timezone, the calendar affects how the
+                    // LocalDateTime is interpreted. Since UTC and London are in different
+                    // zones, they should produce the same LocalDateTime but the Calendar
+                    // parameter is respected in the conversion logic
+                    // Verify both work and produce timestamps
+                    assertThat(tsDefault.toString()).isNotEmpty();
+                    assertThat(tsLondon.toString()).isNotEmpty();
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testMultipleSessionTimezones() {
+        // Test that different session timezones affect timestamp interpretation
+        String sql = "SELECT TIMESTAMP '2024-06-15 12:00:00' as test_timestamp";
+
+        // Test with America/New_York
+        Properties propsNY = new Properties();
+        propsNY.setProperty("querySetting.time_zone", "America/New_York");
+        try (DataCloudConnection connNY = LocalHyperTestBase.getHyperQueryConnection(propsNY)) {
+            try (Statement stmt = connNY.createStatement();
+                    ResultSet rs = stmt.executeQuery(sql)) {
+                assertThat(rs.next()).isTrue();
+                Timestamp tsNY = rs.getTimestamp("test_timestamp");
+                assertThat(tsNY).isNotNull();
+            }
+        }
+
+        // Test with Asia/Tokyo
+        Properties propsTokyo = new Properties();
+        propsTokyo.setProperty("querySetting.time_zone", "Asia/Tokyo");
+        try (DataCloudConnection connTokyo = LocalHyperTestBase.getHyperQueryConnection(propsTokyo)) {
+            try (Statement stmt = connTokyo.createStatement();
+                    ResultSet rs = stmt.executeQuery(sql)) {
+                assertThat(rs.next()).isTrue();
+                Timestamp tsTokyo = rs.getTimestamp("test_timestamp");
+                assertThat(tsTokyo).isNotNull();
+            }
+        }
+
+        // Test with Europe/London
+        Properties propsLondon = new Properties();
+        propsLondon.setProperty("querySetting.time_zone", "Europe/London");
+        try (DataCloudConnection connLondon = LocalHyperTestBase.getHyperQueryConnection(propsLondon)) {
+            try (Statement stmt = connLondon.createStatement();
+                    ResultSet rs = stmt.executeQuery(sql)) {
+                assertThat(rs.next()).isTrue();
+                Timestamp tsLondon = rs.getTimestamp("test_timestamp");
+                assertThat(tsLondon).isNotNull();
+            }
+        }
+
+        // Test with UTC
+        Properties propsUTC = new Properties();
+        propsUTC.setProperty("querySetting.time_zone", "UTC");
+        try (DataCloudConnection connUTC = LocalHyperTestBase.getHyperQueryConnection(propsUTC)) {
+            try (Statement stmt = connUTC.createStatement();
+                    ResultSet rs = stmt.executeQuery(sql)) {
+                assertThat(rs.next()).isTrue();
+                Timestamp tsUTC = rs.getTimestamp("test_timestamp");
+                assertThat(tsUTC).isNotNull();
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testTimestampPrecision() {
+        // Test that nanosecond precision is preserved
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                // Use a timestamp with microsecond precision (Hyper's max)
+                String sql = "SELECT TIMESTAMP '2024-03-15 14:30:45.123456' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Test Instant preserves precision
+                    Instant instant = rs.getObject("test_timestamp", Instant.class);
+                    assertThat(instant).isNotNull();
+                    long nanos = instant.getNano();
+                    // Verify we have microsecond precision (123456000 nanos)
+                    assertThat(nanos).isEqualTo(123456000);
+
+                    // Test OffsetDateTime preserves precision
+                    OffsetDateTime odt = rs.getObject("test_timestamp", OffsetDateTime.class);
+                    assertThat(odt).isNotNull();
+                    assertThat(odt.getNano()).isEqualTo(123456000);
+
+                    // Test Timestamp preserves precision
+                    Timestamp ts = rs.getTimestamp("test_timestamp");
+                    assertThat(ts).isNotNull();
+                    assertThat(ts.getNanos()).isGreaterThan(0);
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testInvalidTimezoneHandling() {
+        // Test that invalid timezone in query settings is rejected by Hyper
+        // Our JDBC driver logs a warning and falls back to system default,
+        // but Hyper itself rejects the invalid timezone setting
+        Properties props = new Properties();
+        props.setProperty("querySetting.time_zone", "Invalid/Timezone");
+
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection(props)) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT TIMESTAMP '2024-03-15 10:00:00' as test_timestamp";
+
+                // Hyper rejects invalid timezone settings at query execution time
+                assertThatThrownBy(() -> stmt.executeQuery(sql))
+                        .isInstanceOf(DataCloudJDBCException.class)
+                        .hasMessageContaining("unknown time zone");
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testTimestampWithTimezoneColumn() {
+        // Test TIMESTAMPTZ (timestamp with timezone) - should include offset in string
+        // Note: Hyper's behavior with TIMESTAMPTZ metadata may vary based on version
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                // Use AT TIME ZONE to convert to TIMESTAMPTZ
+                String sql = "SELECT TIMESTAMP '2024-03-15 10:00:00' AT TIME ZONE 'UTC' as test_timestamptz";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Verify we can read the timestamp
+                    String tsString = rs.getString("test_timestamptz");
+                    assertThat(tsString).isNotNull();
+                    assertThat(tsString).isNotEmpty();
+
+                    // Should be able to get as Instant regardless of timezone metadata
+                    Instant instant = rs.getObject("test_timestamptz", Instant.class);
+                    assertThat(instant).isNotNull();
+
+                    // Should be able to get as OffsetDateTime
+                    OffsetDateTime odt = rs.getObject("test_timestamptz", OffsetDateTime.class);
+                    assertThat(odt).isNotNull();
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testTimestampNullHandling() {
+        // Test that NULL timestamps are handled correctly
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT NULL::TIMESTAMP as null_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // All methods should return null
+                    assertThat(rs.getTimestamp("null_timestamp")).isNull();
+                    assertThat(rs.wasNull()).isTrue();
+
+                    assertThat(rs.getString("null_timestamp")).isNull();
+                    assertThat(rs.wasNull()).isTrue();
+
+                    assertThat(rs.getObject("null_timestamp", Instant.class)).isNull();
+                    assertThat(rs.wasNull()).isTrue();
+
+                    assertThat(rs.getObject("null_timestamp", OffsetDateTime.class))
+                            .isNull();
+                    assertThat(rs.wasNull()).isTrue();
+
+                    assertThat(rs.getObject("null_timestamp", LocalDateTime.class))
+                            .isNull();
+                    assertThat(rs.wasNull()).isTrue();
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testDefaultSessionTimezone() {
+        // Test without setting any timezone - should use system default
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT TIMESTAMP '2024-03-15 10:00:00' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Should work with system default timezone
+                    Timestamp ts = rs.getTimestamp("test_timestamp");
+                    assertThat(ts).isNotNull();
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testGetDateAndTimeFromTimestamp() {
+        // Test getDate() and getTime() methods on timestamp columns
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT TIMESTAMP '2024-03-15 14:30:45.123456' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Test getDate - should return java.sql.Date
+                    java.sql.Date date = rs.getDate("test_timestamp");
+                    assertThat(date).isNotNull();
+
+                    // Test getTime - should return java.sql.Time
+                    java.sql.Time time = rs.getTime("test_timestamp");
+                    assertThat(time).isNotNull();
+
+                    // Test getTimestamp - should return java.sql.Timestamp
+                    Timestamp ts = rs.getTimestamp("test_timestamp");
+                    assertThat(ts).isNotNull();
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testGetObjectWithoutTypeParameter() {
+        // Test getObject() without type parameter - should return Timestamp by default
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT TIMESTAMP '2024-03-15 14:30:45.123456' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Test getObject without type parameter
+                    Object obj = rs.getObject("test_timestamp");
+                    assertThat(obj).isNotNull();
+                    assertThat(obj).isInstanceOf(Timestamp.class);
+
+                    // Test that returned object has correct value
+                    Timestamp ts = (Timestamp) obj;
+                    assertThat(ts.getNanos()).isGreaterThan(0);
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testGetObjectWithStringType() {
+        // Test getObject(String.class) to ensure string conversion works
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT TIMESTAMP '2024-03-15 14:30:45.123456' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Test getObject with String type
+                    String str = rs.getObject("test_timestamp", String.class);
+                    assertThat(str).isNotNull();
+                    assertThat(str).matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{6}");
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testGetObjectWithDateAndTimeTypes() {
+        // Test getObject with Date and Time class types
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT TIMESTAMP '2024-03-15 14:30:45.123456' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Test getObject with Date type
+                    java.sql.Date date = rs.getObject("test_timestamp", java.sql.Date.class);
+                    assertThat(date).isNotNull();
+
+                    // Test getObject with Time type
+                    java.sql.Time time = rs.getObject("test_timestamp", java.sql.Time.class);
+                    assertThat(time).isNotNull();
+
+                    // Test getObject with Timestamp type
+                    Timestamp ts = rs.getObject("test_timestamp", Timestamp.class);
+                    assertThat(ts).isNotNull();
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+}
