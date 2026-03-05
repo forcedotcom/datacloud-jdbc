@@ -6,24 +6,25 @@ package com.salesforce.datacloud.jdbc.core.metadata;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salesforce.datacloud.jdbc.core.QueryDBMetadata;
+import com.salesforce.datacloud.jdbc.core.MetadataSchemas;
 import com.salesforce.datacloud.jdbc.core.SimpleMetadataResultSet;
 import java.sql.JDBCType;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class SimpleResultSetMetaDataTest {
-    QueryDBMetadata queryDBMetadata = QueryDBMetadata.GET_COLUMNS;
+    private static final List<ColumnMetadata> COLUMNS_SCHEMA = MetadataSchemas.COLUMNS;
 
     ResultSetMetaData simpleResultSetMetaData;
 
     @BeforeEach
     public void init() throws SQLException {
         SimpleMetadataResultSet simpleMetadataResultSet =
-                SimpleMetadataResultSet.of(new SimpleResultSetMetaData(queryDBMetadata), null);
+                SimpleMetadataResultSet.of(new SimpleResultSetMetaData(COLUMNS_SCHEMA), null);
         simpleResultSetMetaData = simpleMetadataResultSet.getMetaData();
     }
 
@@ -64,15 +65,15 @@ class SimpleResultSetMetaDataTest {
 
     @Test
     public void testGetColumnDisplaySize() throws SQLException {
-        assertThat(simpleResultSetMetaData.getColumnDisplaySize(1)).isEqualTo(9);
+        assertThat(simpleResultSetMetaData.getColumnDisplaySize(1)).isEqualTo(-1);
         assertThat(simpleResultSetMetaData.getColumnDisplaySize(5)).isEqualTo(11);
     }
 
     @Test
     public void testGetColumnLabel() throws SQLException {
-        for (int i = 1; i <= queryDBMetadata.getColumnNames().size(); i++) {
+        for (int i = 1; i <= COLUMNS_SCHEMA.size(); i++) {
             assertThat(simpleResultSetMetaData.getColumnLabel(i))
-                    .isEqualTo(queryDBMetadata.getColumnNames().get(i - 1));
+                    .isEqualTo(COLUMNS_SCHEMA.get(i - 1).getName());
         }
     }
 
@@ -85,9 +86,9 @@ class SimpleResultSetMetaDataTest {
 
     @Test
     public void testGetColumnName() throws SQLException {
-        for (int i = 1; i <= queryDBMetadata.getColumnNames().size(); i++) {
+        for (int i = 1; i <= COLUMNS_SCHEMA.size(); i++) {
             assertThat(simpleResultSetMetaData.getColumnName(i))
-                    .isEqualTo(queryDBMetadata.getColumnNames().get(i - 1));
+                    .isEqualTo(COLUMNS_SCHEMA.get(i - 1).getName());
         }
     }
 
@@ -98,7 +99,7 @@ class SimpleResultSetMetaDataTest {
 
     @Test
     public void testGetPrecision() throws SQLException {
-        assertThat(simpleResultSetMetaData.getPrecision(1)).isEqualTo(9);
+        assertThat(simpleResultSetMetaData.getPrecision(1)).isEqualTo(-1);
         assertThat(simpleResultSetMetaData.getPrecision(5)).isEqualTo(10);
     }
 
@@ -120,17 +121,17 @@ class SimpleResultSetMetaDataTest {
 
     @Test
     public void getColumnType() throws SQLException {
-        for (int i = 1; i <= queryDBMetadata.getColumnTypeIds().size(); i++) {
+        for (int i = 1; i <= COLUMNS_SCHEMA.size(); i++) {
             assertThat(simpleResultSetMetaData.getColumnType(i))
-                    .isEqualTo(queryDBMetadata.getColumnTypeIds().get(i - 1));
+                    .isEqualTo(COLUMNS_SCHEMA.get(i - 1).getType().getType().getVendorTypeNumber());
         }
     }
 
     @Test
     public void getColumnTypeName() throws SQLException {
-        for (int i = 1; i <= queryDBMetadata.getColumnTypes().size(); i++) {
+        for (int i = 1; i <= COLUMNS_SCHEMA.size(); i++) {
             assertThat(simpleResultSetMetaData.getColumnTypeName(i))
-                    .isEqualTo(queryDBMetadata.getColumnTypes().get(i - 1));
+                    .isEqualTo(COLUMNS_SCHEMA.get(i - 1).getTypeName());
         }
     }
 

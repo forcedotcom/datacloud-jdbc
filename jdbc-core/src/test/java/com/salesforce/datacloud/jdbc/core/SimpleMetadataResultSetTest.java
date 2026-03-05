@@ -20,11 +20,10 @@ import org.junit.jupiter.api.Test;
 class SimpleMetadataResultSetTest {
     SimpleMetadataResultSet simpleMetadataResultSet;
 
-    QueryDBMetadata queryDBMetadata = QueryDBMetadata.GET_COLUMNS;
-
     @BeforeEach
     public void init() throws SQLException {
-        simpleMetadataResultSet = SimpleMetadataResultSet.of(new SimpleResultSetMetaData(queryDBMetadata), null);
+        simpleMetadataResultSet =
+                SimpleMetadataResultSet.of(new SimpleResultSetMetaData(MetadataSchemas.COLUMNS), null);
     }
 
     @Test

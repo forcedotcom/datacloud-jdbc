@@ -6,12 +6,14 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
 import java.sql.Types;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
-public class QueryDBMetadataTest {
+class MetadataSchemasTest {
     private static final List<String> COLUMN_NAMES = Arrays.asList(
             "TABLE_CAT",
             "TABLE_SCHEM",
@@ -70,23 +72,31 @@ public class QueryDBMetadataTest {
             Types.VARCHAR);
 
     @Test
-    public void testGetColumnNames() {
-        assertThat(QueryDBMetadata.GET_COLUMNS.getColumnNames()).isEqualTo(COLUMN_NAMES);
-        assertThat(QueryDBMetadata.GET_COLUMNS.getColumnNames().size()).isEqualTo(24);
-        assertThat(QueryDBMetadata.GET_COLUMNS.getColumnNames().get(0)).isEqualTo("TABLE_CAT");
+    void columnsSchemaHasExpectedNames() {
+        List<String> names =
+                MetadataSchemas.COLUMNS.stream().map(ColumnMetadata::getName).collect(Collectors.toList());
+        assertThat(names).isEqualTo(COLUMN_NAMES);
+        assertThat(names).hasSize(24);
+        assertThat(names.get(0)).isEqualTo("TABLE_CAT");
     }
 
     @Test
-    public void testGetColumnTypes() {
-        assertThat(QueryDBMetadata.GET_COLUMNS.getColumnTypes()).isEqualTo(COLUMN_TYPES);
-        assertThat(QueryDBMetadata.GET_COLUMNS.getColumnTypes().size()).isEqualTo(24);
-        assertThat(QueryDBMetadata.GET_COLUMNS.getColumnTypes().get(0)).isEqualTo("TEXT");
+    void columnsSchemaHasExpectedTypeNames() {
+        List<String> typeNames = MetadataSchemas.COLUMNS.stream()
+                .map(ColumnMetadata::getTypeName)
+                .collect(Collectors.toList());
+        assertThat(typeNames).isEqualTo(COLUMN_TYPES);
+        assertThat(typeNames).hasSize(24);
+        assertThat(typeNames.get(0)).isEqualTo("TEXT");
     }
 
     @Test
-    public void testGetColumnTypeIds() {
-        assertThat(QueryDBMetadata.GET_COLUMNS.getColumnTypeIds()).isEqualTo(COLUMN_TYPE_IDS);
-        assertThat(QueryDBMetadata.GET_COLUMNS.getColumnTypeIds().size()).isEqualTo(24);
-        assertThat(QueryDBMetadata.GET_COLUMNS.getColumnTypeIds().get(0)).isEqualTo(Types.VARCHAR);
+    void columnsSchemaHasExpectedJdbcTypeIds() {
+        List<Integer> typeIds = MetadataSchemas.COLUMNS.stream()
+                .map(c -> c.getType().getType().getVendorTypeNumber())
+                .collect(Collectors.toList());
+        assertThat(typeIds).isEqualTo(COLUMN_TYPE_IDS);
+        assertThat(typeIds).hasSize(24);
+        assertThat(typeIds.get(0)).isEqualTo(Types.VARCHAR);
     }
 }

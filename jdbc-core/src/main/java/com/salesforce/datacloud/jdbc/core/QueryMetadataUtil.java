@@ -12,6 +12,7 @@ import static com.salesforce.datacloud.jdbc.config.QueryResources.getTablesQuery
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
@@ -87,11 +88,11 @@ final class QueryMetadataUtil {
             data = constructTableData(resultSet);
         }
 
-        return getMetadataResultSet(QueryDBMetadata.GET_TABLES, data);
+        return getMetadataResultSet(MetadataSchemas.TABLES, data);
     }
 
-    static ResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, List<Object> data) throws SQLException {
-        return SimpleMetadataResultSet.of(new SimpleResultSetMetaData(queryDbMetadata), data);
+    static ResultSet getMetadataResultSet(List<ColumnMetadata> columns, List<Object> data) throws SQLException {
+        return SimpleMetadataResultSet.of(new SimpleResultSetMetaData(columns), data);
     }
 
     private static List<Object> constructTableData(ResultSet resultSet) throws SQLException {
@@ -153,7 +154,7 @@ final class QueryMetadataUtil {
             data = constructColumnData(resultSet);
         }
 
-        return getMetadataResultSet(QueryDBMetadata.GET_COLUMNS, data);
+        return getMetadataResultSet(MetadataSchemas.COLUMNS, data);
     }
 
     private static String getColumnsQueryInner(
@@ -273,7 +274,7 @@ final class QueryMetadataUtil {
             data = constructSchemaData(resultSet);
         }
 
-        return getMetadataResultSet(QueryDBMetadata.GET_SCHEMAS, data);
+        return getMetadataResultSet(MetadataSchemas.SCHEMAS, data);
     }
 
     private static String getSchemasQuery(String schemaPattern) {
@@ -295,11 +296,8 @@ final class QueryMetadataUtil {
     }
 
     public static ResultSet createTableTypesResultSet() throws SQLException {
-
         List<Object> data = constructTableTypesData();
-        QueryDBMetadata queryDbMetadata = QueryDBMetadata.GET_TABLE_TYPES;
-
-        return getMetadataResultSet(queryDbMetadata, data);
+        return getMetadataResultSet(MetadataSchemas.TABLE_TYPES, data);
     }
 
     private static List<Object> constructTableTypesData() {
@@ -329,7 +327,7 @@ final class QueryMetadataUtil {
     public static ResultSet createCatalogsResultSet(ThrowingJdbcSupplier<String> lakehouseSupplier)
             throws SQLException {
         val data = getLakehouse(lakehouseSupplier);
-        return getMetadataResultSet(QueryDBMetadata.GET_CATALOGS, data);
+        return getMetadataResultSet(MetadataSchemas.CATALOGS, data);
     }
 
     private static final Map<String, Map<String, String>> tableTypeClauses = ImmutableMap.ofEntries(
