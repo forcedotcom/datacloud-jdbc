@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.42.2](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.1...v0.42.2) (2026-03-05)
+
+
+### Bug Fixes
+
+* allow refresh-token auth without userName ([#157](https://github.com/forcedotcom/datacloud-jdbc/issues/157)) ([97bc515](https://github.com/forcedotcom/datacloud-jdbc/commit/97bc51504e1284d9b9a4f825d61d943ea0c6019a))
+* properly handle thread interrupts during gRPC channel shutdown ([#159](https://github.com/forcedotcom/datacloud-jdbc/issues/159)) ([b0a96d1](https://github.com/forcedotcom/datacloud-jdbc/commit/b0a96d1a6e196f2badafc207ee3c03b1447d37c0))
+
 ## [0.42.1](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.0...v0.42.1) (2026-02-06)
 
 
