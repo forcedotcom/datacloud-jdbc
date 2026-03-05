@@ -48,10 +48,7 @@ class JdbcDriverStubProviderTest {
     }
 
     private ManagedChannelBuilder getMockChannelBuilder() {
-        val mockChannel = mock(ManagedChannel.class);
-        // Setup default mock behavior for shutdownNow() to return the channel for chaining
-        when(mockChannel.shutdownNow()).thenReturn(mockChannel);
-        return getMockChannelBuilderWithChannel(mockChannel);
+        return getMockChannelBuilderWithChannel(mock(ManagedChannel.class));
     }
 
     @Test
@@ -173,18 +170,32 @@ class JdbcDriverStubProviderTest {
 
     @SneakyThrows
     @Test
-    void callsManagedChannelShutdownNow() {
+    void callsManagedChannelCleanup() {
         val mockChannel = mock(ManagedChannel.class);
         val mockChannelBuilder = getMockChannelBuilderWithChannel(mockChannel);
-        when(mockChannel.shutdownNow()).thenReturn(mockChannel);
         when(mockChannel.awaitTermination(anyLong(), any(TimeUnit.class))).thenReturn(true);
 
         val stubProvider = JdbcDriverStubProvider.of(mockChannelBuilder);
         stubProvider.close();
 
-        verify(mockChannel, never()).shutdown();
-        verify(mockChannel).shutdownNow();
+        verify(mockChannel).shutdown();
         verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
+        verify(mockChannel, never()).shutdownNow();
+    }
+
+    @SneakyThrows
+    @Test
+    void callsManagedChannelShutdownNowOnTimeout() {
+        val mockChannel = mock(ManagedChannel.class);
+        val mockChannelBuilder = getMockChannelBuilderWithChannel(mockChannel);
+        when(mockChannel.awaitTermination(anyLong(), any(TimeUnit.class))).thenReturn(false);
+
+        val stubProvider = JdbcDriverStubProvider.of(mockChannelBuilder);
+        stubProvider.close();
+
+        verify(mockChannel).shutdown();
+        verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
+        verify(mockChannel).shutdownNow();
     }
 
     @SneakyThrows
@@ -192,15 +203,15 @@ class JdbcDriverStubProviderTest {
     void handlesInterruptDuringShutdown() {
         val mockChannel = mock(ManagedChannel.class);
         val mockChannelBuilder = getMockChannelBuilderWithChannel(mockChannel);
-        when(mockChannel.shutdownNow()).thenReturn(mockChannel);
         when(mockChannel.awaitTermination(anyLong(), any(TimeUnit.class)))
                 .thenThrow(new InterruptedException("Test interruption"));
 
         val stubProvider = JdbcDriverStubProvider.of(mockChannelBuilder);
         stubProvider.close();
 
-        verify(mockChannel).shutdownNow();
+        verify(mockChannel).shutdown();
         verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
+        verify(mockChannel).shutdownNow();
 
         // Verify interrupt status is restored per Java best practices
         assert Thread.currentThread().isInterrupted() : "Thread interrupt status should be restored";

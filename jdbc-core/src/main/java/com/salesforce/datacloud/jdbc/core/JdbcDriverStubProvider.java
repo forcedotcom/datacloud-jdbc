@@ -53,11 +53,16 @@ public class JdbcDriverStubProvider implements HyperGrpcStubProvider {
             return;
         }
 
-        // This immediately cancels in-flight RPCs, then waits for resource cleanup (threads, TCP connections)
+        channel.shutdown();
+
         try {
-            channel.shutdownNow().awaitTermination(5, TimeUnit.SECONDS);
+            if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {
+                log.warn("Channel did not terminate within 5 seconds, forcing shutdown");
+                channel.shutdownNow();
+            }
         } catch (InterruptedException e) {
-            log.warn("Channel shutdown interrupted", e);
+            log.warn("Channel shutdown interrupted, forcing immediate termination", e);
+            channel.shutdownNow();
             Thread.currentThread().interrupt();
         }
     }
