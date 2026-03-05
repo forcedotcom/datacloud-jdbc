@@ -5,6 +5,7 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -71,8 +72,21 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
-    public void testGetUserName() {
+    public void testGetUserName() throws SQLException {
         assertThat(dataCloudDatabaseMetadata.getUserName()).isEqualTo("userName");
+    }
+
+    /**
+     * When userName is null (e.g. refresh-token auth without userName), getUserName() throws SQLException.
+     */
+    @Test
+    public void testGetUserName_throwsWhenNull() throws SQLException {
+        DataCloudDatabaseMetadata metadataWithNullUser = new DataCloudDatabaseMetadata(
+                connection, JdbcURL.of("jdbc:salesforce-datacloud://login.salesforce.com"), null, null, null);
+        assertThatThrownBy(metadataWithNullUser::getUserName)
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("userName is not available for this connection")
+                .satisfies(e -> assertThat(((SQLException) e).getSQLState()).isEqualTo("28000"));
     }
 
     @Test

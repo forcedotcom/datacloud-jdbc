@@ -42,8 +42,15 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     private final ThrowingJdbcSupplier<List<String>> dataspacesSupplier;
 
-    @Getter
     private final String userName;
+
+    @Override
+    public String getUserName() throws SQLException {
+        if (userName == null) {
+            throw new SQLException("userName is not available for this connection", "28000");
+        }
+        return userName;
+    }
 
     @Override
     public boolean allProceduresAreCallable() {

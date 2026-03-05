@@ -156,7 +156,7 @@ public class DataCloudDatasource implements DataSource {
                 stubProvider,
                 connectionProperties,
                 jdbcUrl,
-                authProperties.getUserName(),
+                authProperties.getUserName() != null ? authProperties.getUserName() : "",
                 tokenProvider::getLakehouseName,
                 dataspaceClient);
     }

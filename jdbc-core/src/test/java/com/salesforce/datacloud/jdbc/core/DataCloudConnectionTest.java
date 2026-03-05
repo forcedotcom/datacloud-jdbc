@@ -4,6 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.verify;
 import io.grpc.ClientInterceptor;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -104,5 +106,29 @@ class DataCloudConnectionTest extends InterceptedHyperTestBase {
         // Interceptors should have been added to set the default workload header (x-hyperdb-workload)
         verify(stubProvider.stub).withInterceptors(any(ClientInterceptor[].class));
         connection.close();
+    }
+
+    /**
+     * The driver must not require userName for refresh-token auth; connection creation succeeds with null userName,
+     * and getMetaData().getUserName() throws SQLException when userName was not provided.
+     */
+    @Test
+    void connectionWithNullUserName_succeeds_refreshTokenAuth() throws SQLException {
+        val stubProvider = new TestStubProvider();
+        try (DataCloudConnection conn = DataCloudConnection.of(
+                stubProvider,
+                ConnectionProperties.defaultProperties(),
+                null,
+                null, // userName optional for refresh-token auth
+                () -> "",
+                Collections::emptyList)) {
+            assertThat(conn).isNotNull();
+            assertThat(conn.isClosed()).isFalse();
+            assertThat(conn.getMetaData()).isNotNull();
+            assertThatThrownBy(() -> conn.getMetaData().getUserName())
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("userName is not available for this connection")
+                    .satisfies(e -> assertThat(((SQLException) e).getSQLState()).isEqualTo("28000"));
+        }
     }
 }
