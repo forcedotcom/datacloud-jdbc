@@ -56,13 +56,14 @@ public class JdbcDriverStubProvider implements HyperGrpcStubProvider {
         channel.shutdown();
 
         try {
-            channel.awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            log.error("Failed to shutdown channel within 5 seconds", e);
-        } finally {
-            if (!channel.isTerminated()) {
+            if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {
+                log.warn("Channel did not terminate within 5 seconds, forcing shutdown");
                 channel.shutdownNow();
             }
+        } catch (InterruptedException e) {
+            log.warn("Channel shutdown interrupted, forcing immediate termination", e);
+            channel.shutdownNow();
+            Thread.currentThread().interrupt();
         }
     }
 }

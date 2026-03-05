@@ -173,7 +173,7 @@ class JdbcDriverStubProviderTest {
     void callsManagedChannelCleanup() {
         val mockChannel = mock(ManagedChannel.class);
         val mockChannelBuilder = getMockChannelBuilderWithChannel(mockChannel);
-        when(mockChannel.isTerminated()).thenReturn(false, true);
+        when(mockChannel.awaitTermination(anyLong(), any(TimeUnit.class))).thenReturn(true);
 
         val stubProvider = JdbcDriverStubProvider.of(mockChannelBuilder);
         stubProvider.close();
@@ -185,10 +185,10 @@ class JdbcDriverStubProviderTest {
 
     @SneakyThrows
     @Test
-    void callsManagedChannelShutdownNow() {
+    void callsManagedChannelShutdownNowOnTimeout() {
         val mockChannel = mock(ManagedChannel.class);
         val mockChannelBuilder = getMockChannelBuilderWithChannel(mockChannel);
-        when(mockChannel.isTerminated()).thenReturn(false);
+        when(mockChannel.awaitTermination(anyLong(), any(TimeUnit.class))).thenReturn(false);
 
         val stubProvider = JdbcDriverStubProvider.of(mockChannelBuilder);
         stubProvider.close();
@@ -196,5 +196,26 @@ class JdbcDriverStubProviderTest {
         verify(mockChannel).shutdown();
         verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
         verify(mockChannel).shutdownNow();
+    }
+
+    @SneakyThrows
+    @Test
+    void handlesInterruptDuringShutdown() {
+        val mockChannel = mock(ManagedChannel.class);
+        val mockChannelBuilder = getMockChannelBuilderWithChannel(mockChannel);
+        when(mockChannel.awaitTermination(anyLong(), any(TimeUnit.class)))
+                .thenThrow(new InterruptedException("Test interruption"));
+
+        val stubProvider = JdbcDriverStubProvider.of(mockChannelBuilder);
+        stubProvider.close();
+
+        verify(mockChannel).shutdown();
+        verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
+        verify(mockChannel).shutdownNow();
+
+        // Verify interrupt status is restored per Java best practices
+        assert Thread.currentThread().isInterrupted() : "Thread interrupt status should be restored";
+        // Clear interrupt status for other tests
+        Thread.interrupted();
     }
 }
