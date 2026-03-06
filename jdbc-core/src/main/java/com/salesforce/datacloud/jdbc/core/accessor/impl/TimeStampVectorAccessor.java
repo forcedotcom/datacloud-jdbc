@@ -137,6 +137,13 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
     /**
      * Gets OffsetDateTime using the effective timezone.
      *
+     * <p>For naive TIMESTAMP (no Arrow metadata timezone):
+     * - With no calendar: Use UTC to preserve literal values
+     * - With explicit calendar: Apply timezone conversion using that calendar
+     *
+     * <p>For TIMESTAMPTZ (has Arrow metadata timezone):
+     * Apply timezone conversion using the effective timezone.
+     *
      * @param calendar Optional calendar to override timezone
      * @return OffsetDateTime with offset, or null if SQL NULL
      */
@@ -146,13 +153,32 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
             return null;
         }
 
-        ZoneId zone = resolveEffectiveZoneId(calendar);
-        return OffsetDateTime.ofInstant(instant, zone);
+        // If calendar parameter is provided, honor it for timezone conversion
+        if (calendar != null) {
+            ZoneId zone = calendar.getTimeZone().toZoneId();
+            return OffsetDateTime.ofInstant(instant, zone);
+        }
+
+        // For TIMESTAMPTZ, apply timezone conversion
+        if (arrowMetadataZone != null) {
+            ZoneId zone = resolveEffectiveZoneId(calendar);
+            return OffsetDateTime.ofInstant(instant, zone);
+        }
+
+        // For naive TIMESTAMP with no calendar, use UTC to preserve literal values
+        return OffsetDateTime.ofInstant(instant, ZoneId.of("UTC"));
     }
 
     /**
      * Gets LocalDateTime using the effective timezone.
      * Note: LocalDateTime is "naive" - it has no timezone info.
+     *
+     * <p>For naive TIMESTAMP (no Arrow metadata timezone):
+     * - With no calendar: Use UTC to preserve literal values
+     * - With explicit calendar: Apply timezone conversion using that calendar
+     *
+     * <p>For TIMESTAMPTZ (has Arrow metadata timezone):
+     * Apply timezone conversion using the effective timezone.
      *
      * @param calendar Optional calendar to override timezone
      * @return LocalDateTime in the effective timezone, or null if SQL NULL
@@ -163,12 +189,31 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
             return null;
         }
 
-        ZoneId zone = resolveEffectiveZoneId(calendar);
-        return LocalDateTime.ofInstant(instant, zone);
+        // If calendar parameter is provided, honor it for timezone conversion
+        if (calendar != null) {
+            ZoneId zone = calendar.getTimeZone().toZoneId();
+            return LocalDateTime.ofInstant(instant, zone);
+        }
+
+        // For TIMESTAMPTZ (has Arrow metadata), apply timezone conversion
+        if (arrowMetadataZone != null) {
+            ZoneId zone = resolveEffectiveZoneId(calendar);
+            return LocalDateTime.ofInstant(instant, zone);
+        }
+
+        // For naive TIMESTAMP with no calendar, Hyper stores as UTC - use UTC to preserve literal values
+        return LocalDateTime.ofInstant(instant, ZoneId.of("UTC"));
     }
 
     /**
      * Gets ZonedDateTime using the effective timezone.
+     *
+     * <p>For naive TIMESTAMP (no Arrow metadata timezone):
+     * - With no calendar: Use UTC to preserve literal values
+     * - With explicit calendar: Apply timezone conversion using that calendar
+     *
+     * <p>For TIMESTAMPTZ (has Arrow metadata timezone):
+     * Apply timezone conversion using the effective timezone.
      *
      * @param calendar Optional calendar to override timezone
      * @return ZonedDateTime with full zone info, or null if SQL NULL
@@ -179,40 +224,72 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
             return null;
         }
 
-        ZoneId zone = resolveEffectiveZoneId(calendar);
-        return ZonedDateTime.ofInstant(instant, zone);
+        // If calendar parameter is provided, honor it for timezone conversion
+        if (calendar != null) {
+            ZoneId zone = calendar.getTimeZone().toZoneId();
+            return ZonedDateTime.ofInstant(instant, zone);
+        }
+
+        // For TIMESTAMPTZ, apply timezone conversion
+        if (arrowMetadataZone != null) {
+            ZoneId zone = resolveEffectiveZoneId(calendar);
+            return ZonedDateTime.ofInstant(instant, zone);
+        }
+
+        // For naive TIMESTAMP with no calendar, use UTC to preserve literal values
+        return ZonedDateTime.ofInstant(instant, ZoneId.of("UTC"));
     }
 
     // ========== JDBC Standard Methods ==========
 
     @Override
     public Timestamp getTimestamp(Calendar calendar) {
+        // For TIMESTAMPTZ with no calendar, return instant directly
+        if (calendar == null && arrowMetadataZone != null) {
+            Instant instant = getInstant();
+            if (instant == null) {
+                return null;
+            }
+            return Timestamp.from(instant);
+        }
+
         LocalDateTime localDateTime = getLocalDateTime(calendar);
         if (localDateTime == null) {
             return null;
         }
 
+        // For naive TIMESTAMP with no calendar: preserve literal values
+        if (calendar == null && arrowMetadataZone == null) {
+            // LocalDateTime is in UTC, adjust to system default for literal preservation
+            Instant adjustedInstant =
+                    localDateTime.atZone(ZoneId.systemDefault()).toInstant();
+            return Timestamp.from(adjustedInstant);
+        }
+
+        // When explicit calendar is provided (both naive TIMESTAMP and TIMESTAMPTZ)
         return Timestamp.valueOf(localDateTime);
     }
 
     @Override
     public Date getDate(Calendar calendar) {
-        LocalDateTime localDateTime = getLocalDateTime(calendar);
-        if (localDateTime == null) {
+        // Use getTimestamp which handles naive TIMESTAMP literal value preservation
+        Timestamp ts = getTimestamp(calendar);
+        if (ts == null) {
             return null;
         }
 
-        return new Date(Timestamp.valueOf(localDateTime).getTime());
+        return new Date(ts.getTime());
     }
 
     @Override
     public Time getTime(Calendar calendar) {
-        LocalDateTime localDateTime = getLocalDateTime(calendar);
-        if (localDateTime == null) {
+        // Use getTimestamp which handles naive TIMESTAMP literal value preservation
+        Timestamp ts = getTimestamp(calendar);
+        if (ts == null) {
             return null;
         }
 
-        return new Time(Timestamp.valueOf(localDateTime).getTime());
+        return new Time(ts.getTime());
     }
 
     @Override

@@ -166,4 +166,42 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
         int columnIndex = findColumn(columnLabel);
         return getDouble(columnIndex);
     }
+
+    /**
+     * Override no-argument getTimestamp methods to pass null calendar.
+     * This preserves literal values for naive TIMESTAMP while allowing
+     * explicit calendar parameters to work correctly for timezone conversion.
+     */
+    @Override
+    public java.sql.Timestamp getTimestamp(int columnIndex) throws SQLException {
+        return super.getTimestamp(columnIndex, null);
+    }
+
+    @Override
+    public java.sql.Timestamp getTimestamp(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getTimestamp(columnIndex);
+    }
+
+    @Override
+    public java.sql.Date getDate(int columnIndex) throws SQLException {
+        return super.getDate(columnIndex, null);
+    }
+
+    @Override
+    public java.sql.Date getDate(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getDate(columnIndex);
+    }
+
+    @Override
+    public java.sql.Time getTime(int columnIndex) throws SQLException {
+        return super.getTime(columnIndex, null);
+    }
+
+    @Override
+    public java.sql.Time getTime(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getTime(columnIndex);
+    }
 }
