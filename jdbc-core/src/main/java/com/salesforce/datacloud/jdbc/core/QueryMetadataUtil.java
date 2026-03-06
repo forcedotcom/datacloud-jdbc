@@ -307,7 +307,7 @@ final class QueryMetadataUtil {
         List<Object> data = new ArrayList<>();
 
         for (Map.Entry<String, Map<String, String>> entry : tableTypeClauses.entrySet()) {
-            List<Object> rowData = Arrays.asList(entry.getValue());
+            List<Object> rowData = Arrays.asList(entry.getKey());
             data.add(rowData);
         }
         return data;

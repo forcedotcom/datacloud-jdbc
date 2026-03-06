@@ -24,6 +24,8 @@ import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
@@ -904,6 +906,29 @@ public class DataCloudDatabaseMetadataTest {
         assertThat(resultSet.getMetaData().getColumnName(1)).isEqualTo("TABLE_TYPE");
 
         assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("TEXT");
+    }
+
+    @Test
+    @SneakyThrows
+    public void testGetTableTypesReturnsActualData() {
+        // This test verifies that getTableTypes() returns actual table type names, not Map objects
+        ResultSet resultSet = dataCloudDatabaseMetadata.getTableTypes();
+
+        assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(NUM_TABLE_TYPES_METADATA_COLUMNS);
+
+        // Collect all table types returned
+        Set<String> tableTypes = new HashSet<>();
+        while (resultSet.next()) {
+            String tableType = resultSet.getString("TABLE_TYPE");
+            assertThat(tableType).isNotNull();
+            tableTypes.add(tableType);
+        }
+
+        // Verify we got expected table types
+        assertThat(tableTypes).contains("TABLE", "VIEW");
+        assertThat(tableTypes.size()).isGreaterThan(0);
+
+        log.info("Table types returned: {}", tableTypes);
     }
 
     @Test
