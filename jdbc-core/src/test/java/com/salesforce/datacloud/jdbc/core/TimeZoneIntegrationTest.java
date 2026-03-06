@@ -38,25 +38,38 @@ public class TimeZoneIntegrationTest {
     @Test
     @SneakyThrows
     public void testSessionTimezoneResolution() {
-        // Test that session timezone is properly resolved from query settings
+        // Test that naive TIMESTAMP preserves literal values regardless of session timezone
         Properties props = new Properties();
         props.setProperty("querySetting.time_zone", "America/New_York");
 
         try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection(props)) {
             try (Statement stmt = conn.createStatement()) {
-                // Query a known timestamp: 2024-03-15 10:00:00 UTC
-                String sql = "SELECT TIMESTAMP '2024-03-15 10:00:00' as test_timestamp";
+                // Query a naive timestamp: 2024-03-15 10:00:00
+                // Hyper stores this as UTC, so literal values should be preserved
+                String sql = "SELECT TIMESTAMP '2024-03-15 10:00:00.123456' as test_timestamp";
                 try (ResultSet rs = stmt.executeQuery(sql)) {
                     assertThat(rs.next()).isTrue();
 
-                    // Get as Timestamp (uses session timezone)
+                    // LocalDateTime should preserve literal value
+                    LocalDateTime ldt = rs.getObject("test_timestamp", LocalDateTime.class);
+                    assertThat(ldt.getYear()).isEqualTo(2024);
+                    assertThat(ldt.getMonthValue()).isEqualTo(3);
+                    assertThat(ldt.getDayOfMonth()).isEqualTo(15);
+                    assertThat(ldt.getHour()).isEqualTo(10);
+                    assertThat(ldt.getMinute()).isEqualTo(0);
+                    assertThat(ldt.getSecond()).isEqualTo(0);
+                    assertThat(ldt.getNano()).isEqualTo(123456000);
+
+                    // Timestamp should match literal value
                     Timestamp ts = rs.getTimestamp("test_timestamp");
                     assertThat(ts).isNotNull();
+                    assertThat(ts.toString()).startsWith("2024-03-15 10:00:00.123456");
 
-                    // Get as String - should not have timezone offset for naive TIMESTAMP
+                    // String should not have timezone offset for naive TIMESTAMP
                     String tsString = rs.getString("test_timestamp");
-                    assertThat(tsString).matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{6}");
-                    assertThat(tsString).hasSize(26); // No offset
+                    assertThat(tsString).isEqualTo("2024-03-15 10:00:00.123456");
+                    // Verify no timezone offset suffix (like " +00:00" or " -07:00")
+                    assertThat(tsString).doesNotMatch(".*\\s[+-]\\d{2}:\\d{2}$");
 
                     assertThat(rs.next()).isFalse();
                 }
@@ -67,12 +80,23 @@ public class TimeZoneIntegrationTest {
     @Test
     @SneakyThrows
     public void testJDBC42JavaTimeTypes() {
-        // Test JDBC 4.2 java.time types support
+        // Test JDBC 4.2 java.time types support with actual value assertions
         try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
             try (Statement stmt = conn.createStatement()) {
                 String sql = "SELECT TIMESTAMP '2024-03-15 14:30:45.123456' as test_timestamp";
                 try (ResultSet rs = stmt.executeQuery(sql)) {
                     assertThat(rs.next()).isTrue();
+
+                    // Test LocalDateTime - naive, no timezone - should match literal value
+                    LocalDateTime ldt = rs.getObject("test_timestamp", LocalDateTime.class);
+                    assertThat(ldt).isNotNull();
+                    assertThat(ldt.getYear()).isEqualTo(2024);
+                    assertThat(ldt.getMonthValue()).isEqualTo(3);
+                    assertThat(ldt.getDayOfMonth()).isEqualTo(15);
+                    assertThat(ldt.getHour()).isEqualTo(14); // Should be 14, not 7!
+                    assertThat(ldt.getMinute()).isEqualTo(30);
+                    assertThat(ldt.getSecond()).isEqualTo(45);
+                    assertThat(ldt.getNano()).isEqualTo(123456000); // microseconds to nanos
 
                     // Test Instant - always UTC
                     Instant instant = rs.getObject("test_timestamp", Instant.class);
@@ -82,19 +106,18 @@ public class TimeZoneIntegrationTest {
                     OffsetDateTime odt = rs.getObject("test_timestamp", OffsetDateTime.class);
                     assertThat(odt).isNotNull();
                     assertThat(odt.toInstant()).isEqualTo(instant);
+                    assertThat(odt.toLocalDateTime()).isEqualTo(ldt);
 
                     // Test ZonedDateTime - full timezone info
                     ZonedDateTime zdt = rs.getObject("test_timestamp", ZonedDateTime.class);
                     assertThat(zdt).isNotNull();
                     assertThat(zdt.toInstant()).isEqualTo(instant);
+                    assertThat(zdt.toLocalDateTime()).isEqualTo(ldt);
 
-                    // Test LocalDateTime - naive, no timezone
-                    LocalDateTime ldt = rs.getObject("test_timestamp", LocalDateTime.class);
-                    assertThat(ldt).isNotNull();
-
-                    // Test legacy Timestamp
+                    // Test legacy Timestamp - should match literal value
                     Timestamp ts = rs.getObject("test_timestamp", Timestamp.class);
                     assertThat(ts).isNotNull();
+                    assertThat(ts.toString()).startsWith("2024-03-15 14:30:45.123456");
 
                     assertThat(rs.next()).isFalse();
                 }
@@ -428,6 +451,65 @@ public class TimeZoneIntegrationTest {
                     // Test getObject with Timestamp type
                     Timestamp ts = rs.getObject("test_timestamp", Timestamp.class);
                     assertThat(ts).isNotNull();
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testGetObjectWithNullType() {
+        // Test getObject with null type parameter - should return null per JDBC spec
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection()) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT TIMESTAMP '2024-03-15 14:30:45.123456' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // Test getObject with null type - should return null
+                    Object result = rs.getObject("test_timestamp", (Class<?>) null);
+                    assertThat(result).isNull();
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    public void testNaiveTimestampPreservesLiteralValue() {
+        // Regression test: Verify that naive TIMESTAMP preserves literal value
+        // Bug in 0.42.1: TIMESTAMP '2024-03-15 10:00:00' with LA timezone returned '03:00:00' (7hr offset)
+        // Expected: Should return '10:00:00' (preserves literal)
+        Properties props = new Properties();
+        props.setProperty("querySetting.time_zone", "America/Los_Angeles"); // -07:00 offset
+
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection(props)) {
+            try (Statement stmt = conn.createStatement()) {
+                String sql = "SELECT TIMESTAMP '2024-03-15 10:00:00' as test_timestamp";
+                try (ResultSet rs = stmt.executeQuery(sql)) {
+                    assertThat(rs.next()).isTrue();
+
+                    // CRITICAL: Naive timestamp should preserve literal value, not apply timezone offset
+                    Timestamp ts = rs.getTimestamp("test_timestamp");
+                    assertThat(ts).isNotNull();
+                    assertThat(ts.toString()).startsWith("2024-03-15 10:00:00");
+
+                    // String representation should also match literal value
+                    String str = rs.getString("test_timestamp");
+                    assertThat(str).startsWith("2024-03-15 10:00:00");
+
+                    // LocalDateTime should match literal components
+                    LocalDateTime ldt = rs.getObject("test_timestamp", LocalDateTime.class);
+                    assertThat(ldt.getYear()).isEqualTo(2024);
+                    assertThat(ldt.getMonthValue()).isEqualTo(3);
+                    assertThat(ldt.getDayOfMonth()).isEqualTo(15);
+                    assertThat(ldt.getHour()).isEqualTo(10); // NOT 3! Should preserve literal
+                    assertThat(ldt.getMinute()).isEqualTo(0);
+                    assertThat(ldt.getSecond()).isEqualTo(0);
 
                     assertThat(rs.next()).isFalse();
                 }
