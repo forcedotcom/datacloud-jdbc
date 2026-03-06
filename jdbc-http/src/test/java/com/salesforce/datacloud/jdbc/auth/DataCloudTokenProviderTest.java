@@ -106,6 +106,72 @@ class DataCloudTokenProviderTest {
 
     @SneakyThrows
     @Test
+    void retryPolicyRetriesOnRetriableAuthorizationException() {
+        val properties = propertiesForPassword("un", "pw");
+        properties.setProperty(HttpClientProperties.HTTP_MAX_RETRIES, "2");
+        val expectedTriesCount = 3; // initial + 2 retries
+        try (val server = new MockWebServer()) {
+            server.start();
+            // Simulate HTTP 500 errors (retriable) that eventually succeed
+            for (int i = 0; i < expectedTriesCount - 1; i++) {
+                server.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
+            }
+            // Last request succeeds
+            val mapper = new ObjectMapper();
+            val oAuthTokenResponse = new OAuthTokenResponse();
+            oAuthTokenResponse.setToken(FAKE_TOKEN);
+            oAuthTokenResponse.setInstanceUrl(server.url("").toString());
+            server.enqueue(new MockResponse()
+                    .setBody(mapper.writeValueAsString(oAuthTokenResponse))
+                    .setResponseCode(200));
+
+            val loginUrl = server.url("").uri();
+            HttpClientProperties clientProperties = HttpClientProperties.ofDestructive(properties);
+            SalesforceAuthProperties authProperties = SalesforceAuthProperties.ofDestructive(loginUrl, properties);
+            val token =
+                    DataCloudTokenProvider.of(clientProperties, authProperties).getOAuthToken();
+            assertThat(token.getToken()).isEqualTo(FAKE_TOKEN);
+            assertThat(server.getRequestCount()).isEqualTo(expectedTriesCount);
+            server.shutdown();
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void retryPolicyRetriesOn400WithRetryHint() {
+        val properties = propertiesForPassword("un", "pw");
+        properties.setProperty(HttpClientProperties.HTTP_MAX_RETRIES, "2");
+        val expectedTriesCount = 3; // initial + 2 retries
+        try (val server = new MockWebServer()) {
+            server.start();
+            // Simulate HTTP 400 with retry hint (retriable)
+            for (int i = 0; i < expectedTriesCount - 1; i++) {
+                server.enqueue(new MockResponse()
+                        .setResponseCode(400)
+                        .setBody("{\"error\":\"unknown_error\",\"error_description\":\"retry your request\"}"));
+            }
+            // Last request succeeds
+            val mapper = new ObjectMapper();
+            val oAuthTokenResponse = new OAuthTokenResponse();
+            oAuthTokenResponse.setToken(FAKE_TOKEN);
+            oAuthTokenResponse.setInstanceUrl(server.url("").toString());
+            server.enqueue(new MockResponse()
+                    .setBody(mapper.writeValueAsString(oAuthTokenResponse))
+                    .setResponseCode(200));
+
+            val loginUrl = server.url("").uri();
+            HttpClientProperties clientProperties = HttpClientProperties.ofDestructive(properties);
+            SalesforceAuthProperties authProperties = SalesforceAuthProperties.ofDestructive(loginUrl, properties);
+            val token =
+                    DataCloudTokenProvider.of(clientProperties, authProperties).getOAuthToken();
+            assertThat(token.getToken()).isEqualTo(FAKE_TOKEN);
+            assertThat(server.getRequestCount()).isEqualTo(expectedTriesCount);
+            server.shutdown();
+        }
+    }
+
+    @SneakyThrows
+    @Test
     void oauthTokenRetrieved() {
         val mapper = new ObjectMapper();
         val properties = propertiesForPassword("un", "pw");
