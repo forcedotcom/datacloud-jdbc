@@ -8,30 +8,25 @@ import static com.google.common.collect.Maps.immutableEntry;
 import static com.salesforce.datacloud.jdbc.config.QueryResources.getColumnsQueryText;
 import static com.salesforce.datacloud.jdbc.config.QueryResources.getSchemasQueryText;
 import static com.salesforce.datacloud.jdbc.config.QueryResources.getTablesQueryText;
-import static com.salesforce.datacloud.jdbc.util.ArrowUtils.convertJDBCMetadataToAvaticaColumns;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.calcite.avatica.AvaticaResultSet;
-import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.avatica.Meta;
-import org.apache.calcite.avatica.QueryState;
-import org.apache.calcite.avatica.SqlType;
 import org.apache.commons.lang3.StringUtils;
 
 @Slf4j
@@ -62,22 +57,22 @@ final class QueryMetadataUtil {
     private static final int GENERATED_COLUMN_INDEX = 23;
 
     private static final Map<String, String> dbTypeToSql = ImmutableMap.ofEntries(
-            immutableEntry("int2", SqlType.SMALLINT.toString()),
-            immutableEntry("int4", SqlType.INTEGER.toString()),
-            immutableEntry("oid", SqlType.BIGINT.toString()),
-            immutableEntry("int8", SqlType.BIGINT.toString()),
-            immutableEntry("float", SqlType.DOUBLE.toString()),
-            immutableEntry("float4", SqlType.REAL.toString()),
-            immutableEntry("float8", SqlType.DOUBLE.toString()),
-            immutableEntry("bool", SqlType.BOOLEAN.toString()),
-            immutableEntry("char", SqlType.CHAR.toString()),
-            immutableEntry("text", SqlType.VARCHAR.toString()),
-            immutableEntry("date", SqlType.DATE.toString()),
-            immutableEntry("time", SqlType.TIME.toString()),
-            immutableEntry("timetz", SqlType.TIME.toString()),
-            immutableEntry("timestamp", SqlType.TIMESTAMP.toString()),
-            immutableEntry("timestamptz", SqlType.TIMESTAMP.toString()),
-            immutableEntry("array", SqlType.ARRAY.toString()));
+            immutableEntry("int2", JDBCType.SMALLINT.toString()),
+            immutableEntry("int4", JDBCType.INTEGER.toString()),
+            immutableEntry("oid", JDBCType.BIGINT.toString()),
+            immutableEntry("int8", JDBCType.BIGINT.toString()),
+            immutableEntry("float", JDBCType.DOUBLE.toString()),
+            immutableEntry("float4", JDBCType.REAL.toString()),
+            immutableEntry("float8", JDBCType.DOUBLE.toString()),
+            immutableEntry("bool", JDBCType.BOOLEAN.toString()),
+            immutableEntry("char", JDBCType.CHAR.toString()),
+            immutableEntry("text", JDBCType.VARCHAR.toString()),
+            immutableEntry("date", JDBCType.DATE.toString()),
+            immutableEntry("time", JDBCType.TIME.toString()),
+            immutableEntry("timetz", JDBCType.TIME.toString()),
+            immutableEntry("timestamp", JDBCType.TIMESTAMP.toString()),
+            immutableEntry("timestamptz", JDBCType.TIMESTAMP_WITH_TIMEZONE.toString()),
+            immutableEntry("array", JDBCType.ARRAY.toString()));
 
     private QueryMetadataUtil() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
@@ -93,17 +88,11 @@ final class QueryMetadataUtil {
             data = constructTableData(resultSet);
         }
 
-        return getMetadataResultSet(QueryDBMetadata.GET_TABLES, data);
+        return getMetadataResultSet(MetadataSchemas.TABLES, data);
     }
 
-    static AvaticaResultSet getMetadataResultSet(QueryDBMetadata queryDbMetadata, List<Object> data)
-            throws SQLException {
-        QueryResultSetMetadata queryResultSetMetadata = new QueryResultSetMetadata(queryDbMetadata);
-        List<ColumnMetaData> columnMetaData = convertJDBCMetadataToAvaticaColumns(queryResultSetMetadata);
-        Meta.Signature signature = new Meta.Signature(
-                columnMetaData, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
-        return MetadataResultSet.of(
-                null, new QueryState(), signature, queryResultSetMetadata, TimeZone.getDefault(), null, data);
+    static ResultSet getMetadataResultSet(List<ColumnMetadata> columns, List<Object> data) throws SQLException {
+        return SimpleMetadataResultSet.of(new SimpleResultSetMetaData(columns), data);
     }
 
     private static List<Object> constructTableData(ResultSet resultSet) throws SQLException {
@@ -165,7 +154,7 @@ final class QueryMetadataUtil {
             data = constructColumnData(resultSet);
         }
 
-        return getMetadataResultSet(QueryDBMetadata.GET_COLUMNS, data);
+        return getMetadataResultSet(MetadataSchemas.COLUMNS, data);
     }
 
     private static String getColumnsQueryInner(
@@ -208,13 +197,17 @@ final class QueryMetadataUtil {
 
             String typeName = resultSet.getString("datatype");
             typeName = typeName == null ? StringUtils.EMPTY : typeName;
+            // Per PostgreSQL docs (https://www.postgresql.org/docs/current/datatype-numeric.html),
+            // numeric types from Hyper system tables may appear as "numeric", "numeric(p,s)", or
+            // "numeric(p)". Match any variant by checking if the type name contains "numeric".
             if (typeName.toLowerCase().contains("numeric")) {
-                rowData[TYPE_NAME_INDEX] = SqlType.NUMERIC.toString();
-                rowData[DATA_TYPE_INDEX] = SqlType.valueOf(SqlType.NUMERIC.toString()).id;
+                rowData[TYPE_NAME_INDEX] = JDBCType.NUMERIC.toString();
+                rowData[DATA_TYPE_INDEX] = JDBCType.NUMERIC.getVendorTypeNumber();
             } else {
                 rowData[TYPE_NAME_INDEX] = dbTypeToSql.getOrDefault(typeName.toLowerCase(), typeName);
                 dataType = dbTypeToSql.containsKey(typeName.toLowerCase())
-                        ? SqlType.valueOf(dbTypeToSql.get(typeName.toLowerCase())).id
+                        ? JDBCType.valueOf(dbTypeToSql.get(typeName.toLowerCase()))
+                                .getVendorTypeNumber()
                         : (int) resultSet.getLong("atttypid");
                 rowData[DATA_TYPE_INDEX] = dataType;
             }
@@ -284,7 +277,7 @@ final class QueryMetadataUtil {
             data = constructSchemaData(resultSet);
         }
 
-        return getMetadataResultSet(QueryDBMetadata.GET_SCHEMAS, data);
+        return getMetadataResultSet(MetadataSchemas.SCHEMAS, data);
     }
 
     private static String getSchemasQuery(String schemaPattern) {
@@ -306,11 +299,8 @@ final class QueryMetadataUtil {
     }
 
     public static ResultSet createTableTypesResultSet() throws SQLException {
-
         List<Object> data = constructTableTypesData();
-        QueryDBMetadata queryDbMetadata = QueryDBMetadata.GET_TABLE_TYPES;
-
-        return getMetadataResultSet(queryDbMetadata, data);
+        return getMetadataResultSet(MetadataSchemas.TABLE_TYPES, data);
     }
 
     private static List<Object> constructTableTypesData() {
@@ -340,7 +330,7 @@ final class QueryMetadataUtil {
     public static ResultSet createCatalogsResultSet(ThrowingJdbcSupplier<String> lakehouseSupplier)
             throws SQLException {
         val data = getLakehouse(lakehouseSupplier);
-        return getMetadataResultSet(QueryDBMetadata.GET_CATALOGS, data);
+        return getMetadataResultSet(MetadataSchemas.CATALOGS, data);
     }
 
     private static final Map<String, Map<String, String>> tableTypeClauses = ImmutableMap.ofEntries(

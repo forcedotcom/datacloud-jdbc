@@ -2,9 +2,14 @@
  * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
  * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
  */
-package com.salesforce.datacloud.jdbc.util;
+package com.salesforce.datacloud.jdbc.core.metadata;
 
+import java.math.BigDecimal;
+import java.sql.Array;
+import java.sql.Date;
 import java.sql.JDBCType;
+import java.sql.Time;
+import java.sql.Timestamp;
 import lombok.Value;
 
 /**
@@ -27,6 +32,8 @@ public class ColumnType {
     /// For Numerics: the NUMERIC(precision, scale)
     /// Unused for other types
     private int scale;
+    /// Is this type nullable?
+    private boolean nullable;
 
     // For date/time types use this as placeholder for maximum display size
     private static final int MAX_DATETIME_DISPLAYSIZE = 128;
@@ -35,25 +42,28 @@ public class ColumnType {
     // Used for types where we are not expected to return a scale
     private static final int UNKNOWN_SCALE = 0;
 
-    public ColumnType(JDBCType type) {
-        this.type = type;
-        this.arrayElementType = null;
-        this.precisionOrStringLength = -1;
-        this.scale = 1;
-    }
-
-    public ColumnType(JDBCType type, ColumnType arrayElementType) {
+    public ColumnType(JDBCType type, ColumnType arrayElementType, boolean nullable) {
         this.type = type;
         this.arrayElementType = arrayElementType;
         this.precisionOrStringLength = -1;
         this.scale = 1;
+        this.nullable = nullable;
     }
 
-    public ColumnType(JDBCType type, int precision, int scale) {
+    public ColumnType(JDBCType type, int precision, int scale, boolean nullable) {
         this.type = type;
         this.arrayElementType = null;
         this.precisionOrStringLength = precision;
         this.scale = scale;
+        this.nullable = nullable;
+    }
+
+    public ColumnType(JDBCType type, boolean nullable) {
+        this.type = type;
+        this.arrayElementType = null;
+        this.precisionOrStringLength = -1;
+        this.scale = 1;
+        this.nullable = nullable;
     }
 
     /**
@@ -250,5 +260,40 @@ public class ColumnType {
             default:
                 return getPrecisionOrStringLength();
         }
+    }
+
+    // See table B.3 from https://download.oracle.com/otn-pub/jcp/jdbc-4_3-mrel3-eval-spec/jdbc4.3-fr-spec.pdf
+    public Class<?> getJavaType() {
+        switch (type) {
+            case BOOLEAN:
+                return Boolean.class;
+            case SMALLINT:
+            case INTEGER:
+                return Integer.class;
+            case BIGINT:
+                return Long.class;
+            case NUMERIC:
+                return BigDecimal.class;
+            case FLOAT:
+                return Float.class;
+            case DOUBLE:
+                return Double.class;
+            case CHAR:
+            case VARCHAR:
+                return String.class;
+            case BINARY:
+                return byte[].class;
+            case DATE:
+                return Date.class;
+            case TIME:
+                return Time.class;
+            case TIMESTAMP:
+                return Timestamp.class;
+            case TIMESTAMP_WITH_TIMEZONE:
+                return Timestamp.class;
+            case ARRAY:
+                return Array.class;
+        }
+        throw new IllegalArgumentException("Unsupported type: " + type);
     }
 }
