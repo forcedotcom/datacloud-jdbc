@@ -197,6 +197,9 @@ final class QueryMetadataUtil {
 
             String typeName = resultSet.getString("datatype");
             typeName = typeName == null ? StringUtils.EMPTY : typeName;
+            // Per PostgreSQL docs (https://www.postgresql.org/docs/current/datatype-numeric.html),
+            // numeric types from Hyper system tables may appear as "numeric", "numeric(p,s)", or
+            // "numeric(p)". Match any variant by checking if the type name contains "numeric".
             if (typeName.toLowerCase().contains("numeric")) {
                 rowData[TYPE_NAME_INDEX] = JDBCType.NUMERIC.toString();
                 rowData[DATA_TYPE_INDEX] = JDBCType.NUMERIC.getVendorTypeNumber();
