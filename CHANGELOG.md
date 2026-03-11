@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.42.3](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.2...v0.42.3) (2026-03-11)
+
+
+### Bug Fixes
+
+* correct DatabaseMetaData.getTableTypes() to return table type names ([#162](https://github.com/forcedotcom/datacloud-jdbc/issues/162)) ([a5399bb](https://github.com/forcedotcom/datacloud-jdbc/commit/a5399bb426b57a1652d92469d70f09f3124ca046))
+
 ## [0.42.2](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.1...v0.42.2) (2026-03-05)
 
 
