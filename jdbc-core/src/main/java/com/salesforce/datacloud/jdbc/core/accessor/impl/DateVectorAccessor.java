@@ -14,6 +14,7 @@ import com.salesforce.datacloud.jdbc.core.accessor.impl.DateVectorGetter.Holder;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
@@ -28,28 +29,35 @@ public class DateVectorAccessor extends QueryJDBCAccessor {
     private final TimeUnit timeUnit;
     private final Holder holder;
 
+    @SuppressWarnings("unused")
+    private final ZoneId sessionZone; // For potential future timezone-aware date handling
+
     private static final String INVALID_VECTOR_ERROR_RESPONSE = "Invalid Arrow vector provided";
 
     public DateVectorAccessor(
             DateDayVector vector,
             IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
+            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull,
+            ZoneId sessionZone)
             throws SQLException {
         super(currentRowSupplier, setCursorWasNull);
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.sessionZone = sessionZone;
     }
 
     public DateVectorAccessor(
             DateMilliVector vector,
             IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
+            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull,
+            ZoneId sessionZone)
             throws SQLException {
         super(currentRowSupplier, setCursorWasNull);
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.sessionZone = sessionZone;
     }
 
     @Override

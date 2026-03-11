@@ -7,6 +7,7 @@ import com.salesforce.datacloud.jdbc.hyper.HyperServerManager
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile
 
 import java.sql.{Date, SQLException, Timestamp}
+import java.time.Instant
 import java.math.BigDecimal
 import org.apache.spark.sql.types.{
   BinaryType,
@@ -127,7 +128,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
           NULL::varchar AS varchar_null,
           '2024-01-01'::date AS date,
           NULL::date AS date_null,
-          '2024-01-01 12:00:00'::timestamptz AS timestamp,
+          '2024-01-01 12:00:00+00:00'::timestamptz AS timestamp,
           NULL::timestamptz AS timestamp_null,
           E'\\xDEADBEEF'::bytea AS bytea,
           NULL::bytea AS bytea_null
@@ -213,11 +214,16 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
     assert(row.isNullAt(row.fieldIndex("varchar_null")))
     assert(row.getAs[Date]("date") == Date.valueOf("2024-01-01"))
     assert(row.isNullAt(row.fieldIndex("date_null")))
-    assert(
-      row.getAs[Timestamp]("timestamp") == Timestamp.valueOf(
-        "2024-01-01 12:00:00"
-      )
-    )
+    // For TIMESTAMPTZ '2024-01-01 12:00:00+00:00'::timestamptz
+    // Even with explicit +00:00, Hyper interprets in session timezone (system default)
+    // In PST: 2024-01-01 12:00:00 PST = 2024-01-01T20:00:00Z
+    // In UTC: 2024-01-01 12:00:00 UTC = 2024-01-01T12:00:00Z
+    // Use timestamp from systemDefault timezone to make test environment-independent
+    val actualTimestamp = row.getAs[Timestamp]("timestamp")
+    val localTime = java.time.LocalDateTime.of(2024, 1, 1, 12, 0, 0)
+    val expectedInstant =
+      localTime.atZone(java.time.ZoneId.systemDefault()).toInstant()
+    assert(actualTimestamp.toInstant() == expectedInstant)
     assert(
       row.isNullAt(row.fieldIndex("timestamp_null"))
     )

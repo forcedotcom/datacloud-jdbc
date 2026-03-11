@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.TimeZone;
 import lombok.Getter;
@@ -50,15 +51,30 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     }
 
     public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId) throws SQLException {
+        return of(resultStream, queryId, ZoneId.systemDefault());
+    }
+
+    /**
+     * Creates a StreamingResultSet with a specified session timezone.
+     *
+     * @param resultStream The Arrow stream containing query results
+     * @param queryId The query identifier
+     * @param sessionZone The session timezone to use for timestamp conversions
+     * @return A new StreamingResultSet
+     * @throws SQLException If an error occurs during ResultSet creation
+     */
+    public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId, ZoneId sessionZone)
+            throws SQLException {
         try {
             val schemaRoot = resultStream.getVectorSchemaRoot();
             val columns = toColumnMetaData(schemaRoot.getSchema().getFields());
-            val timezone = TimeZone.getDefault();
+            // Convert ZoneId to TimeZone for Avatica compatibility
+            val timezone = TimeZone.getTimeZone(sessionZone);
             val state = new QueryState();
             val signature = new Meta.Signature(
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
-            val cursor = new ArrowStreamReaderCursor(resultStream);
+            val cursor = new ArrowStreamReaderCursor(resultStream, sessionZone);
             val result = new StreamingResultSet(cursor, queryId, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
 
@@ -143,5 +159,43 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     public double getDouble(String columnLabel) throws SQLException {
         int columnIndex = findColumn(columnLabel);
         return getDouble(columnIndex);
+    }
+
+    /**
+     * Override no-argument getTimestamp methods to pass null calendar.
+     * This preserves literal values for naive TIMESTAMP while allowing
+     * explicit calendar parameters to work correctly for timezone conversion.
+     */
+    @Override
+    public java.sql.Timestamp getTimestamp(int columnIndex) throws SQLException {
+        return super.getTimestamp(columnIndex, null);
+    }
+
+    @Override
+    public java.sql.Timestamp getTimestamp(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getTimestamp(columnIndex);
+    }
+
+    @Override
+    public java.sql.Date getDate(int columnIndex) throws SQLException {
+        return super.getDate(columnIndex, null);
+    }
+
+    @Override
+    public java.sql.Date getDate(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getDate(columnIndex);
+    }
+
+    @Override
+    public java.sql.Time getTime(int columnIndex) throws SQLException {
+        return super.getTime(columnIndex, null);
+    }
+
+    @Override
+    public java.sql.Time getTime(String columnLabel) throws SQLException {
+        int columnIndex = findColumn(columnLabel);
+        return getTime(columnIndex);
     }
 }

@@ -14,6 +14,7 @@ import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
@@ -31,50 +32,61 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
     private final TimeUnit timeUnit;
     private final Holder holder;
 
+    @SuppressWarnings("unused")
+    private final ZoneId sessionZone; // For potential future timezone-aware time handling
+
     private static final String INVALID_VECTOR_ERROR_RESPONSE = "Unsupported Timestamp vector type provided";
 
     public TimeVectorAccessor(
             TimeNanoVector vector,
             IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
+            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull,
+            ZoneId sessionZone)
             throws SQLException {
         super(currentRowSupplier, setCursorWasNull);
         this.holder = new TimeVectorGetter.Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.sessionZone = sessionZone;
     }
 
     public TimeVectorAccessor(
             TimeMicroVector vector,
             IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
+            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull,
+            ZoneId sessionZone)
             throws SQLException {
         super(currentRowSupplier, setCursorWasNull);
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.sessionZone = sessionZone;
     }
 
     public TimeVectorAccessor(
             TimeMilliVector vector,
             IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
+            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull,
+            ZoneId sessionZone)
             throws SQLException {
         super(currentRowSupplier, setCursorWasNull);
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.sessionZone = sessionZone;
     }
 
     public TimeVectorAccessor(
             TimeSecVector vector,
             IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
+            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull,
+            ZoneId sessionZone)
             throws SQLException {
         super(currentRowSupplier, setCursorWasNull);
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.sessionZone = sessionZone;
     }
 
     @Override
