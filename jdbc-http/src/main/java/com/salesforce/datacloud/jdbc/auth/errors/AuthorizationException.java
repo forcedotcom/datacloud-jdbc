@@ -40,9 +40,9 @@ public class AuthorizationException extends Exception {
 
     /**
      * Determines if this exception represents a transient error that should be retried.
-     * Retries are appropriate for:
-     * - 5xx server errors (500, 502, 503, 504)
-     * - 400 errors with retry hints in the error description (e.g., "retry your request", "unknown_error")
+     *
+     * Retriable errors: 5xx server errors and 429 Too Many Requests.
+     * Non-retriable: 4xx client errors indicate permanent issues (invalid credentials, malformed request).
      *
      * @return true if this exception should be retried, false otherwise
      */
@@ -54,25 +54,12 @@ public class AuthorizationException extends Exception {
         try {
             int httpCode = Integer.parseInt(errorCode);
 
-            // Retry on 5xx server errors (transient server issues)
             if (httpCode >= 500 && httpCode < 600) {
                 return true;
             }
 
-            // Retry on 429 (Too Many Requests) - always retriable
             if (httpCode == 429) {
                 return true;
-            }
-
-            // Retry on 400 errors that indicate transient issues
-            if (httpCode == 400) {
-                String description = errorDescription != null ? errorDescription.toLowerCase() : "";
-                // Check for retry hints in the error description
-                return description.contains("retry")
-                        || description.contains("unknown_error")
-                        || description.contains("temporary")
-                        || description.contains("rate limit")
-                        || description.contains("throttle");
             }
 
             return false;

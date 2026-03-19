@@ -60,8 +60,10 @@ class AuthorizationExceptionTest {
     }
 
     @Test
-    void isRetriable_ReturnsFalseForNon5xxErrors() {
+    void isRetriable_ReturnsFalseFor4xxClientErrors() {
         assertThat(AuthorizationException.builder().errorCode("200").build().isRetriable())
+                .isFalse();
+        assertThat(AuthorizationException.builder().errorCode("400").build().isRetriable())
                 .isFalse();
         assertThat(AuthorizationException.builder().errorCode("401").build().isRetriable())
                 .isFalse();
@@ -72,31 +74,15 @@ class AuthorizationExceptionTest {
     }
 
     @Test
-    void isRetriable_ReturnsTrueFor400WithRetryHints() {
+    void isRetriable_ReturnsFalseFor400RegardlessOfDescription() {
         assertThat(AuthorizationException.builder()
                         .errorCode("400")
-                        .errorDescription("{\"error\":\"unknown_error\",\"error_description\":\"retry your request\"}")
+                        .errorDescription(
+                                "{\"error\":\"invalid_grant\",\"error_description\":\"authentication failure\"}")
                         .build()
                         .isRetriable())
-                .isTrue();
+                .isFalse();
 
-        assertThat(AuthorizationException.builder()
-                        .errorCode("400")
-                        .errorDescription("Please retry your request")
-                        .build()
-                        .isRetriable())
-                .isTrue();
-
-        assertThat(AuthorizationException.builder()
-                        .errorCode("400")
-                        .errorDescription("Temporary error occurred")
-                        .build()
-                        .isRetriable())
-                .isTrue();
-    }
-
-    @Test
-    void isRetriable_ReturnsFalseFor400WithoutRetryHints() {
         assertThat(AuthorizationException.builder()
                         .errorCode("400")
                         .errorDescription("Invalid credentials")
@@ -128,7 +114,6 @@ class AuthorizationExceptionTest {
                         .isRetriable())
                 .isTrue();
 
-        // 429 should be retriable even without description
         assertThat(AuthorizationException.builder().errorCode("429").build().isRetriable())
                 .isTrue();
     }
@@ -148,5 +133,15 @@ class AuthorizationExceptionTest {
                 .isFalse();
         assertThat(AuthorizationException.builder().errorCode("abc").build().isRetriable())
                 .isFalse();
+    }
+
+    @Test
+    void getMessage_WithMessageAndCode() {
+        AuthorizationException ex = AuthorizationException.builder()
+                .message("Authentication failed")
+                .errorCode("401")
+                .build();
+
+        assertThat(ex.getMessage()).isEqualTo("Authentication failed (HTTP 401)");
     }
 }

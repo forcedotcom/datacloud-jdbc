@@ -222,6 +222,82 @@ class FormCommandTest {
         assertThat(ex.isRetriable()).isTrue();
     }
 
+    @Test
+    @SneakyThrows
+    void postHandlesErrorWithEmptyResponseBody() {
+        val command = new FormCommand(
+                new URI(server.url("").toString()),
+                new URI("foo"),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of());
+
+        server.enqueue(new MockResponse().setResponseCode(500).setBody(""));
+
+        val ex = assertThrows(
+                AuthorizationException.class, () -> FormCommand.post(client, command, FakeCommandResp.class));
+        assertThat(ex.getErrorCode()).isEqualTo("500");
+        assertThat(ex.getErrorDescription()).isEqualTo("");
+        assertThat(ex.isRetriable()).isTrue();
+    }
+
+    @Test
+    @SneakyThrows
+    void postHandlesErrorWithNullResponseBody() {
+        val command = new FormCommand(
+                new URI(server.url("").toString()),
+                new URI("foo"),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of());
+
+        server.enqueue(new MockResponse().setResponseCode(502));
+
+        val ex = assertThrows(
+                AuthorizationException.class, () -> FormCommand.post(client, command, FakeCommandResp.class));
+        assertThat(ex.getErrorCode()).isEqualTo("502");
+        assertThat(ex.getErrorDescription()).isEqualTo("");
+        assertThat(ex.isRetriable()).isTrue();
+    }
+
+    @Test
+    @SneakyThrows
+    void getThrowsAuthorizationExceptionOn5xxError() {
+        val command = new FormCommand(
+                new URI(server.url("").toString()),
+                new URI("foo"),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of("param", "value"));
+
+        server.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Server Error"));
+
+        val ex = assertThrows(
+                AuthorizationException.class, () -> FormCommand.get(client, command, FakeCommandResp.class));
+        assertThat(ex.getErrorCode()).isEqualTo("500");
+        assertThat(ex.getErrorDescription()).isEqualTo("Internal Server Error");
+        assertThat(ex.isRetriable()).isTrue();
+    }
+
+    @Test
+    @SneakyThrows
+    void getThrowsAuthorizationExceptionOn4xxError() {
+        val command = new FormCommand(
+                new URI(server.url("").toString()),
+                new URI("foo"),
+                ImmutableMap.of(),
+                ImmutableMap.of(),
+                ImmutableMap.of("param", "value"));
+
+        server.enqueue(new MockResponse().setResponseCode(401).setBody("Unauthorized"));
+
+        val ex = assertThrows(
+                AuthorizationException.class, () -> FormCommand.get(client, command, FakeCommandResp.class));
+        assertThat(ex.getErrorCode()).isEqualTo("401");
+        assertThat(ex.getErrorDescription()).isEqualTo("Unauthorized");
+        assertThat(ex.isRetriable()).isFalse();
+    }
+
     @Data
     @Builder
     @Jacksonized
