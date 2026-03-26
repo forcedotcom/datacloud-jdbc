@@ -19,6 +19,8 @@ import salesforce.cdp.hyperdb.v1.QueryInfo;
  *   <li><b>RESULTS_PRODUCED</b>: The query has completed, and the results are ready for retrieval.</li>
  *   <li><b>FINISHED</b>: The query has finished execution and its results have been persisted, guaranteed to be available until the expiration time.</li>
  * </ul>
+ *
+ * <p>Query execution statistics are available via {@link #getExecutionStatistics()} when provided by the server.
  */
 @Value
 @Unstable
@@ -38,6 +40,8 @@ public class QueryStatus {
     double progress;
 
     CompletionStatus completionStatus;
+
+    QueryExecutionStatistics executionStatistics;
 
     public static boolean allResultsProduced(salesforce.cdp.hyperdb.v1.QueryStatus status) {
         return status.getCompletionStatus() == salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.RESULTS_PRODUCED
@@ -71,7 +75,11 @@ public class QueryStatus {
 
     public static QueryStatus of(salesforce.cdp.hyperdb.v1.QueryStatus s) throws SQLException {
         val completionStatus = of(s.getCompletionStatus());
-        return new QueryStatus(s.getQueryId(), s.getChunkCount(), s.getRowCount(), s.getProgress(), completionStatus);
+        val executionStats = s.hasExecutionStats()
+                ? QueryExecutionStatistics.of(s.getExecutionStats()).orElse(null)
+                : null;
+        return new QueryStatus(
+                s.getQueryId(), s.getChunkCount(), s.getRowCount(), s.getProgress(), completionStatus, executionStats);
     }
 
     private static CompletionStatus of(salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus completionStatus)

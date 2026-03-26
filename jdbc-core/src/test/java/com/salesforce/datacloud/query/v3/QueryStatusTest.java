@@ -91,4 +91,30 @@ class QueryStatusTest {
 
         assertThat(actual).isPresent().map(QueryStatus::getRowCount).get().isEqualTo(rows);
     }
+
+    @Test
+    void testExecutionStatisticsPresent() throws SQLException {
+        val executionStats = salesforce.cdp.hyperdb.v1.QueryExecutionStatistics.newBuilder()
+                .setWallClockTime(2.5)
+                .setRowsProcessed(5000)
+                .build();
+        val queryInfo = queryInfoWith(s -> s.setExecutionStats(executionStats));
+        val actual = QueryStatus.of(queryInfo);
+
+        assertThat(actual).isPresent().get().satisfies(status -> {
+            assertThat(status.getExecutionStatistics()).isNotNull();
+            assertThat(status.getExecutionStatistics().getWallClockTime()).isEqualTo(java.time.Duration.ofMillis(2500));
+            assertThat(status.getExecutionStatistics().getRowsProcessed()).isEqualTo(5000);
+        });
+    }
+
+    @Test
+    void testExecutionStatisticsAbsent() throws SQLException {
+        val queryInfo = queryInfoWith(s -> {}); // No execution stats set
+        val actual = QueryStatus.of(queryInfo);
+
+        assertThat(actual).isPresent().get().satisfies(status -> {
+            assertThat(status.getExecutionStatistics()).isNull();
+        });
+    }
 }
