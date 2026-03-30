@@ -13,6 +13,7 @@ import com.salesforce.datacloud.jdbc.core.accessor.impl.DoubleVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.FloatVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.LargeListVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.ListVectorAccessor;
+import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampTZVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.VarCharVectorAccessor;
@@ -116,9 +117,9 @@ public class QueryJDBCAccessorFactory {
         } else if (arrowType.equals(Types.MinorType.FIXEDSIZEBINARY)) {
             return new BinaryVectorAccessor((FixedSizeBinaryVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.DATEDAY)) {
-            return new DateVectorAccessor((DateDayVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new DateVectorAccessor((DateDayVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.DATEMILLI)) {
-            return new DateVectorAccessor((DateMilliVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new DateVectorAccessor((DateMilliVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMENANO)) {
             return new TimeVectorAccessor((TimeNanoVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
         } else if (arrowType.equals(Types.MinorType.TIMEMICRO)) {
@@ -128,29 +129,25 @@ public class QueryJDBCAccessorFactory {
         } else if (arrowType.equals(Types.MinorType.TIMESEC)) {
             return new TimeVectorAccessor((TimeSecVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPSECTZ)) {
-            return new TimeStampVectorAccessor(
+            return new TimeStampTZVectorAccessor(
                     (TimeStampSecTZVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPSEC)) {
-            return new TimeStampVectorAccessor(
-                    (TimeStampSecVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeStampVectorAccessor((TimeStampSecVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMILLITZ)) {
-            return new TimeStampVectorAccessor(
+            return new TimeStampTZVectorAccessor(
                     (TimeStampMilliTZVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMILLI)) {
-            return new TimeStampVectorAccessor(
-                    (TimeStampMilliVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeStampVectorAccessor((TimeStampMilliVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMICROTZ)) {
-            return new TimeStampVectorAccessor(
+            return new TimeStampTZVectorAccessor(
                     (TimeStampMicroTZVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMICRO)) {
-            return new TimeStampVectorAccessor(
-                    (TimeStampMicroVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeStampVectorAccessor((TimeStampMicroVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPNANOTZ)) {
-            return new TimeStampVectorAccessor(
+            return new TimeStampTZVectorAccessor(
                     (TimeStampNanoTZVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPNANO)) {
-            return new TimeStampVectorAccessor(
-                    (TimeStampNanoVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeStampVectorAccessor((TimeStampNanoVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.LIST)) {
             return new ListVectorAccessor((ListVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.LARGELIST)) {

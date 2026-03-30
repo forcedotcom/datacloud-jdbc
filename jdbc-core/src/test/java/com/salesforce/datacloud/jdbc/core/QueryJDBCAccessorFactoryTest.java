@@ -17,6 +17,7 @@ import com.salesforce.datacloud.jdbc.core.accessor.impl.DecimalVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DoubleVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.LargeListVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.ListVectorAccessor;
+import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampTZVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.VarCharVectorAccessor;
@@ -279,7 +280,7 @@ public class QueryJDBCAccessorFactoryTest {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
-            assertThat(accessor).isInstanceOf(TimeStampVectorAccessor.class);
+            assertThat(accessor).isInstanceOf(TimeStampTZVectorAccessor.class);
         }
     }
 
@@ -302,7 +303,7 @@ public class QueryJDBCAccessorFactoryTest {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
-            assertThat(accessor).isInstanceOf(TimeStampVectorAccessor.class);
+            assertThat(accessor).isInstanceOf(TimeStampTZVectorAccessor.class);
         }
     }
 
@@ -325,7 +326,7 @@ public class QueryJDBCAccessorFactoryTest {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
-            assertThat(accessor).isInstanceOf(TimeStampVectorAccessor.class);
+            assertThat(accessor).isInstanceOf(TimeStampTZVectorAccessor.class);
         }
     }
 
@@ -348,7 +349,7 @@ public class QueryJDBCAccessorFactoryTest {
             QueryJDBCAccessor accessor =
                     QueryJDBCAccessorFactory.createAccessor(valueVector, GET_CURRENT_ROW, (boolean wasNull) -> {});
 
-            assertThat(accessor).isInstanceOf(TimeStampVectorAccessor.class);
+            assertThat(accessor).isInstanceOf(TimeStampTZVectorAccessor.class);
         }
     }
 

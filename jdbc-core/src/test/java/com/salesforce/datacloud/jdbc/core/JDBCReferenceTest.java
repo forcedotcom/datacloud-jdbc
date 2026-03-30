@@ -150,7 +150,6 @@ public class JDBCReferenceTest {
                         // We return JSON as a String
                         value.setJavaClassName(String.class.getName());
                     }
-                    // Note: Timestamp testing is now enabled after timezone handling fixes
                 }
                 if (isTestable) {
                     testableEntries.add(e);

@@ -4,6 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
+import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorAccessor.INVALID_UNIT_ERROR_RESPONSE;
+import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorAccessor.getTimeUnitForVector;
 import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorGetter.createGetter;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
@@ -21,51 +23,66 @@ import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
-import lombok.val;
 import org.apache.arrow.vector.TimeStampVector;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 
 /**
- * Accessor for naive TIMESTAMP columns (no timezone metadata in Arrow).
+ * Accessor for TIMESTAMPTZ columns (with timezone metadata in Arrow).
  *
- * <p>Naive timestamps store literal date-time values without timezone context.
- * Hyper stores these as UTC epoch values, and this accessor preserves the literal
- * values by interpreting them in UTC (no timezone conversion).
+ * <p>TIMESTAMPTZ values are true UTC instants. The Arrow metadata always contains
+ * a timezone string (e.g. "UTC"). This accessor applies timezone conversion when
+ * returning values.
  *
- * <p>When a Calendar parameter is provided, timezone conversion is applied using
- * that calendar's timezone.
+ * <p>Timezone Precedence (highest to lowest):
+ * 1. Calendar parameter (per-call setting)
+ * 2. Arrow metadata timezone (from column definition)
+ * 3. Session timezone (query setting time_zone)
+ * 4. System default
  *
  * <p>Supported JDBC 4.2 types via getObject(Class):
- * - Instant (raw UTC epoch)
- * - OffsetDateTime (UTC offset)
- * - ZonedDateTime (UTC zone)
- * - LocalDateTime (literal value preserved)
- * - Timestamp (legacy, literal value preserved)
+ * - Instant (always UTC)
+ * - OffsetDateTime (with timezone offset)
+ * - ZonedDateTime (with full timezone info)
+ * - LocalDateTime (converted to effective timezone)
+ * - Timestamp (legacy, uses effective timezone)
  */
-public class TimeStampVectorAccessor extends QueryJDBCAccessor {
-    private static final String TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss.SSSSSS";
-    private static final ZoneId UTC = ZoneId.of("UTC");
-    static final String INVALID_UNIT_ERROR_RESPONSE = "Invalid Arrow time unit";
+public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
+    private static final String TIMESTAMP_WITH_OFFSET_FORMAT = "yyyy-MM-dd HH:mm:ss.SSSSSS xxx";
 
+    private final ZoneId arrowMetadataZone;
+    private final ZoneId sessionZone;
     private final TimeUnit timeUnit;
     private final TimeStampVectorGetter.Holder holder;
     private final TimeStampVectorGetter.Getter getter;
 
-    public TimeStampVectorAccessor(
+    public TimeStampTZVectorAccessor(
             TimeStampVector vector,
             IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer)
+            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer,
+            ZoneId sessionZone)
             throws SQLException {
         super(currentRowSupplier, wasNullConsumer);
+        this.arrowMetadataZone = extractArrowMetadataZone(vector);
+        this.sessionZone = sessionZone;
         this.timeUnit = getTimeUnitForVector(vector);
         this.holder = new TimeStampVectorGetter.Holder();
         this.getter = createGetter(vector);
     }
 
-    /**
-     * Gets the raw Instant value (always UTC) from the vector.
-     */
-    Instant getInstant() {
+    private ZoneId resolveEffectiveZoneId(Calendar calendar) {
+        if (calendar != null) {
+            return calendar.getTimeZone().toZoneId();
+        }
+        if (arrowMetadataZone != null) {
+            return arrowMetadataZone;
+        }
+        if (sessionZone != null) {
+            return sessionZone;
+        }
+        return ZoneId.systemDefault();
+    }
+
+    private Instant getInstant() {
         getter.get(getCurrentRow(), holder);
         this.wasNull = holder.isSet == 0;
         this.wasNullConsumer.setWasNull(this.wasNull);
@@ -95,12 +112,7 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
         if (instant == null) {
             return null;
         }
-
-        if (calendar != null) {
-            return OffsetDateTime.ofInstant(instant, calendar.getTimeZone().toZoneId());
-        }
-
-        return OffsetDateTime.ofInstant(instant, UTC);
+        return OffsetDateTime.ofInstant(instant, resolveEffectiveZoneId(calendar));
     }
 
     private LocalDateTime getLocalDateTime(Calendar calendar) {
@@ -108,12 +120,7 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
         if (instant == null) {
             return null;
         }
-
-        if (calendar != null) {
-            return LocalDateTime.ofInstant(instant, calendar.getTimeZone().toZoneId());
-        }
-
-        return LocalDateTime.ofInstant(instant, UTC);
+        return LocalDateTime.ofInstant(instant, resolveEffectiveZoneId(calendar));
     }
 
     private ZonedDateTime getZonedDateTime(Calendar calendar) {
@@ -121,28 +128,24 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
         if (instant == null) {
             return null;
         }
-
-        if (calendar != null) {
-            return ZonedDateTime.ofInstant(instant, calendar.getTimeZone().toZoneId());
-        }
-
-        return ZonedDateTime.ofInstant(instant, UTC);
+        return ZonedDateTime.ofInstant(instant, resolveEffectiveZoneId(calendar));
     }
 
     @Override
     public Timestamp getTimestamp(Calendar calendar) {
+        if (calendar == null) {
+            Instant instant = getInstant();
+            if (instant == null) {
+                return null;
+            }
+            return Timestamp.from(instant);
+        }
+
         LocalDateTime localDateTime = getLocalDateTime(calendar);
         if (localDateTime == null) {
             return null;
         }
-
-        if (calendar != null) {
-            return Timestamp.valueOf(localDateTime);
-        }
-
-        // Preserve literal values: adjust UTC-stored value to system default for Timestamp
-        Instant adjustedInstant = localDateTime.atZone(ZoneId.systemDefault()).toInstant();
-        return Timestamp.from(adjustedInstant);
+        return Timestamp.valueOf(localDateTime);
     }
 
     @Override
@@ -169,7 +172,7 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
         if (odt == null) {
             return null;
         }
-        return odt.format(DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT));
+        return odt.format(DateTimeFormatter.ofPattern(TIMESTAMP_WITH_OFFSET_FORMAT));
     }
 
     @Override
@@ -217,22 +220,19 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
         return null;
     }
 
-    static TimeUnit getTimeUnitForVector(TimeStampVector vector) throws SQLException {
+    private static ZoneId extractArrowMetadataZone(TimeStampVector vector) {
         ArrowType.Timestamp arrowType =
                 (ArrowType.Timestamp) vector.getField().getFieldType().getType();
 
-        switch (arrowType.getUnit()) {
-            case NANOSECOND:
-                return TimeUnit.NANOSECONDS;
-            case MICROSECOND:
-                return TimeUnit.MICROSECONDS;
-            case MILLISECOND:
-                return TimeUnit.MILLISECONDS;
-            case SECOND:
-                return TimeUnit.SECONDS;
-            default:
-                val rootCauseException = new UnsupportedOperationException(INVALID_UNIT_ERROR_RESPONSE);
-                throw new SQLException(INVALID_UNIT_ERROR_RESPONSE, "22007", rootCauseException);
+        String timezoneName = arrowType.getTimezone();
+        if (timezoneName == null) {
+            return null;
+        }
+
+        try {
+            return ZoneId.of(timezoneName);
+        } catch (Exception e) {
+            return null;
         }
     }
 }
