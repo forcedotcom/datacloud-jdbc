@@ -17,9 +17,9 @@ import com.salesforce.datacloud.reference.ValueWithClass;
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -159,14 +159,6 @@ public class JDBCReferenceTest {
         }
     }
 
-    /**
-     * Tests DataCloudResultSet metadata and returned values against PostgreSQL baseline expectations.
-     * This validates that our JDBC driver produces the same metadata and values as PostgreSQL.
-     * <p>
-     * Note: Timestamp value comparison is limited because timezone handling differences between
-     * PostgreSQL JDBC driver and our driver can result in different string representations,
-     * even though both are correct interpretations.
-     */
     @ParameterizedTest
     @MethodSource("getBaselineEntries")
     @SneakyThrows
@@ -178,16 +170,17 @@ public class JDBCReferenceTest {
             val stmt = conn.createStatement();
 
             try (ResultSet rs = stmt.executeQuery(referenceEntry.getQuery())) {
-                // Check if this is a timestamp query
                 boolean isTimestampQuery =
                         referenceEntry.getQuery().toLowerCase().contains("timestamp");
 
                 if (isTimestampQuery) {
-                    // For timestamp queries, only validate metadata and that values can be retrieved
-                    // Skip exact value comparison due to timezone interpretation differences
-                    validateMetadataOnly(rs, referenceEntry);
+                    // For timestamp queries, compare javaClassName but allow stringValue to differ.
+                    // The reference was captured with PostgreSQL in a specific timezone, while our
+                    // test runs with America/Los_Angeles — so hours differ by the timezone offset.
+                    // Pre-Gregorian dates (before 1582) also differ due to Julian/Gregorian calendar transition.
+                    referenceEntry.validateAgainstResultSet(
+                            rs, referenceEntry.getQuery(), JDBCReferenceTest::timestampValueComparator);
                 } else {
-                    // For non-timestamp queries, validate both metadata and values
                     referenceEntry.validateAgainstResultSet(rs, referenceEntry.getQuery());
                 }
             } catch (Exception e) {
@@ -199,51 +192,10 @@ public class JDBCReferenceTest {
     }
 
     /**
-     * Validates only metadata against the reference, without comparing actual values.
-     * Used for timestamp queries where string representation may differ due to timezone handling.
+     * Comparator for timestamp values that checks javaClassName matches
+     * but allows stringValue to differ due to timezone rendering differences.
      */
-    private void validateMetadataOnly(ResultSet rs, ReferenceEntry referenceEntry) throws SQLException {
-        ResultSetMetaData actualMetaData = rs.getMetaData();
-
-        // Validate column count
-        if (referenceEntry.getColumnMetadata().size() != actualMetaData.getColumnCount()) {
-            throw new RuntimeException(String.format(
-                    "Column count mismatch for query '%s': expected %d, got %d",
-                    referenceEntry.getQuery(),
-                    referenceEntry.getColumnMetadata().size(),
-                    actualMetaData.getColumnCount()));
-        }
-
-        // Validate each column's metadata
-        ArrayList<String> differences = new ArrayList<>();
-        for (int i = 0; i < referenceEntry.getColumnMetadata().size(); i++) {
-            int columnIndex = i + 1; // JDBC is 1-based
-            ColumnMetadata expected = referenceEntry.getColumnMetadata().get(i);
-            ColumnMetadata actual = ColumnMetadata.fromResultSetMetaData(actualMetaData, columnIndex);
-            differences.addAll(actual.collectDifferences(expected));
-        }
-
-        if (differences.size() > 0) {
-            throw new IllegalArgumentException("ColumnMetadata validation failed:\n" + String.join("\n", differences));
-        }
-
-        // Verify that values can be retrieved (don't compare exact values)
-        int rowCount = 0;
-        while (rs.next()) {
-            rowCount++;
-            for (int i = 1; i <= actualMetaData.getColumnCount(); i++) {
-                // Just retrieve the value to ensure no exceptions
-                rs.getObject(i);
-            }
-        }
-
-        // Verify row count matches
-        if (referenceEntry.getReturnedValues().size() != rowCount) {
-            throw new RuntimeException(String.format(
-                    "Row count mismatch for query '%s': expected %d rows, got %d rows",
-                    referenceEntry.getQuery(),
-                    referenceEntry.getReturnedValues().size(),
-                    rowCount));
-        }
+    private static boolean timestampValueComparator(ValueWithClass expected, ValueWithClass actual) {
+        return Objects.equals(expected.getJavaClassName(), actual.getJavaClassName());
     }
 }

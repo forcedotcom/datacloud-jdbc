@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -16,12 +17,19 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Properties;
 import java.util.TimeZone;
+import java.util.stream.Stream;
 import lombok.SneakyThrows;
+import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Integration tests for timezone and timestamp handling in DataCloud JDBC driver.
@@ -510,6 +518,113 @@ public class TimeZoneIntegrationTest {
                     assertThat(ldt.getHour()).isEqualTo(10); // NOT 3! Should preserve literal
                     assertThat(ldt.getMinute()).isEqualTo(0);
                     assertThat(ldt.getSecond()).isEqualTo(0);
+
+                    assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    // ========== Roundtrip parameterized query tests ==========
+
+    /**
+     * Provides test cases for the roundtrip parameterized timestamp test.
+     *
+     * Each case specifies:
+     * - castType: SQL cast to apply ("timestamp" or "timestamptz")
+     * - sessionTimezone: timezone set via querySetting.time_zone
+     * - writeCalendarTz: timezone for Calendar passed to setTimestamp (null = no calendar)
+     * - readCalendarTz: timezone for Calendar passed to getTimestamp (null = no calendar)
+     *
+     * Parameters are always serialized as Arrow TimeStampMicroTZVector(UTC). The write path
+     * uses {@code Timestamp.toLocalDateTime()} to extract local components, which are then
+     * stored as-is in UTC. This means the actual UTC instant of the Timestamp is NOT preserved
+     * on the wire — only the local date/time components are.
+     *
+     * On the Hyper side, when casting the TIMESTAMPTZ parameter:
+     * - {@code ?::timestamp}: Hyper converts the UTC value to the session timezone, then strips
+     *   the timezone. So session timezone affects the naive TIMESTAMP result.
+     * - {@code ?::timestamptz}: The value stays as TIMESTAMPTZ (no conversion).
+     *
+     * On the read side:
+     * - TIMESTAMP (naive): returns the literal value, interpreted in the JVM's default timezone
+     * - TIMESTAMPTZ: returns the true UTC instant
+     *
+     * Because of these conversions, roundtrip value preservation depends on the interaction
+     * between JVM default timezone, session timezone, and Calendar parameters. This test
+     * exercises all combinations to ensure no errors occur and java.time types are consistent.
+     */
+    static Stream<Arguments> timestampRoundtripCases() {
+        List<Arguments> cases = new ArrayList<>();
+        String[] castTypes = {"timestamp", "timestamptz"};
+        String[] sessionTimezones = {"UTC", "America/Los_Angeles"};
+        // null means no calendar
+        String[] calendarTimezones = {null, "UTC", "America/Los_Angeles", "Asia/Tokyo"};
+
+        for (String castType : castTypes) {
+            for (String sessionTz : sessionTimezones) {
+                for (String writeTz : calendarTimezones) {
+                    for (String readTz : calendarTimezones) {
+                        cases.add(Arguments.of(castType, sessionTz, writeTz, readTz));
+                    }
+                }
+            }
+        }
+        return cases.stream();
+    }
+
+    @ParameterizedTest(name = "cast={0} session={1} writeCal={2} readCal={3}")
+    @MethodSource("timestampRoundtripCases")
+    @SneakyThrows
+    public void testTimestampRoundtrip(String castType, String sessionTz, String writeCalTz, String readCalTz) {
+        val input = Timestamp.valueOf(LocalDateTime.of(2024, 6, 15, 14, 30, 45));
+
+        Calendar writeCal = writeCalTz != null ? Calendar.getInstance(TimeZone.getTimeZone(writeCalTz)) : null;
+        Calendar readCal = readCalTz != null ? Calendar.getInstance(TimeZone.getTimeZone(readCalTz)) : null;
+
+        Properties props = new Properties();
+        props.setProperty("querySetting.time_zone", sessionTz);
+
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection(props)) {
+            // Cast the parameter to the target type so Hyper returns it as TIMESTAMP or TIMESTAMPTZ
+            String sql = "SELECT (?::" + castType + ") AS ts";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                if (writeCal != null) {
+                    pstmt.setTimestamp(1, input, writeCal);
+                } else {
+                    pstmt.setTimestamp(1, input);
+                }
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    assertThat(rs.next()).as("result set should have a row").isTrue();
+
+                    // Read back with the specified calendar
+                    Timestamp result;
+                    if (readCal != null) {
+                        result = rs.getTimestamp("ts", readCal);
+                    } else {
+                        result = rs.getTimestamp("ts");
+                    }
+                    assertThat(result)
+                            .as("returned timestamp should not be null")
+                            .isNotNull();
+
+                    // Verify java.time types are also retrievable
+                    Instant instant = rs.getObject("ts", Instant.class);
+                    assertThat(instant).as("Instant should be non-null").isNotNull();
+
+                    LocalDateTime ldt = rs.getObject("ts", LocalDateTime.class);
+                    assertThat(ldt).as("LocalDateTime should be non-null").isNotNull();
+
+                    OffsetDateTime odt = rs.getObject("ts", OffsetDateTime.class);
+                    assertThat(odt).as("OffsetDateTime should be non-null").isNotNull();
+
+                    ZonedDateTime zdt = rs.getObject("ts", ZonedDateTime.class);
+                    assertThat(zdt).as("ZonedDateTime should be non-null").isNotNull();
+
+                    // All java.time types should represent the same instant
+                    assertThat(odt.toInstant()).isEqualTo(instant);
+                    assertThat(zdt.toInstant()).isEqualTo(instant);
 
                     assertThat(rs.next()).isFalse();
                 }

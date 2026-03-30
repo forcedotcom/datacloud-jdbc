@@ -9,6 +9,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BiPredicate;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.jackson.Jacksonized;
@@ -32,6 +33,12 @@ public class ReferenceEntry {
     private final List<List<ValueWithClass>> returnedValues;
 
     public void validateAgainstResultSet(ResultSet resultSet, String sql) throws SQLException {
+        validateAgainstResultSet(resultSet, sql, ValueWithClass::equals);
+    }
+
+    public void validateAgainstResultSet(
+            ResultSet resultSet, String sql, BiPredicate<ValueWithClass, ValueWithClass> valuesComparator)
+            throws SQLException {
         ResultSetMetaData actualMetaData = resultSet.getMetaData();
 
         // Validate column count
@@ -82,8 +89,7 @@ public class ReferenceEntry {
                 ValueWithClass expectedValue = expectedRow.get(colIndex);
                 ValueWithClass actualValue = actualRow.get(colIndex);
 
-                // Handle null comparison properly
-                if (!expectedValue.equals(actualValue)) {
+                if (!valuesComparator.test(expectedValue, actualValue)) {
                     throw new RuntimeException(String.format(
                             "Value mismatch for query '%s', row %d, column %d: expected '%s', got '%s'",
                             sql, rowIndex + 1, colIndex + 1, expectedValue, actualValue));
