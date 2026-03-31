@@ -168,9 +168,15 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     }
 
     /**
-     * Override no-argument getTimestamp methods to pass null calendar.
-     * This preserves literal values for naive TIMESTAMP while allowing
-     * explicit calendar parameters to work correctly for timezone conversion.
+     * Override no-calendar timestamp/date/time methods to pass null calendar.
+     *
+     * Avatica's default implementations call the accessor with localCalendar (derived from
+     * the TimeZone passed during ResultSet construction). For naive TIMESTAMP, the accessor's
+     * calendar-aware path shifts the literal by the timezone offset. Passing null triggers
+     * the literal-preserving path instead.
+     *
+     * When a user explicitly calls getTimestamp(int, Calendar), the calendar is passed through
+     * to the accessor and honored as expected by the JDBC spec.
      */
     @Override
     public java.sql.Timestamp getTimestamp(int columnIndex) throws SQLException {
@@ -179,8 +185,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
     @Override
     public java.sql.Timestamp getTimestamp(String columnLabel) throws SQLException {
-        int columnIndex = findColumn(columnLabel);
-        return getTimestamp(columnIndex);
+        return getTimestamp(findColumn(columnLabel));
     }
 
     @Override
@@ -190,8 +195,7 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
     @Override
     public java.sql.Date getDate(String columnLabel) throws SQLException {
-        int columnIndex = findColumn(columnLabel);
-        return getDate(columnIndex);
+        return getDate(findColumn(columnLabel));
     }
 
     @Override
@@ -201,7 +205,28 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
 
     @Override
     public java.sql.Time getTime(String columnLabel) throws SQLException {
-        int columnIndex = findColumn(columnLabel);
-        return getTime(columnIndex);
+        return getTime(findColumn(columnLabel));
+    }
+
+    /**
+     * Override getObject to bypass Avatica's AvaticaSite.get() for timestamp columns.
+     *
+     * AvaticaSite.get() passes localCalendar to accessor.getTimestamp(localCalendar),
+     * triggering the same calendar-aware shift described above. For timestamp types,
+     * we call the accessor's getObject() directly (which uses the null-calendar path).
+     * All other types delegate to Avatica's default behavior.
+     */
+    @Override
+    public Object getObject(int columnIndex) throws SQLException {
+        int sqlType = getMetaData().getColumnType(columnIndex);
+        if (sqlType == java.sql.Types.TIMESTAMP || sqlType == java.sql.Types.TIMESTAMP_WITH_TIMEZONE) {
+            return accessorList.get(columnIndex - 1).getObject();
+        }
+        return super.getObject(columnIndex);
+    }
+
+    @Override
+    public Object getObject(String columnLabel) throws SQLException {
+        return getObject(findColumn(columnLabel));
     }
 }

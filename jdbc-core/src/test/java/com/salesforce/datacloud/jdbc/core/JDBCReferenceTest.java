@@ -19,22 +19,42 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Properties;
+import java.util.TimeZone;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-@ExtendWith(LocalHyperTestBase.class)
 /**
  * This test case compares our JDBC driver against the behavior of the
  * PostgreSQL JDBC driver. It loads the pre-materialized test expectations
- * from`reference.json` and makes sure our driver behaves the same.
+ * from reference.json and makes sure our driver behaves the same.
+ *
+ * The JVM timezone is pinned to America/Los_Angeles to match the timezone
+ * used when generating reference.json via PostgresReferenceGenerator.
+ * This ensures Timestamp.toString() produces consistent stringValue output
+ * across all environments (local, CI, etc.).
  */
+@ExtendWith(LocalHyperTestBase.class)
 public class JDBCReferenceTest {
+
+    private static TimeZone originalTimeZone;
+
+    @BeforeAll
+    static void setTimezone() {
+        originalTimeZone = TimeZone.getDefault();
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"));
+    }
+
+    @AfterAll
+    static void restoreTimezone() {
+        TimeZone.setDefault(originalTimeZone);
+    }
 
     /**
      * Loads baseline entries from the reference.json file.
@@ -76,12 +96,6 @@ public class JDBCReferenceTest {
                     }
                     // This type isn't supported by the driver yet
                     if (c.getColumnTypeName().endsWith("interval")) {
-                        isTestable = false;
-                    }
-                    // Timestamp arrays have issues with values before the Gregorian epoch.
-                    // It is currently unclear if the bug is in Hyper, the JDBC driver or the Java Arrow library
-                    else if (c.getColumnTypeName().equals("_timestamptz")
-                            || c.getColumnTypeName().equals("_timestamp")) {
                         isTestable = false;
                     }
                     // This type behaves differently between Hyper and Postgres and is not worth it to test
@@ -138,13 +152,13 @@ public class JDBCReferenceTest {
                     }
                 }
 
-                // Patch result value expecation
+                // Patch result value expectation
                 for (List<ValueWithClass> v : e.getReturnedValues()) {
                     assertEquals(1, v.size(), "The test driver only supports one result value per query");
                     ValueWithClass value = v.get(0);
                     if (e.getQuery().contains("smallint") && (value.getJavaClassName() != null)) {
-                        // Avatica doesn't support returning short as Integer (which the standard requires as described
-                        // in B-3)
+                        // Avatica's AvaticaSite.get() calls getShort() for SMALLINT, returning Short
+                        // instead of Integer (which the JDBC spec table B-3 recommends)
                         value.setJavaClassName(Short.class.getName());
                     } else if ("org.postgresql.util.PGobject".equals(value.getJavaClassName())) {
                         // We return JSON as a String
@@ -170,32 +184,12 @@ public class JDBCReferenceTest {
             val stmt = conn.createStatement();
 
             try (ResultSet rs = stmt.executeQuery(referenceEntry.getQuery())) {
-                boolean isTimestampQuery =
-                        referenceEntry.getQuery().toLowerCase().contains("timestamp");
-
-                if (isTimestampQuery) {
-                    // For timestamp queries, compare javaClassName but allow stringValue to differ.
-                    // The reference was captured with PostgreSQL in a specific timezone, while our
-                    // test runs with America/Los_Angeles — so hours differ by the timezone offset.
-                    // Pre-Gregorian dates (before 1582) also differ due to Julian/Gregorian calendar transition.
-                    referenceEntry.validateAgainstResultSet(
-                            rs, referenceEntry.getQuery(), JDBCReferenceTest::timestampValueComparator);
-                } else {
-                    referenceEntry.validateAgainstResultSet(rs, referenceEntry.getQuery());
-                }
+                referenceEntry.validateAgainstResultSet(rs, referenceEntry.getQuery());
             } catch (Exception e) {
                 System.out.println("Failed to execute query: " + referenceEntry.getQuery());
                 System.out.println("Error: " + e.getMessage());
                 throw (e);
             }
         }
-    }
-
-    /**
-     * Comparator for timestamp values that checks javaClassName matches
-     * but allows stringValue to differ due to timezone rendering differences.
-     */
-    private static boolean timestampValueComparator(ValueWithClass expected, ValueWithClass actual) {
-        return Objects.equals(expected.getJavaClassName(), actual.getJavaClassName());
     }
 }
