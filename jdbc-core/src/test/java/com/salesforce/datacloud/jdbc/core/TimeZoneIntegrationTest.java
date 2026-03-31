@@ -536,23 +536,26 @@ public class TimeZoneIntegrationTest {
      * - writeCalendarTz: timezone for Calendar passed to setTimestamp (null = no calendar)
      * - readCalendarTz: timezone for Calendar passed to getTimestamp (null = no calendar)
      *
-     * Parameters are always serialized as Arrow TimeStampMicroTZVector(UTC). The write path
-     * uses {@code Timestamp.toLocalDateTime()} to extract local components, which are then
-     * stored as-is in UTC. This means the actual UTC instant of the Timestamp is NOT preserved
-     * on the wire — only the local date/time components are.
+     * Parameters are serialized as Arrow TimeStampMicroTZVector(UTC). The write path uses the
+     * Timestamp's actual UTC instant ({@code Timestamp.toInstant()}) directly. The Calendar
+     * parameter on {@code setTimestamp} does not affect the stored instant, because we always
+     * serialize as UTC epoch microseconds.
      *
      * On the Hyper side, when casting the TIMESTAMPTZ parameter:
-     * - {@code ?::timestamp}: Hyper converts the UTC value to the session timezone, then strips
-     *   the timezone. So session timezone affects the naive TIMESTAMP result.
-     * - {@code ?::timestamptz}: The value stays as TIMESTAMPTZ (no conversion).
+     * - {@code ?::timestamptz}: the value stays as TIMESTAMPTZ (no conversion). The roundtrip
+     *   always preserves the original instant.
+     * - {@code ?::timestamp}: Hyper converts the UTC instant to the session timezone, then
+     *   strips the timezone. The resulting naive TIMESTAMP depends on the session timezone,
+     *   so roundtrip preservation is only guaranteed when session timezone matches the JVM
+     *   default timezone.
      *
      * On the read side:
-     * - TIMESTAMP (naive): returns the literal value, interpreted in the JVM's default timezone
-     * - TIMESTAMPTZ: returns the true UTC instant
+     * - TIMESTAMPTZ: the TZ accessor returns the true UTC instant
+     * - TIMESTAMP (naive): the accessor interprets the literal value in the JVM's default
+     *   timezone
      *
-     * Because of these conversions, roundtrip value preservation depends on the interaction
-     * between JVM default timezone, session timezone, and Calendar parameters. This test
-     * exercises all combinations to ensure no errors occur and java.time types are consistent.
+     * This test exercises all combinations to ensure no errors occur, java.time types are
+     * internally consistent, and TIMESTAMPTZ roundtrips always preserve the instant.
      */
     static Stream<Arguments> timestampRoundtripCases() {
         List<Arguments> cases = new ArrayList<>();
@@ -625,6 +628,15 @@ public class TimeZoneIntegrationTest {
                     // All java.time types should represent the same instant
                     assertThat(odt.toInstant()).isEqualTo(instant);
                     assertThat(zdt.toInstant()).isEqualTo(instant);
+
+                    // For TIMESTAMPTZ, the stored instant must match the input's instant.
+                    // We compare via Instant (not Timestamp.getTime) because getTimestamp(Calendar)
+                    // shifts the wall-clock representation, changing the epoch millis.
+                    if ("timestamptz".equals(castType)) {
+                        assertThat(instant)
+                                .as("TIMESTAMPTZ roundtrip should preserve the instant")
+                                .isEqualTo(input.toInstant());
+                    }
 
                     assertThat(rs.next()).isFalse();
                 }

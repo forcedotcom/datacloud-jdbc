@@ -7,7 +7,6 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toArrowByteArray;
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCDateFromDateAndCalendar;
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimeFromTimeAndCalendar;
-import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimestampFromTimestampAndCalendar;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -300,8 +299,9 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
-        val utcTimestamp = getUTCTimestampFromTimestampAndCalendar(x, cal);
-        setParameter(parameterIndex, Types.TIMESTAMP, utcTimestamp);
+        // TIMESTAMP Arrow vectors (TimeStampMicroTZVector) carry timezone metadata ("UTC"),
+        // so VectorPopulator can use the actual instant directly. Calendar is not needed.
+        setParameter(parameterIndex, Types.TIMESTAMP, x);
     }
 
     @Override

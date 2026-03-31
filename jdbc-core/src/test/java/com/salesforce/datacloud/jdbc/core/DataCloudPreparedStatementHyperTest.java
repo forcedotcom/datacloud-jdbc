@@ -164,9 +164,6 @@ public class DataCloudPreparedStatementHyperTest {
         LocalDateTime startDateTime = LocalDateTime.of(2024, 1, 1, 0, 0);
         LocalDateTime endDateTime = LocalDateTime.of(2024, 1, 5, 0, 0);
 
-        TimeZone utcTimeZone = TimeZone.getTimeZone("UTC");
-        Calendar utcCalendar = Calendar.getInstance(utcTimeZone);
-
         try (Connection connection = getHyperQueryConnection()) {
             try (PreparedStatement preparedStatement = connection.prepareStatement("select ? as a")) {
                 for (LocalDateTime dateTime = startDateTime;
@@ -177,10 +174,10 @@ public class DataCloudPreparedStatementHyperTest {
 
                     try (ResultSet resultSet = preparedStatement.executeQuery()) {
                         while (resultSet.next()) {
-                            val actual = resultSet.getTimestamp("a", utcCalendar);
-                            assertThat(actual)
-                                    .isEqualTo(sqlTimestamp)
-                                    .as("Expected the date to be %s in UTC timezone but got %s", sqlTimestamp, actual);
+                            val actual = resultSet.getTimestamp("a");
+                            assertThat(actual.toInstant())
+                                    .as("Expected the instant to match for %s", sqlTimestamp)
+                                    .isEqualTo(sqlTimestamp.toInstant());
                         }
                     }
                 }
@@ -197,9 +194,6 @@ public class DataCloudPreparedStatementHyperTest {
         TimeZone plusTwoTimeZone = TimeZone.getTimeZone("GMT+2");
         Calendar calendar = Calendar.getInstance(plusTwoTimeZone);
 
-        TimeZone utcTimeZone = TimeZone.getTimeZone("UTC");
-        Calendar utcCalendar = Calendar.getInstance(utcTimeZone);
-
         try (Connection connection = getHyperQueryConnection()) {
             try (PreparedStatement preparedStatement = connection.prepareStatement("select ? as a")) {
                 for (LocalDateTime dateTime = startDateTime;
@@ -209,18 +203,12 @@ public class DataCloudPreparedStatementHyperTest {
                     val sqlTimestamp = Timestamp.valueOf(dateTime);
                     preparedStatement.setTimestamp(1, sqlTimestamp, calendar);
 
-                    val localDateTime = sqlTimestamp.toLocalDateTime();
-
-                    val zonedDateTime = localDateTime.atZone(plusTwoTimeZone.toZoneId());
-                    val convertedDateTime = zonedDateTime.withZoneSameInstant(utcTimeZone.toZoneId());
-                    val expected = Timestamp.valueOf(convertedDateTime.toLocalDateTime());
-
                     try (ResultSet resultSet = preparedStatement.executeQuery()) {
                         while (resultSet.next()) {
-                            val actual = resultSet.getTimestamp("a", utcCalendar);
-                            assertThat(actual)
-                                    .isEqualTo(expected)
-                                    .as("Expected the date to be %s in UTC timezone but got %s", sqlTimestamp, actual);
+                            val actual = resultSet.getTimestamp("a");
+                            assertThat(actual.toInstant())
+                                    .as("Expected the instant to match for %s", sqlTimestamp)
+                                    .isEqualTo(sqlTimestamp.toInstant());
                         }
                     }
                 }

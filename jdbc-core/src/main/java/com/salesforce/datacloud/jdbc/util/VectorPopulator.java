@@ -5,7 +5,6 @@
 package com.salesforce.datacloud.jdbc.util;
 
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.adjustForCalendar;
-import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.localDateTimeToMicrosecondsSinceEpoch;
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.millisToMicrosecondsSinceMidnight;
 
 import com.google.common.collect.ImmutableMap;
@@ -16,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Calendar;
 import java.util.List;
@@ -92,7 +92,7 @@ class VectorValueSetterFactory {
                 Maps.immutableEntry(DecimalVector.class, new DecimalVectorSetter()),
                 Maps.immutableEntry(DateDayVector.class, new DateDayVectorSetter()),
                 Maps.immutableEntry(TimeMicroVector.class, new TimeMicroVectorSetter(calendar)),
-                Maps.immutableEntry(TimeStampMicroTZVector.class, new TimeStampMicroTZVectorSetter(calendar)),
+                Maps.immutableEntry(TimeStampMicroTZVector.class, new TimeStampMicroTZVectorSetter()),
                 Maps.immutableEntry(TinyIntVector.class, new TinyIntVectorSetter()));
     }
 
@@ -308,19 +308,17 @@ class TimeMicroVectorSetter extends BaseVectorSetter<TimeMicroVector, Time> {
 
 /** Setter implementation for TimeStampMicroTZVector. */
 class TimeStampMicroTZVectorSetter extends BaseVectorSetter<TimeStampMicroTZVector, Timestamp> {
-    private final Calendar calendar;
 
-    TimeStampMicroTZVectorSetter(Calendar calendar) {
+    TimeStampMicroTZVectorSetter() {
         super(Timestamp.class);
-        this.calendar = calendar;
     }
 
     @Override
     protected void setValueInternal(TimeStampMicroTZVector vector, Timestamp value) {
-        LocalDateTime localDateTime = value.toLocalDateTime();
-        localDateTime = adjustForCalendar(localDateTime, calendar, TimeZone.getTimeZone("UTC"));
-        long microsecondsSinceEpoch = localDateTimeToMicrosecondsSinceEpoch(localDateTime);
-
+        // Use the Timestamp's actual UTC instant rather than extracting local components
+        // via toLocalDateTime(), which would lose timezone information.
+        Instant instant = value.toInstant();
+        long microsecondsSinceEpoch = instant.getEpochSecond() * 1_000_000 + instant.getNano() / 1_000;
         vector.setSafe(0, microsecondsSinceEpoch);
     }
 

@@ -192,20 +192,12 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
             verify(mockParameterManager).setParameter(19, Types.TIME, Time.valueOf("22:00:00"));
         }
 
-        try (MockedStatic<DateTimeUtils> mockedDateTimeUtil = mockStatic(DateTimeUtils.class)) {
-            mockedDateTimeUtil
-                    .when(() -> DateTimeUtils.getUTCTimestampFromTimestampAndCalendar(
-                            Timestamp.valueOf("1970-01-01 00:00:00.000000000"), calendar))
-                    .thenReturn(Timestamp.valueOf("1969-12-31 22:00:00.000000000"));
-
-            preparedStatement.setTimestamp(20, Timestamp.valueOf("1970-01-01 00:00:00.000000000"), calendar);
-
-            mockedDateTimeUtil.verify(
-                    () -> DateTimeUtils.getUTCTimestampFromTimestampAndCalendar(
-                            Timestamp.valueOf("1970-01-01 00:00:00.000000000"), calendar),
-                    times(1));
-            verify(mockParameterManager)
-                    .setParameter(20, Types.TIMESTAMP, Timestamp.valueOf("1969-12-31 22:00:00.000000000"));
+        {
+            // TIMESTAMP uses TimeStampMicroTZVector which carries timezone metadata ("UTC"),
+            // so Calendar is not needed — the raw Timestamp is passed through.
+            Timestamp ts = Timestamp.valueOf("1970-01-01 00:00:00.000000000");
+            preparedStatement.setTimestamp(20, ts, calendar);
+            verify(mockParameterManager).setParameter(20, Types.TIMESTAMP, ts);
         }
 
         assertThatThrownBy(() -> preparedStatement.setObject(1, new InvalidClass()))
