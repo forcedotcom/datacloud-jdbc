@@ -121,13 +121,13 @@ public class QueryJDBCAccessorFactory {
         } else if (arrowType.equals(Types.MinorType.DATEMILLI)) {
             return new DateVectorAccessor((DateMilliVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMENANO)) {
-            return new TimeVectorAccessor((TimeNanoVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeVectorAccessor((TimeNanoVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMEMICRO)) {
-            return new TimeVectorAccessor((TimeMicroVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeVectorAccessor((TimeMicroVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMEMILLI)) {
-            return new TimeVectorAccessor((TimeMilliVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeVectorAccessor((TimeMilliVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESEC)) {
-            return new TimeVectorAccessor((TimeSecVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeVectorAccessor((TimeSecVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPSECTZ)) {
             return new TimeStampTZVectorAccessor(
                     (TimeStampSecTZVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
