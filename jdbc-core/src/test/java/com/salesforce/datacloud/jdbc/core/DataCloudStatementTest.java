@@ -8,12 +8,16 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.sql.SQLException;
+import java.time.ZoneId;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.grpcmock.junit5.InProcessGrpcMockExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,5 +53,51 @@ public class DataCloudStatementTest extends InterceptedHyperTestBase {
         assertThat(ex)
                 .hasMessage("Batch execution is not supported in Data Cloud query")
                 .hasFieldOrPropertyWithValue("SQLState", SqlErrorCodes.FEATURE_NOT_SUPPORTED);
+    }
+
+    @Test
+    @SneakyThrows
+    public void testResolveSessionTimeZoneWithInvalidTimezone() {
+        Map<String, String> querySettings = new HashMap<>();
+        querySettings.put("time_zone", "INVALID_TIMEZONE");
+        statement.statementProperties =
+                StatementProperties.builder().querySettings(querySettings).build();
+
+        ZoneId result = statement.resolveSessionTimeZone();
+        assertThat(result).isEqualTo(ZoneId.systemDefault());
+    }
+
+    @Test
+    @SneakyThrows
+    public void testResolveSessionTimeZoneWithValidTimezone() {
+        Map<String, String> querySettings = new HashMap<>();
+        querySettings.put("time_zone", "America/New_York");
+        statement.statementProperties =
+                StatementProperties.builder().querySettings(querySettings).build();
+
+        ZoneId result = statement.resolveSessionTimeZone();
+        assertThat(result).isEqualTo(ZoneId.of("America/New_York"));
+    }
+
+    @Test
+    @SneakyThrows
+    public void testResolveSessionTimeZoneWithEmptyTimezone() {
+        Map<String, String> querySettings = new HashMap<>();
+        querySettings.put("time_zone", "  ");
+        statement.statementProperties =
+                StatementProperties.builder().querySettings(querySettings).build();
+
+        ZoneId result = statement.resolveSessionTimeZone();
+        assertThat(result).isEqualTo(ZoneId.systemDefault());
+    }
+
+    @Test
+    @SneakyThrows
+    public void testResolveSessionTimeZoneWithNoTimezoneSetting() {
+        statement.statementProperties =
+                StatementProperties.builder().querySettings(new HashMap<>()).build();
+
+        ZoneId result = statement.resolveSessionTimeZone();
+        assertThat(result).isEqualTo(ZoneId.systemDefault());
     }
 }
