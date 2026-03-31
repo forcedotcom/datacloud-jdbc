@@ -13,17 +13,12 @@ public class Tracer {
 
     private static final String INVALID = "0000000000000000";
 
-    private static volatile Tracer instance;
+    private static final class Holder {
+        static final Tracer INSTANCE = new Tracer();
+    }
 
-    public static synchronized Tracer get() {
-        if (instance == null) {
-            synchronized (Tracer.class) {
-                if (instance == null) {
-                    instance = new Tracer();
-                }
-            }
-        }
-        return instance;
+    public static Tracer get() {
+        return Holder.INSTANCE;
     }
 
     public String nextSpanId() {
@@ -45,7 +40,7 @@ public class Tracer {
         if (id == 0) {
             return INVALID;
         }
-        char[] result = TemporaryBuffers.chars(SPAN_ID_HEX_LENGTH);
+        char[] result = new char[SPAN_ID_HEX_LENGTH];
         EncodingUtils.longToBase16String(id, result, 0);
         return new String(result, 0, SPAN_ID_HEX_LENGTH);
     }
@@ -74,7 +69,7 @@ public class Tracer {
         if (traceIdLongHighPart == 0 && traceIdLongLowPart == 0) {
             return INVALID;
         }
-        char[] chars = TemporaryBuffers.chars(TRACE_ID_HEX_LENGTH);
+        char[] chars = new char[TRACE_ID_HEX_LENGTH];
         EncodingUtils.longToBase16String(traceIdLongHighPart, chars, 0);
         EncodingUtils.longToBase16String(traceIdLongLowPart, chars, 16);
         return new String(chars, 0, TRACE_ID_HEX_LENGTH);
