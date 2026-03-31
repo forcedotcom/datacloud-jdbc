@@ -141,7 +141,8 @@ public class AsyncStreamObserver<ReqT, RespT extends AbstractMessage> implements
         lock.lock();
         try {
             long elapsed = System.nanoTime() - startNanos;
-            ElapsedLogger.logSuccess(logger, timingName + ", responseSizeMb=" + totalResponseSize / 1_000_000.0, elapsed);
+            ElapsedLogger.logSuccess(
+                    logger, timingName + ", responseSizeMb=" + totalResponseSize / 1_000_000.0, elapsed);
             streamEnded = true;
 
             // Complete any pending future with empty (only if buffer is also empty)
