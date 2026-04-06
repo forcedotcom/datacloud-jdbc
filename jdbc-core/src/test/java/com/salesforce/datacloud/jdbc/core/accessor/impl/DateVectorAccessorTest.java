@@ -6,7 +6,6 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.appendDates;
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.nulledOutVector;
-import static org.apache.calcite.avatica.util.DateTimeUtils.MILLIS_PER_DAY;
 
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
@@ -36,6 +35,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 @ExtendWith(SoftAssertionsExtension.class)
 public class DateVectorAccessorTest {
+    private static final long MILLIS_PER_DAY = 86_400_000L;
 
     @InjectSoftAssertions
     private SoftAssertions collector;

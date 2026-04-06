@@ -10,6 +10,8 @@ import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
 
 import com.google.protobuf.Empty;
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
@@ -47,7 +49,6 @@ import java.sql.Statement;
 import java.sql.Struct;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -61,9 +62,6 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.calcite.avatica.AvaticaResultSetMetaData;
-import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.avatica.Meta;
 import salesforce.cdp.hyperdb.v1.CancelQueryParam;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
@@ -279,11 +277,8 @@ public class DataCloudConnection implements Connection {
     public ResultSetMetaData getSchemaForQueryId(String queryId) throws SQLException {
         try {
             val schema = QuerySchemaAccessor.getArrowSchema(QueryAccessGrpcClient.of(queryId, getStub()));
-            List<ColumnMetaData> columns = toColumnMetaData(schema.getFields());
-            // Create metadata directly without full ResultSet infrastructure
-            Meta.Signature signature = new Meta.Signature(
-                    columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
-            return new AvaticaResultSetMetaData(null, null, signature);
+            List<ColumnMetadata> columns = toColumnMetaData(schema.getFields());
+            return new SimpleResultSetMetaData(columns);
         } catch (StatusRuntimeException ex) {
             throw createException(connectionProperties.isIncludeCustomerDetailInReason(), null, queryId, ex);
         }

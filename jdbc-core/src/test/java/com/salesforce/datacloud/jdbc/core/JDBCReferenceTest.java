@@ -157,7 +157,8 @@ public class JDBCReferenceTest {
                     assertEquals(1, v.size(), "The test driver only supports one result value per query");
                     ValueWithClass value = v.get(0);
                     if (e.getQuery().contains("smallint") && (value.getJavaClassName() != null)) {
-                        value.setJavaClassName(Short.class.getName());
+                        // JDBC spec table B-3 requires SMALLINT to return Integer
+                        value.setJavaClassName(Integer.class.getName());
                     } else if ("org.postgresql.util.PGobject".equals(value.getJavaClassName())) {
                         // We return JSON as a String
                         value.setJavaClassName(String.class.getName());

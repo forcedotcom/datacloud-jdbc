@@ -38,7 +38,7 @@ abstract class ShadingExtension @Inject constructor(
         "META-INF/LICENSE*", "META-INF/NOTICE*",
         "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "META-INF/*.xml",
         "**/*.proto", "org.slf4j",
-        "META-INF/services/com.fasterxml.*", "org.apache.calcite.avatica.remote.Driver",
+        "META-INF/services/com.fasterxml.*",
         ".netbeans_automatic_build", "git.properties", "google-http-client.properties",
         "storage.v1.json", "pipes-fork-server-default-log4j2.xml",
         "dependencies.properties", "arrow-git.properties"
@@ -73,9 +73,6 @@ abstract class ShadingExtension @Inject constructor(
             relocate("okhttp3", "$shadeBase.okhttp3")
             relocate("okio", "$shadeBase.okio")
             relocate("org.apache.arrow", "$shadeBase.org.apache.arrow")
-            relocate("org.apache.calcite", "$shadeBase.org.apache.calcite") {
-                exclude("org.apache.calcite.avatica.remote.Driver")
-            }
             relocate("org.apache.commons", "$shadeBase.org.apache.commons")
             relocate("org.apache.hc", "$shadeBase.org.apache.hc")
 

@@ -6,6 +6,7 @@ package com.salesforce.datacloud.jdbc.core.metadata;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.List;
 import lombok.val;
 
@@ -58,7 +59,12 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int getColumnType(int column) throws SQLException {
-        return getColumn(column).getType().getType().getVendorTypeNumber();
+        int typeId = getColumn(column).getType().getType().getVendorTypeNumber();
+        // Arrow timestamps with timezone map to JDBC TIMESTAMP, not TIMESTAMP_WITH_TIMEZONE
+        if (typeId == Types.TIMESTAMP_WITH_TIMEZONE) {
+            return Types.TIMESTAMP;
+        }
+        return typeId;
     }
 
     @Override
@@ -142,8 +148,9 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public boolean isReadOnly(int column) throws SQLException {
-        // Our result sets are always read only
-        return true;
+        // Match standard JDBC behavior: readOnly=false does not mean the column is writable,
+        // it means we don't know. isWritable() and isDefinitelyWritable() still return false.
+        return false;
     }
 
     @Override

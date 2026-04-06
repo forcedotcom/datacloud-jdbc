@@ -688,39 +688,39 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     @Override
     public ResultSet getColumnPrivileges(String catalog, String schema, String table, String columnNamePattern)
             throws SQLException {
-        return MetadataResultSet.of();
+        return SimpleMetadataResultSet.empty();
     }
 
     @Override
     public ResultSet getTablePrivileges(String catalog, String schemaPattern, String tableNamePattern)
             throws SQLException {
-        return MetadataResultSet.of();
+        return SimpleMetadataResultSet.empty();
     }
 
     @Override
     public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable)
             throws SQLException {
-        return MetadataResultSet.of();
+        return SimpleMetadataResultSet.empty();
     }
 
     @Override
     public ResultSet getVersionColumns(String catalog, String schema, String table) throws SQLException {
-        return MetadataResultSet.of();
+        return SimpleMetadataResultSet.empty();
     }
 
     @Override
     public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
-        return MetadataResultSet.of();
+        return SimpleMetadataResultSet.empty();
     }
 
     @Override
     public ResultSet getImportedKeys(String catalog, String schema, String table) throws SQLException {
-        return MetadataResultSet.of();
+        return SimpleMetadataResultSet.empty();
     }
 
     @Override
     public ResultSet getExportedKeys(String catalog, String schema, String table) throws SQLException {
-        return MetadataResultSet.of();
+        return SimpleMetadataResultSet.empty();
     }
 
     @Override
@@ -732,18 +732,18 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
             String foreignSchema,
             String foreignTable)
             throws SQLException {
-        return MetadataResultSet.of();
+        return SimpleMetadataResultSet.empty();
     }
 
     @Override
     public ResultSet getTypeInfo() throws SQLException {
-        return MetadataResultSet.of();
+        return SimpleMetadataResultSet.empty();
     }
 
     @Override
     public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate)
             throws SQLException {
-        return MetadataResultSet.of();
+        return SimpleMetadataResultSet.empty();
     }
 
     @Override

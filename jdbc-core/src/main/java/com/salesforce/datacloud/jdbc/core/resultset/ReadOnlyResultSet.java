@@ -27,7 +27,7 @@ import java.sql.Timestamp;
  * Overwrites all update-related methods to throw {@link SQLFeatureNotSupportedException}.
  * Used as a mixin to keep the boilerplate out of the actual result set implementations.
  */
-interface ReadOnlyResultSet extends ResultSet {
+public interface ReadOnlyResultSet extends ResultSet {
     @Override
     public default int getConcurrency() throws SQLException {
         return ResultSet.CONCUR_READ_ONLY;

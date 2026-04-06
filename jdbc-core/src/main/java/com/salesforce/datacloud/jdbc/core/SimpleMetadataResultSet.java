@@ -10,6 +10,7 @@ import com.salesforce.datacloud.jdbc.core.resultset.ColumnAccessor;
 import com.salesforce.datacloud.jdbc.core.resultset.SimpleResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
 import java.util.List;
 import java.util.OptionalLong;
 
@@ -26,6 +27,10 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
             SimpleResultSetMetaData metadata, ColumnAccessor<SimpleMetadataResultSet>[] accessors, List<Object> data) {
         super(metadata, accessors, false);
         this.data = data;
+    }
+
+    public static SimpleMetadataResultSet empty() throws SQLException {
+        return of(new SimpleResultSetMetaData(Collections.emptyList()), Collections.emptyList());
     }
 
     public static SimpleMetadataResultSet of(SimpleResultSetMetaData metadata, List<Object> data) throws SQLException {

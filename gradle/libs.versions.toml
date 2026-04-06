@@ -20,8 +20,6 @@ net-jodah-failsafe = "3.3.2"
 netty = "4.1.132.Final"
 # This is soft pinned to 4.* (as we didn't invest in the upgrade yet) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 okhttp3 = "4.12.0"
-# @pin this version as the following versions have a breaking Cursor change, that - with the upcoming Avactica removal - we currently don't want to invest in
-org-apache-calcite-avatica-core = "1.26.0"
 org-apache-commons-commons-lang3 = "3.20.0"
 # This is soft pinned to 3.* (as the driver is targetting in Spark 3) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 org-apache-spark = "3.5.8"
@@ -43,7 +41,6 @@ slf4j = "2.0.17"
 [libraries]
 apache-arrow-memory-netty = { module = "org.apache.arrow:arrow-memory-netty", version.ref = "arrow" }
 apache-arrow-vector = { module = "org.apache.arrow:arrow-vector", version.ref = "arrow" }
-apache-calcite-avatica = { module = "org.apache.calcite.avatica:avatica-core", version.ref = "org-apache-calcite-avatica-core" }
 apache-commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "org-apache-commons-commons-lang3" }
 apache-httpcomponents-httpclient = { module = "org.apache.httpcomponents.client5:httpclient5", version.ref = "apache-httpcomponents-httpclient" }
 assertj = { module = "org.assertj:assertj-core", version.ref = "org-assertj-assertj-core" }

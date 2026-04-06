@@ -13,7 +13,6 @@ import lombok.SneakyThrows;
 import lombok.val;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,12 +27,6 @@ class ArrowStreamReaderCursorTest {
 
     @Mock
     protected VectorSchemaRoot root;
-
-    @Test
-    void createGetterIsUnsupported() {
-        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
-        Assertions.assertThrows(UnsupportedOperationException.class, () -> sut.createGetter(0));
-    }
 
     @Test
     @SneakyThrows

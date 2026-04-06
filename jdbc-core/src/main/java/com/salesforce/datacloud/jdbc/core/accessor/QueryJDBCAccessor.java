@@ -23,9 +23,8 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.function.IntSupplier;
-import org.apache.calcite.avatica.util.Cursor.Accessor;
 
-public abstract class QueryJDBCAccessor implements Accessor {
+public abstract class QueryJDBCAccessor implements DataCloudAccessor {
     private final IntSupplier currentRowSupplier;
     protected boolean wasNull;
     protected QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer;
