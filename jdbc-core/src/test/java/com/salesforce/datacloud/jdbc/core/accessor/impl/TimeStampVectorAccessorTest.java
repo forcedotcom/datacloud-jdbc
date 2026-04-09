@@ -5,12 +5,16 @@
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.nulledOutVector;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
 import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -25,6 +29,8 @@ import lombok.SneakyThrows;
 import lombok.val;
 import org.assertj.core.api.junit.jupiter.InjectSoftAssertions;
 import org.assertj.core.api.junit.jupiter.SoftAssertionsExtension;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -37,6 +43,19 @@ public class TimeStampVectorAccessorTest {
 
     @InjectSoftAssertions
     private SoftAssertions collector;
+
+    private static TimeZone originalTimeZone;
+
+    @BeforeAll
+    static void pinTimezone() {
+        originalTimeZone = TimeZone.getDefault();
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+    }
+
+    @AfterAll
+    static void restoreTimezone() {
+        TimeZone.setDefault(originalTimeZone);
+    }
 
     public static final int BASE_YEAR = 2020;
     public static final int NUM_OF_METHODS = 4;
@@ -480,35 +499,58 @@ public class TimeStampVectorAccessorTest {
 
     @SneakyThrows
     @Test
-    void testGetTimestampWithDifferentTimeZone() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
+    void testGetTimestampCalendarInterpretsLiteralInCalendarTimezone() {
+        // For naive TIMESTAMP, getTimestamp(Calendar) interprets the stored literal
+        // as being in the Calendar's timezone (matching Postgres JDBC behavior).
+        // UTC calendar → literal treated as UTC → epoch = raw stored epoch.
+        // GMT-8 calendar → literal treated as GMT-8 → epoch = raw stored epoch + 8h.
+        Calendar utcCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         List<Integer> monthNumber = getRandomMonthNumber();
-        val values = getMilliSecondValues(calendar, monthNumber);
+        val values = getMilliSecondValues(utcCalendar, monthNumber);
         val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createTimeStampNanoVector(values)) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampVectorAccessor(vector, i::get, consumer);
 
-            Calendar pstCalendar = Calendar.getInstance(TimeZone.getTimeZone("PST"));
+            // Use GMT-8:00 (fixed offset, no DST) for deterministic assertions
+            Calendar gmtMinus8 = Calendar.getInstance(TimeZone.getTimeZone("GMT-8:00"));
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
-                val timestampValue = sut.getTimestamp(pstCalendar);
-                val stringValue = sut.getString();
+                val withUtc = sut.getTimestamp(utcCalendar);
+                val withGmtMinus8 = sut.getTimestamp(gmtMinus8);
                 val currentMillis = values.get(i.get());
 
-                pstCalendar.setTimeInMillis(currentMillis);
-                long pstMillis = pstCalendar.getTimeInMillis();
+                // UTC calendar: literal interpreted as UTC → same epoch as how values were created
+                collector.assertThat(withUtc.getTime()).isEqualTo(currentMillis);
 
-                LocalDateTime expectedPST = LocalDateTime.ofInstant(
-                        Instant.ofEpochMilli(pstMillis),
-                        TimeZone.getTimeZone("PST").toZoneId());
-                Timestamp expectedTimestamp = Timestamp.valueOf(expectedPST);
-
-                collector.assertThat(timestampValue).isEqualTo(expectedTimestamp);
-                assertTimestampStringFormat(stringValue, currentMillis);
+                // GMT-8 calendar: literal treated as GMT-8 → epoch = literal + 8h in UTC
+                collector.assertThat(withGmtMinus8.getTime()).isEqualTo(currentMillis + 8 * 3600_000L);
+                assertTimestampStringFormat(sut.getString(), currentMillis);
             }
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void testGetTimestampCalendarEpochForKnownValue() {
+        // Verifies exact epoch millis for getTimestamp(Calendar) against a known naive TIMESTAMP.
+        // Literal stored: 2024-03-15 12:00:00 (encoded as UTC epoch = 2024-03-15T12:00:00Z)
+        // getTimestamp(utcCal):   literal treated as UTC  → epoch = 2024-03-15T12:00:00Z
+        // getTimestamp(tokyoCal): literal treated as JST  → epoch = 2024-03-15T03:00:00Z (UTC+9)
+        long literalAsUtcMs = Instant.parse("2024-03-15T12:00:00Z").toEpochMilli();
+        long literalAsTokyo = Instant.parse("2024-03-15T03:00:00Z").toEpochMilli(); // 12:00 JST
+
+        val consumer = new TestWasNullConsumer(collector);
+        try (val vector = extension.createTimeStampMicroVector(ImmutableList.of(literalAsUtcMs))) {
+            val i = new AtomicInteger(0);
+            val sut = new TimeStampVectorAccessor(vector, i::get, consumer);
+
+            Calendar utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+            Calendar tokyoCal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Tokyo"));
+
+            assertThat(sut.getTimestamp(utcCal).getTime()).isEqualTo(literalAsUtcMs);
+            assertThat(sut.getTimestamp(tokyoCal).getTime()).isEqualTo(literalAsTokyo);
         }
     }
 
@@ -828,15 +870,15 @@ public class TimeStampVectorAccessorTest {
             val i = new AtomicInteger(0);
             val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
 
-            collector.assertThat(sut.getObject(Integer.class)).isNull();
-            collector.assertThat(sut.getObject(Long.class)).isNull();
-            collector.assertThat(sut.getObject(Double.class)).isNull();
+            assertThatThrownBy(() -> sut.getObject(Integer.class)).isInstanceOf(SQLFeatureNotSupportedException.class);
+            assertThatThrownBy(() -> sut.getObject(Long.class)).isInstanceOf(SQLFeatureNotSupportedException.class);
+            assertThatThrownBy(() -> sut.getObject(Double.class)).isInstanceOf(SQLFeatureNotSupportedException.class);
         }
     }
 
     @Test
     @SneakyThrows
-    void testGetObjectWithNullTypeReturnsNull() {
+    void testGetObjectWithNullTypeThrows() {
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
         List<Integer> monthNumber = getRandomMonthNumber();
@@ -847,14 +889,18 @@ public class TimeStampVectorAccessorTest {
         try (val vector = extension.createTimeStampMilliVector(values)) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampVectorAccessor(vector, i::get, consumer);
-            collector.assertThat(sut.getObject((Class<?>) null)).isNull();
+            assertThatThrownBy(() -> sut.getObject((Class<?>) null))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("must not be null");
         }
 
         // TIMESTAMPTZ
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
-            collector.assertThat(sut.getObject((Class<?>) null)).isNull();
+            assertThatThrownBy(() -> sut.getObject((Class<?>) null))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("must not be null");
         }
     }
 
@@ -897,8 +943,8 @@ public class TimeStampVectorAccessorTest {
             val i = new AtomicInteger(0);
             val sut = new TimeStampVectorAccessor(vector, i::get, consumer);
 
-            collector.assertThat(sut.getObject(Integer.class)).isNull();
-            collector.assertThat(sut.getObject(Long.class)).isNull();
+            assertThatThrownBy(() -> sut.getObject(Integer.class)).isInstanceOf(SQLFeatureNotSupportedException.class);
+            assertThatThrownBy(() -> sut.getObject(Long.class)).isInstanceOf(SQLFeatureNotSupportedException.class);
         }
     }
 

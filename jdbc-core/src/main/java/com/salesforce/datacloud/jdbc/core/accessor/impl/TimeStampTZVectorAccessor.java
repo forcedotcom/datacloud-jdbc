@@ -12,6 +12,7 @@ import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.sql.Date;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -145,7 +146,8 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
         if (localDateTime == null) {
             return null;
         }
-        return Timestamp.valueOf(localDateTime);
+        return Timestamp.from(
+                localDateTime.atZone(calendar.getTimeZone().toZoneId()).toInstant());
     }
 
     @Override
@@ -187,9 +189,9 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T getObject(Class<T> type) {
+    public <T> T getObject(Class<T> type) throws SQLException {
         if (type == null) {
-            return null;
+            throw new SQLException("type parameter must not be null", "22023");
         }
 
         if (type == Instant.class) {
@@ -217,7 +219,7 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
             return (T) getString();
         }
 
-        return null;
+        throw new SQLFeatureNotSupportedException("Unsupported conversion type: " + type.getName());
     }
 
     private static ZoneId extractArrowMetadataZone(TimeStampVector vector) {

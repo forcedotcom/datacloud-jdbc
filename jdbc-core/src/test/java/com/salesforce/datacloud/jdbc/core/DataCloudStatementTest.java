@@ -4,6 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
@@ -56,15 +57,16 @@ public class DataCloudStatementTest extends InterceptedHyperTestBase {
     }
 
     @Test
-    @SneakyThrows
     public void testResolveSessionTimeZoneWithInvalidTimezone() {
         Map<String, String> querySettings = new HashMap<>();
         querySettings.put("time_zone", "INVALID_TIMEZONE");
         statement.statementProperties =
                 StatementProperties.builder().querySettings(querySettings).build();
 
-        ZoneId result = statement.resolveSessionTimeZone();
-        assertThat(result).isEqualTo(ZoneId.systemDefault());
+        assertThatThrownBy(() -> statement.resolveSessionTimeZone())
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("Invalid timezone setting 'INVALID_TIMEZONE'")
+                .hasFieldOrPropertyWithValue("SQLState", "22023");
     }
 
     @Test

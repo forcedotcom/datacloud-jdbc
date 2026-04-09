@@ -71,7 +71,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
      *
      * @return The resolved ZoneId for this session, never null
      */
-    protected ZoneId resolveSessionTimeZone() {
+    protected ZoneId resolveSessionTimeZone() throws SQLException {
         val querySettings = statementProperties.getQuerySettings();
         if (querySettings == null) {
             return ZoneId.systemDefault();
@@ -82,11 +82,8 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             try {
                 return ZoneId.of(timezoneSetting);
             } catch (DateTimeException e) {
-                log.warn(
-                        "Invalid timezone setting '{}': {}. Falling back to system default '{}'",
-                        timezoneSetting,
-                        e.getMessage(),
-                        ZoneId.systemDefault());
+                throw new SQLException(
+                        "Invalid timezone setting '" + timezoneSetting + "': " + e.getMessage(), "22023", e);
             }
         }
 

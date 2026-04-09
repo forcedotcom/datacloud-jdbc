@@ -10,6 +10,7 @@ import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.sql.Date;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -28,19 +29,22 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 /**
  * Accessor for naive TIMESTAMP columns (no timezone metadata in Arrow).
  *
- * <p>Naive timestamps store literal date-time values without timezone context.
- * Hyper stores these as UTC epoch values, and this accessor preserves the literal
- * values by interpreting them in UTC (no timezone conversion).
+ * <p>Naive timestamps store literal date-time values without timezone context. The literal is
+ * preserved: {@code getTimestamp()} returns a {@code Timestamp} whose {@code toString()} renders
+ * the original wall-clock value in the JVM's default timezone. This matches the behaviour of
+ * the PostgreSQL JDBC driver for {@code TIMESTAMP} (without time zone) columns.
  *
- * <p>When a Calendar parameter is provided, timezone conversion is applied using
- * that calendar's timezone.
+ * <p>When a {@link Calendar} parameter is provided to {@code getTimestamp(Calendar)}, the literal
+ * is interpreted in that calendar's timezone rather than the JVM default.
  *
- * <p>Supported JDBC 4.2 types via getObject(Class):
- * - Instant (raw UTC epoch)
- * - OffsetDateTime (UTC offset)
- * - ZonedDateTime (UTC zone)
- * - LocalDateTime (literal value preserved)
- * - Timestamp (legacy, literal value preserved)
+ * <p>Supported JDBC 4.2 types via {@code getObject(Class)}:
+ * <ul>
+ *   <li>{@link Instant} – raw UTC epoch (literal treated as UTC)
+ *   <li>{@link OffsetDateTime} – UTC offset
+ *   <li>{@link ZonedDateTime} – UTC zone
+ *   <li>{@link LocalDateTime} – literal value preserved
+ *   <li>{@link Timestamp} – legacy, literal value preserved
+ * </ul>
  */
 public class TimeStampVectorAccessor extends QueryJDBCAccessor {
     private static final String TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss.SSSSSS";
@@ -63,7 +67,8 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
     }
 
     /**
-     * Gets the raw Instant value (always UTC) from the vector.
+     * Returns the raw stored epoch. Hyper encodes the literal wall-clock as a UTC epoch value,
+     * so this instant represents the literal treated as UTC.
      */
     Instant getInstant() {
         getter.get(getCurrentRow(), holder);
@@ -108,11 +113,6 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
         if (instant == null) {
             return null;
         }
-
-        if (calendar != null) {
-            return LocalDateTime.ofInstant(instant, calendar.getTimeZone().toZoneId());
-        }
-
         return LocalDateTime.ofInstant(instant, UTC);
     }
 
@@ -136,13 +136,8 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
             return null;
         }
 
-        if (calendar != null) {
-            return Timestamp.valueOf(localDateTime);
-        }
-
-        // Preserve literal values: adjust UTC-stored value to system default for Timestamp
-        Instant adjustedInstant = localDateTime.atZone(ZoneId.systemDefault()).toInstant();
-        return Timestamp.from(adjustedInstant);
+        ZoneId zone = calendar != null ? calendar.getTimeZone().toZoneId() : ZoneId.systemDefault();
+        return Timestamp.from(localDateTime.atZone(zone).toInstant());
     }
 
     @Override
@@ -165,11 +160,11 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
 
     @Override
     public String getString() {
-        OffsetDateTime odt = getOffsetDateTime(null);
-        if (odt == null) {
+        LocalDateTime ldt = getLocalDateTime(null);
+        if (ldt == null) {
             return null;
         }
-        return odt.format(DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT));
+        return ldt.format(DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT));
     }
 
     @Override
@@ -184,9 +179,9 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> T getObject(Class<T> type) {
+    public <T> T getObject(Class<T> type) throws SQLException {
         if (type == null) {
-            return null;
+            throw new SQLException("type parameter must not be null", "22023");
         }
 
         if (type == Instant.class) {
@@ -214,7 +209,7 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
             return (T) getString();
         }
 
-        return null;
+        throw new SQLFeatureNotSupportedException("Unsupported conversion type: " + type.getName());
     }
 
     static TimeUnit getTimeUnitForVector(TimeStampVector vector) throws SQLException {
