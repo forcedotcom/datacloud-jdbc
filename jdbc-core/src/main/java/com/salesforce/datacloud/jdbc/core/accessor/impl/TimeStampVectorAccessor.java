@@ -95,16 +95,11 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
         }
     }
 
-    private OffsetDateTime getOffsetDateTime(Calendar calendar) {
+    private OffsetDateTime getOffsetDateTime() {
         Instant instant = getInstant();
         if (instant == null) {
             return null;
         }
-
-        if (calendar != null) {
-            return OffsetDateTime.ofInstant(instant, calendar.getTimeZone().toZoneId());
-        }
-
         return OffsetDateTime.ofInstant(instant, UTC);
     }
 
@@ -116,16 +111,11 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
         return LocalDateTime.ofInstant(instant, UTC);
     }
 
-    private ZonedDateTime getZonedDateTime(Calendar calendar) {
+    private ZonedDateTime getZonedDateTime() {
         Instant instant = getInstant();
         if (instant == null) {
             return null;
         }
-
-        if (calendar != null) {
-            return ZonedDateTime.ofInstant(instant, calendar.getTimeZone().toZoneId());
-        }
-
         return ZonedDateTime.ofInstant(instant, UTC);
     }
 
@@ -188,10 +178,10 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
             return (T) getInstant();
         }
         if (type == OffsetDateTime.class) {
-            return (T) getOffsetDateTime(null);
+            return (T) getOffsetDateTime();
         }
         if (type == ZonedDateTime.class) {
-            return (T) getZonedDateTime(null);
+            return (T) getZonedDateTime();
         }
         if (type == LocalDateTime.class) {
             return (T) getLocalDateTime(null);

@@ -102,4 +102,14 @@ public class DataCloudStatementTest extends InterceptedHyperTestBase {
         ZoneId result = statement.resolveSessionTimeZone();
         assertThat(result).isEqualTo(ZoneId.systemDefault());
     }
+
+    @Test
+    @SneakyThrows
+    public void testResolveSessionTimeZoneWithNullQuerySettings() {
+        statement.statementProperties =
+                StatementProperties.builder().querySettings(null).build();
+
+        ZoneId result = statement.resolveSessionTimeZone();
+        assertThat(result).isEqualTo(ZoneId.systemDefault());
+    }
 }

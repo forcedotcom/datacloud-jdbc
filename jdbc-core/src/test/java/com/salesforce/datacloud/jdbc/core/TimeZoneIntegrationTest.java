@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -26,6 +27,8 @@ import java.util.TimeZone;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,14 +38,60 @@ import org.junit.jupiter.params.provider.MethodSource;
 /**
  * Integration tests for timezone and timestamp handling in DataCloud JDBC driver.
  *
- * Tests the timezone precedence order:
+ * <p>Tests the timezone precedence order:
  * 1. Calendar parameter (per-call setting)
  * 2. Arrow metadata timezone (from Hyper - TIMESTAMPTZ columns)
  * 3. Session timezone (query setting time_zone)
  * 4. System default
+ *
+ * <p>Also contains the PreparedStatement parameter-setting matrix: every combination of setter
+ * method, Java type, and SQL cast target ({@code ?::timestamp} / {@code ?::timestamptz}).
  */
 @ExtendWith(LocalHyperTestBase.class)
 public class TimeZoneIntegrationTest {
+
+    // ── Parameter matrix constants ────────────────────────────────────────────────────────────
+    // Input: UTC instant 2024-06-15T21:30:45.123456Z
+    // In JVM TZ (LA, UTC-7 in June): wall-clock = "2024-06-15 14:30:45.123456"
+    private static final Instant MATRIX_INPUT_INSTANT = Instant.parse("2024-06-15T21:30:45.123456Z");
+    private static final LocalDateTime MATRIX_INPUT_LDT =
+            LocalDateTime.ofInstant(MATRIX_INPUT_INSTANT, ZoneId.of("America/Los_Angeles")); // 14:30:45
+    private static final OffsetDateTime MATRIX_INPUT_ODT =
+            OffsetDateTime.ofInstant(MATRIX_INPUT_INSTANT, ZoneOffset.UTC);
+    private static final ZonedDateTime MATRIX_INPUT_ZDT = ZonedDateTime.ofInstant(MATRIX_INPUT_INSTANT, ZoneOffset.UTC);
+    private static final Timestamp MATRIX_INPUT_TS = Timestamp.from(MATRIX_INPUT_INSTANT);
+
+    /** 14:30:45 — JVM (LA) wall-clock digits, stored as a naive literal. */
+    private static final LocalDateTime MATRIX_WALL_CLOCK_LA =
+            LocalDateTime.ofInstant(MATRIX_INPUT_INSTANT, ZoneId.of("America/Los_Angeles"));
+
+    /** 21:30:45 — UTC wall-clock digits (= the instant read in UTC). */
+    private static final LocalDateTime MATRIX_WALL_CLOCK_UTC =
+            LocalDateTime.ofInstant(MATRIX_INPUT_INSTANT, ZoneOffset.UTC);
+
+    /** 21:30:45Z — the original UTC instant, preserved exactly. */
+    private static final OffsetDateTime MATRIX_INSTANT_UTC =
+            OffsetDateTime.ofInstant(MATRIX_INPUT_INSTANT, ZoneOffset.UTC);
+
+    /**
+     * 14:30:45Z — wall-clock literal (14:30) encoded as naive UTC epoch, then cast to timestamptz
+     * with session TZ=UTC. Diverges from PG which sends the true UTC epoch (21:30:45Z).
+     */
+    private static final OffsetDateTime MATRIX_WALL_CLOCK_AS_UTC =
+            OffsetDateTime.of(MATRIX_WALL_CLOCK_LA, ZoneOffset.UTC);
+
+    private static TimeZone matrixOriginalTimeZone;
+
+    @BeforeAll
+    static void pinJvmTimezoneForMatrix() {
+        matrixOriginalTimeZone = TimeZone.getDefault();
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"));
+    }
+
+    @AfterAll
+    static void restoreJvmTimezoneAfterMatrix() {
+        TimeZone.setDefault(matrixOriginalTimeZone);
+    }
 
     @Test
     @SneakyThrows
@@ -675,6 +724,210 @@ public class TimeZoneIntegrationTest {
                     }
 
                     assertThat(rs.next()).isFalse();
+                }
+            }
+        }
+    }
+
+    // ── PreparedStatement parameter-setting matrix ────────────────────────────────────────────
+
+    @FunctionalInterface
+    interface ParameterSetter {
+        void set(PreparedStatement pstmt) throws Exception;
+    }
+
+    /**
+     * Matrix of all supported setter/type/SQL-cast combinations.
+     *
+     * <p>Each row: (description, setter, castType, expectedLDT, expectedODT)
+     * <ul>
+     *   <li>{@code expectedLDT} non-null → {@code ?::timestamp}: asserts
+     *       {@code getObject(LocalDateTime.class)}</li>
+     *   <li>{@code expectedODT} non-null → {@code ?::timestamptz}: asserts
+     *       {@code getObject(OffsetDateTime.class)}</li>
+     * </ul>
+     *
+     * <p>JVM TZ is pinned to {@code America/Los_Angeles} (UTC-7 in June) so that
+     * timezone-sensitive differences are visible. Session TZ is UTC for all queries.
+     *
+     * <h2>JDBC 4.2 Spec mapping (Table B-4)</h2>
+     * <pre>
+     * java.sql.Timestamp           → TIMESTAMP  (wall-clock in JVM TZ)
+     * java.time.Instant            → TIMESTAMP_WITH_TIMEZONE (UTC epoch)
+     * java.time.LocalDateTime      → TIMESTAMP  (LDT digits stored as-is)
+     * java.time.OffsetDateTime     → TIMESTAMP_WITH_TIMEZONE (UTC epoch)
+     * java.time.ZonedDateTime      → TIMESTAMP_WITH_TIMEZONE (UTC epoch)
+     * </pre>
+     */
+    static Stream<Arguments> parameterMatrixCases() {
+        return Stream.of(
+                // ── setTimestamp (no calendar) ─────────────────────────────────────────────
+                // Wall-clock normalization: JVM TZ (LA) wall-clock = 14:30:45 stored as naive literal.
+                Arguments.of(
+                        "setTimestamp(ts) → ?::timestamp",
+                        (ParameterSetter) pstmt -> pstmt.setTimestamp(1, MATRIX_INPUT_TS),
+                        "timestamp",
+                        MATRIX_WALL_CLOCK_LA,
+                        null),
+                // ?::timestamptz: Hyper interprets naive literal 14:30:45 in session UTC → 14:30:45Z.
+                // (PG JDBC diverges: sends true UTC epoch 21:30:45Z instead.)
+                Arguments.of(
+                        "setTimestamp(ts) → ?::timestamptz",
+                        (ParameterSetter) pstmt -> pstmt.setTimestamp(1, MATRIX_INPUT_TS),
+                        "timestamptz",
+                        null,
+                        MATRIX_WALL_CLOCK_AS_UTC),
+
+                // ── setTimestamp with Calendar UTC ─────────────────────────────────────────
+                // Calendar UTC wall-clock = 21:30:45. Stored as naive literal 21:30:45.
+                Arguments.of(
+                        "setTimestamp(ts, calUTC) → ?::timestamp",
+                        (ParameterSetter) pstmt -> pstmt.setTimestamp(
+                                1, MATRIX_INPUT_TS, Calendar.getInstance(TimeZone.getTimeZone("UTC"))),
+                        "timestamp",
+                        MATRIX_WALL_CLOCK_UTC,
+                        null),
+
+                // ── setObject(Timestamp) ───────────────────────────────────────────────────
+                // Delegates to setTimestamp(ts). JVM wall-clock 14:30:45.
+                Arguments.of(
+                        "setObject(Timestamp) → ?::timestamp",
+                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_TS),
+                        "timestamp",
+                        MATRIX_WALL_CLOCK_LA,
+                        null),
+
+                // ── setObject(Instant) ────────────────────────────────────────────────────
+                // JDBC 4.2: Instant → TIMESTAMP_WITH_TIMEZONE. UTC epoch stored exactly.
+                Arguments.of(
+                        "setObject(Instant) → ?::timestamptz",
+                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_INSTANT),
+                        "timestamptz",
+                        null,
+                        MATRIX_INSTANT_UTC),
+                Arguments.of(
+                        "setObject(Instant) → ?::timestamp",
+                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_INSTANT),
+                        "timestamp",
+                        MATRIX_WALL_CLOCK_UTC,
+                        null),
+
+                // ── setObject(LocalDateTime) ──────────────────────────────────────────────
+                // JDBC 4.2: LocalDateTime → TIMESTAMP. LDT digits stored as-is (no TZ shift).
+                // Recommended write path for wall-clock (TIMESTAMP without timezone) values.
+                Arguments.of(
+                        "setObject(LocalDateTime) → ?::timestamp",
+                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_LDT),
+                        "timestamp",
+                        MATRIX_WALL_CLOCK_LA,
+                        null),
+
+                // ── setObject(OffsetDateTime) ─────────────────────────────────────────────
+                // JDBC 4.2: OffsetDateTime → TIMESTAMP_WITH_TIMEZONE. UTC epoch stored.
+                // Recommended write path for exact-instant (TIMESTAMPTZ) values.
+                Arguments.of(
+                        "setObject(OffsetDateTime) → ?::timestamptz",
+                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_ODT),
+                        "timestamptz",
+                        null,
+                        MATRIX_INSTANT_UTC),
+                Arguments.of(
+                        "setObject(OffsetDateTime) → ?::timestamp",
+                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_ODT),
+                        "timestamp",
+                        MATRIX_WALL_CLOCK_UTC,
+                        null),
+
+                // ── setObject(ZonedDateTime) ──────────────────────────────────────────────
+                // JDBC 4.2: ZonedDateTime → TIMESTAMP_WITH_TIMEZONE. UTC epoch stored.
+                Arguments.of(
+                        "setObject(ZonedDateTime) → ?::timestamptz",
+                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_ZDT),
+                        "timestamptz",
+                        null,
+                        MATRIX_INSTANT_UTC),
+
+                // ── setObject(ts, Types.TIMESTAMP) ────────────────────────────────────────
+                // Explicit TIMESTAMP type hint. JVM wall-clock 14:30:45.
+                Arguments.of(
+                        "setObject(ts, TIMESTAMP) → ?::timestamp",
+                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_TS, Types.TIMESTAMP),
+                        "timestamp",
+                        MATRIX_WALL_CLOCK_LA,
+                        null),
+
+                // ── setObject(ts, Types.TIMESTAMP_WITH_TIMEZONE) ──────────────────────────
+                // Explicit TIMESTAMPTZ type hint. UTC epoch from Timestamp.toInstant() stored.
+                // Use this when you have a java.sql.Timestamp but need TIMESTAMPTZ roundtrip.
+                Arguments.of(
+                        "setObject(ts, TIMESTAMP_WITH_TIMEZONE) → ?::timestamptz",
+                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_TS, Types.TIMESTAMP_WITH_TIMEZONE),
+                        "timestamptz",
+                        null,
+                        MATRIX_INSTANT_UTC));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("parameterMatrixCases")
+    @SneakyThrows
+    void verifyParameterMatrix(
+            String description,
+            ParameterSetter setter,
+            String castType,
+            LocalDateTime expectedLDT,
+            OffsetDateTime expectedODT) {
+
+        Properties props = new Properties();
+        props.setProperty("querySetting.time_zone", "UTC");
+
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection(props)) {
+            String sql = "SELECT (?::" + castType + ") AS val";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                setter.set(pstmt);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    assertThat(rs.next()).isTrue();
+
+                    if (expectedLDT != null) {
+                        assertThat(rs.getObject("val", LocalDateTime.class))
+                                .as("%s — getObject(LocalDateTime.class)", description)
+                                .isEqualTo(expectedLDT);
+                    }
+
+                    if (expectedODT != null) {
+                        assertThat(rs.getObject("val", OffsetDateTime.class))
+                                .as("%s — getObject(OffsetDateTime.class)", description)
+                                .isEqualTo(expectedODT);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    void nullTimestampParameterStoresSqlNull() {
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection(new Properties())) {
+            try (PreparedStatement pstmt = conn.prepareStatement("SELECT (?::timestamp) AS val")) {
+                pstmt.setNull(1, Types.TIMESTAMP);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    assertThat(rs.next()).isTrue();
+                    assertThat(rs.getObject("val")).isNull();
+                    assertThat(rs.wasNull()).isTrue();
+                }
+            }
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    void nullTimestampTZParameterStoresSqlNull() {
+        try (DataCloudConnection conn = LocalHyperTestBase.getHyperQueryConnection(new Properties())) {
+            try (PreparedStatement pstmt = conn.prepareStatement("SELECT (?::timestamptz) AS val")) {
+                pstmt.setNull(1, Types.TIMESTAMP_WITH_TIMEZONE);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    assertThat(rs.next()).isTrue();
+                    assertThat(rs.getObject("val")).isNull();
+                    assertThat(rs.wasNull()).isTrue();
                 }
             }
         }
