@@ -31,6 +31,7 @@ import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.SmallIntVector;
 import org.apache.arrow.vector.TimeMicroVector;
 import org.apache.arrow.vector.TimeStampMicroTZVector;
+import org.apache.arrow.vector.TimeStampMicroVector;
 import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarCharVector;
@@ -92,6 +93,7 @@ class VectorValueSetterFactory {
                 Maps.immutableEntry(DecimalVector.class, new DecimalVectorSetter()),
                 Maps.immutableEntry(DateDayVector.class, new DateDayVectorSetter()),
                 Maps.immutableEntry(TimeMicroVector.class, new TimeMicroVectorSetter(calendar)),
+                Maps.immutableEntry(TimeStampMicroVector.class, new TimeStampMicroVectorSetter()),
                 Maps.immutableEntry(TimeStampMicroTZVector.class, new TimeStampMicroTZVectorSetter()),
                 Maps.immutableEntry(TinyIntVector.class, new TinyIntVectorSetter()));
     }
@@ -306,7 +308,39 @@ class TimeMicroVectorSetter extends BaseVectorSetter<TimeMicroVector, Time> {
     }
 }
 
-/** Setter implementation for TimeStampMicroTZVector. */
+/**
+ * Setter for naive TimeStampMicroVector (no timezone metadata).
+ *
+ * <p>The Timestamp value arriving here has already been normalized by
+ * {@code DataCloudPreparedStatement.toWallClockAsUtc}: its UTC instant encodes the
+ * wall-clock digits the user intended to store (in their effective timezone). We read
+ * those digits back via {@code toInstant()} and store them as the naive epoch, so Hyper
+ * receives the literal wall-clock value directly.
+ */
+class TimeStampMicroVectorSetter extends BaseVectorSetter<TimeStampMicroVector, Timestamp> {
+
+    TimeStampMicroVectorSetter() {
+        super(Timestamp.class);
+    }
+
+    @Override
+    protected void setValueInternal(TimeStampMicroVector vector, Timestamp value) {
+        Instant instant = value.toInstant();
+        long microsecondsSinceEpoch = instant.getEpochSecond() * 1_000_000 + instant.getNano() / 1_000;
+        vector.setSafe(0, microsecondsSinceEpoch);
+    }
+
+    @Override
+    protected void setNullValue(TimeStampMicroVector vector) {
+        vector.setNull(0);
+    }
+}
+
+/**
+ * Setter for TZ-aware TimeStampMicroTZVector (TIMESTAMP WITH TIME ZONE).
+ * Stores the Timestamp's true UTC instant — no wall-clock shift applied.
+ * Used when the parameter is bound as Types.TIMESTAMP_WITH_TIMEZONE.
+ */
 class TimeStampMicroTZVectorSetter extends BaseVectorSetter<TimeStampMicroTZVector, Timestamp> {
 
     TimeStampMicroTZVectorSetter() {
@@ -315,8 +349,6 @@ class TimeStampMicroTZVectorSetter extends BaseVectorSetter<TimeStampMicroTZVect
 
     @Override
     protected void setValueInternal(TimeStampMicroTZVector vector, Timestamp value) {
-        // Use the Timestamp's actual UTC instant rather than extracting local components
-        // via toLocalDateTime(), which would lose timezone information.
         Instant instant = value.toInstant();
         long microsecondsSinceEpoch = instant.getEpochSecond() * 1_000_000 + instant.getNano() / 1_000;
         vector.setSafe(0, microsecondsSinceEpoch);

@@ -148,6 +148,46 @@ This section describes details around potential pitfalls / ambiguities related t
 - The JDBC standard describes that `getObject` for a `SHORT` should return an `Integer`. Due to a current limitation we for now return a `Short` object. This will likely be fixed in a future version of the JDBC driver.
 - The query timeout enforcement is done on the server side for both normal as well as async execution. To provide a safety net with regards to network problems the driver locally also does a delayed enforcement for normal query executions. The default delay is `5` seconds - which typically shouldn't be relevant as in normal circumstances the server will enforce the timeout. The local enforcement delay can be configured through the `queryTimeoutLocalEnforcementDelay` property
 
+### Timestamp handling
+
+The driver follows the JDBC 4.2 specification for timestamp types. Use the `java.time` API for unambiguous behavior:
+
+> **Rule of thumb:** if the value has a timezone, use `OffsetDateTime`; if it doesn't, use `LocalDateTime`.
+
+#### Storing a wall-clock time (`TIMESTAMP` — no timezone)
+
+Use this when you want to store a literal date and time with no timezone context (e.g. "meeting at 2pm").
+
+```java
+// Write — digits stored as-is, no timezone shift applied
+pstmt.setObject(1, LocalDateTime.of(2024, 6, 15, 14, 30, 0));
+
+// Read
+LocalDateTime ldt = rs.getObject("col", LocalDateTime.class);
+```
+
+#### Storing an exact moment in time (`TIMESTAMPTZ` — with timezone)
+
+Use this when you want to preserve a specific instant in UTC (e.g. "event occurred at 21:30:45 UTC").
+
+```java
+// Write — UTC epoch preserved exactly
+pstmt.setObject(1, OffsetDateTime.ofInstant(instant, ZoneOffset.UTC));
+
+// Read
+OffsetDateTime odt = rs.getObject("col", OffsetDateTime.class);
+```
+
+#### Legacy `java.sql.Timestamp`
+
+`setTimestamp(ts)` and `setObject(ts)` store the wall-clock value in the JVM default timezone as a naive `TIMESTAMP`. This is correct for wall-clock use cases but should not be used for `TIMESTAMPTZ` columns where preserving the UTC instant matters.
+
+| Use case | Recommended write | Recommended read |
+|----------|------------------|-----------------|
+| Wall-clock (`TIMESTAMP`) | `setObject(LocalDateTime)` | `getObject(LocalDateTime.class)` |
+| UTC instant (`TIMESTAMPTZ`) | `setObject(OffsetDateTime)` | `getObject(OffsetDateTime.class)` |
+| Legacy (`TIMESTAMP`) | `setTimestamp(ts)` | `getTimestamp()` |
+
 ### Optional configuration
 
 - `dataspace`: The data space to query, defaults to "default"

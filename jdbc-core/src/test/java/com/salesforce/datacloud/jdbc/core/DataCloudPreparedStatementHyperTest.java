@@ -205,7 +205,10 @@ public class DataCloudPreparedStatementHyperTest {
 
                     try (ResultSet resultSet = preparedStatement.executeQuery()) {
                         while (resultSet.next()) {
-                            val actual = resultSet.getTimestamp("a");
+                            // Read back with the same Calendar: JDBC spec says setTimestamp(cal)
+                            // stores the wall-clock in cal's timezone, so getTimestamp(cal) must
+                            // be used to recover the original instant.
+                            val actual = resultSet.getTimestamp("a", calendar);
                             assertThat(actual.toInstant())
                                     .as("Expected the instant to match for %s", sqlTimestamp)
                                     .isEqualTo(sqlTimestamp.toInstant());

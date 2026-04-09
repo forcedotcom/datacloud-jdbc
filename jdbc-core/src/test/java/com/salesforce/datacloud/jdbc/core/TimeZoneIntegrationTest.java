@@ -554,26 +554,27 @@ public class TimeZoneIntegrationTest {
      * - writeCalendarTz: timezone for Calendar passed to setTimestamp (null = no calendar)
      * - readCalendarTz: timezone for Calendar passed to getTimestamp (null = no calendar)
      *
-     * Parameters are serialized as Arrow TimeStampMicroTZVector(UTC). The write path uses the
-     * Timestamp's actual UTC instant ({@code Timestamp.toInstant()}) directly. The Calendar
-     * parameter on {@code setTimestamp} does not affect the stored instant, because we always
-     * serialize as UTC epoch microseconds.
+     * Parameters are serialized as Arrow TimeStampMicroVector (naive, no timezone metadata).
+     * The write path extracts the wall-clock digits of the Timestamp in the effective write
+     * timezone (writeCalendarTz if given, else JVM default) and sends those digits as the
+     * naive literal. This matches JDBC spec semantics for {@code setTimestamp(Calendar)}.
      *
-     * On the Hyper side, when casting the TIMESTAMPTZ parameter:
-     * - {@code ?::timestamptz}: the value stays as TIMESTAMPTZ (no conversion). The roundtrip
-     *   always preserves the original instant.
-     * - {@code ?::timestamp}: Hyper converts the UTC instant to the session timezone, then
-     *   strips the timezone. The resulting naive TIMESTAMP depends on the session timezone,
-     *   so roundtrip preservation is only guaranteed when session timezone matches the JVM
-     *   default timezone.
+     * On the Hyper side:
+     * - {@code ?::timestamp}: Hyper stores the received naive literal directly. The wall-clock
+     *   is preserved regardless of session timezone.
+     * - {@code ?::timestamptz}: Hyper interprets the naive literal in the session timezone to
+     *   produce an instant. The stored instant equals the wall-clock literal interpreted in
+     *   the session timezone.
      *
      * On the read side:
-     * - TIMESTAMPTZ: the TZ accessor returns the true UTC instant
-     * - TIMESTAMP (naive): the accessor interprets the literal value in the JVM's default
-     *   timezone
+     * - TIMESTAMP (naive): the accessor interprets the literal in the JVM's default timezone
+     *   (or the read Calendar's timezone if provided).
+     * - TIMESTAMPTZ: the TZ accessor returns the stored UTC instant.
      *
-     * This test exercises all combinations to ensure no errors occur, java.time types are
-     * internally consistent, and TIMESTAMPTZ roundtrips always preserve the instant.
+     * This test exercises all combinations to ensure no errors occur and java.time types are
+     * internally consistent. For TIMESTAMP, the wall-clock written equals the wall-clock read.
+     * For TIMESTAMPTZ, the stored instant equals the wall-clock in the write timezone
+     * interpreted in the session timezone.
      */
     static Stream<Arguments> timestampRoundtripCases() {
         List<Arguments> cases = new ArrayList<>();
@@ -647,16 +648,30 @@ public class TimeZoneIntegrationTest {
                     assertThat(odt.toInstant()).isEqualTo(instant);
                     assertThat(zdt.toInstant()).isEqualTo(instant);
 
-                    // For TIMESTAMPTZ, the stored instant must match the input's instant.
-                    // We compare via Instant (not Timestamp.getTime) because getTimestamp(Calendar)
-                    // shifts the wall-clock representation, changing the epoch millis.
-                    // Example: getTimestamp(tokyoCal) on a value whose UTC instant is 14:30 returns
-                    // a Timestamp whose getTime() encodes "14:30 JST" (a different UTC epoch), so
-                    // epoch-millis comparison would fail even for a correct roundtrip.
-                    if ("timestamptz".equals(castType)) {
+                    // Effective write timezone: Calendar TZ if provided, else JVM default.
+                    ZoneId writeTz = writeCalTz != null ? ZoneId.of(writeCalTz) : ZoneId.systemDefault();
+
+                    // The wall-clock digits written to Hyper: the input instant projected into
+                    // the write timezone.
+                    LocalDateTime writtenWallClock = LocalDateTime.ofInstant(input.toInstant(), writeTz);
+
+                    if ("timestamp".equals(castType)) {
+                        // TIMESTAMP: naive literal is preserved end-to-end. The literal stored
+                        // equals the wall-clock the caller expressed in the write timezone.
+                        assertThat(ldt)
+                                .as("TIMESTAMP wall-clock should equal the written literal")
+                                .isEqualTo(writtenWallClock);
+                    } else {
+                        // TIMESTAMPTZ: Hyper interprets the naive literal in the session timezone
+                        // to produce the stored instant. So the stored instant equals the
+                        // written wall-clock re-interpreted in the session timezone.
+                        // Example: written literal "14:30" with session=UTC → instant 14:30Z.
+                        //          written literal "14:30" with session=LA  → instant 21:30Z.
+                        Instant expectedInstant =
+                                writtenWallClock.atZone(ZoneId.of(sessionTz)).toInstant();
                         assertThat(instant)
-                                .as("TIMESTAMPTZ roundtrip should preserve the instant")
-                                .isEqualTo(input.toInstant());
+                                .as("TIMESTAMPTZ instant should be wall-clock interpreted in session TZ")
+                                .isEqualTo(expectedInstant);
                     }
 
                     assertThat(rs.next()).isFalse();

@@ -7,6 +7,7 @@ package com.salesforce.datacloud.jdbc.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
@@ -211,7 +212,7 @@ class ArrowUtilsTest {
         assertInstanceOf(ArrowType.Timestamp.class, field.getType());
         ArrowType.Timestamp timestampType = (ArrowType.Timestamp) field.getType();
         assertEquals(TimeUnit.MICROSECOND, timestampType.getUnit());
-        assertEquals("UTC", timestampType.getTimezone());
+        assertNull(timestampType.getTimezone()); // naive TIMESTAMP — no timezone metadata
 
         field = schema.getFields().get(9);
         assertInstanceOf(ArrowType.Decimal.class, field.getType());

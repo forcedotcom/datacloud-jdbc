@@ -35,6 +35,12 @@ import java.sql.SQLXML;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.TimeZone;
@@ -191,7 +197,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
-        setParameter(parameterIndex, Types.TIMESTAMP, x);
+        setParameter(parameterIndex, Types.TIMESTAMP, toWallClockAsUtc(x, null));
     }
 
     @Override
@@ -219,6 +225,20 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
         if (x == null) {
             setNull(parameterIndex, Types.NULL);
             return;
+        }
+        // TIMESTAMP (naive): apply wall-clock normalization for legacy Timestamp,
+        // or store LocalDateTime digits directly.
+        if (targetSqlType == Types.TIMESTAMP) {
+            if (x instanceof Timestamp) {
+                setParameter(parameterIndex, Types.TIMESTAMP, toWallClockAsUtc((Timestamp) x, null));
+                return;
+            }
+            if (x instanceof LocalDateTime) {
+                LocalDateTime ldt = (LocalDateTime) x;
+                // Encode LDT digits as if they were in UTC — no JVM-TZ shift applied.
+                setParameter(parameterIndex, Types.TIMESTAMP, Timestamp.from(ldt.toInstant(ZoneOffset.UTC)));
+                return;
+            }
         }
         setParameter(parameterIndex, targetSqlType, x);
     }
@@ -299,9 +319,25 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
-        // TIMESTAMP Arrow vectors (TimeStampMicroTZVector) carry timezone metadata ("UTC"),
-        // so VectorPopulator can use the actual instant directly. Calendar is not needed.
-        setParameter(parameterIndex, Types.TIMESTAMP, x);
+        setParameter(parameterIndex, Types.TIMESTAMP, toWallClockAsUtc(x, cal));
+    }
+
+    /**
+     * Converts a Timestamp to a naive-UTC representation for sending as a naive TIMESTAMP parameter.
+     *
+     * <p>Per JDBC spec, {@code setTimestamp(Calendar)} stores the wall-clock value of the Timestamp
+     * in the Calendar's timezone (or JVM default if null) as the literal. For example, if the
+     * Timestamp represents 14:30 UTC and the Calendar is Asia/Tokyo (UTC+9), the stored literal is
+     * "23:30" (the Tokyo wall-clock at that instant).
+     *
+     * <p>We encode this by extracting the wall-clock in the effective timezone, then re-encoding
+     * it as if that wall-clock were in UTC — so the Arrow epoch value carries the wall-clock digits.
+     * Hyper receives a naive {@code TimeStampMicroVector} and stores the literal directly.
+     */
+    private static Timestamp toWallClockAsUtc(Timestamp ts, Calendar cal) {
+        ZoneId zone = cal != null ? cal.getTimeZone().toZoneId() : ZoneId.systemDefault();
+        LocalDateTime wallClock = LocalDateTime.ofInstant(ts.toInstant(), zone);
+        return Timestamp.from(wallClock.toInstant(ZoneOffset.UTC));
     }
 
     @Override
@@ -445,6 +481,21 @@ final class TypeHandlers {
     public static final TypeHandler TIME_HANDLER = (ps, idx, value) -> ps.setTime(idx, (Time) value);
     public static final TypeHandler TIMESTAMP_HANDLER = (ps, idx, value) -> ps.setTimestamp(idx, (Timestamp) value);
     public static final TypeHandler BOOLEAN_HANDLER = (ps, idx, value) -> ps.setBoolean(idx, (Boolean) value);
+
+    // JDBC 4.2 java.time handlers — mapped per JDBC spec Table B-4:
+    //   Instant          → TIMESTAMP_WITH_TIMEZONE (UTC epoch)
+    //   LocalDateTime    → TIMESTAMP               (wall-clock digits, no TZ shift)
+    //   OffsetDateTime   → TIMESTAMP_WITH_TIMEZONE (UTC epoch)
+    //   ZonedDateTime    → TIMESTAMP_WITH_TIMEZONE (UTC epoch)
+    public static final TypeHandler INSTANT_HANDLER =
+            (ps, idx, value) -> ps.setObject(idx, Timestamp.from((Instant) value), Types.TIMESTAMP_WITH_TIMEZONE);
+    public static final TypeHandler LOCAL_DATE_TIME_HANDLER =
+            (ps, idx, value) -> ps.setObject(idx, value, Types.TIMESTAMP);
+    public static final TypeHandler OFFSET_DATE_TIME_HANDLER = (ps, idx, value) ->
+            ps.setObject(idx, Timestamp.from(((OffsetDateTime) value).toInstant()), Types.TIMESTAMP_WITH_TIMEZONE);
+    public static final TypeHandler ZONED_DATE_TIME_HANDLER = (ps, idx, value) ->
+            ps.setObject(idx, Timestamp.from(((ZonedDateTime) value).toInstant()), Types.TIMESTAMP_WITH_TIMEZONE);
+
     static final Map<Class<?>, TypeHandler> typeHandlerMap = ImmutableMap.ofEntries(
             Maps.immutableEntry(String.class, STRING_HANDLER),
             Maps.immutableEntry(BigDecimal.class, BIGDECIMAL_HANDLER),
@@ -456,7 +507,11 @@ final class TypeHandlers {
             Maps.immutableEntry(Date.class, DATE_HANDLER),
             Maps.immutableEntry(Time.class, TIME_HANDLER),
             Maps.immutableEntry(Timestamp.class, TIMESTAMP_HANDLER),
-            Maps.immutableEntry(Boolean.class, BOOLEAN_HANDLER));
+            Maps.immutableEntry(Boolean.class, BOOLEAN_HANDLER),
+            Maps.immutableEntry(Instant.class, INSTANT_HANDLER),
+            Maps.immutableEntry(LocalDateTime.class, LOCAL_DATE_TIME_HANDLER),
+            Maps.immutableEntry(OffsetDateTime.class, OFFSET_DATE_TIME_HANDLER),
+            Maps.immutableEntry(ZonedDateTime.class, ZONED_DATE_TIME_HANDLER));
 
     private TypeHandlers() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");

@@ -149,9 +149,15 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
         preparedStatement.setTime(11, time);
         verify(mockParameterManager).setParameter(11, Types.TIME, time);
 
+        // setTimestamp normalizes to wall-clock-as-UTC before storing.
+        // In the JVM default timezone the wall-clock extracted from the epoch and re-encoded
+        // as UTC produces a Timestamp whose instant equals LocalDateTime.ofInstant(ts, JVM).atUTC().
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+        java.time.LocalDateTime wallClock =
+                java.time.LocalDateTime.ofInstant(timestamp.toInstant(), java.time.ZoneId.systemDefault());
+        Timestamp expectedStored = Timestamp.from(wallClock.toInstant(java.time.ZoneOffset.UTC));
         preparedStatement.setTimestamp(12, timestamp);
-        verify(mockParameterManager).setParameter(12, Types.TIMESTAMP, timestamp);
+        verify(mockParameterManager).setParameter(12, Types.TIMESTAMP, expectedStored);
 
         preparedStatement.setNull(13, Types.NULL);
         verify(mockParameterManager).setParameter(13, Types.NULL, null);
@@ -193,11 +199,16 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
         }
 
         {
-            // TIMESTAMP uses TimeStampMicroTZVector which carries timezone metadata ("UTC"),
-            // so Calendar is not needed — the raw Timestamp is passed through.
+            // setTimestamp(Calendar) extracts the wall-clock in the Calendar's timezone and
+            // re-encodes it as if it were in UTC — this is the normalized value stored.
+            // calendar is GMT+2, so 1970-01-01 00:00:00 UTC → wall-clock in GMT+2 = 02:00:00.
+            // Re-encoded as UTC: 1970-01-01 02:00:00Z.
             Timestamp ts = Timestamp.valueOf("1970-01-01 00:00:00.000000000");
+            java.time.LocalDateTime tsWallClock = java.time.LocalDateTime.ofInstant(
+                    ts.toInstant(), calendar.getTimeZone().toZoneId());
+            Timestamp tsExpectedStored = Timestamp.from(tsWallClock.toInstant(java.time.ZoneOffset.UTC));
             preparedStatement.setTimestamp(20, ts, calendar);
-            verify(mockParameterManager).setParameter(20, Types.TIMESTAMP, ts);
+            verify(mockParameterManager).setParameter(20, Types.TIMESTAMP, tsExpectedStored);
         }
 
         assertThatThrownBy(() -> preparedStatement.setObject(1, new InvalidClass()))
