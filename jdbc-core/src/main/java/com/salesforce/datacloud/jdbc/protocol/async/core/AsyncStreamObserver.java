@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.NonNull;
 import org.slf4j.Logger;
 
@@ -26,7 +27,8 @@ import org.slf4j.Logger;
  * it would be ambiguous whether all messages have been received). Messages are buffered
  * in memory until consumed.</p>
  *
- * <p>Thread-safety: All state mutations are protected by synchronization on {@code this}.
+ * <p>Thread-safety: All state mutations are protected by a {@link ReentrantLock}
+ * (virtual-thread friendly, unlike {@code synchronized}).
  * The observer can be closed from any thread.</p>
  *
  * @param <ReqT>  the request message type
@@ -38,6 +40,9 @@ public class AsyncStreamObserver<ReqT, RespT extends AbstractMessage> implements
     // connections). Larger streams are still supported and more messages will get requested as messages come in to aim
     // for always INITIAL_REQUEST_COUNT outstanding messages.
     private static final int INITIAL_REQUEST_COUNT = 16;
+
+    // Lock used instead of synchronized to avoid pinning virtual threads to carrier threads
+    private final ReentrantLock lock = new ReentrantLock();
 
     // The logger which should be used for logging
     private final Logger logger;
@@ -86,52 +91,68 @@ public class AsyncStreamObserver<ReqT, RespT extends AbstractMessage> implements
     }
 
     @Override
-    public synchronized void onNext(RespT value) {
-        totalResponseSize += value.getSerializedSize();
+    public void onNext(RespT value) {
+        lock.lock();
+        try {
+            totalResponseSize += value.getSerializedSize();
 
-        // If there's a pending future waiting for data, complete it directly
-        if (pendingFuture != null) {
-            CompletableFuture<Optional<RespT>> future = pendingFuture;
-            pendingFuture = null;
-            future.complete(Optional.of(value));
-        } else {
-            // Otherwise buffer the message
-            buffer.add(value);
-        }
+            // If there's a pending future waiting for data, complete it directly
+            if (pendingFuture != null) {
+                CompletableFuture<Optional<RespT>> future = pendingFuture;
+                pendingFuture = null;
+                future.complete(Optional.of(value));
+            } else {
+                // Otherwise buffer the message
+                buffer.add(value);
+            }
 
-        // Request the next message to keep the pipeline flowing
-        if (callStream != null) {
-            callStream.request(1);
-        }
-    }
-
-    @Override
-    public synchronized void onError(Throwable t) {
-        long elapsed = System.nanoTime() - startNanos;
-        ElapsedLogger.logFailure(
-                logger, timingName + ", responseSizeMb=" + totalResponseSize / 1_000_000.0, elapsed, t);
-        streamEnded = true;
-        terminalError = t;
-
-        // Complete any pending future with the error
-        if (pendingFuture != null) {
-            CompletableFuture<Optional<RespT>> future = pendingFuture;
-            pendingFuture = null;
-            future.completeExceptionally(t);
+            // Request the next message to keep the pipeline flowing
+            if (callStream != null) {
+                callStream.request(1);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
     @Override
-    public synchronized void onCompleted() {
-        long elapsed = System.nanoTime() - startNanos;
-        ElapsedLogger.logSuccess(logger, timingName + ", responseSizeMb=" + totalResponseSize / 1_000_000.0, elapsed);
-        streamEnded = true;
+    public void onError(Throwable t) {
+        lock.lock();
+        try {
+            long elapsed = System.nanoTime() - startNanos;
+            ElapsedLogger.logFailure(
+                    logger, timingName + ", responseSizeMb=" + totalResponseSize / 1_000_000.0, elapsed, t);
+            streamEnded = true;
+            terminalError = t;
 
-        // Complete any pending future with empty (only if buffer is also empty)
-        if (pendingFuture != null && buffer.isEmpty()) {
-            CompletableFuture<Optional<RespT>> future = pendingFuture;
-            pendingFuture = null;
-            future.complete(Optional.empty());
+            // Complete any pending future with the error
+            if (pendingFuture != null) {
+                CompletableFuture<Optional<RespT>> future = pendingFuture;
+                pendingFuture = null;
+                future.completeExceptionally(t);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void onCompleted() {
+        lock.lock();
+        try {
+            long elapsed = System.nanoTime() - startNanos;
+            ElapsedLogger.logSuccess(
+                    logger, timingName + ", responseSizeMb=" + totalResponseSize / 1_000_000.0, elapsed);
+            streamEnded = true;
+
+            // Complete any pending future with empty (only if buffer is also empty)
+            if (pendingFuture != null && buffer.isEmpty()) {
+                CompletableFuture<Optional<RespT>> future = pendingFuture;
+                pendingFuture = null;
+                future.complete(Optional.empty());
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -148,31 +169,36 @@ public class AsyncStreamObserver<ReqT, RespT extends AbstractMessage> implements
      *
      * @return a CompletionStage for the next element
      */
-    public synchronized CompletionStage<Optional<RespT>> requestNext() {
-        // If there are buffered messages, return one immediately
-        if (!buffer.isEmpty()) {
-            return CompletableFuture.completedFuture(Optional.of(buffer.poll()));
-        }
-
-        // If stream already ended, return immediately
-        if (streamEnded) {
-            if (terminalError != null) {
-                CompletableFuture<Optional<RespT>> future = new CompletableFuture<>();
-                future.completeExceptionally(terminalError);
-                return future;
+    public CompletionStage<Optional<RespT>> requestNext() {
+        lock.lock();
+        try {
+            // If there are buffered messages, return one immediately
+            if (!buffer.isEmpty()) {
+                return CompletableFuture.completedFuture(Optional.of(buffer.poll()));
             }
-            // Empty signals success
-            return CompletableFuture.completedFuture(Optional.empty());
-        }
 
-        // Create a new future that will be completed when data arrives
-        // Fail if there is an unconsumed future (would indicate concurrent requestNext calls
-        // which are not supported)
-        if (pendingFuture != null) {
-            throw new IllegalStateException("Unfulfilled previous future when next is requested");
+            // If stream already ended, return immediately
+            if (streamEnded) {
+                if (terminalError != null) {
+                    CompletableFuture<Optional<RespT>> future = new CompletableFuture<>();
+                    future.completeExceptionally(terminalError);
+                    return future;
+                }
+                // Empty signals success
+                return CompletableFuture.completedFuture(Optional.empty());
+            }
+
+            // Create a new future that will be completed when data arrives
+            // Fail if there is an unconsumed future (would indicate concurrent requestNext calls
+            // which are not supported)
+            if (pendingFuture != null) {
+                throw new IllegalStateException("Unfulfilled previous future when next is requested");
+            }
+            pendingFuture = new CompletableFuture<>();
+            return pendingFuture;
+        } finally {
+            lock.unlock();
         }
-        pendingFuture = new CompletableFuture<>();
-        return pendingFuture;
     }
 
     /**
