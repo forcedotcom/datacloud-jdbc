@@ -137,7 +137,7 @@ class SimpleResultSetMetaDataTest {
 
     @Test
     public void testIsReadOnly() throws SQLException {
-        assertThat(simpleResultSetMetaData.isReadOnly(1)).isFalse();
+        assertThat(simpleResultSetMetaData.isReadOnly(1)).isTrue();
     }
 
     @Test

@@ -148,9 +148,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public boolean isReadOnly(int column) throws SQLException {
-        // Match standard JDBC behavior: readOnly=false does not mean the column is writable,
-        // it means we don't know. isWritable() and isDefinitelyWritable() still return false.
-        return false;
+        return true;
     }
 
     @Override
