@@ -5,7 +5,6 @@
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
@@ -21,11 +20,8 @@ public class FloatVectorAccessor extends QueryJDBCAccessor {
 
     private static final String INVALID_VALUE_ERROR_RESPONSE = "BigDecimal doesn't support Infinite/NaN";
 
-    public FloatVectorAccessor(
-            Float4Vector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull) {
-        super(currentRowSupplier, setCursorWasNull);
+    public FloatVectorAccessor(Float4Vector vector, IntSupplier currentRowSupplier) {
+        super(currentRowSupplier);
         this.holder = new NullableFloat4Holder();
         this.vector = vector;
     }
@@ -40,7 +36,6 @@ public class FloatVectorAccessor extends QueryJDBCAccessor {
         vector.get(getCurrentRow(), holder);
 
         this.wasNull = holder.isSet == 0;
-        this.wasNullConsumer.setWasNull(this.wasNull);
         if (this.wasNull) {
             return 0;
         }

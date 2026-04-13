@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
-import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
@@ -51,12 +50,10 @@ public class DoubleVectorAccessorTest {
         Collections.shuffle(values);
     }
 
-    private TestWasNullConsumer iterate(List<Double> values, BuildThrowingConsumer builder) {
-        val consumer = new TestWasNullConsumer(collector);
-
+    private void iterate(List<Double> values, BuildThrowingConsumer builder) {
         try (val vector = extension.createFloat8Vector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new DoubleVectorAccessor(vector, i::get, consumer);
+            val sut = new DoubleVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
@@ -64,14 +61,10 @@ public class DoubleVectorAccessorTest {
                 collector.assertThat(sut).satisfies(b -> s.accept((DoubleVectorAccessor) b));
             }
         }
-
-        return consumer;
     }
 
-    private TestWasNullConsumer iterate(BuildThrowingConsumer builder) {
-        val consumer = iterate(values, builder);
-        consumer.assertThat().hasNullSeen(2).hasNotNullSeen(values.size() - 2);
-        return consumer;
+    private void iterate(BuildThrowingConsumer builder) {
+        iterate(values, builder);
     }
 
     @FunctionalInterface
@@ -128,10 +121,9 @@ public class DoubleVectorAccessorTest {
 
     @Test
     void testGetBigDecimalIllegalDoublesMethodFromFloat8Vector() {
-        val consumer = iterate(
+        iterate(
                 ImmutableList.of(Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NaN),
                 expected -> sut -> assertThrows(SQLException.class, sut::getBigDecimal));
-        consumer.assertThat().hasNullSeen(0).hasNotNullSeen(3);
     }
 
     @Test

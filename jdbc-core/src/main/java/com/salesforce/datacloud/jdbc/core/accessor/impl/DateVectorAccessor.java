@@ -8,7 +8,6 @@ import static com.salesforce.datacloud.jdbc.core.accessor.impl.DateVectorGetter.
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCDateFromMilliseconds;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DateVectorGetter.Getter;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DateVectorGetter.Holder;
 import java.sql.Date;
@@ -30,23 +29,15 @@ public class DateVectorAccessor extends QueryJDBCAccessor {
 
     private static final String INVALID_VECTOR_ERROR_RESPONSE = "Invalid Arrow vector provided";
 
-    public DateVectorAccessor(
-            DateDayVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        super(currentRowSupplier, setCursorWasNull);
+    public DateVectorAccessor(DateDayVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        super(currentRowSupplier);
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
     }
 
-    public DateVectorAccessor(
-            DateMilliVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        super(currentRowSupplier, setCursorWasNull);
+    public DateVectorAccessor(DateMilliVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        super(currentRowSupplier);
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
@@ -105,7 +96,6 @@ public class DateVectorAccessor extends QueryJDBCAccessor {
     private void fillHolder() {
         getter.get(getCurrentRow(), holder);
         this.wasNull = holder.isSet == 0;
-        this.wasNullConsumer.setWasNull(this.wasNull);
     }
 
     protected static TimeUnit getTimeUnitForVector(ValueVector vector) throws SQLException {

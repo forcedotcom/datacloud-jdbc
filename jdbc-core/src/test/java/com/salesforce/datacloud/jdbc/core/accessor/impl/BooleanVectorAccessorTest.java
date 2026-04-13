@@ -8,11 +8,9 @@ import static com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorAsser
 
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
-import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -39,9 +37,6 @@ public class BooleanVectorAccessorTest {
     private static final List<Boolean> values = Stream.concat(
                     IntStream.range(0, 15).mapToObj(i -> random.nextBoolean()), Stream.of(null, null, null, null, null))
             .collect(Collectors.toList());
-    private static final int expectedNulls =
-            (int) values.stream().filter(Objects::isNull).count();
-    private static final int expectedNonNulls = values.size() - expectedNulls;
 
     @BeforeAll
     static void setup() {
@@ -49,10 +44,9 @@ public class BooleanVectorAccessorTest {
     }
 
     private void iterate(BuildThrowingConsumer builder) {
-        val consumer = new TestWasNullConsumer(collector);
         try (val vector = extension.createBitVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new BooleanVectorAccessor(vector, i::get, consumer);
+            val sut = new BooleanVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
@@ -63,8 +57,6 @@ public class BooleanVectorAccessorTest {
                         .satisfies(b -> s.accept((BooleanVectorAccessor) b));
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls).hasNullSeen(expectedNulls);
     }
 
     @FunctionalInterface

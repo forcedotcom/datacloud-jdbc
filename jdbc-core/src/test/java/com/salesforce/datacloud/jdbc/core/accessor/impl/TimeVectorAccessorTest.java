@@ -10,7 +10,6 @@ import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.null
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
-import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
 import java.sql.Time;
 import java.time.Instant;
 import java.time.LocalTime;
@@ -21,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
 import java.util.TimeZone;
 import java.util.concurrent.ThreadLocalRandom;
@@ -47,18 +45,16 @@ public class TimeVectorAccessorTest {
     public static RootAllocatorTestExtension extension = new RootAllocatorTestExtension();
 
     private static final int[] edgeCaseVals = {0, 1, 60, 60 * 60, (24 * 60 * 60 - 1)};
-    public static final int NUM_OF_CALLS = 3;
 
     @SneakyThrows
     @Test
     void testTimeNanoVectorGetObjectClass() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.NANOSECONDS);
 
         try (val vector = extension.createTimeNanoVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Time.class);
@@ -69,13 +65,12 @@ public class TimeVectorAccessorTest {
     @SneakyThrows
     @Test
     void testTimeMicroVectorGetObjectClass() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.MICROSECONDS);
 
         try (val vector = extension.createTimeMicroVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Time.class);
@@ -86,13 +81,12 @@ public class TimeVectorAccessorTest {
     @SneakyThrows
     @Test
     void testTimeMilliVectorGetObjectClass() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.MILLISECONDS);
 
         try (val vector = extension.createTimeMilliVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Time.class);
@@ -103,13 +97,12 @@ public class TimeVectorAccessorTest {
     @SneakyThrows
     @Test
     void testTimeSecVectorGetObjectClass() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.SECONDS);
 
         try (val vector = extension.createTimeSecVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Time.class);
@@ -120,18 +113,15 @@ public class TimeVectorAccessorTest {
     @SneakyThrows
     @Test
     void testTimeNanoVectorGetTime() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.NANOSECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
         Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
 
         try (val vector = extension.createTimeNanoVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.NANOSECONDS.toMillis(values.get(i.get())));
@@ -160,25 +150,20 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * NUM_OF_CALLS).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeMicroVectorGetTime() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.MICROSECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
         Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
 
         try (val vector = extension.createTimeMicroVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.MICROSECONDS.toMillis(values.get(i.get())));
@@ -207,25 +192,20 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * NUM_OF_CALLS).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeMilliVectorGetTime() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.MILLISECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
         Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
 
         try (val vector = extension.createTimeMilliVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(values.get(i.get()));
@@ -254,25 +234,20 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * NUM_OF_CALLS).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeSecVectorGetTime() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.SECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
         Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
 
         try (val vector = extension.createTimeSecVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.SECONDS.toMillis(values.get(i.get())));
@@ -301,22 +276,17 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * NUM_OF_CALLS).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeNanoGetObject() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.NANOSECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeNanoVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.NANOSECONDS.toMillis(values.get(i.get())));
@@ -334,22 +304,17 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * 2).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeMicroGetObject() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.MICROSECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeMicroVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.MICROSECONDS.toMillis(values.get(i.get())));
@@ -367,22 +332,17 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * 2).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeMilliGetObject() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.MILLISECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeMilliVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(values.get(i.get()));
@@ -400,22 +360,17 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * 2).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeSecGetObject() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.SECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeSecVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.SECONDS.toMillis(values.get(i.get())));
@@ -433,22 +388,17 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * 2).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeNanoGetTimestamp() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.NANOSECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeNanoVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.NANOSECONDS.toMillis(values.get(i.get())));
@@ -465,22 +415,17 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeMicroGetTimestamp() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.MICROSECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeMicroVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.MICROSECONDS.toMillis(values.get(i.get())));
@@ -497,22 +442,17 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeMilliGetTimestamp() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.MILLISECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeMilliVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(values.get(i.get()));
@@ -529,22 +469,17 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeSecGetTimestamp() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.SECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeSecVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedTime = getExpectedTime(TimeUnit.SECONDS.toMillis(values.get(i.get())));
@@ -561,22 +496,17 @@ public class TimeVectorAccessorTest {
                         .hasMillisecond(expectedMilli);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeNanoGetString() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.NANOSECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeNanoVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -585,21 +515,17 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(stringValue).isEqualTo(getISOString(currentNanos, TimeUnit.NANOSECONDS));
             }
         }
-        consumer.assertThat().hasNullSeen(expectedNulls).hasNotNullSeen(expectedNonNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeMicroGetString() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.MICROSECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeMicroVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -608,21 +534,17 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(stringValue).isEqualTo(getISOString(currentMicros, TimeUnit.MICROSECONDS));
             }
         }
-        consumer.assertThat().hasNullSeen(expectedNulls).hasNotNullSeen(expectedNonNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeMilliGetString() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.MILLISECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeMilliVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -631,21 +553,17 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(stringValue).isEqualTo(getISOString(currentMillis, TimeUnit.MILLISECONDS));
             }
         }
-        consumer.assertThat().hasNullSeen(expectedNulls).hasNotNullSeen(expectedNonNulls);
     }
 
     @SneakyThrows
     @Test
     void testTimeSecGetString() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.SECONDS);
-        final int expectedNulls = (int) values.stream().filter(Objects::isNull).count();
-        final int expectedNonNulls = values.size() - expectedNulls;
 
         try (val vector = extension.createTimeSecVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -654,19 +572,17 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(stringValue).isEqualTo(getISOString(currentSec, TimeUnit.SECONDS));
             }
         }
-        consumer.assertThat().hasNullSeen(expectedNulls).hasNotNullSeen(expectedNonNulls);
     }
 
     @SneakyThrows
     @Test
     void testNulledOutTimeNanoVectorReturnsNull() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.NANOSECONDS);
 
         try (val vector = nulledOutVector(extension.createTimeNanoVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
             Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
@@ -678,20 +594,17 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(sut.getString()).isNull();
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(values.size() * 4);
     }
 
     @SneakyThrows
     @Test
     void testNulledOutTimeMicroVectorReturnsNull() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Long> values = generateRandomLongs(TimeUnit.MICROSECONDS);
 
         try (val vector = nulledOutVector(extension.createTimeMicroVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
             Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
@@ -703,20 +616,17 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(sut.getString()).isNull();
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(values.size() * 4);
     }
 
     @SneakyThrows
     @Test
     void testNulledOutTimeMilliVectorReturnsNull() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.MILLISECONDS);
 
         try (val vector = nulledOutVector(extension.createTimeMilliVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
             Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
@@ -728,20 +638,17 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(sut.getString()).isNull();
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(values.size() * 4);
     }
 
     @SneakyThrows
     @Test
     void testNulledOutTimeSecVectorReturnsNull() {
-        val consumer = new TestWasNullConsumer(collector);
 
         List<Integer> values = generateRandomIntegers(TimeUnit.SECONDS);
 
         try (val vector = nulledOutVector(extension.createTimeSecVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new TimeVectorAccessor(vector, i::get, consumer);
+            val sut = new TimeVectorAccessor(vector, i::get);
 
             Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone(ASIA_BANGKOK));
             Calendar defaultCalendar = Calendar.getInstance(TimeZone.getDefault());
@@ -753,8 +660,6 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(sut.getString()).isNull();
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(values.size() * 4);
     }
 
     private static List<Long> generateRandomLongs(TimeUnit timeUnit) {

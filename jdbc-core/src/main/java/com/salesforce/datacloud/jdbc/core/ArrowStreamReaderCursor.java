@@ -32,21 +32,11 @@ class ArrowStreamReaderCursor implements AutoCloseable {
     @lombok.Getter
     private int rowsSeen = 0;
 
-    private boolean wasNull;
-
     private final AtomicInteger currentIndex = new AtomicInteger(INIT_ROW_NUMBER);
 
     ArrowStreamReaderCursor(ArrowStreamReader reader, ZoneId sessionZone) {
         this.reader = reader;
         this.sessionZone = sessionZone;
-    }
-
-    private void wasNullConsumer(boolean wasNull) {
-        this.wasNull = wasNull;
-    }
-
-    boolean wasNull() {
-        return wasNull;
     }
 
     @SneakyThrows
@@ -61,7 +51,7 @@ class ArrowStreamReaderCursor implements AutoCloseable {
     }
 
     private QueryJDBCAccessor createAccessor(FieldVector vector) throws SQLException {
-        return QueryJDBCAccessorFactory.createAccessor(vector, currentIndex::get, this::wasNullConsumer, sessionZone);
+        return QueryJDBCAccessorFactory.createAccessor(vector, currentIndex::get, sessionZone);
     }
 
     private boolean loadNextBatch() throws IOException {

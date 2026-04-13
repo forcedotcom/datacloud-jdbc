@@ -8,7 +8,6 @@ import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.null
 
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
-import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
@@ -37,12 +36,10 @@ public class VarCharVectorAccessorTest {
     @Test
     void testGetStringGetObjectAndGetObjectClassFromValidVarCharVector() {
         val values = getStrings();
-        val expectedNullChecks = values.size() * 3; // seen thrice since getObject and getString both call getBytes
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createVarCharVectorFrom(values)) {
             val i = new AtomicInteger(0);
-            val sut = new VarCharVectorAccessor(vector, i::get, consumer);
+            val sut = new VarCharVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
@@ -54,20 +51,16 @@ public class VarCharVectorAccessorTest {
                         .hasString(expected);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNullChecks).hasNullSeen(0);
     }
 
     @SneakyThrows
     @Test
     void testGetStringGetObjectAndGetObjectClassFromNulledVarCharVector() {
         val values = getStrings();
-        val expectedNullChecks = values.size() * 3; // seen thrice since getObject and getString both call getBytes
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = nulledOutVector(extension.createVarCharVectorFrom(values))) {
             val i = new AtomicInteger(0);
-            val sut = new VarCharVectorAccessor(vector, i::get, consumer);
+            val sut = new VarCharVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector
@@ -78,20 +71,16 @@ public class VarCharVectorAccessorTest {
                 collector.assertThat(sut.getBytes()).isNull();
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(expectedNullChecks);
     }
 
     @SneakyThrows
     @Test
     void testGetStringGetObjectAndGetObjectClassFromValidLargeVarCharVector() {
         val values = getStrings();
-        val expectedNullChecks = values.size() * 3; // seen thrice since getObject and getString both call getBytes
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createLargeVarCharVectorFrom(values)) {
             val i = new AtomicInteger(0);
-            val sut = new VarCharVectorAccessor(vector, i::get, consumer);
+            val sut = new VarCharVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
@@ -103,20 +92,16 @@ public class VarCharVectorAccessorTest {
                         .hasString(expected);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNullChecks).hasNullSeen(0);
     }
 
     @SneakyThrows
     @Test
     void testGetStringGetObjectAndGetObjectClassFromNulledLargeVarCharVector() {
         val values = getStrings();
-        val expectedNullChecks = values.size() * 3; // seen thrice since getObject and getString both call getBytes
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = nulledOutVector(extension.createLargeVarCharVectorFrom(values))) {
             val i = new AtomicInteger(0);
-            val sut = new VarCharVectorAccessor(vector, i::get, consumer);
+            val sut = new VarCharVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector
@@ -127,8 +112,6 @@ public class VarCharVectorAccessorTest {
                 collector.assertThat(sut.getBytes()).isNull();
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(expectedNullChecks);
     }
 
     private List<String> getStrings() {

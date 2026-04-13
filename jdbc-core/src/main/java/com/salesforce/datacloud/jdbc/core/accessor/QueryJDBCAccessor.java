@@ -27,12 +27,9 @@ import java.util.function.IntSupplier;
 public abstract class QueryJDBCAccessor implements DataCloudAccessor {
     private final IntSupplier currentRowSupplier;
     protected boolean wasNull;
-    protected QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer;
 
-    protected QueryJDBCAccessor(
-            IntSupplier currentRowSupplier, QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
+    protected QueryJDBCAccessor(IntSupplier currentRowSupplier) {
         this.currentRowSupplier = currentRowSupplier;
-        this.wasNullConsumer = wasNullConsumer;
     }
 
     protected int getCurrentRow() {

@@ -9,7 +9,6 @@ import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorAc
 import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorGetter.createGetter;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -54,12 +53,8 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
     private final TimeStampVectorGetter.Holder holder;
     private final TimeStampVectorGetter.Getter getter;
 
-    public TimeStampTZVectorAccessor(
-            TimeStampVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer)
-            throws SQLException {
-        super(currentRowSupplier, wasNullConsumer);
+    public TimeStampTZVectorAccessor(TimeStampVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        super(currentRowSupplier);
         this.arrowMetadataZone = extractArrowMetadataZone(vector);
         this.timeUnit = getTimeUnitForVector(vector);
         this.holder = new TimeStampVectorGetter.Holder();
@@ -79,7 +74,6 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
     private Instant getInstant() {
         getter.get(getCurrentRow(), holder);
         this.wasNull = holder.isSet == 0;
-        this.wasNullConsumer.setWasNull(this.wasNull);
 
         if (this.wasNull) {
             return null;

@@ -148,7 +148,7 @@ public class SimpleResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public boolean isReadOnly(int column) throws SQLException {
-        return true;
+        return false;
     }
 
     @Override
