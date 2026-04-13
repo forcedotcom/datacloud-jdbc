@@ -142,6 +142,7 @@ public class StreamingResultSet
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
+        checkClosed();
         return metadata;
     }
 
