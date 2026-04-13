@@ -5,7 +5,7 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
-import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
+import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.resultset.ColumnAccessor;
 import com.salesforce.datacloud.jdbc.core.resultset.SimpleResultSet;
 import java.sql.SQLException;
@@ -17,40 +17,43 @@ import java.util.OptionalLong;
 /**
  * Custom ResultSet implementation for metadata queries
  */
-public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResultSet> {
+public class DataCloudMetadataResultSet extends SimpleResultSet<DataCloudMetadataResultSet> {
 
     private final List<Object> data;
     private int currentRow = -1;
     private boolean closed = false;
 
-    private SimpleMetadataResultSet(
-            SimpleResultSetMetaData metadata, ColumnAccessor<SimpleMetadataResultSet>[] accessors, List<Object> data) {
+    private DataCloudMetadataResultSet(
+            DataCloudResultSetMetaData metadata,
+            ColumnAccessor<DataCloudMetadataResultSet>[] accessors,
+            List<Object> data) {
         super(metadata, accessors, false);
         this.data = data;
     }
 
-    public static SimpleMetadataResultSet empty() throws SQLException {
-        return of(new SimpleResultSetMetaData(Collections.emptyList()), Collections.emptyList());
+    public static DataCloudMetadataResultSet empty() throws SQLException {
+        return of(new DataCloudResultSetMetaData(Collections.emptyList()), Collections.emptyList());
     }
 
-    public static SimpleMetadataResultSet of(SimpleResultSetMetaData metadata, List<Object> data) throws SQLException {
+    public static DataCloudMetadataResultSet of(DataCloudResultSetMetaData metadata, List<Object> data)
+            throws SQLException {
         @SuppressWarnings("unchecked")
-        ColumnAccessor<SimpleMetadataResultSet>[] accessors = new ColumnAccessor[metadata.getColumnCount()];
+        ColumnAccessor<DataCloudMetadataResultSet>[] accessors = new ColumnAccessor[metadata.getColumnCount()];
         for (int i = 0; i < metadata.getColumnCount(); i++) {
             final int columnIndex = i;
             accessors[i] = createAccessor(metadata.getColumn(i + 1), columnIndex);
         }
 
-        return new SimpleMetadataResultSet(metadata, accessors, data);
+        return new DataCloudMetadataResultSet(metadata, accessors, data);
     }
 
     /**
      * Creates a ColumnAccessor for a specific column.
      */
-    private static ColumnAccessor<SimpleMetadataResultSet> createAccessor(ColumnMetadata column, int columnIndex) {
-        return new ColumnAccessor<SimpleMetadataResultSet>() {
+    private static ColumnAccessor<DataCloudMetadataResultSet> createAccessor(ColumnMetadata column, int columnIndex) {
+        return new ColumnAccessor<DataCloudMetadataResultSet>() {
             @Override
-            public String getString(SimpleMetadataResultSet resultSet) throws SQLException {
+            public String getString(DataCloudMetadataResultSet resultSet) throws SQLException {
                 Object value = getValue(resultSet, columnIndex);
                 if (value == null) {
                     return null;
@@ -59,7 +62,7 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
             }
 
             @Override
-            public Boolean getBoolean(SimpleMetadataResultSet resultSet) throws SQLException {
+            public Boolean getBoolean(DataCloudMetadataResultSet resultSet) throws SQLException {
                 Object value = getValue(resultSet, columnIndex);
                 if (value == null) {
                     return null;
@@ -71,7 +74,7 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
             }
 
             @Override
-            public OptionalLong getAnyInteger(SimpleMetadataResultSet resultSet) throws SQLException {
+            public OptionalLong getAnyInteger(DataCloudMetadataResultSet resultSet) throws SQLException {
                 Object value = getValue(resultSet, columnIndex);
                 if (value == null) {
                     return OptionalLong.empty();
@@ -86,7 +89,7 @@ public class SimpleMetadataResultSet extends SimpleResultSet<SimpleMetadataResul
             /**
              * Helper method to get the value for the current row and column.
              */
-            private Object getValue(SimpleMetadataResultSet resultSet, int columnIndex) throws SQLException {
+            private Object getValue(DataCloudMetadataResultSet resultSet, int columnIndex) throws SQLException {
                 if (resultSet.closed) {
                     throw new SQLException("ResultSet is closed");
                 }

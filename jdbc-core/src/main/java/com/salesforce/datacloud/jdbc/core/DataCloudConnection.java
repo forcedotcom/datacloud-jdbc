@@ -11,7 +11,7 @@ import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
 
 import com.google.protobuf.Empty;
 import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
-import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
+import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
@@ -278,7 +278,7 @@ public class DataCloudConnection implements Connection {
         try {
             val schema = QuerySchemaAccessor.getArrowSchema(QueryAccessGrpcClient.of(queryId, getStub()));
             List<ColumnMetadata> columns = toColumnMetaData(schema.getFields());
-            return new SimpleResultSetMetaData(columns);
+            return new DataCloudResultSetMetaData(columns);
         } catch (StatusRuntimeException ex) {
             throw createException(connectionProperties.isIncludeCustomerDetailInReason(), null, queryId, ex);
         }

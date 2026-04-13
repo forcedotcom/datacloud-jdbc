@@ -10,16 +10,16 @@ import java.sql.Types;
 import java.util.List;
 import lombok.val;
 
-public class SimpleResultSetMetaData implements ResultSetMetaData {
+public class DataCloudResultSetMetaData implements ResultSetMetaData {
     /// The columns
     private final ColumnMetadata[] columns;
 
-    public SimpleResultSetMetaData(ColumnMetadata[] columns) {
+    public DataCloudResultSetMetaData(ColumnMetadata[] columns) {
         this.columns = columns;
     }
 
     /** Builds metadata from a list of column definitions (e.g. from {@link com.salesforce.datacloud.jdbc.core.MetadataSchemas}). */
-    public SimpleResultSetMetaData(List<ColumnMetadata> columns) {
+    public DataCloudResultSetMetaData(List<ColumnMetadata> columns) {
         this.columns = columns.toArray(new ColumnMetadata[0]);
     }
     /// Find a column by label

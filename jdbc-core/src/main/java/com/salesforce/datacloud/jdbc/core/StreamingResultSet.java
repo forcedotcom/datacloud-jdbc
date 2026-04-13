@@ -6,7 +6,7 @@ package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
-import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
+import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.resultset.ForwardOnlyResultSet;
 import com.salesforce.datacloud.jdbc.core.resultset.ReadOnlyResultSet;
 import com.salesforce.datacloud.jdbc.core.resultset.ResultSetWithPositionalGetters;
@@ -53,7 +53,7 @@ public class StreamingResultSet
 
     private final ArrowStreamReaderCursor cursor;
     private final QueryJDBCAccessor[] accessors;
-    private final SimpleResultSetMetaData metadata;
+    private final DataCloudResultSetMetaData metadata;
     private final ColumnNameResolver columnNameResolver;
     ThrowingJdbcSupplier<QueryStatus> getQueryStatus;
     private boolean wasNull;
@@ -62,7 +62,7 @@ public class StreamingResultSet
     private StreamingResultSet(
             ArrowStreamReaderCursor cursor,
             String queryId,
-            SimpleResultSetMetaData metadata,
+            DataCloudResultSetMetaData metadata,
             QueryJDBCAccessor[] accessors,
             ColumnNameResolver columnNameResolver) {
         this.cursor = cursor;
@@ -99,7 +99,7 @@ public class StreamingResultSet
                                 field.getName(), type, type.getType().getName());
                     })
                     .collect(Collectors.toList());
-            val metadata = new SimpleResultSetMetaData(columns);
+            val metadata = new DataCloudResultSetMetaData(columns);
 
             val cursor = new ArrowStreamReaderCursor(resultStream, sessionZone);
             val accessorList = cursor.createAccessors();
