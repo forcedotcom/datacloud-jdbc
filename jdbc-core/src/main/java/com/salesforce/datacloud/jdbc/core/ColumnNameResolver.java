@@ -38,13 +38,15 @@ public final class ColumnNameResolver {
     public ColumnNameResolver(List<ColumnMetadata> columns) {
         this.exactColumnLabelMap = new HashMap<>(columns.size());
         this.lowercaseColumnLabelMap = new HashMap<>(columns.size());
-
+        // Index lowercase labels to ordinals, but only if the lowercase key doesn't exist yet
+        // This ensures the first column with a given lowercase name wins (lowest ordinal)
         for (int i = 0; i < columns.size(); i++) {
             ColumnMetadata col = columns.get(i);
             String label = col.getName();
             if (label != null) {
                 // Use putIfAbsent to ensure first occurrence (lowest ordinal) wins for duplicates
                 exactColumnLabelMap.putIfAbsent(label, i);
+                // Only add if this lowercase key hasn't been seen yet (preserves first occurrence)
                 lowercaseColumnLabelMap.putIfAbsent(label.toLowerCase(), i);
             }
         }
