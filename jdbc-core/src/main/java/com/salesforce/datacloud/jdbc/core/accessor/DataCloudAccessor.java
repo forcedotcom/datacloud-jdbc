@@ -22,10 +22,6 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
 
-/**
- * Project-owned replacement for Avatica's {@code Cursor.Accessor} interface. Provides the same
- * method signatures for column value access without any Avatica dependency.
- */
 public interface DataCloudAccessor {
 
     boolean wasNull() throws SQLException;

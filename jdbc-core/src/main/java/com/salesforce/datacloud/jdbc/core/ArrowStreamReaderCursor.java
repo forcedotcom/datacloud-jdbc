@@ -84,6 +84,7 @@ class ArrowStreamReaderCursor implements AutoCloseable {
             }
             return next;
         } catch (Exception e) {
+            // This can happen due to SneakyThrows.
             if (e instanceof SQLException) {
                 throw e;
             } else {
