@@ -5,11 +5,11 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.google.protobuf.ByteString;
+import com.salesforce.datacloud.jdbc.protocol.CloseableIterator;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
-import java.util.Iterator;
 import lombok.NonNull;
 
 /**
@@ -17,12 +17,12 @@ import lombok.NonNull;
  * This class has a single responsibility: converting ByteString iterator to byte stream.
  */
 public class ByteStringReadableByteChannel implements ReadableByteChannel {
-    @NonNull private final Iterator<ByteString> iterator;
+    @NonNull private final CloseableIterator<ByteString> iterator;
 
     private boolean open = true;
     private ByteBuffer currentBuffer = null;
 
-    public ByteStringReadableByteChannel(@NonNull Iterator<ByteString> iterator) {
+    public ByteStringReadableByteChannel(@NonNull CloseableIterator<ByteString> iterator) {
         this.iterator = iterator;
     }
 
@@ -61,6 +61,13 @@ public class ByteStringReadableByteChannel implements ReadableByteChannel {
     @Override
     public void close() throws IOException {
         open = false;
+        try {
+            iterator.close();
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Failed to close underlying resource", e);
+        }
     }
 
     private static int transferToDestination(ByteBuffer source, ByteBuffer destination) {

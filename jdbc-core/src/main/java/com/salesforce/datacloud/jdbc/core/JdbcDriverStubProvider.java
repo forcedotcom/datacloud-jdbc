@@ -53,16 +53,20 @@ public class JdbcDriverStubProvider implements HyperGrpcStubProvider {
             return;
         }
 
-        channel.shutdown();
+        // Use shutdownNow() to cancel any in-flight RPCs. A JDBC Connection.close() means the
+        // caller is done with the connection, so immediate cancellation is appropriate.
+        // Note: With gRPC 1.80+, graceful shutdown() can hang if streams aren't fully closed,
+        // e.g., when result sets are not explicitly closed before closing the connection.
+        channel.shutdownNow();
 
         try {
+            // Brief wait after forceful shutdown. Any remaining transport cleanup happens
+            // asynchronously in the background and will be handled by the JVM.
             if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {
-                log.warn("Channel did not terminate within 5 seconds, forcing shutdown");
-                channel.shutdownNow();
+                log.debug("Channel transport still shutting down in background after shutdownNow");
             }
         } catch (InterruptedException e) {
-            log.warn("Channel shutdown interrupted, forcing immediate termination", e);
-            channel.shutdownNow();
+            log.warn("Channel shutdown interrupted", e);
             Thread.currentThread().interrupt();
         }
     }

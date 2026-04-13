@@ -13,6 +13,32 @@ repositories {
     }
 }
 
+val nettyVersion = extensions.getByType<VersionCatalogsExtension>()
+    .named("libs")
+    .findVersion("netty")
+    .get()
+    .requiredVersion
+
+dependencies {
+    constraints {
+        // gRPC and Arrow pull in Netty 4.1.x transitively. These constraints enforce a minimum
+        // version to fix security vulnerabilities. Keep the version in gradle/libs.versions.toml.
+        listOf(
+            "io.netty:netty-buffer",
+            "io.netty:netty-codec",
+            "io.netty:netty-codec-http",
+            "io.netty:netty-codec-http2",
+            "io.netty:netty-common",
+            "io.netty:netty-handler",
+            "io.netty:netty-resolver",
+            "io.netty:netty-transport",
+            "io.netty:netty-transport-native-unix-common",
+        ).forEach { module ->
+            implementation("$module:$nettyVersion")
+        }
+    }
+}
+
 tasks.withType<Test>().configureEach {
     javaLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(8)

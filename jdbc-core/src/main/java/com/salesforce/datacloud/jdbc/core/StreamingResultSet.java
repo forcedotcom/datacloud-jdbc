@@ -6,8 +6,6 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
 
-import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
-import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -30,7 +28,6 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     private final String queryId;
 
     private final ArrowStreamReaderCursor cursor;
-    ThrowingJdbcSupplier<QueryStatus> getQueryStatus;
     private final ColumnNameResolver columnNameResolver;
 
     private StreamingResultSet(
@@ -65,6 +62,15 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
             return result;
         } catch (IOException ex) {
             throw new SQLException("Unexpected error during ResultSet creation", "XX000", ex);
+        }
+    }
+
+    @Override
+    public void close() {
+        try {
+            cursor.close();
+        } finally {
+            super.close();
         }
     }
 
