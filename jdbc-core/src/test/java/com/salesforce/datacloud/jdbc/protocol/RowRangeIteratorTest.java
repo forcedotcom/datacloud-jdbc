@@ -105,7 +105,7 @@ public class RowRangeIteratorTest {
                 val statement = conn.prepareStatement("select a from generate_series(1, ?) as s(a)")
                         .unwrap(DataCloudPreparedStatement.class)) {
             statement.setInt(1, querySize);
-            statement.executeQuery();
+            statement.executeAsyncQuery();
 
             queryId = statement.getQueryId();
         }

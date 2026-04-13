@@ -179,7 +179,7 @@ class JdbcDriverStubProviderTest {
         stubProvider.close();
 
         verify(mockChannel).shutdownNow();
-        verify(mockChannel).awaitTermination(100, TimeUnit.MILLISECONDS);
+        verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
     }
 
     @SneakyThrows
@@ -193,7 +193,7 @@ class JdbcDriverStubProviderTest {
         stubProvider.close();
 
         verify(mockChannel).shutdownNow();
-        verify(mockChannel).awaitTermination(100, TimeUnit.MILLISECONDS);
+        verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
     }
 
     @SneakyThrows
@@ -208,7 +208,7 @@ class JdbcDriverStubProviderTest {
         stubProvider.close();
 
         verify(mockChannel).shutdownNow();
-        verify(mockChannel).awaitTermination(100, TimeUnit.MILLISECONDS);
+        verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
 
         // Verify interrupt status is restored per Java best practices
         assert Thread.currentThread().isInterrupted() : "Thread interrupt status should be restored";

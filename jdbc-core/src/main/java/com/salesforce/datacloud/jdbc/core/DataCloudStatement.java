@@ -195,6 +195,12 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
     }
 
+    /**
+     * Closes the statement and releases any resources associated with it. Might cancel the query
+     * if it was not yet completed.
+     *
+     * @throws SQLException
+     */
     @Override
     public void close() throws SQLException {
         log.debug("Entering close");

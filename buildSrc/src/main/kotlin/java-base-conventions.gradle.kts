@@ -19,6 +19,13 @@ val nettyVersion = extensions.getByType<VersionCatalogsExtension>()
     .get()
     .requiredVersion
 
+// Exclude grpc-netty-shaded (pulled in transitively by grpcmock) to prevent it from winning
+// gRPC provider discovery over our grpc-netty. The shaded variant has higher priority, and
+// mixing its older transport with our grpc-core version causes channels to never terminate.
+configurations.all {
+    exclude(group = "io.grpc", module = "grpc-netty-shaded")
+}
+
 dependencies {
     constraints {
         // gRPC and Arrow pull in Netty 4.1.x transitively. These constraints enforce a minimum
