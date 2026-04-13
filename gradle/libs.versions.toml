@@ -13,7 +13,7 @@ grpc = "1.78.0"
 io-netty = "4.2.9.Final"
 javax-annotation-javax-annotation-api = "1.3.2"
 jjwt = "0.13.0"
-log4j-core = "2.25.3"
+log4j-core = "2.25.4"
 # This is soft pinned to 4.* (as 5 is not Java 8 compatible) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 mockito = "4.11.0"
 net-jodah-failsafe = "3.3.2"
