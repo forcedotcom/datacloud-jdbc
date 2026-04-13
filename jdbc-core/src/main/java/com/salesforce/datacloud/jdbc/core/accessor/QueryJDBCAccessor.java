@@ -24,7 +24,7 @@ import java.util.Calendar;
 import java.util.Map;
 import java.util.function.IntSupplier;
 
-public abstract class QueryJDBCAccessor implements DataCloudAccessor {
+public abstract class QueryJDBCAccessor implements DataCloudQueryAccessor {
     private final IntSupplier currentRowSupplier;
     protected boolean wasNull;
 

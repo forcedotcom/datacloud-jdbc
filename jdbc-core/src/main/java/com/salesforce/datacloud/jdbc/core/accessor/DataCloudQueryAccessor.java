@@ -22,7 +22,7 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
 
-public interface DataCloudAccessor {
+public interface DataCloudQueryAccessor {
 
     boolean wasNull() throws SQLException;
 
