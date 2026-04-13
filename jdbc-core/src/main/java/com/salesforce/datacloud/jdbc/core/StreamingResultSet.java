@@ -148,16 +148,19 @@ public class StreamingResultSet
 
     @Override
     public int findColumn(String columnLabel) throws SQLException {
+        checkClosed();
         return columnNameResolver.findColumn(columnLabel);
     }
 
     @Override
     public Statement getStatement() throws SQLException {
+        checkClosed();
         return null;
     }
 
     @Override
     public boolean wasNull() throws SQLException {
+        checkClosed();
         return wasNull;
     }
 
@@ -443,6 +446,7 @@ public class StreamingResultSet
 
     @Override
     public int getHoldability() throws SQLException {
+        checkClosed();
         return ResultSet.HOLD_CURSORS_OVER_COMMIT;
     }
 
@@ -453,11 +457,13 @@ public class StreamingResultSet
 
     @Override
     public int getFetchSize() throws SQLException {
+        checkClosed();
         return 0;
     }
 
     @Override
     public SQLWarning getWarnings() throws SQLException {
+        checkClosed();
         return null;
     }
 
