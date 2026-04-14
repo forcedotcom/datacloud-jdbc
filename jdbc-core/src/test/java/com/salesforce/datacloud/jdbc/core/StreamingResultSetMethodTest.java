@@ -12,8 +12,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
-import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Arrays;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
@@ -44,8 +44,7 @@ class StreamingResultSetMethodTest {
         vector.set(0, "hello".getBytes(StandardCharsets.UTF_8));
         vector.setValueCount(1);
 
-        val root = new VectorSchemaRoot(
-                Arrays.asList(vector.getField()), Arrays.asList(vector));
+        val root = new VectorSchemaRoot(Arrays.asList(vector.getField()), Arrays.asList(vector));
         root.setRowCount(1);
 
         val out = new ByteArrayOutputStream();
@@ -54,8 +53,7 @@ class StreamingResultSetMethodTest {
         }
         root.close();
 
-        val reader = new ArrowStreamReader(
-                new ByteArrayInputStream(out.toByteArray()), allocator);
+        val reader = new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), allocator);
         return StreamingResultSet.of(reader, QUERY_ID);
     }
 
@@ -89,8 +87,7 @@ class StreamingResultSetMethodTest {
     void unsupportedMethodThrows(ResultSetMethod method) throws Exception {
         try (val rs = createResultSet()) {
             rs.next();
-            assertThatThrownBy(() -> method.invoke(rs))
-                    .isInstanceOf(SQLFeatureNotSupportedException.class);
+            assertThatThrownBy(() -> method.invoke(rs)).isInstanceOf(SQLFeatureNotSupportedException.class);
         }
     }
 
@@ -138,7 +135,9 @@ class StreamingResultSetMethodTest {
         assertThatThrownBy(rs::getRow).isInstanceOf(SQLException.class).hasMessageContaining("closed");
         assertThatThrownBy(rs::getMetaData).isInstanceOf(SQLException.class).hasMessageContaining("closed");
         assertThatThrownBy(rs::wasNull).isInstanceOf(SQLException.class).hasMessageContaining("closed");
-        assertThatThrownBy(() -> rs.getString(1)).isInstanceOf(SQLException.class).hasMessageContaining("closed");
+        assertThatThrownBy(() -> rs.getString(1))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("closed");
         assertThatThrownBy(() -> rs.findColumn("col1"))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("closed");
@@ -183,8 +182,7 @@ class StreamingResultSetMethodTest {
     void findColumn() throws Exception {
         try (val rs = createResultSet()) {
             assertThat(rs.findColumn("col1")).isEqualTo(1);
-            assertThatThrownBy(() -> rs.findColumn("nonexistent"))
-                    .isInstanceOf(SQLException.class);
+            assertThatThrownBy(() -> rs.findColumn("nonexistent")).isInstanceOf(SQLException.class);
         }
     }
 

@@ -195,7 +195,7 @@ public abstract class QueryJDBCAccessor implements DataCloudQueryAccessor {
 
     @Override
     public <T> T getObject(Class<T> aClass) throws SQLException {
-        return null;
+        throw getOperationNotSupported(aClass.getClass());
     }
 
     private static SQLException getOperationNotSupported(final Class<?> type) {
