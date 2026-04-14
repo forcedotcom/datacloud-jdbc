@@ -4,6 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.protocol.async.core;
 
+import com.salesforce.datacloud.jdbc.protocol.CloseableIterator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -22,7 +23,7 @@ import java.util.concurrent.ExecutionException;
  *
  * @param <T> the type of elements returned by this iterator
  */
-public class SyncIteratorAdapter<T> implements Iterator<T>, AutoCloseable {
+public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
 
     /** The underlying async iterator being wrapped. */
     private final AsyncIterator<T> asyncIterator;

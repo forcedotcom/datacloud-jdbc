@@ -13,6 +13,39 @@ repositories {
     }
 }
 
+val nettyVersion = extensions.getByType<VersionCatalogsExtension>()
+    .named("libs")
+    .findVersion("netty")
+    .get()
+    .requiredVersion
+
+// Exclude grpc-netty-shaded (pulled in transitively by grpcmock) to prevent it from winning
+// gRPC provider discovery over our grpc-netty. The shaded variant has higher priority, and
+// mixing its older transport with our grpc-core version causes channels to never terminate.
+configurations.all {
+    exclude(group = "io.grpc", module = "grpc-netty-shaded")
+}
+
+dependencies {
+    constraints {
+        // gRPC and Arrow pull in Netty 4.1.x transitively. These constraints enforce a minimum
+        // version to fix security vulnerabilities. Keep the version in gradle/libs.versions.toml.
+        listOf(
+            "io.netty:netty-buffer",
+            "io.netty:netty-codec",
+            "io.netty:netty-codec-http",
+            "io.netty:netty-codec-http2",
+            "io.netty:netty-common",
+            "io.netty:netty-handler",
+            "io.netty:netty-resolver",
+            "io.netty:netty-transport",
+            "io.netty:netty-transport-native-unix-common",
+        ).forEach { module ->
+            implementation("$module:$nettyVersion")
+        }
+    }
+}
+
 tasks.withType<Test>().configureEach {
     javaLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(8)

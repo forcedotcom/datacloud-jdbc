@@ -5,9 +5,9 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
+import com.salesforce.datacloud.jdbc.protocol.CloseableIterator;
 import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
 import io.grpc.StatusRuntimeException;
-import java.util.Iterator;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
@@ -26,11 +26,16 @@ import salesforce.cdp.hyperdb.v1.QueryResult;
  * @see QueryExceptionHandler
  */
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-class SQLExceptionQueryResultIterator implements Iterator<QueryResult> {
-    Iterator<QueryResult> grpcIterator;
+class SQLExceptionQueryResultIterator implements CloseableIterator<QueryResult> {
+    CloseableIterator<QueryResult> resultIterator;
     boolean includeCustomerDetail;
     String queryId;
     String sql;
+
+    @Override
+    public void close() throws Exception {
+        resultIterator.close();
+    }
 
     /**
      * Creates an {@link ArrowStreamReader} that wraps the given iterator with SQL exception handling.
@@ -47,7 +52,7 @@ class SQLExceptionQueryResultIterator implements Iterator<QueryResult> {
      * @return an {@link ArrowStreamReader} that converts gRPC exceptions to SQL exceptions
      */
     public static ArrowStreamReader createSqlExceptionArrowStreamReader(
-            Iterator<QueryResult> resultIterator, boolean includeCustomerDetail, String queryId, String sql) {
+            CloseableIterator<QueryResult> resultIterator, boolean includeCustomerDetail, String queryId, String sql) {
         val throwingSqlExceptionIterator =
                 new SQLExceptionQueryResultIterator(resultIterator, includeCustomerDetail, queryId, sql);
         return QueryResultArrowStream.toArrowStreamReader(throwingSqlExceptionIterator);
@@ -67,7 +72,7 @@ class SQLExceptionQueryResultIterator implements Iterator<QueryResult> {
     @Override
     public boolean hasNext() {
         try {
-            return grpcIterator.hasNext();
+            return resultIterator.hasNext();
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createException(includeCustomerDetail, sql, queryId, ex);
         }
@@ -88,7 +93,7 @@ class SQLExceptionQueryResultIterator implements Iterator<QueryResult> {
     @Override
     public QueryResult next() {
         try {
-            return grpcIterator.next();
+            return resultIterator.next();
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createException(includeCustomerDetail, queryId, sql, ex);
         }

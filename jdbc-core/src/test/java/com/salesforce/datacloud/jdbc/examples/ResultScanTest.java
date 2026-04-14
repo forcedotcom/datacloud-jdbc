@@ -32,7 +32,7 @@ public class ResultScanTest {
                 val stmt = conn.prepareStatement("SELECT a from generate_series(1,?) a")
                         .unwrap(DataCloudPreparedStatement.class)) {
             stmt.setInt(1, size);
-            stmt.execute();
+            stmt.executeAsyncQuery();
             queryId = stmt.getQueryId();
         }
 

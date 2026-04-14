@@ -7,6 +7,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.protobuf.ByteString;
+import com.salesforce.datacloud.jdbc.protocol.CloseableIterator;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
@@ -35,7 +36,7 @@ class ByteStringReadableByteChannelMemoryTest {
         val allocatedBefore = memoryBean.getHeapMemoryUsage().getUsed();
 
         long totalBytesRead;
-        try (val channel = new ByteStringReadableByteChannel(testData.iterator())) {
+        try (val channel = new ByteStringReadableByteChannel(CloseableIterator.of(testData.iterator()))) {
             totalBytesRead = 0;
 
             // Read all data in small chunks to simulate realistic usage
@@ -86,7 +87,7 @@ class ByteStringReadableByteChannelMemoryTest {
 
         val testData = createTestData(numChunks, dataSize);
         long totalRead;
-        try (val channel = new ByteStringReadableByteChannel(testData.iterator())) {
+        try (val channel = new ByteStringReadableByteChannel(CloseableIterator.of(testData.iterator()))) {
 
             ByteBuffer buffer = ByteBuffer.allocate(4096);
             totalRead = 0;
@@ -141,7 +142,7 @@ class ByteStringReadableByteChannelMemoryTest {
         val before = memoryBean.getHeapMemoryUsage().getUsed();
 
         long totalRead;
-        try (val channel = new ByteStringReadableByteChannel(variableData.iterator())) {
+        try (val channel = new ByteStringReadableByteChannel(CloseableIterator.of(variableData.iterator()))) {
             ByteBuffer buffer = ByteBuffer.allocate(1024); // Small buffer
 
             totalRead = 0;

@@ -8,10 +8,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.google.protobuf.ByteString;
+import com.salesforce.datacloud.jdbc.protocol.CloseableIterator;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +69,7 @@ class ByteStringReadableByteChannelTest {
         val second = ByteBuffer.allocate(5);
         val seen = new ArrayList<ByteString>();
 
-        val iterator = infiniteStream().peek(seen::add).iterator();
+        val iterator = CloseableIterator.of(infiniteStream().peek(seen::add).iterator());
 
         try (val channel = new ReadChannel(new ByteStringReadableByteChannel(iterator))) {
             channel.readFully(first);
@@ -82,12 +82,12 @@ class ByteStringReadableByteChannelTest {
         }
     }
 
-    private static Iterator<ByteString> some() {
-        return infiniteStream().iterator();
+    private static CloseableIterator<ByteString> some() {
+        return CloseableIterator.of(infiniteStream().iterator());
     }
 
-    private static Iterator<ByteString> empty() {
-        return infiniteStream().limit(0).iterator();
+    private static CloseableIterator<ByteString> empty() {
+        return CloseableIterator.of(infiniteStream().limit(0).iterator());
     }
 
     private static Stream<ByteString> infiniteStream() {

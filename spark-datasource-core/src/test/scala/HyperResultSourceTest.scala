@@ -35,7 +35,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
       val connection = use(hyperServerProcess.getConnection());
       val stmt =
         use(connection.createStatement().unwrap(classOf[DataCloudStatement]))
-      stmt.execute("SELECT 42::bigint AS bigint")
+      stmt.executeAsyncQuery("SELECT 42::bigint AS bigint")
       stmt.getQueryId()
     }.get
 
@@ -106,7 +106,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
       val connection = use(hyperServerProcess.getConnection());
       val stmt =
         use(connection.createStatement().unwrap(classOf[DataCloudStatement]))
-      stmt.execute("""
+      stmt.executeAsyncQuery("""
         SELECT
           true::boolean AS boolean,
           NULL::boolean AS boolean_null,
@@ -236,7 +236,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
       val connection = use(hyperServerProcess.getConnection());
       val stmt =
         use(connection.createStatement().unwrap(classOf[DataCloudStatement]))
-      stmt.execute("SELECT generate_series(1, 1000) AS id")
+      stmt.executeAsyncQuery("SELECT generate_series(1, 1000) AS id")
       stmt.getQueryId()
     }.get
 
@@ -275,7 +275,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
       val connection = use(hyperServerProcess.getConnection());
       val stmt =
         use(connection.createStatement().unwrap(classOf[DataCloudStatement]))
-      stmt.execute("""
+      stmt.executeAsyncQuery("""
         SELECT
           1::int AS id,
           NULL::varchar AS name,

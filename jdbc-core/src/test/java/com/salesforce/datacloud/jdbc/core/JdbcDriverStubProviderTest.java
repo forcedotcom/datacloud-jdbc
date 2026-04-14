@@ -178,9 +178,8 @@ class JdbcDriverStubProviderTest {
         val stubProvider = JdbcDriverStubProvider.of(mockChannelBuilder);
         stubProvider.close();
 
-        verify(mockChannel).shutdown();
+        verify(mockChannel).shutdownNow();
         verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
-        verify(mockChannel, never()).shutdownNow();
     }
 
     @SneakyThrows
@@ -193,9 +192,8 @@ class JdbcDriverStubProviderTest {
         val stubProvider = JdbcDriverStubProvider.of(mockChannelBuilder);
         stubProvider.close();
 
-        verify(mockChannel).shutdown();
-        verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
         verify(mockChannel).shutdownNow();
+        verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
     }
 
     @SneakyThrows
@@ -209,9 +207,8 @@ class JdbcDriverStubProviderTest {
         val stubProvider = JdbcDriverStubProvider.of(mockChannelBuilder);
         stubProvider.close();
 
-        verify(mockChannel).shutdown();
-        verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
         verify(mockChannel).shutdownNow();
+        verify(mockChannel).awaitTermination(5, TimeUnit.SECONDS);
 
         // Verify interrupt status is restored per Java best practices
         assert Thread.currentThread().isInterrupted() : "Thread interrupt status should be restored";
