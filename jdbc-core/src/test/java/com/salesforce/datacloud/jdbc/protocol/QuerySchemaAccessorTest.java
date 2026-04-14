@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
+import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
 import com.salesforce.datacloud.jdbc.core.InterceptedHyperTestBase;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
 import io.grpc.Status;
@@ -23,9 +24,9 @@ class QuerySchemaAccessorTest extends InterceptedHyperTestBase {
     void getArrowSchema_shouldReturnSchema() {
         String queryId;
         try (val connection = getInterceptedClientConnection();
-                val stmt = connection.createStatement()) {
+                val stmt = (DataCloudStatement) connection.createStatement()) {
             // Submit a query to get query id
-            val result = (DataCloudResultSet) stmt.executeQuery("SELECT 1 as a");
+            val result = (DataCloudResultSet) stmt.executeAsyncQuery("SELECT 1 as a");
             queryId = result.getQueryId();
         }
 

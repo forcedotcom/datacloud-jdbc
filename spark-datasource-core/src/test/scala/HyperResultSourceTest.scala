@@ -236,7 +236,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
       val connection = use(hyperServerProcess.getConnection());
       val stmt =
         use(connection.createStatement().unwrap(classOf[DataCloudStatement]))
-      stmt.execute("SELECT generate_series(1, 1000) AS id")
+      stmt.executeAsyncQuery("SELECT generate_series(1, 1000) AS id")
       stmt.getQueryId()
     }.get
 

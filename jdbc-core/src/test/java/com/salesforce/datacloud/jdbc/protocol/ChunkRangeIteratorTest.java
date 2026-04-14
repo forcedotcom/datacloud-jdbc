@@ -131,7 +131,7 @@ class ChunkRangeIteratorTest {
 
         try (val client = getHyperQueryConnection();
                 val statement = client.createStatement().unwrap(DataCloudStatement.class)) {
-            statement.executeQuery(query);
+            statement.executeAsyncQuery(query);
             return statement.getQueryId();
         }
     }
