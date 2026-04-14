@@ -123,10 +123,8 @@ public class StreamingResultSetTest {
             String sql =
                     "SELECT s, s::text as s_text, cast(s as numeric(38,18)) as s_numeric FROM generate_series(1,10) s LIMIT 0";
 
-            final String queryId;
-            try (DataCloudResultSet rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
-                queryId = rs.getQueryId();
-            }
+            stmt.executeAsyncQuery(sql);
+            final String queryId = stmt.getQueryId();
 
             ResultSetMetaData metaData = conn.getSchemaForQueryId(queryId);
 
@@ -152,11 +150,9 @@ public class StreamingResultSetTest {
             String sql =
                     "SELECT s, s::text as s_text, cast(s as numeric(38,18)) as s_numeric FROM generate_series(1,3) s";
 
-            final String queryId;
-            try (DataCloudResultSet rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class)) {
-                queryId = rs.getQueryId();
-                conn.waitFor(queryId, QueryStatus::allResultsProduced);
-            }
+            stmt.executeAsyncQuery(sql);
+            final String queryId = stmt.getQueryId();
+            conn.waitFor(queryId, QueryStatus::allResultsProduced);
 
             ResultSetMetaData metaData = conn.getSchemaForQueryId(queryId);
 
