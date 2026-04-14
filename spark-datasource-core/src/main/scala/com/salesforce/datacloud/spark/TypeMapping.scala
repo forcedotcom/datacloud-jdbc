@@ -62,8 +62,8 @@ private object TypeMapping {
       case Types.REAL   => Some(FloatType)
       case Types.DOUBLE => Some(DoubleType)
       case Types.DATE   => Some(DateType)
-      // TODO: distinguish between Timestamp and TimestampTZ
-      case Types.TIMESTAMP     => Some(TimestampType)
+      case Types.TIMESTAMP | Types.TIMESTAMP_WITH_TIMEZONE =>
+        Some(TimestampType)
       case Types.VARCHAR       => Some(StringType)
       case Types.LONGVARCHAR   => Some(StringType)
       case Types.BINARY        => Some(BinaryType)
@@ -147,7 +147,7 @@ private object TypeMapping {
               SparkDateTimeUtils.fromJavaDate
             )
           )
-      case Types.TIMESTAMP =>
+      case Types.TIMESTAMP | Types.TIMESTAMP_WITH_TIMEZONE =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
           row.update(
             pos,

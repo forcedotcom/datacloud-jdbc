@@ -6,7 +6,6 @@ package com.salesforce.datacloud.jdbc.core.metadata;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.List;
 import lombok.val;
 
@@ -59,12 +58,7 @@ public class DataCloudResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int getColumnType(int column) throws SQLException {
-        int typeId = getColumn(column).getType().getType().getVendorTypeNumber();
-        // Arrow timestamps with timezone map to JDBC TIMESTAMP, not TIMESTAMP_WITH_TIMEZONE
-        if (typeId == Types.TIMESTAMP_WITH_TIMEZONE) {
-            return Types.TIMESTAMP;
-        }
-        return typeId;
+        return getColumn(column).getType().getType().getVendorTypeNumber();
     }
 
     @Override

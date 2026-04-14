@@ -122,6 +122,9 @@ public class JDBCReferenceTest {
                         c.setColumnTypeName(JDBCType.CHAR.getName());
                     } else if ("TIMESTAMPTZ".equals(c.getColumnTypeName())) {
                         c.setColumnTypeName(JDBCType.TIMESTAMP_WITH_TIMEZONE.getName());
+                        // Postgres reports TIMESTAMPTZ as TIMESTAMP (93); our driver correctly
+                        // reports TIMESTAMP_WITH_TIMEZONE (2014) per JDBC 4.2
+                        c.setColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE.getVendorTypeNumber());
                     }
 
                     // Both `Numeric` and `Decimal` can be used, keep using `Decimal` to avoid soft breaking

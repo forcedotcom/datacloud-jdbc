@@ -519,7 +519,6 @@ public class TimeStampVectorAccessorTest {
         long literalAsUtcMs = Instant.parse("2024-03-15T12:00:00Z").toEpochMilli();
         long literalAsTokyo = Instant.parse("2024-03-15T03:00:00Z").toEpochMilli(); // 12:00 JST
 
-
         try (val vector = extension.createTimeStampMicroVector(ImmutableList.of(literalAsUtcMs))) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampVectorAccessor(vector, i::get);
@@ -591,7 +590,6 @@ public class TimeStampVectorAccessorTest {
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampTZVectorAccessor(vector, i::get);
@@ -608,7 +606,6 @@ public class TimeStampVectorAccessorTest {
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampTZVectorAccessor(vector, i::get);
@@ -619,7 +616,6 @@ public class TimeStampVectorAccessorTest {
                 collector.assertThat(odt.toInstant().toEpochMilli()).isEqualTo(values.get(i.get()));
             }
         }
-
     }
 
     @Test
@@ -629,7 +625,6 @@ public class TimeStampVectorAccessorTest {
         calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
-
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
@@ -641,7 +636,6 @@ public class TimeStampVectorAccessorTest {
                 collector.assertThat(zdt.toInstant().toEpochMilli()).isEqualTo(values.get(i.get()));
             }
         }
-
     }
 
     @Test
@@ -652,7 +646,6 @@ public class TimeStampVectorAccessorTest {
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         try (val vector = extension.createTimeStampNanoVector(values)) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampVectorAccessor(vector, i::get);
@@ -662,7 +655,6 @@ public class TimeStampVectorAccessorTest {
                 collector.assertThat(ldt).isNotNull();
             }
         }
-
     }
 
     @Test
@@ -673,7 +665,6 @@ public class TimeStampVectorAccessorTest {
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampTZVectorAccessor(vector, i::get);
@@ -683,7 +674,6 @@ public class TimeStampVectorAccessorTest {
                 collector.assertThat(ts).isNotNull();
             }
         }
-
     }
 
     @Test
@@ -693,7 +683,6 @@ public class TimeStampVectorAccessorTest {
         calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
-
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
@@ -710,7 +699,6 @@ public class TimeStampVectorAccessorTest {
         calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
-
 
         // Test naive TIMESTAMP with null calendar
         try (val vector = extension.createTimeStampMilliVector(values)) {
@@ -742,7 +730,6 @@ public class TimeStampVectorAccessorTest {
         calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
-
 
         try (val vector = extension.createTimeStampMilliVector(values)) {
             val i = new AtomicInteger(0);
@@ -776,7 +763,6 @@ public class TimeStampVectorAccessorTest {
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         try (val vector = extension.createTimeStampMilliTZVector(values, "America/Los_Angeles")) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampTZVectorAccessor(vector, i::get);
@@ -808,7 +794,6 @@ public class TimeStampVectorAccessorTest {
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         try (val vector = nulledOutVector(extension.createTimeStampMilliTZVector(values, "UTC"))) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampTZVectorAccessor(vector, i::get);
@@ -833,7 +818,6 @@ public class TimeStampVectorAccessorTest {
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampTZVectorAccessor(vector, i::get);
@@ -851,7 +835,6 @@ public class TimeStampVectorAccessorTest {
         calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
-
 
         // Naive TIMESTAMP
         try (val vector = extension.createTimeStampMilliVector(values)) {
@@ -880,7 +863,6 @@ public class TimeStampVectorAccessorTest {
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         try (val vector = extension.createTimeStampMilliVector(values)) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampVectorAccessor(vector, i::get);
@@ -906,7 +888,6 @@ public class TimeStampVectorAccessorTest {
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         try (val vector = extension.createTimeStampMilliVector(values)) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampVectorAccessor(vector, i::get);
@@ -923,7 +904,6 @@ public class TimeStampVectorAccessorTest {
         calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
-
 
         try (val vector = nulledOutVector(extension.createTimeStampMilliVector(values))) {
             val i = new AtomicInteger(0);
@@ -950,7 +930,6 @@ public class TimeStampVectorAccessorTest {
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         // Invalid timezone string → extractArrowMetadataZone returns null → systemDefault fallback
         try (val vector = extension.createTimeStampMilliTZVector(values, "INVALID_TZ")) {
             val i = new AtomicInteger(0);
@@ -971,7 +950,6 @@ public class TimeStampVectorAccessorTest {
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
 
-
         try (val vector = extension.createTimeStampMilliVector(values)) {
             val i = new AtomicInteger(0);
             val sut = new TimeStampVectorAccessor(vector, i::get);
@@ -986,7 +964,6 @@ public class TimeStampVectorAccessorTest {
         calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
         List<Integer> monthNumber = getRandomMonthNumber();
         val values = getMilliSecondValues(calendar, monthNumber);
-
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);

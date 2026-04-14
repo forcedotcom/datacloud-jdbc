@@ -65,8 +65,8 @@ public class QueryJDBCAccessorFactory {
     /**
      * Creates an accessor with specified session timezone.
      */
-    public static QueryJDBCAccessor createAccessor(
-            ValueVector vector, IntSupplier getCurrentRow, ZoneId sessionZone) throws SQLException {
+    public static QueryJDBCAccessor createAccessor(ValueVector vector, IntSupplier getCurrentRow, ZoneId sessionZone)
+            throws SQLException {
         Types.MinorType arrowType =
                 Types.getMinorTypeForArrowType(vector.getField().getType());
         if (arrowType.equals(Types.MinorType.VARCHAR)) {
