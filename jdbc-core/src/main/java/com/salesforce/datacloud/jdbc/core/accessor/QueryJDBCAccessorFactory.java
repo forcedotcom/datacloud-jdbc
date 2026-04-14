@@ -13,10 +13,12 @@ import com.salesforce.datacloud.jdbc.core.accessor.impl.DoubleVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.FloatVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.LargeListVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.ListVectorAccessor;
+import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampTZVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.VarCharVectorAccessor;
 import java.sql.SQLException;
+import java.time.ZoneId;
 import java.util.function.IntSupplier;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
@@ -57,8 +59,32 @@ public class QueryJDBCAccessorFactory {
         void setWasNull(boolean wasNull);
     }
 
+    /**
+     * Creates an accessor without session timezone (uses system default).
+     * @deprecated Use method with explicit ZoneId parameter
+     */
+    @Deprecated
     public static QueryJDBCAccessor createAccessor(
             ValueVector vector, IntSupplier getCurrentRow, QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer)
+            throws SQLException {
+        return createAccessor(vector, getCurrentRow, wasNullConsumer, ZoneId.systemDefault());
+    }
+
+    /**
+     * Creates an accessor with specified session timezone.
+     *
+     * @param vector The Arrow value vector
+     * @param getCurrentRow Supplier for current row index
+     * @param wasNullConsumer Consumer for wasNull flag
+     * @param sessionZone The session timezone for timestamp conversions
+     * @return A QueryJDBCAccessor for the specified vector type
+     * @throws SQLException If vector type is not supported
+     */
+    public static QueryJDBCAccessor createAccessor(
+            ValueVector vector,
+            IntSupplier getCurrentRow,
+            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer,
+            ZoneId sessionZone)
             throws SQLException {
         Types.MinorType arrowType =
                 Types.getMinorTypeForArrowType(vector.getField().getType());
@@ -103,19 +129,19 @@ public class QueryJDBCAccessorFactory {
         } else if (arrowType.equals(Types.MinorType.TIMESEC)) {
             return new TimeVectorAccessor((TimeSecVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPSECTZ)) {
-            return new TimeStampVectorAccessor((TimeStampSecTZVector) vector, getCurrentRow, wasNullConsumer);
+            return new TimeStampTZVectorAccessor((TimeStampSecTZVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPSEC)) {
             return new TimeStampVectorAccessor((TimeStampSecVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMILLITZ)) {
-            return new TimeStampVectorAccessor((TimeStampMilliTZVector) vector, getCurrentRow, wasNullConsumer);
+            return new TimeStampTZVectorAccessor((TimeStampMilliTZVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMILLI)) {
             return new TimeStampVectorAccessor((TimeStampMilliVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMICROTZ)) {
-            return new TimeStampVectorAccessor((TimeStampMicroTZVector) vector, getCurrentRow, wasNullConsumer);
+            return new TimeStampTZVectorAccessor((TimeStampMicroTZVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMICRO)) {
             return new TimeStampVectorAccessor((TimeStampMicroVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPNANOTZ)) {
-            return new TimeStampVectorAccessor((TimeStampNanoTZVector) vector, getCurrentRow, wasNullConsumer);
+            return new TimeStampTZVectorAccessor((TimeStampNanoTZVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPNANO)) {
             return new TimeStampVectorAccessor((TimeStampNanoVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.LIST)) {

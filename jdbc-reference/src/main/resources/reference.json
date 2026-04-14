@@ -49,7 +49,142 @@
     "writable" : true
   } ],
   "returnedValues" : [ [ {
-    "stringValue" : "1000-01-01 01:00:00.0",
+    "stringValue" : "0999-12-26 16:00:00.0",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
+  "query" : "select timestamptz '2024-03-15 14:30:45.123456+05:30'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamptz",
+    "columnLabel" : "timestamptz",
+    "columnType" : 93,
+    "columnTypeName" : "timestamptz",
+    "columnDisplaySize" : 35,
+    "precision" : 35,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "2024-03-15 02:00:45.123456",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
+  "query" : "select timestamptz '1997-09-03 01:23:45+00'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamptz",
+    "columnLabel" : "timestamptz",
+    "columnType" : 93,
+    "columnTypeName" : "timestamptz",
+    "columnDisplaySize" : 35,
+    "precision" : 35,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1997-09-02 18:23:45.0",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
+  "query" : "select timestamptz '2024-06-15 12:00:00-04'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamptz",
+    "columnLabel" : "timestamptz",
+    "columnType" : 93,
+    "columnTypeName" : "timestamptz",
+    "columnDisplaySize" : 35,
+    "precision" : 35,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "2024-06-15 09:00:00.0",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
+  "query" : "select timestamptz '2000-01-01 00:00:00+00'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamptz",
+    "columnLabel" : "timestamptz",
+    "columnType" : 93,
+    "columnTypeName" : "timestamptz",
+    "columnDisplaySize" : 35,
+    "precision" : 35,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1999-12-31 16:00:00.0",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
+  "query" : "select timestamptz '2024-01-01 12:00:00+09:00'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamptz",
+    "columnLabel" : "timestamptz",
+    "columnType" : 93,
+    "columnTypeName" : "timestamptz",
+    "columnDisplaySize" : 35,
+    "precision" : 35,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "2023-12-31 19:00:00.0",
     "javaClassName" : "java.sql.Timestamp"
   } ] ]
 }, {
@@ -674,6 +809,114 @@
     "javaClassName" : "java.sql.Timestamp"
   } ] ]
 }, {
+  "query" : "select timestamp '1997-09-03 01:23:45'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamp",
+    "columnLabel" : "timestamp",
+    "columnType" : 93,
+    "columnTypeName" : "timestamp",
+    "columnDisplaySize" : 29,
+    "precision" : 29,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "1997-09-03 01:23:45.0",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
+  "query" : "select timestamp '2024-03-15 14:30:45.123456'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamp",
+    "columnLabel" : "timestamp",
+    "columnType" : 93,
+    "columnTypeName" : "timestamp",
+    "columnDisplaySize" : 29,
+    "precision" : 29,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "2024-03-15 14:30:45.123456",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
+  "query" : "select timestamp '2000-01-01 00:00:00'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamp",
+    "columnLabel" : "timestamp",
+    "columnType" : 93,
+    "columnTypeName" : "timestamp",
+    "columnDisplaySize" : 29,
+    "precision" : 29,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "2000-01-01 00:00:00.0",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
+  "query" : "select timestamp '2024-11-03 01:30:00'",
+  "columnMetadata" : [ {
+    "columnName" : "timestamp",
+    "columnLabel" : "timestamp",
+    "columnType" : 93,
+    "columnTypeName" : "timestamp",
+    "columnDisplaySize" : 29,
+    "precision" : 29,
+    "scale" : 6,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : false,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "2024-11-03 01:30:00.0",
+    "javaClassName" : "java.sql.Timestamp"
+  } ] ]
+}, {
   "query" : "select NULL::interval",
   "columnMetadata" : [ {
     "columnName" : "interval",
@@ -724,7 +967,7 @@
     "writable" : true
   } ],
   "returnedValues" : [ [ {
-    "stringValue" : "0 years 1 mons 0 days 0 hours 0 mins 0.0 secs",
+    "stringValue" : "1 mons",
     "javaClassName" : "org.postgresql.util.PGInterval"
   } ] ]
 }, {

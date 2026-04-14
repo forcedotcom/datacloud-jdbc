@@ -20,20 +20,41 @@ import java.sql.ResultSetMetaData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.TimeZone;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-@ExtendWith(LocalHyperTestBase.class)
 /**
  * This test case compares our JDBC driver against the behavior of the
  * PostgreSQL JDBC driver. It loads the pre-materialized test expectations
- * from`reference.json` and makes sure our driver behaves the same.
+ * from reference.json and makes sure our driver behaves the same.
+ *
+ * The JVM timezone is pinned to America/Los_Angeles to match the timezone
+ * used when generating reference.json via PostgresReferenceGenerator.
+ * This ensures Timestamp.toString() produces consistent stringValue output
+ * across all environments (local, CI, etc.).
  */
+@ExtendWith(LocalHyperTestBase.class)
 public class JDBCReferenceTest {
+
+    private static TimeZone originalTimeZone;
+
+    @BeforeAll
+    static void setTimezone() {
+        originalTimeZone = TimeZone.getDefault();
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"));
+    }
+
+    @AfterAll
+    static void restoreTimezone() {
+        TimeZone.setDefault(originalTimeZone);
+    }
 
     /**
      * Loads baseline entries from the reference.json file.
@@ -75,12 +96,6 @@ public class JDBCReferenceTest {
                     }
                     // This type isn't supported by the driver yet
                     if (c.getColumnTypeName().endsWith("interval")) {
-                        isTestable = false;
-                    }
-                    // Timestamps have a bug for timestamp values before the Gregorian epoch.
-                    // It is currently unclear if the bug is in Hyper, the JDBC driver or the Java Arrow library
-                    else if (c.getColumnTypeName().equals("_timestamptz")
-                            || c.getColumnTypeName().equals("_timestamp")) {
                         isTestable = false;
                     }
                     // This type behaves differently between Hyper and Postgres and is not worth it to test
@@ -137,21 +152,15 @@ public class JDBCReferenceTest {
                     }
                 }
 
-                // Patch result value expecation
+                // Patch result value expectation
                 for (List<ValueWithClass> v : e.getReturnedValues()) {
                     assertEquals(1, v.size(), "The test driver only supports one result value per query");
                     ValueWithClass value = v.get(0);
                     if (e.getQuery().contains("smallint") && (value.getJavaClassName() != null)) {
-                        // Avatica doesn't support returning short as Integer (which the standard requires as described
-                        // in B-3)
                         value.setJavaClassName(Short.class.getName());
                     } else if ("org.postgresql.util.PGobject".equals(value.getJavaClassName())) {
                         // We return JSON as a String
                         value.setJavaClassName(String.class.getName());
-                    } else if (java.sql.Timestamp.class.getName().equals(value.getJavaClassName())) {
-                        // We still have several bugs in the driver regarding timestamps and thus we can't compare
-                        // against reference values
-                        isTestable = false;
                     }
                 }
                 if (isTestable) {
@@ -162,10 +171,6 @@ public class JDBCReferenceTest {
         }
     }
 
-    /**
-     * Tests DataCloudResultSet metadata and returned values against PostgreSQL baseline expectations.
-     * This validates that our JDBC driver produces the same metadata and values as PostgreSQL.
-     */
     @ParameterizedTest
     @MethodSource("getBaselineEntries")
     @SneakyThrows
@@ -177,7 +182,6 @@ public class JDBCReferenceTest {
             val stmt = conn.createStatement();
 
             try (ResultSet rs = stmt.executeQuery(referenceEntry.getQuery())) {
-                // Validate metadata and returned values against the reference entry
                 referenceEntry.validateAgainstResultSet(rs, referenceEntry.getQuery());
             } catch (Exception e) {
                 System.out.println("Failed to execute query: " + referenceEntry.getQuery());

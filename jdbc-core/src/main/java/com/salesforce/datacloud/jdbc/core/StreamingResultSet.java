@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.TimeZone;
 import lombok.Getter;
@@ -47,15 +48,30 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     }
 
     public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId) throws SQLException {
+        return of(resultStream, queryId, ZoneId.systemDefault());
+    }
+
+    /**
+     * Creates a StreamingResultSet with a specified session timezone.
+     *
+     * @param resultStream The Arrow stream containing query results
+     * @param queryId The query identifier
+     * @param sessionZone The session timezone to use for timestamp conversions
+     * @return A new StreamingResultSet
+     * @throws SQLException If an error occurs during ResultSet creation
+     */
+    public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId, ZoneId sessionZone)
+            throws SQLException {
         try {
             val schemaRoot = resultStream.getVectorSchemaRoot();
             val columns = toColumnMetaData(schemaRoot.getSchema().getFields());
-            val timezone = TimeZone.getDefault();
+            // Convert ZoneId to TimeZone for Avatica compatibility
+            val timezone = TimeZone.getTimeZone(sessionZone);
             val state = new QueryState();
             val signature = new Meta.Signature(
                     columns, null, Collections.emptyList(), Collections.emptyMap(), null, Meta.StatementType.SELECT);
             val metadata = new AvaticaResultSetMetaData(null, null, signature);
-            val cursor = new ArrowStreamReaderCursor(resultStream);
+            val cursor = new ArrowStreamReaderCursor(resultStream, sessionZone);
             val result = new StreamingResultSet(cursor, queryId, null, state, signature, metadata, timezone, null);
             result.execute2(cursor, columns);
 
@@ -149,5 +165,68 @@ public class StreamingResultSet extends AvaticaResultSet implements DataCloudRes
     public double getDouble(String columnLabel) throws SQLException {
         int columnIndex = findColumn(columnLabel);
         return getDouble(columnIndex);
+    }
+
+    /**
+     * Override no-calendar timestamp/date/time methods to pass null calendar.
+     *
+     * Avatica's default implementations call the accessor with localCalendar (derived from
+     * the TimeZone passed during ResultSet construction). For naive TIMESTAMP, the accessor's
+     * calendar-aware path shifts the literal by the timezone offset. Passing null triggers
+     * the literal-preserving path instead.
+     *
+     * When a user explicitly calls getTimestamp(int, Calendar), the calendar is passed through
+     * to the accessor and honored as expected by the JDBC spec.
+     */
+    @Override
+    public java.sql.Timestamp getTimestamp(int columnIndex) throws SQLException {
+        return super.getTimestamp(columnIndex, null);
+    }
+
+    @Override
+    public java.sql.Timestamp getTimestamp(String columnLabel) throws SQLException {
+        return getTimestamp(findColumn(columnLabel));
+    }
+
+    @Override
+    public java.sql.Date getDate(int columnIndex) throws SQLException {
+        return super.getDate(columnIndex, null);
+    }
+
+    @Override
+    public java.sql.Date getDate(String columnLabel) throws SQLException {
+        return getDate(findColumn(columnLabel));
+    }
+
+    @Override
+    public java.sql.Time getTime(int columnIndex) throws SQLException {
+        return super.getTime(columnIndex, null);
+    }
+
+    @Override
+    public java.sql.Time getTime(String columnLabel) throws SQLException {
+        return getTime(findColumn(columnLabel));
+    }
+
+    /**
+     * Override getObject to bypass Avatica's AvaticaSite.get() for timestamp columns.
+     *
+     * AvaticaSite.get() passes localCalendar to accessor.getTimestamp(localCalendar),
+     * triggering the same calendar-aware shift described above. For timestamp types,
+     * we call the accessor's getObject() directly (which uses the null-calendar path).
+     * All other types delegate to Avatica's default behavior.
+     */
+    @Override
+    public Object getObject(int columnIndex) throws SQLException {
+        int sqlType = getMetaData().getColumnType(columnIndex);
+        if (sqlType == java.sql.Types.TIMESTAMP || sqlType == java.sql.Types.TIMESTAMP_WITH_TIMEZONE) {
+            return accessorList.get(columnIndex - 1).getObject();
+        }
+        return super.getObject(columnIndex);
+    }
+
+    @Override
+    public Object getObject(String columnLabel) throws SQLException {
+        return getObject(findColumn(columnLabel));
     }
 }

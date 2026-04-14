@@ -7,6 +7,7 @@ import com.salesforce.datacloud.jdbc.hyper.HyperServerManager
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile
 
 import java.sql.{Date, SQLException, Timestamp}
+import java.time.Instant
 import java.math.BigDecimal
 import org.apache.spark.sql.types.{
   BinaryType,
@@ -127,7 +128,7 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
           NULL::varchar AS varchar_null,
           '2024-01-01'::date AS date,
           NULL::date AS date_null,
-          '2024-01-01 12:00:00'::timestamptz AS timestamp,
+          '2024-01-01 12:00:00+00:00'::timestamptz AS timestamp,
           NULL::timestamptz AS timestamp_null,
           E'\\xDEADBEEF'::bytea AS bytea,
           NULL::bytea AS bytea_null
@@ -213,11 +214,10 @@ class HyperResultSourceTest extends AnyFunSuite with WithSparkSession {
     assert(row.isNullAt(row.fieldIndex("varchar_null")))
     assert(row.getAs[Date]("date") == Date.valueOf("2024-01-01"))
     assert(row.isNullAt(row.fieldIndex("date_null")))
-    assert(
-      row.getAs[Timestamp]("timestamp") == Timestamp.valueOf(
-        "2024-01-01 12:00:00"
-      )
-    )
+    // TIMESTAMPTZ '2024-01-01 12:00:00+00:00'::timestamptz stores UTC instant directly
+    val actualTimestamp = row.getAs[Timestamp]("timestamp")
+    val expectedInstant = java.time.Instant.parse("2024-01-01T12:00:00Z")
+    assert(actualTimestamp.toInstant() == expectedInstant)
     assert(
       row.isNullAt(row.fieldIndex("timestamp_null"))
     )

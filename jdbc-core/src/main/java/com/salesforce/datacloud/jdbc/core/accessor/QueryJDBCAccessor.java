@@ -198,7 +198,7 @@ public abstract class QueryJDBCAccessor implements Accessor {
     }
 
     @Override
-    public <T> T getObject(Class<T> aClass) {
+    public <T> T getObject(Class<T> aClass) throws SQLException {
         return null;
     }
 
