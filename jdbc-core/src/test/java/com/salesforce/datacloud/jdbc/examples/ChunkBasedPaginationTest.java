@@ -47,7 +47,7 @@ public class ChunkBasedPaginationTest {
         while (true) {
             try (final DataCloudConnection conn = getHyperQueryConnection()) {
                 if (status == null || !status.allResultsProduced()) {
-                    status = conn.waitFor(queryId, t -> t.getChunkCount() > offset.get());
+                    status = conn.waitFor(queryId, t -> (t.getChunkCount() > offset.get()) || (t.allResultsProduced()));
                 }
 
                 if (status.allResultsProduced() && offset.get() >= status.getChunkCount()) {

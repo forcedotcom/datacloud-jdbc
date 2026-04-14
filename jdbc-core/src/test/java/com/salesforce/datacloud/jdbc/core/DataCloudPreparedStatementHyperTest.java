@@ -302,6 +302,7 @@ public class DataCloudPreparedStatementHyperTest {
                         connection.prepareStatement("select 1 as id, 'test' as name")) {
                     try (ResultSet resultSet = preparedStatement.executeQuery()) {
                         assertThat(resultSet.next()).isTrue();
+                        assertThat(resultSet.next()).isFalse();
 
                         ResultSetMetaData metadata = preparedStatement.getMetaData();
                         assertThat(metadata).isNotNull();
