@@ -321,16 +321,11 @@ public class TimeZoneIntegrationTest {
                     assertThat(tsString)
                             .matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{6} [+-]\\d{2}:\\d{2}");
 
-                    // Should be able to get as Instant regardless of timezone metadata
-                    Instant instant = rs.getObject("test_timestamptz", Instant.class);
-                    assertThat(instant).isNotNull();
+                    // Should be able to get as OffsetDateTime (JDBC 4.2 standard type for TIMESTAMPTZ)
                     // TIMESTAMP '2024-03-15 10:00:00' AT TIME ZONE 'UTC' is 10:00 UTC
-                    assertThat(instant).isEqualTo(Instant.parse("2024-03-15T10:00:00Z"));
-
-                    // Should be able to get as OffsetDateTime
                     OffsetDateTime odt = rs.getObject("test_timestamptz", OffsetDateTime.class);
                     assertThat(odt).isNotNull();
-                    assertThat(odt.toInstant()).isEqualTo(instant);
+                    assertThat(odt.toInstant()).isEqualTo(Instant.parse("2024-03-15T10:00:00Z"));
 
                     assertThat(rs.next()).isFalse();
                 }
@@ -681,9 +676,6 @@ public class TimeZoneIntegrationTest {
                             .isNotNull();
 
                     // Verify java.time types are also retrievable
-                    Instant instant = rs.getObject("ts", Instant.class);
-                    assertThat(instant).as("Instant should be non-null").isNotNull();
-
                     LocalDateTime ldt = rs.getObject("ts", LocalDateTime.class);
                     assertThat(ldt).as("LocalDateTime should be non-null").isNotNull();
 
@@ -692,6 +684,14 @@ public class TimeZoneIntegrationTest {
 
                     ZonedDateTime zdt = rs.getObject("ts", ZonedDateTime.class);
                     assertThat(zdt).as("ZonedDateTime should be non-null").isNotNull();
+
+                    Instant instant;
+                    if ("timestamp".equals(castType)) {
+                        instant = rs.getObject("ts", Instant.class);
+                        assertThat(instant).as("Instant should be non-null").isNotNull();
+                    } else {
+                        instant = odt.toInstant();
+                    }
 
                     // All java.time types should represent the same instant
                     assertThat(odt.toInstant()).isEqualTo(instant);
@@ -795,21 +795,6 @@ public class TimeZoneIntegrationTest {
                         (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_TS),
                         "timestamp",
                         MATRIX_WALL_CLOCK_LA,
-                        null),
-
-                // ── setObject(Instant) ────────────────────────────────────────────────────
-                // JDBC 4.2: Instant → TIMESTAMP_WITH_TIMEZONE. UTC epoch stored exactly.
-                Arguments.of(
-                        "setObject(Instant) → ?::timestamptz",
-                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_INSTANT),
-                        "timestamptz",
-                        null,
-                        MATRIX_INSTANT_UTC),
-                Arguments.of(
-                        "setObject(Instant) → ?::timestamp",
-                        (ParameterSetter) pstmt -> pstmt.setObject(1, MATRIX_INPUT_INSTANT),
-                        "timestamp",
-                        MATRIX_WALL_CLOCK_UTC,
                         null),
 
                 // ── setObject(LocalDateTime) ──────────────────────────────────────────────

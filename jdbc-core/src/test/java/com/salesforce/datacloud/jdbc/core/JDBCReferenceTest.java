@@ -157,8 +157,6 @@ public class JDBCReferenceTest {
                     assertEquals(1, v.size(), "The test driver only supports one result value per query");
                     ValueWithClass value = v.get(0);
                     if (e.getQuery().contains("smallint") && (value.getJavaClassName() != null)) {
-                        // Avatica's AvaticaSite.get() calls getShort() for SMALLINT, returning Short
-                        // instead of Integer (which the JDBC spec table B-3 recommends)
                         value.setJavaClassName(Short.class.getName());
                     } else if ("org.postgresql.util.PGobject".equals(value.getJavaClassName())) {
                         // We return JSON as a String

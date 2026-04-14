@@ -7,6 +7,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import java.time.ZoneId;
 import java.util.stream.IntStream;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -30,14 +31,14 @@ class ArrowStreamReaderCursorTest {
 
     @Test
     void createGetterIsUnsupported() {
-        val sut = new ArrowStreamReaderCursor(reader);
+        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
         Assertions.assertThrows(UnsupportedOperationException.class, () -> sut.createGetter(0));
     }
 
     @Test
     @SneakyThrows
     void closesTheReader() {
-        val sut = new ArrowStreamReaderCursor(reader);
+        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
         sut.close();
         verify(reader, times(1)).close();
     }
@@ -50,7 +51,7 @@ class ArrowStreamReaderCursorTest {
         when(reader.loadNextBatch()).thenReturn(true);
         when(root.getRowCount()).thenReturn(times);
 
-        val sut = new ArrowStreamReaderCursor(reader);
+        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
         IntStream.range(0, times + 1).forEach(i -> sut.next());
 
         verify(root, times(times + 1)).getRowCount();
@@ -65,7 +66,7 @@ class ArrowStreamReaderCursorTest {
         when(reader.getVectorSchemaRoot()).thenReturn(root);
         when(reader.loadNextBatch()).thenReturn(result);
 
-        val sut = new ArrowStreamReaderCursor(reader);
+        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
 
         assertThat(sut.next()).isEqualTo(result);
     }

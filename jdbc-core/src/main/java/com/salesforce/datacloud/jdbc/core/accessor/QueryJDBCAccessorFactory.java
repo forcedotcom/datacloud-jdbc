@@ -129,23 +129,19 @@ public class QueryJDBCAccessorFactory {
         } else if (arrowType.equals(Types.MinorType.TIMESEC)) {
             return new TimeVectorAccessor((TimeSecVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPSECTZ)) {
-            return new TimeStampTZVectorAccessor(
-                    (TimeStampSecTZVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeStampTZVectorAccessor((TimeStampSecTZVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPSEC)) {
             return new TimeStampVectorAccessor((TimeStampSecVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMILLITZ)) {
-            return new TimeStampTZVectorAccessor(
-                    (TimeStampMilliTZVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeStampTZVectorAccessor((TimeStampMilliTZVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMILLI)) {
             return new TimeStampVectorAccessor((TimeStampMilliVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMICROTZ)) {
-            return new TimeStampTZVectorAccessor(
-                    (TimeStampMicroTZVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeStampTZVectorAccessor((TimeStampMicroTZVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPMICRO)) {
             return new TimeStampVectorAccessor((TimeStampMicroVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPNANOTZ)) {
-            return new TimeStampTZVectorAccessor(
-                    (TimeStampNanoTZVector) vector, getCurrentRow, wasNullConsumer, sessionZone);
+            return new TimeStampTZVectorAccessor((TimeStampNanoTZVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPNANO)) {
             return new TimeStampVectorAccessor((TimeStampNanoVector) vector, getCurrentRow, wasNullConsumer);
         } else if (arrowType.equals(Types.MinorType.LIST)) {

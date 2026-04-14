@@ -41,8 +41,7 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
  * 4. System default
  *
  * <p>Supported JDBC 4.2 types via getObject(Class):
- * - Instant (always UTC)
- * - OffsetDateTime (with timezone offset)
+ * - OffsetDateTime (JDBC 4.2 standard type for TIMESTAMPTZ; carries the timezone offset)
  * - ZonedDateTime (with full timezone info)
  * - LocalDateTime (converted to effective timezone)
  * - Timestamp (legacy, uses effective timezone)
@@ -51,7 +50,6 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
     private static final String TIMESTAMP_WITH_OFFSET_FORMAT = "yyyy-MM-dd HH:mm:ss.SSSSSS xxx";
 
     private final ZoneId arrowMetadataZone;
-    private final ZoneId sessionZone;
     private final TimeUnit timeUnit;
     private final TimeStampVectorGetter.Holder holder;
     private final TimeStampVectorGetter.Getter getter;
@@ -59,12 +57,10 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
     public TimeStampTZVectorAccessor(
             TimeStampVector vector,
             IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer,
-            ZoneId sessionZone)
+            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer)
             throws SQLException {
         super(currentRowSupplier, wasNullConsumer);
         this.arrowMetadataZone = extractArrowMetadataZone(vector);
-        this.sessionZone = sessionZone;
         this.timeUnit = getTimeUnitForVector(vector);
         this.holder = new TimeStampVectorGetter.Holder();
         this.getter = createGetter(vector);
@@ -76,9 +72,6 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
         }
         if (arrowMetadataZone != null) {
             return arrowMetadataZone;
-        }
-        if (sessionZone != null) {
-            return sessionZone;
         }
         return ZoneId.systemDefault();
     }
@@ -194,9 +187,6 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
             throw new SQLException("type parameter must not be null", "22023");
         }
 
-        if (type == Instant.class) {
-            return (T) getInstant();
-        }
         if (type == OffsetDateTime.class) {
             return (T) getOffsetDateTime(null);
         }

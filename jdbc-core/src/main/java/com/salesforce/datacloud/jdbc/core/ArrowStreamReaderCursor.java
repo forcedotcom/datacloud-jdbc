@@ -37,21 +37,6 @@ class ArrowStreamReaderCursor extends AbstractCursor {
 
     private final AtomicInteger currentIndex = new AtomicInteger(INIT_ROW_NUMBER);
 
-    /**
-     * Creates a cursor with system default timezone.
-     * @deprecated Use constructor with explicit ZoneId parameter
-     */
-    @Deprecated
-    ArrowStreamReaderCursor(ArrowStreamReader reader) {
-        this(reader, ZoneId.systemDefault());
-    }
-
-    /**
-     * Creates a cursor with specified session timezone.
-     *
-     * @param reader The Arrow stream reader
-     * @param sessionZone The session timezone for timestamp conversions
-     */
     ArrowStreamReaderCursor(ArrowStreamReader reader, ZoneId sessionZone) {
         this.reader = reader;
         this.sessionZone = sessionZone;

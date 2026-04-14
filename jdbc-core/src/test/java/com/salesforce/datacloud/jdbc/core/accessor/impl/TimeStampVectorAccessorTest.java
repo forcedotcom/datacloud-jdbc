@@ -20,7 +20,6 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.*;
@@ -122,7 +121,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampNanoTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val timestampValue = sut.getTimestamp(calendar);
@@ -224,7 +223,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampMicroTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val timestampValue = sut.getTimestamp(calendar);
@@ -326,7 +325,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val timestampValue = sut.getTimestamp(calendar);
@@ -428,7 +427,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampSecTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val timestampValue = sut.getTimestamp(calendar);
@@ -480,7 +479,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = nulledOutVector(extension.createTimeStampSecTZVector(values, "UTC"))) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val timestampValue = sut.getTimestamp(calendar);
@@ -608,24 +607,18 @@ public class TimeStampVectorAccessorTest {
 
     @Test
     @SneakyThrows
-    void testGetObjectWithInstantClass() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
+    void testGetObjectWithInstantClassThrowsForTimestampTZ() {
         List<Integer> monthNumber = getRandomMonthNumber();
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         val values = getMilliSecondValues(calendar, monthNumber);
         val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
-            for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
-                Instant instant = sut.getObject(Instant.class);
-                collector.assertThat(instant).isNotNull();
-                collector.assertThat(instant.toEpochMilli()).isEqualTo(values.get(i.get()));
-            }
+            assertThatThrownBy(() -> sut.getObject(Instant.class)).isInstanceOf(SQLFeatureNotSupportedException.class);
         }
-        consumer.assertThat().hasNullSeen(0).hasNotNullSeen(values.size());
     }
 
     @Test
@@ -639,7 +632,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 OffsetDateTime odt = sut.getObject(OffsetDateTime.class);
@@ -661,7 +654,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 ZonedDateTime zdt = sut.getObject(ZonedDateTime.class);
@@ -704,7 +697,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 Timestamp ts = sut.getObject(Timestamp.class);
@@ -725,7 +718,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             collector.assertThat(sut.getObjectClass()).isEqualTo(Timestamp.class);
         }
@@ -754,7 +747,7 @@ public class TimeStampVectorAccessorTest {
         // Test TIMESTAMPTZ with null calendar
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.of("America/Los_Angeles"));
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 Timestamp ts = sut.getTimestamp(null);
@@ -807,22 +800,19 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "America/Los_Angeles")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.of("UTC"));
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
-                Instant instant = sut.getObject(Instant.class);
                 OffsetDateTime odt = sut.getObject(OffsetDateTime.class);
                 ZonedDateTime zdt = sut.getObject(ZonedDateTime.class);
                 LocalDateTime ldt = sut.getObject(LocalDateTime.class);
                 Timestamp ts = sut.getObject(Timestamp.class);
 
-                collector.assertThat(instant).isNotNull();
                 collector.assertThat(odt).isNotNull();
                 collector.assertThat(zdt).isNotNull();
                 collector.assertThat(ldt).isNotNull();
                 collector.assertThat(ts).isNotNull();
 
-                collector.assertThat(instant.toEpochMilli()).isEqualTo(values.get(i.get()));
                 collector.assertThat(odt.toInstant().toEpochMilli()).isEqualTo(values.get(i.get()));
                 collector.assertThat(zdt.toInstant().toEpochMilli()).isEqualTo(values.get(i.get()));
 
@@ -842,10 +832,9 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = nulledOutVector(extension.createTimeStampMilliTZVector(values, "UTC"))) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
-                collector.assertThat(sut.getObject(Instant.class)).isNull();
                 collector.assertThat(sut.getObject(OffsetDateTime.class)).isNull();
                 collector.assertThat(sut.getObject(ZonedDateTime.class)).isNull();
                 collector.assertThat(sut.getObject(LocalDateTime.class)).isNull();
@@ -868,7 +857,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             assertThatThrownBy(() -> sut.getObject(Integer.class)).isInstanceOf(SQLFeatureNotSupportedException.class);
             assertThatThrownBy(() -> sut.getObject(Long.class)).isInstanceOf(SQLFeatureNotSupportedException.class);
@@ -897,7 +886,7 @@ public class TimeStampVectorAccessorTest {
         // TIMESTAMPTZ
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.systemDefault());
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
             assertThatThrownBy(() -> sut.getObject((Class<?>) null))
                     .isInstanceOf(SQLException.class)
                     .hasMessageContaining("must not be null");
@@ -983,60 +972,14 @@ public class TimeStampVectorAccessorTest {
         val values = getMilliSecondValues(calendar, monthNumber);
         val consumer = new TestWasNullConsumer(collector);
 
-        // Create a TZ vector with an invalid timezone string — extractArrowMetadataZone returns null
+        // Invalid timezone string → extractArrowMetadataZone returns null → systemDefault fallback
         try (val vector = extension.createTimeStampMilliTZVector(values, "INVALID_TZ")) {
             val i = new AtomicInteger(0);
-            // Also pass null sessionZone to exercise the systemDefault fallback
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, null);
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 Timestamp ts = sut.getTimestamp(null);
                 collector.assertThat(ts).isNotNull();
-            }
-        }
-    }
-
-    @Test
-    @SneakyThrows
-    void testTimestampTZWithSessionZoneFallback() {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
-        List<Integer> monthNumber = getRandomMonthNumber();
-        val values = getMilliSecondValues(calendar, monthNumber);
-        val consumer = new TestWasNullConsumer(collector);
-
-        // Create a TZ vector with an invalid timezone so arrowMetadataZone is null,
-        // but provide a valid sessionZone — should use sessionZone
-        try (val vector = extension.createTimeStampMilliTZVector(values, "INVALID_TZ")) {
-            val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.of("America/New_York"));
-
-            for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
-                Timestamp ts = sut.getTimestamp(null);
-                collector.assertThat(ts).isNotNull();
-            }
-        }
-    }
-
-    @Test
-    @SneakyThrows
-    void testTimestampTZSystemDefaultFallbackWhenBothArrowMetadataAndSessionZoneAreNull() {
-        // arrowMetadataZone is null (invalid TZ string), sessionZone is null → falls back to
-        // ZoneId.systemDefault() in resolveEffectiveZoneId.
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeZone(TimeZone.getTimeZone("UTC"));
-        List<Integer> monthNumber = getRandomMonthNumber();
-        val values = getMilliSecondValues(calendar, monthNumber);
-        val consumer = new TestWasNullConsumer(collector);
-
-        try (val vector = extension.createTimeStampMilliTZVector(values, "INVALID_TZ")) {
-            val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, null);
-
-            for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
-                // Trigger resolveEffectiveZoneId through getObject(OffsetDateTime.class)
-                OffsetDateTime odt = sut.getObject(OffsetDateTime.class);
-                collector.assertThat(odt).isNotNull();
             }
         }
     }
@@ -1068,7 +1011,7 @@ public class TimeStampVectorAccessorTest {
 
         try (val vector = extension.createTimeStampMilliTZVector(values, "UTC")) {
             val i = new AtomicInteger(0);
-            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer, ZoneId.of("UTC"));
+            val sut = new TimeStampTZVectorAccessor(vector, i::get, consumer);
             collector.assertThat(sut.getObjectClass()).isEqualTo(Timestamp.class);
         }
     }

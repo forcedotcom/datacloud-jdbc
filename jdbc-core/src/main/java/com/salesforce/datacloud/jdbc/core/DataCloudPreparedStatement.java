@@ -35,7 +35,6 @@ import java.sql.SQLXML;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -483,12 +482,9 @@ final class TypeHandlers {
     public static final TypeHandler BOOLEAN_HANDLER = (ps, idx, value) -> ps.setBoolean(idx, (Boolean) value);
 
     // JDBC 4.2 java.time handlers — mapped per JDBC spec Table B-4:
-    //   Instant          → TIMESTAMP_WITH_TIMEZONE (UTC epoch)
     //   LocalDateTime    → TIMESTAMP               (wall-clock digits, no TZ shift)
-    //   OffsetDateTime   → TIMESTAMP_WITH_TIMEZONE (UTC epoch)
+    //   OffsetDateTime   → TIMESTAMP_WITH_TIMEZONE (UTC epoch; recommended write path for TIMESTAMPTZ)
     //   ZonedDateTime    → TIMESTAMP_WITH_TIMEZONE (UTC epoch)
-    public static final TypeHandler INSTANT_HANDLER =
-            (ps, idx, value) -> ps.setObject(idx, Timestamp.from((Instant) value), Types.TIMESTAMP_WITH_TIMEZONE);
     public static final TypeHandler LOCAL_DATE_TIME_HANDLER =
             (ps, idx, value) -> ps.setObject(idx, value, Types.TIMESTAMP);
     public static final TypeHandler OFFSET_DATE_TIME_HANDLER = (ps, idx, value) ->
@@ -508,7 +504,6 @@ final class TypeHandlers {
             Maps.immutableEntry(Time.class, TIME_HANDLER),
             Maps.immutableEntry(Timestamp.class, TIMESTAMP_HANDLER),
             Maps.immutableEntry(Boolean.class, BOOLEAN_HANDLER),
-            Maps.immutableEntry(Instant.class, INSTANT_HANDLER),
             Maps.immutableEntry(LocalDateTime.class, LOCAL_DATE_TIME_HANDLER),
             Maps.immutableEntry(OffsetDateTime.class, OFFSET_DATE_TIME_HANDLER),
             Maps.immutableEntry(ZonedDateTime.class, ZONED_DATE_TIME_HANDLER));
