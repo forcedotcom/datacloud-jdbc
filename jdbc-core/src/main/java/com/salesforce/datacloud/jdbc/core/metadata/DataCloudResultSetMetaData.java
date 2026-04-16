@@ -142,7 +142,7 @@ public class DataCloudResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public boolean isReadOnly(int column) throws SQLException {
-        return false;
+        return true;
     }
 
     @Override

@@ -137,7 +137,7 @@ class DataCloudResultSetMetaDataTest {
 
     @Test
     public void testIsReadOnly() throws SQLException {
-        assertThat(resultSetMetaData.isReadOnly(1)).isFalse();
+        assertThat(resultSetMetaData.isReadOnly(1)).isTrue();
     }
 
     @Test

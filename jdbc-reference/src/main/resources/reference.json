@@ -16,7 +16,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -43,7 +43,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -70,7 +70,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -97,7 +97,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -124,7 +124,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -151,7 +151,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -178,7 +178,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -205,7 +205,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -232,7 +232,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -259,7 +259,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -286,7 +286,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -313,7 +313,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -340,7 +340,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -367,7 +367,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -394,7 +394,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -421,7 +421,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -448,7 +448,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -475,7 +475,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -502,7 +502,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -529,7 +529,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -556,7 +556,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -583,7 +583,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -610,7 +610,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -637,7 +637,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -664,7 +664,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -691,7 +691,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -718,7 +718,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -745,7 +745,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -772,7 +772,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -799,7 +799,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -826,7 +826,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -853,7 +853,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -880,7 +880,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -907,7 +907,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -934,7 +934,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -961,7 +961,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -988,7 +988,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1015,7 +1015,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1042,7 +1042,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1069,7 +1069,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1096,7 +1096,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1123,7 +1123,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1150,7 +1150,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1177,7 +1177,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1204,7 +1204,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1231,7 +1231,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1258,7 +1258,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1285,7 +1285,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1312,7 +1312,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1339,7 +1339,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1366,7 +1366,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1393,7 +1393,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1420,7 +1420,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1447,7 +1447,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1474,7 +1474,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1501,7 +1501,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1528,7 +1528,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1555,7 +1555,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1582,7 +1582,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1609,7 +1609,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1636,7 +1636,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1663,7 +1663,7 @@
     "caseSensitive" : true,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : false,
     "writable" : true
@@ -1690,7 +1690,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1717,7 +1717,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1744,7 +1744,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1771,7 +1771,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1798,7 +1798,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1825,7 +1825,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1852,7 +1852,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1879,7 +1879,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1906,7 +1906,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1933,7 +1933,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1960,7 +1960,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -1987,7 +1987,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2014,7 +2014,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2041,7 +2041,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2068,7 +2068,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2095,7 +2095,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2122,7 +2122,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2149,7 +2149,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2176,7 +2176,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2203,7 +2203,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2230,7 +2230,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2257,7 +2257,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2284,7 +2284,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
@@ -2311,7 +2311,7 @@
     "caseSensitive" : false,
     "currency" : false,
     "definitelyWritable" : false,
-    "readOnly" : false,
+    "readOnly" : true,
     "searchable" : true,
     "signed" : true,
     "writable" : true
