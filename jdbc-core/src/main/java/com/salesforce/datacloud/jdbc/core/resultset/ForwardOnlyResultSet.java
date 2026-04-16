@@ -14,7 +14,7 @@ import java.sql.SQLFeatureNotSupportedException;
  * Overwrites all methods that are not supported by forward-only result sets.
  * Used as a mixin to keep the boilerplate out of the actual result set implementations.
  */
-interface ForwardOnlyResultSet extends ResultSet {
+public interface ForwardOnlyResultSet extends ResultSet {
     @Override
     public default int getType() throws SQLException {
         return ResultSet.TYPE_FORWARD_ONLY;

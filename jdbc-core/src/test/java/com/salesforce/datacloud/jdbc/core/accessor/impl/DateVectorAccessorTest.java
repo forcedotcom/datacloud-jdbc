@@ -6,12 +6,10 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.appendDates;
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.nulledOutVector;
-import static org.apache.calcite.avatica.util.DateTimeUtils.MILLIS_PER_DAY;
 
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
-import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
 import java.sql.Date;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,7 +19,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -36,6 +33,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 @ExtendWith(SoftAssertionsExtension.class)
 public class DateVectorAccessorTest {
+    private static final long MILLIS_PER_DAY = 86_400_000L;
 
     @InjectSoftAssertions
     private SoftAssertions collector;
@@ -56,19 +54,13 @@ public class DateVectorAccessorTest {
                     -601689600000L) // 1950-12-08 00:00:00 UTC, 1950-12-07 16:00:00 PT
             .collect(Collectors.toList());
 
-    private static final int expectedNulls =
-            (int) values.stream().filter(Objects::isNull).count();
-
-    private static final int expectedNonNulls = values.size() - expectedNulls;
-
     @SneakyThrows
     @Test
-    void testDateDayVectorGetObjectClass() {
-        val consumer = new TestWasNullConsumer(collector);
+    public void testDateDayVectorGetObjectClass() {
 
         try (val vector = appendDates(values, extension.createDateDayVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Date.class);
@@ -79,11 +71,10 @@ public class DateVectorAccessorTest {
     @SneakyThrows
     @Test
     void testDateMilliVectorGetObjectClass() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = appendDates(values, extension.createDateMilliVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasObjectClass(Date.class);
@@ -94,11 +85,10 @@ public class DateVectorAccessorTest {
     @SneakyThrows
     @Test
     void testDateDayVectorGetDateReturnsUTCDate() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = appendDates(values, extension.createDateDayVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -138,18 +128,15 @@ public class DateVectorAccessorTest {
                         .hasMillisecond(expectedZero);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * 3).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testDateMilliVectorGetDateReturnsUTCDate() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = appendDates(values, extension.createDateMilliVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -189,18 +176,15 @@ public class DateVectorAccessorTest {
                         .hasMillisecond(expectedZero);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * 3).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testDateDayVectorGetObjectReturnsUTCDate() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = appendDates(values, extension.createDateDayVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -220,18 +204,15 @@ public class DateVectorAccessorTest {
                         .hasMillisecond(expectedZero);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * 2).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testDateMilliVectorGetObjectReturnsUTCDate() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = appendDates(values, extension.createDateMilliVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -251,18 +232,15 @@ public class DateVectorAccessorTest {
                         .hasMillisecond(expectedZero);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * 2).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testDateDayVectorGetTimestampReturnsUTCTimestampAtMidnight() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = appendDates(values, extension.createDateDayVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -300,18 +278,15 @@ public class DateVectorAccessorTest {
                         .hasSecond(expectedZero);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * 3).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testDateMilliVectorGetTimestampReturnsUTCTimestampAtMidnight() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = appendDates(values, extension.createDateMilliVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expectedDate = getExpectedDateForTimeZone(values.get(i.get()), UTC_ZONE_ID);
@@ -348,18 +323,15 @@ public class DateVectorAccessorTest {
                         .hasSecond(expectedZero);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls * 3).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testDateMilliVectorGetString() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = appendDates(values, extension.createDateMilliVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -367,18 +339,15 @@ public class DateVectorAccessorTest {
                 collector.assertThat(stringValue).isEqualTo(expected);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testDateDayVectorGetString() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = appendDates(values, extension.createDateDayVector())) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -386,18 +355,15 @@ public class DateVectorAccessorTest {
                 collector.assertThat(stringValue).isEqualTo(expected);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(expectedNonNulls).hasNullSeen(expectedNulls);
     }
 
     @SneakyThrows
     @Test
     void testNulledOutDateDayVectorReturnsNull() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = nulledOutVector(appendDates(values, extension.createDateDayVector()))) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
 
@@ -410,18 +376,15 @@ public class DateVectorAccessorTest {
                 collector.assertThat(sut.getString()).isNull();
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(values.size() * 4);
     }
 
     @SneakyThrows
     @Test
     void testNulledOutDateMilliVectorReturnsNull() {
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = nulledOutVector(appendDates(values, extension.createDateMilliVector()))) {
             val i = new AtomicInteger(0);
-            val sut = new DateVectorAccessor(vector, i::get, consumer);
+            val sut = new DateVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
 
@@ -434,8 +397,6 @@ public class DateVectorAccessorTest {
                 collector.assertThat(sut.getString()).isNull();
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(values.size() * 4);
     }
 
     private Map<String, Integer> getExpectedDateForTimeZone(long epochMilli, ZoneId zoneId) {

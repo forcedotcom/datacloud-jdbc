@@ -5,7 +5,6 @@
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.sql.Array;
 import java.sql.SQLException;
 import java.util.List;
@@ -23,9 +22,8 @@ public abstract class BaseListVectorAccessor extends QueryJDBCAccessor {
 
     protected abstract boolean isNull(int index);
 
-    protected BaseListVectorAccessor(
-            IntSupplier currentRowSupplier, QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        super(currentRowSupplier, wasNullConsumer);
+    protected BaseListVectorAccessor(IntSupplier currentRowSupplier) {
+        super(currentRowSupplier);
     }
 
     @Override
@@ -36,7 +34,6 @@ public abstract class BaseListVectorAccessor extends QueryJDBCAccessor {
     protected List<?> getListObject(VectorProvider vectorProvider) throws SQLException {
         List<?> object = vectorProvider.getObject(getCurrentRow());
         this.wasNull = object == null;
-        this.wasNullConsumer.setWasNull(this.wasNull);
         return object;
     }
 
@@ -50,7 +47,6 @@ public abstract class BaseListVectorAccessor extends QueryJDBCAccessor {
         val dataVector = getDataVector();
 
         this.wasNull = isNull(index);
-        this.wasNullConsumer.setWasNull(this.wasNull);
         if (this.wasNull) {
             return null;
         }

@@ -5,7 +5,6 @@
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.math.BigDecimal;
 import java.util.function.IntSupplier;
 import lombok.val;
@@ -14,9 +13,8 @@ import org.apache.arrow.vector.DecimalVector;
 public class DecimalVectorAccessor extends QueryJDBCAccessor {
     private final DecimalVector vector;
 
-    public DecimalVectorAccessor(
-            DecimalVector vector, IntSupplier getCurrentRow, QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        super(getCurrentRow, wasNullConsumer);
+    public DecimalVectorAccessor(DecimalVector vector, IntSupplier getCurrentRow) {
+        super(getCurrentRow);
         this.vector = vector;
     }
 
@@ -29,7 +27,6 @@ public class DecimalVectorAccessor extends QueryJDBCAccessor {
     public BigDecimal getBigDecimal() {
         final BigDecimal value = vector.getObject(getCurrentRow());
         this.wasNull = value == null;
-        this.wasNullConsumer.setWasNull(this.wasNull);
         return value;
     }
 

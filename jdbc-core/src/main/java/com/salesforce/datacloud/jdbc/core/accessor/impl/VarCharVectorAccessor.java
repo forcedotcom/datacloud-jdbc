@@ -5,7 +5,6 @@
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.function.IntSupplier;
 import org.apache.arrow.vector.LargeVarCharVector;
@@ -20,23 +19,16 @@ public class VarCharVectorAccessor extends QueryJDBCAccessor {
 
     private final Getter getter;
 
-    public VarCharVectorAccessor(
-            VarCharVector vector,
-            IntSupplier currenRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        this(vector::get, currenRowSupplier, wasNullConsumer);
+    public VarCharVectorAccessor(VarCharVector vector, IntSupplier currenRowSupplier) {
+        this(vector::get, currenRowSupplier);
     }
 
-    public VarCharVectorAccessor(
-            LargeVarCharVector vector,
-            IntSupplier currenRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        this(vector::get, currenRowSupplier, wasNullConsumer);
+    public VarCharVectorAccessor(LargeVarCharVector vector, IntSupplier currenRowSupplier) {
+        this(vector::get, currenRowSupplier);
     }
 
-    VarCharVectorAccessor(
-            Getter getter, IntSupplier currentRowSupplier, QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        super(currentRowSupplier, wasNullConsumer);
+    VarCharVectorAccessor(Getter getter, IntSupplier currentRowSupplier) {
+        super(currentRowSupplier);
         this.getter = getter;
     }
 
@@ -49,7 +41,6 @@ public class VarCharVectorAccessor extends QueryJDBCAccessor {
     public byte[] getBytes() {
         final byte[] bytes = this.getter.get(getCurrentRow());
         this.wasNull = bytes == null;
-        this.wasNullConsumer.setWasNull(this.wasNull);
         return this.getter.get(getCurrentRow());
     }
 

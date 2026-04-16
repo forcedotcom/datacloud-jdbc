@@ -8,7 +8,6 @@ import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.null
 
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
-import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Random;
@@ -38,11 +37,10 @@ public class DecimalVectorAccessorTest {
     @Test
     void testGetBigDecimalGetObjectAndGetObjectClassFromValidDecimalVector() {
         val values = getBigDecimals();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createDecimalVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new DecimalVectorAccessor(vector, i::get, consumer);
+            val sut = new DecimalVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
@@ -53,37 +51,31 @@ public class DecimalVectorAccessorTest {
                         .hasObjectClass(BigDecimal.class);
             }
         }
-
-        consumer.assertThat().hasNullSeen(0).hasNotNullSeen(values.size() * 2);
     }
 
     @SneakyThrows
     @Test
     void testGetBigDecimalGetObjectAndGetObjectClassFromNulledDecimalVector() {
         val values = getBigDecimals();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = nulledOutVector(extension.createDecimalVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new DecimalVectorAccessor(vector, i::get, consumer);
+            val sut = new DecimalVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasBigDecimal(null).hasObject(null).hasObjectClass(BigDecimal.class);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(values.size() * 2);
     }
 
     @SneakyThrows
     @Test
     void testGetStringFromDecimalVector() {
         val values = getBigDecimals();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createDecimalVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new DecimalVectorAccessor(vector, i::get, consumer);
+            val sut = new DecimalVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
@@ -91,38 +83,32 @@ public class DecimalVectorAccessorTest {
                 collector.assertThat(stringValue).isEqualTo(expected);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(values.size()).hasNullSeen(0);
     }
 
     @SneakyThrows
     @Test
     void testGetStringFromNullDecimalVector() {
         val values = getBigDecimals();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = nulledOutVector(extension.createDecimalVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new DecimalVectorAccessor(vector, i::get, consumer);
+            val sut = new DecimalVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val stringValue = sut.getString();
                 collector.assertThat(stringValue).isNull();
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(values.size());
     }
 
     @SneakyThrows
     @Test
     void testGetIntFromDecimalVector() {
         val values = getBigDecimals();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createDecimalVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new DecimalVectorAccessor(vector, i::get, consumer);
+            val sut = new DecimalVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val intValue = sut.getInt();
@@ -130,27 +116,22 @@ public class DecimalVectorAccessorTest {
                 collector.assertThat(intValue).isEqualTo(expected);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(values.size()).hasNullSeen(0);
     }
 
     @SneakyThrows
     @Test
     void testGetIntFromNullDecimalVector() {
         val values = getBigDecimals();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = nulledOutVector(extension.createDecimalVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new DecimalVectorAccessor(vector, i::get, consumer);
+            val sut = new DecimalVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val intValue = sut.getInt();
                 collector.assertThat(intValue).isZero();
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(values.size());
     }
 
     private List<BigDecimal> getBigDecimals() {

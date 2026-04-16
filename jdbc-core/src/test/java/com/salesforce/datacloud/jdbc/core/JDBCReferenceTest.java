@@ -122,6 +122,9 @@ public class JDBCReferenceTest {
                         c.setColumnTypeName(JDBCType.CHAR.getName());
                     } else if ("TIMESTAMPTZ".equals(c.getColumnTypeName())) {
                         c.setColumnTypeName(JDBCType.TIMESTAMP_WITH_TIMEZONE.getName());
+                        // Postgres reports TIMESTAMPTZ as TIMESTAMP (93); our driver correctly
+                        // reports TIMESTAMP_WITH_TIMEZONE (2014) per JDBC 4.2
+                        c.setColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE.getVendorTypeNumber());
                     }
 
                     // Both `Numeric` and `Decimal` can be used, keep using `Decimal` to avoid soft breaking
@@ -157,7 +160,8 @@ public class JDBCReferenceTest {
                     assertEquals(1, v.size(), "The test driver only supports one result value per query");
                     ValueWithClass value = v.get(0);
                     if (e.getQuery().contains("smallint") && (value.getJavaClassName() != null)) {
-                        value.setJavaClassName(Short.class.getName());
+                        // JDBC spec table B-3 requires SMALLINT to return Integer
+                        value.setJavaClassName(Integer.class.getName());
                     } else if ("org.postgresql.util.PGobject".equals(value.getJavaClassName())) {
                         // We return JSON as a String
                         value.setJavaClassName(String.class.getName());

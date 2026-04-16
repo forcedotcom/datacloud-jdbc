@@ -5,7 +5,6 @@
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.math.BigDecimal;
 import java.util.function.IntSupplier;
 import org.apache.arrow.vector.BitVector;
@@ -16,9 +15,8 @@ public class BooleanVectorAccessor extends QueryJDBCAccessor {
     private final BitVector vector;
     private final NullableBitHolder holder;
 
-    public BooleanVectorAccessor(
-            BitVector vector, IntSupplier getCurrentRow, QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        super(getCurrentRow, wasNullConsumer);
+    public BooleanVectorAccessor(BitVector vector, IntSupplier getCurrentRow) {
+        super(getCurrentRow);
         this.vector = vector;
         this.holder = new NullableBitHolder();
     }
@@ -76,7 +74,6 @@ public class BooleanVectorAccessor extends QueryJDBCAccessor {
     public long getLong() {
         vector.get(getCurrentRow(), holder);
         this.wasNull = holder.isSet == 0;
-        this.wasNullConsumer.setWasNull(this.wasNull);
         if (this.wasNull) {
             return 0;
         }

@@ -10,7 +10,6 @@ import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeVectorGetter.
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimeFromMilliseconds;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -33,45 +32,29 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
 
     private static final String INVALID_VECTOR_ERROR_RESPONSE = "Unsupported Timestamp vector type provided";
 
-    public TimeVectorAccessor(
-            TimeNanoVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        super(currentRowSupplier, setCursorWasNull);
+    public TimeVectorAccessor(TimeNanoVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        super(currentRowSupplier);
         this.holder = new TimeVectorGetter.Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
     }
 
-    public TimeVectorAccessor(
-            TimeMicroVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        super(currentRowSupplier, setCursorWasNull);
+    public TimeVectorAccessor(TimeMicroVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        super(currentRowSupplier);
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
     }
 
-    public TimeVectorAccessor(
-            TimeMilliVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        super(currentRowSupplier, setCursorWasNull);
+    public TimeVectorAccessor(TimeMilliVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        super(currentRowSupplier);
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
     }
 
-    public TimeVectorAccessor(
-            TimeSecVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        super(currentRowSupplier, setCursorWasNull);
+    public TimeVectorAccessor(TimeSecVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        super(currentRowSupplier);
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
@@ -107,7 +90,6 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
     private void fillHolder() {
         getter.get(getCurrentRow(), holder);
         this.wasNull = holder.isSet == 0;
-        this.wasNullConsumer.setWasNull(this.wasNull);
     }
 
     /**

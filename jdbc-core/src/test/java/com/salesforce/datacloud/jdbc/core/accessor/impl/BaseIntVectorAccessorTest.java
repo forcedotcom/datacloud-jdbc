@@ -9,7 +9,6 @@ import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.null
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
-import com.salesforce.datacloud.jdbc.util.TestWasNullConsumer;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,11 +33,10 @@ public class BaseIntVectorAccessorTest {
     @Test
     public void testShouldConvertToTinyIntMethodFromBaseIntVector() {
         val values = getTinyIntValues();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createTinyIntVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new BaseIntVectorAccessor(vector, i::get, consumer);
+            val sut = new BaseIntVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
@@ -54,18 +52,16 @@ public class BaseIntVectorAccessorTest {
                         .hasObjectClass(Long.class);
             }
         }
-        consumer.assertThat().hasNullSeen(0).hasNotNullSeen(values.size() * 7);
     }
 
     @SneakyThrows
     @Test
     public void testShouldConvertToSmallIntMethodFromBaseIntVector() {
         val values = getSmallIntValues();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createSmallIntVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new BaseIntVectorAccessor(vector, i::get, consumer);
+            val sut = new BaseIntVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
@@ -80,18 +76,16 @@ public class BaseIntVectorAccessorTest {
                         .hasObjectClass(Long.class);
             }
         }
-        consumer.assertThat().hasNullSeen(0).hasNotNullSeen(values.size() * 6);
     }
 
     @SneakyThrows
     @Test
     public void testShouldConvertToIntegerMethodFromBaseIntVector() {
         val values = getIntValues();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createIntVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new BaseIntVectorAccessor(vector, i::get, consumer);
+            val sut = new BaseIntVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
@@ -105,18 +99,16 @@ public class BaseIntVectorAccessorTest {
                         .hasObjectClass(Long.class);
             }
         }
-        consumer.assertThat().hasNullSeen(0).hasNotNullSeen(values.size() * 5);
     }
 
     @SneakyThrows
     @Test
     public void testShouldConvertToBigIntMethodFromBaseIntVector() {
         val values = getBigIntValues();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createBigIntVector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new BaseIntVectorAccessor(vector, i::get, consumer);
+            val sut = new BaseIntVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
@@ -129,18 +121,16 @@ public class BaseIntVectorAccessorTest {
                         .hasObjectClass(Long.class);
             }
         }
-        consumer.assertThat().hasNullSeen(0).hasNotNullSeen(values.size() * 4);
     }
 
     @SneakyThrows
     @Test
     public void testShouldConvertToUInt4MethodFromBaseIntVector() {
         val values = getIntValues();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = extension.createUInt4Vector(values)) {
             val i = new AtomicInteger(0);
-            val sut = new BaseIntVectorAccessor(vector, i::get, consumer);
+            val sut = new BaseIntVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
@@ -154,25 +144,21 @@ public class BaseIntVectorAccessorTest {
                         .hasObjectClass(Long.class);
             }
         }
-        consumer.assertThat().hasNullSeen(0).hasNotNullSeen(values.size() * 5);
     }
 
     @SneakyThrows
     @Test
     public void testGetBigDecimalGetObjectAndGetObjectClassFromNulledDecimalVector() {
         val values = getBigIntValues();
-        val consumer = new TestWasNullConsumer(collector);
 
         try (val vector = nulledOutVector(extension.createBigIntVector(values))) {
             val i = new AtomicInteger(0);
-            val sut = new BaseIntVectorAccessor(vector, i::get, consumer);
+            val sut = new BaseIntVectorAccessor(vector, i::get);
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 collector.assertThat(sut).hasBigDecimal(null).hasObject(null).hasObjectClass(Long.class);
             }
         }
-
-        consumer.assertThat().hasNotNullSeen(0).hasNullSeen(values.size() * 2);
     }
 
     private List<Byte> getTinyIntValues() {

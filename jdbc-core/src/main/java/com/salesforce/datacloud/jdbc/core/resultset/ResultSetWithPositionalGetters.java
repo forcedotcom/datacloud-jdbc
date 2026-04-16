@@ -31,7 +31,7 @@ import java.util.Map;
  *
  * Used as a mixin to keep the boilerplate out of the actual result set implementations.
  */
-interface ResultSetWithPositionalGetters extends ResultSet {
+public interface ResultSetWithPositionalGetters extends ResultSet {
     @Override
     public default String getString(String columnLabel) throws SQLException {
         return getString(findColumn(columnLabel));

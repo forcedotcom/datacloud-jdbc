@@ -6,11 +6,11 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static com.salesforce.datacloud.jdbc.util.ThrowingFunction.rethrowFunction;
 
+import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.ZoneId;
-import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -20,12 +20,9 @@ import lombok.val;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
-import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.avatica.util.AbstractCursor;
-import org.apache.calcite.avatica.util.ArrayImpl;
 
 @Slf4j
-class ArrowStreamReaderCursor extends AbstractCursor {
+class ArrowStreamReaderCursor implements AutoCloseable {
 
     private static final int INIT_ROW_NUMBER = -1;
 
@@ -42,26 +39,19 @@ class ArrowStreamReaderCursor extends AbstractCursor {
         this.sessionZone = sessionZone;
     }
 
-    private void wasNullConsumer(boolean wasNull) {
-        this.wasNull[0] = wasNull;
-    }
-
     @SneakyThrows
     private VectorSchemaRoot getSchemaRoot() {
         return reader.getVectorSchemaRoot();
     }
 
-    @Override
-    @SneakyThrows
-    public List<Accessor> createAccessors(
-            List<ColumnMetaData> types, Calendar localCalendar, ArrayImpl.Factory factory) {
+    List<QueryJDBCAccessor> createAccessors() {
         return getSchemaRoot().getFieldVectors().stream()
                 .map(rethrowFunction(this::createAccessor))
                 .collect(Collectors.toList());
     }
 
-    private Accessor createAccessor(FieldVector vector) throws SQLException {
-        return QueryJDBCAccessorFactory.createAccessor(vector, currentIndex::get, this::wasNullConsumer, sessionZone);
+    private QueryJDBCAccessor createAccessor(FieldVector vector) throws SQLException {
+        return QueryJDBCAccessorFactory.createAccessor(vector, currentIndex::get, sessionZone);
     }
 
     private boolean loadNextBatch() throws IOException {
@@ -73,7 +63,6 @@ class ArrowStreamReaderCursor extends AbstractCursor {
     }
 
     @SneakyThrows
-    @Override
     public boolean next() {
         val current = currentIndex.incrementAndGet();
         val total = getSchemaRoot().getRowCount();
@@ -92,11 +81,6 @@ class ArrowStreamReaderCursor extends AbstractCursor {
                 throw new SQLException("Failed to load next batch: " + e.getMessage(), e);
             }
         }
-    }
-
-    @Override
-    protected Getter createGetter(int i) {
-        throw new UnsupportedOperationException();
     }
 
     @SneakyThrows

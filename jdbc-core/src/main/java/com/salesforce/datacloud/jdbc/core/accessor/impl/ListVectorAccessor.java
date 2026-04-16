@@ -4,7 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.sql.SQLException;
 import java.util.function.IntSupplier;
 import lombok.val;
@@ -16,11 +15,8 @@ public class ListVectorAccessor extends BaseListVectorAccessor {
 
     private final ListVector vector;
 
-    public ListVectorAccessor(
-            ListVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        super(currentRowSupplier, wasNullConsumer);
+    public ListVectorAccessor(ListVector vector, IntSupplier currentRowSupplier) {
+        super(currentRowSupplier);
         this.vector = vector;
     }
 

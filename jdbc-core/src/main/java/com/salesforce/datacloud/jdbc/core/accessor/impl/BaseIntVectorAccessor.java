@@ -7,7 +7,6 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 import static com.salesforce.datacloud.jdbc.core.accessor.impl.NumericGetter.createGetter;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
@@ -30,55 +29,33 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
 
     private static final String INVALID_TYPE_ERROR_RESPONSE = "Invalid Minor Type provided";
 
-    public BaseIntVectorAccessor(
-            TinyIntVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        this(vector, currentRowSupplier, false, setCursorWasNull);
+    public BaseIntVectorAccessor(TinyIntVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        this(vector, currentRowSupplier, false);
     }
 
-    public BaseIntVectorAccessor(
-            SmallIntVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        this(vector, currentRowSupplier, false, setCursorWasNull);
+    public BaseIntVectorAccessor(SmallIntVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        this(vector, currentRowSupplier, false);
     }
 
-    public BaseIntVectorAccessor(
-            IntVector vector, IntSupplier currentRowSupplier, QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        this(vector, currentRowSupplier, false, setCursorWasNull);
+    public BaseIntVectorAccessor(IntVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        this(vector, currentRowSupplier, false);
     }
 
-    public BaseIntVectorAccessor(
-            BigIntVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        this(vector, currentRowSupplier, false, setCursorWasNull);
+    public BaseIntVectorAccessor(BigIntVector vector, IntSupplier currentRowSupplier) throws SQLException {
+        this(vector, currentRowSupplier, false);
     }
 
-    private BaseIntVectorAccessor(
-            BaseIntVector vector,
-            IntSupplier currentRowSupplier,
-            boolean isUnsigned,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
+    private BaseIntVectorAccessor(BaseIntVector vector, IntSupplier currentRowSupplier, boolean isUnsigned)
             throws SQLException {
-        super(currentRowSupplier, setCursorWasNull);
+        super(currentRowSupplier);
         this.type = vector.getMinorType();
         this.holder = new NumericGetter.NumericHolder();
         this.getter = createGetter(vector);
         this.isUnsigned = isUnsigned;
     }
 
-    public BaseIntVectorAccessor(
-            UInt4Vector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer setCursorWasNull)
-            throws SQLException {
-        this(vector, currentRowSupplier, false, setCursorWasNull);
+    public BaseIntVectorAccessor(UInt4Vector vector, IntSupplier currentRowSupplier) throws SQLException {
+        this(vector, currentRowSupplier, false);
     }
 
     @Override
@@ -86,7 +63,6 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
         getter.get(getCurrentRow(), holder);
 
         this.wasNull = holder.isSet == 0;
-        this.wasNullConsumer.setWasNull(this.wasNull);
         if (this.wasNull) {
             return 0;
         }

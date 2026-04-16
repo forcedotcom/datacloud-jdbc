@@ -6,8 +6,8 @@ package com.salesforce.datacloud.jdbc.core.metadata;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudMetadataResultSet;
 import com.salesforce.datacloud.jdbc.core.MetadataSchemas;
-import com.salesforce.datacloud.jdbc.core.SimpleMetadataResultSet;
 import java.sql.JDBCType;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -16,63 +16,63 @@ import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class SimpleResultSetMetaDataTest {
+class DataCloudResultSetMetaDataTest {
     private static final List<ColumnMetadata> COLUMNS_SCHEMA = MetadataSchemas.COLUMNS;
 
-    ResultSetMetaData simpleResultSetMetaData;
+    ResultSetMetaData resultSetMetaData;
 
     @BeforeEach
     public void init() throws SQLException {
-        SimpleMetadataResultSet simpleMetadataResultSet =
-                SimpleMetadataResultSet.of(new SimpleResultSetMetaData(COLUMNS_SCHEMA), null);
-        simpleResultSetMetaData = simpleMetadataResultSet.getMetaData();
+        DataCloudMetadataResultSet dataCloudMetadataResultSet =
+                DataCloudMetadataResultSet.of(new DataCloudResultSetMetaData(COLUMNS_SCHEMA), null);
+        resultSetMetaData = dataCloudMetadataResultSet.getMetaData();
     }
 
     @Test
     public void testGetColumnCount() throws SQLException {
-        assertThat(simpleResultSetMetaData.getColumnCount()).isEqualTo(24);
+        assertThat(resultSetMetaData.getColumnCount()).isEqualTo(24);
     }
 
     @Test
     public void testIsAutoIncrement() throws SQLException {
-        assertThat(simpleResultSetMetaData.isAutoIncrement(1)).isFalse();
+        assertThat(resultSetMetaData.isAutoIncrement(1)).isFalse();
     }
 
     @Test
     public void testIsCaseSensitive() throws SQLException {
-        assertThat(simpleResultSetMetaData.isCaseSensitive(1)).isTrue();
+        assertThat(resultSetMetaData.isCaseSensitive(1)).isTrue();
     }
 
     @Test
     public void testIsSearchable() throws SQLException {
-        assertThat(simpleResultSetMetaData.isSearchable(1)).isTrue();
+        assertThat(resultSetMetaData.isSearchable(1)).isTrue();
     }
 
     @Test
     public void testIsCurrency() throws SQLException {
-        assertThat(simpleResultSetMetaData.isCurrency(1)).isFalse();
+        assertThat(resultSetMetaData.isCurrency(1)).isFalse();
     }
 
     @Test
     public void testIsNullable() throws SQLException {
-        assertThat(simpleResultSetMetaData.isNullable(1)).isEqualTo(1);
+        assertThat(resultSetMetaData.isNullable(1)).isEqualTo(1);
     }
 
     @Test
     public void testIsSigned() throws SQLException {
-        assertThat(simpleResultSetMetaData.isSigned(1)).isFalse();
+        assertThat(resultSetMetaData.isSigned(1)).isFalse();
     }
 
     @Test
     public void testGetColumnDisplaySize() throws SQLException {
-        assertThat(simpleResultSetMetaData.getColumnDisplaySize(1)).isEqualTo(-1);
-        assertThat(simpleResultSetMetaData.getColumnDisplaySize(5)).isEqualTo(11);
+        assertThat(resultSetMetaData.getColumnDisplaySize(1)).isEqualTo(-1);
+        assertThat(resultSetMetaData.getColumnDisplaySize(5)).isEqualTo(11);
     }
 
     @Test
     public void testGetColumnLabel() throws SQLException {
         for (int i = 1; i <= COLUMNS_SCHEMA.size(); i++) {
-            assertThat(simpleResultSetMetaData.getColumnLabel(i))
+            assertThat(resultSetMetaData.getColumnLabel(i))
                     .isEqualTo(COLUMNS_SCHEMA.get(i - 1).getName());
         }
     }
@@ -80,49 +80,49 @@ class SimpleResultSetMetaDataTest {
     @Test
     public void testGetColumnLabelWithNullColumnNameReturnsDefaultValue() throws SQLException {
         ColumnMetadata columnMetadata = new ColumnMetadata(null, new ColumnType(JDBCType.VARCHAR, true), "TEXT");
-        simpleResultSetMetaData = new SimpleResultSetMetaData(new ColumnMetadata[] {columnMetadata});
-        assertThat(simpleResultSetMetaData.getColumnLabel(1)).isEqualTo("C0");
+        resultSetMetaData = new DataCloudResultSetMetaData(new ColumnMetadata[] {columnMetadata});
+        assertThat(resultSetMetaData.getColumnLabel(1)).isEqualTo("C0");
     }
 
     @Test
     public void testGetColumnName() throws SQLException {
         for (int i = 1; i <= COLUMNS_SCHEMA.size(); i++) {
-            assertThat(simpleResultSetMetaData.getColumnName(i))
+            assertThat(resultSetMetaData.getColumnName(i))
                     .isEqualTo(COLUMNS_SCHEMA.get(i - 1).getName());
         }
     }
 
     @Test
     public void testGetSchemaName() throws SQLException {
-        assertThat(simpleResultSetMetaData.getSchemaName(1)).isEqualTo(StringUtils.EMPTY);
+        assertThat(resultSetMetaData.getSchemaName(1)).isEqualTo(StringUtils.EMPTY);
     }
 
     @Test
     public void testGetPrecision() throws SQLException {
-        assertThat(simpleResultSetMetaData.getPrecision(1)).isEqualTo(-1);
-        assertThat(simpleResultSetMetaData.getPrecision(5)).isEqualTo(10);
+        assertThat(resultSetMetaData.getPrecision(1)).isEqualTo(-1);
+        assertThat(resultSetMetaData.getPrecision(5)).isEqualTo(10);
     }
 
     @Test
     public void testGetScale() throws SQLException {
-        assertThat(simpleResultSetMetaData.getScale(1)).isEqualTo(0);
-        assertThat(simpleResultSetMetaData.getScale(5)).isEqualTo(0);
+        assertThat(resultSetMetaData.getScale(1)).isEqualTo(0);
+        assertThat(resultSetMetaData.getScale(5)).isEqualTo(0);
     }
 
     @Test
     public void testGetTableName() throws SQLException {
-        assertThat(simpleResultSetMetaData.getTableName(1)).isEqualTo(StringUtils.EMPTY);
+        assertThat(resultSetMetaData.getTableName(1)).isEqualTo(StringUtils.EMPTY);
     }
 
     @Test
     public void testGetCatalogName() throws SQLException {
-        assertThat(simpleResultSetMetaData.getCatalogName(1)).isEqualTo(StringUtils.EMPTY);
+        assertThat(resultSetMetaData.getCatalogName(1)).isEqualTo(StringUtils.EMPTY);
     }
 
     @Test
     public void getColumnType() throws SQLException {
         for (int i = 1; i <= COLUMNS_SCHEMA.size(); i++) {
-            assertThat(simpleResultSetMetaData.getColumnType(i))
+            assertThat(resultSetMetaData.getColumnType(i))
                     .isEqualTo(COLUMNS_SCHEMA.get(i - 1).getType().getType().getVendorTypeNumber());
         }
     }
@@ -130,31 +130,31 @@ class SimpleResultSetMetaDataTest {
     @Test
     public void getColumnTypeName() throws SQLException {
         for (int i = 1; i <= COLUMNS_SCHEMA.size(); i++) {
-            assertThat(simpleResultSetMetaData.getColumnTypeName(i))
+            assertThat(resultSetMetaData.getColumnTypeName(i))
                     .isEqualTo(COLUMNS_SCHEMA.get(i - 1).getTypeName());
         }
     }
 
     @Test
     public void testIsReadOnly() throws SQLException {
-        assertThat(simpleResultSetMetaData.isReadOnly(1)).isTrue();
+        assertThat(resultSetMetaData.isReadOnly(1)).isTrue();
     }
 
     @Test
     public void isWritable() throws SQLException {
-        assertThat(simpleResultSetMetaData.isWritable(1)).isFalse();
+        assertThat(resultSetMetaData.isWritable(1)).isFalse();
     }
 
     @Test
     public void isDefinitelyWritable() throws SQLException {
-        assertThat(simpleResultSetMetaData.isDefinitelyWritable(1)).isFalse();
+        assertThat(resultSetMetaData.isDefinitelyWritable(1)).isFalse();
     }
 
     @Test
     public void getColumnClassName() throws SQLException {
         // From GET_COLUMNS: column 1 is VARCHAR, column 17 is INTEGER
-        assertThat(simpleResultSetMetaData.getColumnClassName(1)).isEqualTo("java.lang.String");
-        assertThat(simpleResultSetMetaData.getColumnClassName(17)).isEqualTo("java.lang.Integer");
+        assertThat(resultSetMetaData.getColumnClassName(1)).isEqualTo("java.lang.String");
+        assertThat(resultSetMetaData.getColumnClassName(17)).isEqualTo("java.lang.Integer");
 
         // Cover remaining Java types from ColumnType.getJavaTypeName() switch
         assertThat(metaDataWithColumnType(JDBCType.BOOLEAN).getColumnClassName(1))
@@ -187,34 +187,33 @@ class SimpleResultSetMetaDataTest {
         // Covers ColumnType(JDBCType type, boolean nullable)
         ColumnType nonNullable = new ColumnType(JDBCType.VARCHAR, false);
         ColumnType nullable = new ColumnType(JDBCType.INTEGER, true);
-        SimpleResultSetMetaData metaNonNullable =
-                new SimpleResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nonNullable, "TEXT")});
-        SimpleResultSetMetaData metaNullable =
-                new SimpleResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nullable, "INTEGER")});
+        DataCloudResultSetMetaData metaNonNullable =
+                new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nonNullable, "TEXT")});
+        DataCloudResultSetMetaData metaNullable =
+                new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nullable, "INTEGER")});
 
         assertThat(metaNonNullable.isNullable(1)).isEqualTo(ResultSetMetaData.columnNoNulls);
         assertThat(metaNullable.isNullable(1)).isEqualTo(ResultSetMetaData.columnNullable);
     }
 
-    private static SimpleResultSetMetaData metaDataWithColumnType(JDBCType jdbcType) {
+    private static DataCloudResultSetMetaData metaDataWithColumnType(JDBCType jdbcType) {
         return metaDataWithColumnType(jdbcType, null);
     }
 
-    private static SimpleResultSetMetaData metaDataWithColumnType(JDBCType jdbcType, ColumnType arrayElementType) {
+    private static DataCloudResultSetMetaData metaDataWithColumnType(JDBCType jdbcType, ColumnType arrayElementType) {
         ColumnType columnType = arrayElementType != null
                 ? new ColumnType(jdbcType, arrayElementType, true)
                 : new ColumnType(jdbcType, true);
-        return new SimpleResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", columnType, "TEXT")});
+        return new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", columnType, "TEXT")});
     }
 
     @Test
     public void unwrap() throws SQLException {
-        assertThat(simpleResultSetMetaData.unwrap(ResultSetMetaData.class)).isInstanceOf(SimpleResultSetMetaData.class);
+        assertThat(resultSetMetaData.unwrap(ResultSetMetaData.class)).isInstanceOf(DataCloudResultSetMetaData.class);
     }
 
     @Test
     public void isWrapperFor() throws SQLException {
-        assertThat(simpleResultSetMetaData.isWrapperFor(ResultSetMetaData.class))
-                .isTrue();
+        assertThat(resultSetMetaData.isWrapperFor(ResultSetMetaData.class)).isTrue();
     }
 }

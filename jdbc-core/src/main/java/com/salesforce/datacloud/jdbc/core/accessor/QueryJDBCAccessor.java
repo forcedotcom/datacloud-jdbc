@@ -23,17 +23,13 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.function.IntSupplier;
-import org.apache.calcite.avatica.util.Cursor.Accessor;
 
-public abstract class QueryJDBCAccessor implements Accessor {
+public abstract class QueryJDBCAccessor implements DataCloudQueryAccessor {
     private final IntSupplier currentRowSupplier;
     protected boolean wasNull;
-    protected QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer;
 
-    protected QueryJDBCAccessor(
-            IntSupplier currentRowSupplier, QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
+    protected QueryJDBCAccessor(IntSupplier currentRowSupplier) {
         this.currentRowSupplier = currentRowSupplier;
-        this.wasNullConsumer = wasNullConsumer;
     }
 
     protected int getCurrentRow() {
@@ -199,7 +195,7 @@ public abstract class QueryJDBCAccessor implements Accessor {
 
     @Override
     public <T> T getObject(Class<T> aClass) throws SQLException {
-        return null;
+        throw getOperationNotSupported(aClass.getClass());
     }
 
     private static SQLException getOperationNotSupported(final Class<?> type) {

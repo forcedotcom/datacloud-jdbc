@@ -18,7 +18,6 @@ dependencies {
     implementation(project(":jdbc-util"))
     implementation(libs.slf4j.api)
     implementation(libs.bundles.arrow)
-    implementation(libs.apache.calcite.avatica)
     implementation(libs.guava)
     implementation(libs.jackson.databind)
     implementation(libs.failsafe)

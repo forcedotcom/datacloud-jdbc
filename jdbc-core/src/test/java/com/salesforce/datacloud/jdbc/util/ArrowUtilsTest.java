@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
 import java.math.BigDecimal;
 import java.sql.Date;
@@ -30,8 +31,6 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.avatica.proto.Common;
 import org.assertj.core.api.SoftAssertions;
 import org.assertj.core.api.junit.jupiter.InjectSoftAssertions;
 import org.assertj.core.api.junit.jupiter.SoftAssertionsExtension;
@@ -50,19 +49,12 @@ class ArrowUtilsTest {
     @Test
     void testConvertArrowFieldsToColumnMetaData() {
         List<Field> arrowFields = ImmutableList.of(new Field("id", FieldType.nullable(new ArrowType.Utf8()), null));
-        final List<ColumnMetaData> expectedColumnMetadata =
-                ImmutableList.of(ColumnMetaData.fromProto(Common.ColumnMetaData.newBuilder()
-                        .setColumnName("id")
-                        .setOrdinal(0)
-                        .build()));
-        List<ColumnMetaData> actualColumnMetadata = ArrowUtils.toColumnMetaData(arrowFields);
-        assertThat(actualColumnMetadata).hasSameSizeAs(expectedColumnMetadata);
-        val expected = expectedColumnMetadata.get(0);
+        List<ColumnMetadata> actualColumnMetadata = ArrowUtils.toColumnMetaData(arrowFields);
+        assertThat(actualColumnMetadata).hasSize(1);
         val actual = actualColumnMetadata.get(0);
 
-        softly.assertThat(actual.columnName).isEqualTo(expected.columnName);
-        softly.assertThat(actual.ordinal).isEqualTo(expected.ordinal);
-        softly.assertThat(actual.type.name)
+        softly.assertThat(actual.getName()).isEqualTo("id");
+        softly.assertThat(actual.getTypeName())
                 .isEqualTo(JDBCType.valueOf(Types.VARCHAR).getName());
     }
 
@@ -117,8 +109,8 @@ class ArrowUtilsTest {
                         ImmutableList.of(new Field("", FieldType.nullable(new ArrowType.Utf8()), null)))));
 
         for (val entry : testCases.entrySet()) {
-            List<ColumnMetaData> actual = ArrowUtils.toColumnMetaData(entry.getValue());
-            softly.assertThat(actual.get(0).type.name).isEqualTo(entry.getKey());
+            List<ColumnMetadata> actual = ArrowUtils.toColumnMetaData(entry.getValue());
+            softly.assertThat(actual.get(0).getTypeName()).isEqualTo(entry.getKey());
         }
     }
 

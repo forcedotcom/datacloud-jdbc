@@ -4,7 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.resultset;
 
-import com.salesforce.datacloud.jdbc.core.metadata.SimpleResultSetMetaData;
+import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -42,7 +42,7 @@ import lombok.val;
 public abstract class SimpleResultSet<SELF>
         implements ReadOnlyResultSet, ForwardOnlyResultSet, ResultSetWithPositionalGetters {
     /// The metadata for the result set
-    protected final SimpleResultSetMetaData metadata;
+    protected final DataCloudResultSetMetaData metadata;
     /// The accessor functions for the columns
     protected final ColumnAccessor<SELF>[] accessors;
     /// Was the previously read value null?

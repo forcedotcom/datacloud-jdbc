@@ -5,7 +5,6 @@
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.function.IntSupplier;
 import org.apache.arrow.vector.FixedSizeBinaryVector;
@@ -20,32 +19,20 @@ public class BinaryVectorAccessor extends QueryJDBCAccessor {
 
     private final ByteArrayGetter getter;
 
-    public BinaryVectorAccessor(
-            FixedSizeBinaryVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        this(vector::get, currentRowSupplier, wasNullConsumer);
+    public BinaryVectorAccessor(FixedSizeBinaryVector vector, IntSupplier currentRowSupplier) {
+        this(vector::get, currentRowSupplier);
     }
 
-    public BinaryVectorAccessor(
-            VarBinaryVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        this(vector::get, currentRowSupplier, wasNullConsumer);
+    public BinaryVectorAccessor(VarBinaryVector vector, IntSupplier currentRowSupplier) {
+        this(vector::get, currentRowSupplier);
     }
 
-    public BinaryVectorAccessor(
-            LargeVarBinaryVector vector,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        this(vector::get, currentRowSupplier, wasNullConsumer);
+    public BinaryVectorAccessor(LargeVarBinaryVector vector, IntSupplier currentRowSupplier) {
+        this(vector::get, currentRowSupplier);
     }
 
-    private BinaryVectorAccessor(
-            ByteArrayGetter getter,
-            IntSupplier currentRowSupplier,
-            QueryJDBCAccessorFactory.WasNullConsumer wasNullConsumer) {
-        super(currentRowSupplier, wasNullConsumer);
+    private BinaryVectorAccessor(ByteArrayGetter getter, IntSupplier currentRowSupplier) {
+        super(currentRowSupplier);
         this.getter = getter;
     }
 
@@ -53,7 +40,6 @@ public class BinaryVectorAccessor extends QueryJDBCAccessor {
     public byte[] getBytes() {
         byte[] bytes = getter.get(getCurrentRow());
         this.wasNull = bytes == null;
-        this.wasNullConsumer.setWasNull(this.wasNull);
 
         return bytes;
     }

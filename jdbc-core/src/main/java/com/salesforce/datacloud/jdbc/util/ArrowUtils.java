@@ -6,24 +6,20 @@ package com.salesforce.datacloud.jdbc.util;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.core.metadata.ColumnType;
 import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.sql.JDBCType;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamWriter;
@@ -34,9 +30,6 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.avatica.SqlType;
-import org.apache.calcite.avatica.proto.Common;
 
 @Slf4j
 public final class ArrowUtils {
@@ -45,34 +38,12 @@ public final class ArrowUtils {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
-    public static List<ColumnMetaData> toColumnMetaData(List<Field> fields) {
-        AtomicInteger index = new AtomicInteger();
+    public static List<ColumnMetadata> toColumnMetaData(List<Field> fields) {
         return fields.stream()
                 .map(field -> {
-                    try {
-                        ColumnType type = ArrowToColumnTypeMapper.toColumnType(field);
-                        val avaticaType = getAvaticaType(type).toProto();
-
-                        final Common.ColumnMetaData.Builder builder = Common.ColumnMetaData.newBuilder()
-                                .setOrdinal(index.getAndIncrement())
-                                .setColumnName(field.getName())
-                                .setLabel(field.getName())
-                                .setType(avaticaType)
-                                .setPrecision(type.getPrecisionOrStringLength())
-                                .setScale(type.getScale())
-                                .setCaseSensitive(type.isCaseSensitive())
-                                .setDisplaySize(type.getDisplaySize())
-                                .setSigned(type.isSigned())
-                                .setNullable(
-                                        field.isNullable()
-                                                ? ResultSetMetaData.columnNullable
-                                                : ResultSetMetaData.columnNoNulls)
-                                .setSearchable(true)
-                                .setWritable(false);
-                        return ColumnMetaData.fromProto(builder.build());
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
+                    ColumnType type = ArrowToColumnTypeMapper.toColumnType(field);
+                    return new ColumnMetadata(
+                            field.getName(), type, type.getType().getName());
                 })
                 .collect(Collectors.toList());
     }
@@ -185,24 +156,5 @@ public final class ArrowUtils {
 
             return outputStream.toByteArray();
         }
-    }
-
-    private static ColumnMetaData.AvaticaType getAvaticaType(ColumnType columnType) throws SQLException {
-        final ColumnMetaData.AvaticaType avaticaType;
-        int typeId = columnType.getType().getVendorTypeNumber();
-        if (typeId == JDBCType.TIMESTAMP_WITH_TIMEZONE.getVendorTypeNumber()) {
-            // We have to expose as `TIMESTAMP` here as Avatica doesn't support TIMESTAMPT_WITH_TIMEZONE accessors
-            typeId = JDBCType.TIMESTAMP.getVendorTypeNumber();
-        }
-        String typeName = columnType.getType().getName();
-        final SqlType sqlType = SqlType.valueOf(typeId);
-        final ColumnMetaData.Rep rep = ColumnMetaData.Rep.of(sqlType.internal);
-        if (sqlType == SqlType.ARRAY) {
-            ColumnMetaData.AvaticaType arrayValueType = getAvaticaType(columnType.getArrayElementType());
-            avaticaType = ColumnMetaData.array(arrayValueType, typeName, rep);
-        } else {
-            avaticaType = ColumnMetaData.scalar(typeId, typeName, rep);
-        }
-        return avaticaType;
     }
 }
