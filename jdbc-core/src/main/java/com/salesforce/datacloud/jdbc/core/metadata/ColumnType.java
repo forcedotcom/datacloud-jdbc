@@ -267,14 +267,18 @@ public class ColumnType {
         switch (type) {
             case BOOLEAN:
                 return Boolean.class;
+            case TINYINT:
+                return Short.class;
             case SMALLINT:
             case INTEGER:
                 return Integer.class;
             case BIGINT:
                 return Long.class;
+            case DECIMAL:
             case NUMERIC:
                 return BigDecimal.class;
             case FLOAT:
+            case REAL:
                 return Float.class;
             case DOUBLE:
                 return Double.class;
@@ -282,6 +286,7 @@ public class ColumnType {
             case VARCHAR:
                 return String.class;
             case BINARY:
+            case VARBINARY:
                 return byte[].class;
             case DATE:
                 return Date.class;
@@ -293,6 +298,8 @@ public class ColumnType {
                 return Timestamp.class;
             case ARRAY:
                 return Array.class;
+            case NULL:
+                return Object.class;
         }
         throw new IllegalArgumentException("Unsupported type: " + type);
     }

@@ -8,7 +8,6 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -50,24 +49,18 @@ public class MetadataCacheInterceptor implements Interceptor {
             log.trace("Cache miss for metadata response. Getting from server");
             val response = chain.proceed(request);
 
-            if (response.isSuccessful()) {
-                Optional.of(response)
-                        .map(Response::body)
-                        .map(t -> {
-                            try {
-                                return t.string();
-                            } catch (IOException ex) {
-                                log.error("Caught exception when extracting body from response. {}", cacheKey, ex);
-                                return null;
-                            }
-                        })
-                        .ifPresent(responseString -> {
-                            builder.body(ResponseBody.create(responseString, mediaType));
-                            metaDataCache.put(cacheKey, responseString);
-                        });
-            } else {
+            if (!response.isSuccessful()) {
                 return response;
             }
+
+            val body = response.body();
+            if (body == null) {
+                return response;
+            }
+
+            val responseString = body.string();
+            builder.body(ResponseBody.create(responseString, mediaType));
+            metaDataCache.put(cacheKey, responseString);
         }
 
         return builder.build();

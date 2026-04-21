@@ -169,6 +169,7 @@ public abstract class SimpleResultSet<SELF>
     @Override
     public long getLong(int columnIndex) throws SQLException {
         switch (metadata.getColumn(columnIndex).getType().getType()) {
+            case TINYINT:
             case SMALLINT:
             case INTEGER:
             case BIGINT: {
@@ -188,7 +189,10 @@ public abstract class SimpleResultSet<SELF>
     @Override
     public float getFloat(int columnIndex) throws SQLException {
         double v = getDouble(columnIndex);
-        if (v < Float.MIN_VALUE || v > Float.MAX_VALUE) {
+        if (wasNull) {
+            return 0;
+        }
+        if (v < -Float.MAX_VALUE || v > Float.MAX_VALUE) {
             throw new SQLException(
                     "Column " + getMetaData().getColumnName(columnIndex) + " is out of range for a float");
         }
@@ -198,6 +202,7 @@ public abstract class SimpleResultSet<SELF>
     @Override
     public double getDouble(int columnIndex) throws SQLException {
         switch (metadata.getColumn(columnIndex).getType().getType()) {
+            case TINYINT:
             case SMALLINT:
             case INTEGER:
             case BIGINT: {
@@ -214,6 +219,7 @@ public abstract class SimpleResultSet<SELF>
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
         switch (metadata.getColumn(columnIndex).getType().getType()) {
+            case TINYINT:
             case SMALLINT:
             case INTEGER:
             case BIGINT: {

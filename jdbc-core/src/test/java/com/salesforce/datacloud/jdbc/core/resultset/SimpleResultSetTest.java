@@ -12,12 +12,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudMetadataResultSet;
 import com.salesforce.datacloud.jdbc.core.MetadataSchemas;
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.core.metadata.ColumnType;
 import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.sql.Blob;
 import java.sql.Clob;
+import java.sql.JDBCType;
 import java.sql.NClob;
 import java.sql.Ref;
 import java.sql.ResultSet;
@@ -412,5 +415,49 @@ class SimpleResultSetTest {
         assertThrows(SQLException.class, () -> resultSet.getObject(col));
         assertThrows(SQLException.class, () -> resultSet.getObject(col, String.class));
         assertThrows(SQLException.class, () -> resultSet.getBigDecimal(col));
+    }
+
+    @Test
+    void tinyintColumnSupportsGetLongGetDoubleGetBigDecimal() throws SQLException {
+        List<ColumnMetadata> schema =
+                Collections.singletonList(new ColumnMetadata("val", new ColumnType(JDBCType.TINYINT, true), "TINYINT"));
+        SimpleResultSet<?> rs = DataCloudMetadataResultSet.of(
+                new DataCloudResultSetMetaData(schema), Arrays.asList(Collections.singletonList(42L)));
+
+        assertTrue(rs.next());
+        assertEquals(42L, rs.getLong(1));
+        assertFalse(rs.wasNull());
+    }
+
+    @Test
+    void tinyintColumnSupportsGetDouble() throws SQLException {
+        List<ColumnMetadata> schema =
+                Collections.singletonList(new ColumnMetadata("val", new ColumnType(JDBCType.TINYINT, true), "TINYINT"));
+        SimpleResultSet<?> rs = DataCloudMetadataResultSet.of(
+                new DataCloudResultSetMetaData(schema), Arrays.asList(Collections.singletonList(7L)));
+
+        assertTrue(rs.next());
+        assertEquals(7.0, rs.getDouble(1));
+    }
+
+    @Test
+    void tinyintColumnSupportsGetBigDecimal() throws SQLException {
+        List<ColumnMetadata> schema =
+                Collections.singletonList(new ColumnMetadata("val", new ColumnType(JDBCType.TINYINT, true), "TINYINT"));
+        SimpleResultSet<?> rs = DataCloudMetadataResultSet.of(
+                new DataCloudResultSetMetaData(schema), Arrays.asList(Collections.singletonList(99L)));
+
+        assertTrue(rs.next());
+        assertEquals(new BigDecimal(99), rs.getBigDecimal(1));
+    }
+
+    @Test
+    void getFloatAcceptsNegativeValuesWithinRange() throws SQLException {
+        int col = 5;
+        SimpleResultSet<?> rs = DataCloudMetadataResultSet.of(
+                new DataCloudResultSetMetaData(MetadataSchemas.COLUMNS), Arrays.asList(rowWithLongAt(col, -42L)));
+
+        assertTrue(rs.next());
+        assertEquals(-42.0f, rs.getFloat(col));
     }
 }

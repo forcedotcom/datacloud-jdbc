@@ -214,7 +214,8 @@ final class QueryMetadataUtil {
             int columnSize = 255;
             rowData[COLUMN_SIZE_INDEX] = columnSize;
 
-            int decimalDigits = 2;
+            String resolvedTypeName = (String) rowData[TYPE_NAME_INDEX];
+            int decimalDigits = isDecimalType(resolvedTypeName) ? 2 : 0;
             rowData[DECIMAL_DIGITS_INDEX] = decimalDigits;
 
             int numPrecRadix = 10;
@@ -233,10 +234,9 @@ final class QueryMetadataUtil {
 
             rowData[SQL_DATA_TYPE_INDEX] = null;
 
-            String sqlDateTimeSub = StringUtils.EMPTY;
-            rowData[SQL_DATE_TIME_SUB_INDEX] = sqlDateTimeSub;
+            rowData[SQL_DATE_TIME_SUB_INDEX] = null;
 
-            int charOctetLength = 2;
+            Integer charOctetLength = isCharType(resolvedTypeName) ? columnSize : null;
             rowData[CHAR_OCTET_LENGTH_INDEX] = charOctetLength;
 
             int ordinalPosition = resultSet.getInt("attnum");
@@ -445,6 +445,18 @@ final class QueryMetadataUtil {
             immutableEntry(
                     "MATERIALIZED VIEW",
                     ImmutableMap.of("SCHEMAS", "c.relkind = 'm'", "NOSCHEMAS", "c.relkind = 'm'")));
+
+    private static boolean isDecimalType(String typeName) {
+        return JDBCType.NUMERIC.toString().equals(typeName)
+                || JDBCType.DECIMAL.toString().equals(typeName)
+                || JDBCType.REAL.toString().equals(typeName)
+                || JDBCType.DOUBLE.toString().equals(typeName);
+    }
+
+    private static boolean isCharType(String typeName) {
+        return JDBCType.VARCHAR.toString().equals(typeName)
+                || JDBCType.CHAR.toString().equals(typeName);
+    }
 
     public static String quoteStringLiteral(String v) {
         StringBuilder result = new StringBuilder();
