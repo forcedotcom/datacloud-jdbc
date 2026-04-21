@@ -8,6 +8,7 @@ import com.salesforce.datacloud.jdbc.protocol.CloseableIterator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -61,25 +62,26 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
             return nextValue.isPresent();
         }
 
-        // Block waiting for next value
+        // Block waiting for next value. The future is hoisted out of the loop so that on interrupt
+        // we close the iterator (triggering gRPC cancellation) and then re-wait on the *same* future
+        // rather than requesting a new one (which would hit "Unfulfilled previous future").
         boolean interrupted = false;
+        CompletableFuture<Optional<T>> future =
+                asyncIterator.next().toCompletableFuture();
         try {
             while (true) {
                 try {
-                    nextValue = asyncIterator.next().toCompletableFuture().get();
+                    nextValue = future.get();
                     if (!nextValue.isPresent()) {
                         done = true;
                     }
                     return nextValue.isPresent();
                 } catch (InterruptedException ie) {
                     interrupted = true;
-                    // This will cause the ongoing call to be stopped and thus the future will get an error element
-                    // which will cause the while loop to exit.
                     try {
                         asyncIterator.close();
                     } catch (Exception ignore) {
                     }
-                    return hasNext();
                 } catch (ExecutionException ee) {
                     Throwable cause = ee.getCause();
                     if (cause instanceof RuntimeException) {

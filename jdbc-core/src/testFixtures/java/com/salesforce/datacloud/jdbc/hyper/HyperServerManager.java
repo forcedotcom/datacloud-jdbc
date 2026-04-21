@@ -14,7 +14,8 @@ public final class HyperServerManager {
     @AllArgsConstructor
     public enum ConfigFile {
         DEFAULT("default.yaml"),
-        SMALL_CHUNKS("hyper.yaml");
+        SMALL_CHUNKS("hyper.yaml"),
+        WITH_DATABASE("hyper_with_database.yaml");
 
         final String filename;
     }
