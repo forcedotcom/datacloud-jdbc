@@ -4,8 +4,9 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
-import static com.salesforce.datacloud.jdbc.util.ArrowToColumnTypeMapper.toColumnType;
-
+import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
+import com.salesforce.datacloud.jdbc.protocol.data.ArrowToHyperTypeMapper;
+import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.sql.Array;
 import java.sql.ResultSet;
@@ -26,8 +27,9 @@ public class DataCloudArray implements Array {
         // Extract data immediately during construction (following PostgreSQL JDBC pattern)
         // This makes the object self-contained and independent of ValueVector lifecycle
         this.data = extractDataFromVector(dataVector, startOffset, valuesCount);
-        this.baseTypeName = toColumnType(dataVector.getField()).getType().getName();
-        this.baseType = toColumnType(dataVector.getField()).getType().getVendorTypeNumber();
+        HyperType elementType = ArrowToHyperTypeMapper.toHyperType(dataVector.getField());
+        this.baseTypeName = HyperTypes.toJdbcTypeName(elementType);
+        this.baseType = HyperTypes.toJdbcTypeCode(elementType);
     }
 
     /**

@@ -13,6 +13,8 @@ import static com.salesforce.datacloud.jdbc.core.QueryMetadataUtil.createTableTy
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
+import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
+import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
@@ -753,7 +755,8 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public ResultSet getTypeInfo() throws SQLException {
-        return DataCloudMetadataResultSet.empty();
+        return DataCloudMetadataResultSet.of(
+                new DataCloudResultSetMetaData(MetadataSchemas.TYPE_INFO), HyperTypes.typeInfoRows());
     }
 
     @Override

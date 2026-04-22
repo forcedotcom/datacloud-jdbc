@@ -2,7 +2,7 @@
  * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
  * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
  */
-package com.salesforce.datacloud.jdbc.util;
+package com.salesforce.datacloud.jdbc.protocol.data;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -10,8 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.google.common.collect.ImmutableList;
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
-import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
+import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.JDBCType;
@@ -54,7 +53,10 @@ class ArrowUtilsTest {
         val actual = actualColumnMetadata.get(0);
 
         softly.assertThat(actual.getName()).isEqualTo("id");
-        softly.assertThat(actual.getTypeName())
+        // toColumnMetaData leaves the JDBC type-name override unset; the JDBC layer derives the
+        // default from the HyperType at query time.
+        softly.assertThat(actual.getTypeName()).isNull();
+        softly.assertThat(HyperTypes.toJdbcTypeName(actual.getType()))
                 .isEqualTo(JDBCType.valueOf(Types.VARCHAR).getName());
     }
 
@@ -110,7 +112,8 @@ class ArrowUtilsTest {
 
         for (val entry : testCases.entrySet()) {
             List<ColumnMetadata> actual = ArrowUtils.toColumnMetaData(entry.getValue());
-            softly.assertThat(actual.get(0).getTypeName()).isEqualTo(entry.getKey());
+            softly.assertThat(HyperTypes.toJdbcTypeName(actual.get(0).getType()))
+                    .isEqualTo(entry.getKey());
         }
     }
 
@@ -136,26 +139,31 @@ class ArrowUtilsTest {
     @ParameterizedTest
     @MethodSource("arrowTypes")
     void testGetSQLTypeFromArrowTypes(ArrowType arrowType, int expectedSqlType) {
-        softly.assertThat(ArrowToColumnTypeMapper.toColumnType(Field.nullable("", arrowType))
-                        .getType()
-                        .getVendorTypeNumber())
+        softly.assertThat(HyperTypes.toJdbcTypeCode(ArrowToHyperTypeMapper.toHyperType(Field.nullable("", arrowType))))
                 .isEqualTo(expectedSqlType);
     }
 
     @Test
     void testCreateSchemaFromParametersValid() {
         List<ParameterBinding> parameterBindings = Arrays.asList(
-                new ParameterBinding(Types.VARCHAR, "string"),
-                new ParameterBinding(Types.INTEGER, 1),
-                new ParameterBinding(Types.BIGINT, 123456789L),
-                new ParameterBinding(Types.BOOLEAN, true),
-                new ParameterBinding(Types.TINYINT, (byte) 1),
-                new ParameterBinding(Types.SMALLINT, (short) 1),
-                new ParameterBinding(Types.DATE, new Date(1)),
-                new ParameterBinding(Types.TIME, new Time(1)),
-                new ParameterBinding(Types.TIMESTAMP, new Timestamp(1)),
-                new ParameterBinding(Types.DECIMAL, new BigDecimal("123.45")),
-                new ParameterBinding(Types.ARRAY, ImmutableList.of(1, 2, 3)));
+                new ParameterBinding(
+                        com.salesforce.datacloud.jdbc.protocol.data.HyperType.varcharUnlimited(true), "string"),
+                new ParameterBinding(com.salesforce.datacloud.jdbc.protocol.data.HyperType.int32(true), 1),
+                new ParameterBinding(com.salesforce.datacloud.jdbc.protocol.data.HyperType.int64(true), 123456789L),
+                new ParameterBinding(com.salesforce.datacloud.jdbc.protocol.data.HyperType.bool(true), true),
+                new ParameterBinding(com.salesforce.datacloud.jdbc.protocol.data.HyperType.int8(true), (byte) 1),
+                new ParameterBinding(com.salesforce.datacloud.jdbc.protocol.data.HyperType.int16(true), (short) 1),
+                new ParameterBinding(com.salesforce.datacloud.jdbc.protocol.data.HyperType.date(true), new Date(1)),
+                new ParameterBinding(com.salesforce.datacloud.jdbc.protocol.data.HyperType.time(true), new Time(1)),
+                new ParameterBinding(
+                        com.salesforce.datacloud.jdbc.protocol.data.HyperType.timestamp(true), new Timestamp(1)),
+                new ParameterBinding(
+                        com.salesforce.datacloud.jdbc.protocol.data.HyperType.decimal(5, 2, true),
+                        new BigDecimal("123.45")),
+                new ParameterBinding(
+                        com.salesforce.datacloud.jdbc.protocol.data.HyperType.array(
+                                com.salesforce.datacloud.jdbc.protocol.data.HyperType.int32(true), true),
+                        ImmutableList.of(1, 2, 3)));
 
         Schema schema = ArrowUtils.createSchemaFromParameters(parameterBindings);
 

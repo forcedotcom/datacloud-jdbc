@@ -12,13 +12,15 @@ import static com.salesforce.datacloud.jdbc.config.QueryResources.getTablesQuery
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
+import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
+import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
+import com.salesforce.datacloud.jdbc.protocol.data.PgCatalogTypeParser;
 import com.salesforce.datacloud.jdbc.util.StringCompatibility;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -27,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.commons.lang3.StringUtils;
 
 @Slf4j
 final class QueryMetadataUtil {
@@ -55,24 +56,6 @@ final class QueryMetadataUtil {
     private static final int SOURCE_DATA_TYPE_INDEX = 21;
     private static final int AUTO_INCREMENT_INDEX = 22;
     private static final int GENERATED_COLUMN_INDEX = 23;
-
-    private static final Map<String, String> dbTypeToSql = ImmutableMap.ofEntries(
-            immutableEntry("int2", JDBCType.SMALLINT.toString()),
-            immutableEntry("int4", JDBCType.INTEGER.toString()),
-            immutableEntry("oid", JDBCType.BIGINT.toString()),
-            immutableEntry("int8", JDBCType.BIGINT.toString()),
-            immutableEntry("float", JDBCType.DOUBLE.toString()),
-            immutableEntry("float4", JDBCType.REAL.toString()),
-            immutableEntry("float8", JDBCType.DOUBLE.toString()),
-            immutableEntry("bool", JDBCType.BOOLEAN.toString()),
-            immutableEntry("char", JDBCType.CHAR.toString()),
-            immutableEntry("text", JDBCType.VARCHAR.toString()),
-            immutableEntry("date", JDBCType.DATE.toString()),
-            immutableEntry("time", JDBCType.TIME.toString()),
-            immutableEntry("timetz", JDBCType.TIME.toString()),
-            immutableEntry("timestamp", JDBCType.TIMESTAMP.toString()),
-            immutableEntry("timestamptz", JDBCType.TIMESTAMP_WITH_TIMEZONE.toString()),
-            immutableEntry("array", JDBCType.ARRAY.toString()));
 
     private QueryMetadataUtil() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
@@ -180,71 +163,42 @@ final class QueryMetadataUtil {
         while (resultSet.next()) {
             Object[] rowData = new Object[24];
 
-            String tableCatalog = null;
-            rowData[TABLE_CATALOG_INDEX] = tableCatalog;
+            rowData[TABLE_CATALOG_INDEX] = null;
+            rowData[TABLE_SCHEMA_INDEX] = resultSet.getString("nspname");
+            rowData[TABLE_NAME_INDEX] = resultSet.getString("relname");
+            rowData[COLUMN_NAME_INDEX] = resultSet.getString("attname");
 
-            String tableSchema = resultSet.getString("nspname");
-            rowData[TABLE_SCHEMA_INDEX] = tableSchema;
-
-            String tableName = resultSet.getString("relname");
-            rowData[TABLE_NAME_INDEX] = tableName;
-
-            String columnName = resultSet.getString("attname");
-            rowData[COLUMN_NAME_INDEX] = columnName;
-
-            int dataType = (int) resultSet.getLong("atttypid");
-            rowData[DATA_TYPE_INDEX] = dataType;
-
-            String typeName = resultSet.getString("datatype");
-            typeName = typeName == null ? StringUtils.EMPTY : typeName;
-            // Per PostgreSQL docs (https://www.postgresql.org/docs/current/datatype-numeric.html),
-            // numeric types from Hyper system tables may appear as "numeric", "numeric(p,s)", or
-            // "numeric(p)". Match any variant by checking if the type name contains "numeric".
-            if (typeName.toLowerCase().contains("numeric")) {
-                rowData[TYPE_NAME_INDEX] = JDBCType.NUMERIC.toString();
-                rowData[DATA_TYPE_INDEX] = JDBCType.NUMERIC.getVendorTypeNumber();
-            } else {
-                rowData[TYPE_NAME_INDEX] = dbTypeToSql.getOrDefault(typeName.toLowerCase(), typeName);
-                dataType = dbTypeToSql.containsKey(typeName.toLowerCase())
-                        ? JDBCType.valueOf(dbTypeToSql.get(typeName.toLowerCase()))
-                                .getVendorTypeNumber()
-                        : (int) resultSet.getLong("atttypid");
-                rowData[DATA_TYPE_INDEX] = dataType;
+            boolean notNull = resultSet.getBoolean("attnotnull");
+            String datatype = resultSet.getString("datatype");
+            HyperType hyperType;
+            try {
+                hyperType = PgCatalogTypeParser.parse(datatype, !notNull);
+            } catch (IllegalArgumentException ex) {
+                // Hyper may surface system-catalog types the driver does not model
+                // (e.g. aclitem, array(aclitem), tsvector). Callers that scan
+                // getColumns(null, null, null, null) will walk into pg_catalog and hit
+                // these — failing the whole metadata query is too aggressive, so we fall
+                // back to an UNKNOWN HyperType that preserves the raw name for debugging
+                // but surfaces as java.sql.Types.OTHER over JDBC.
+                hyperType = HyperType.unknown(datatype, !notNull);
             }
+
+            rowData[DATA_TYPE_INDEX] = HyperTypes.toJdbcTypeCode(hyperType);
+            rowData[TYPE_NAME_INDEX] = HyperTypes.toJdbcTypeName(hyperType);
+
             int columnSize = 255;
             rowData[COLUMN_SIZE_INDEX] = columnSize;
 
-            String resolvedTypeName = (String) rowData[TYPE_NAME_INDEX];
-            int decimalDigits = isDecimalType(resolvedTypeName) ? 2 : 0;
-            rowData[DECIMAL_DIGITS_INDEX] = decimalDigits;
-
-            int numPrecRadix = 10;
-            rowData[NUM_PREC_RADIX_INDEX] = numPrecRadix;
-
-            int nullable = resultSet.getBoolean("attnotnull")
-                    ? DatabaseMetaData.columnNoNulls
-                    : DatabaseMetaData.columnNullable;
-            rowData[NULLABLE_INDEX] = nullable;
-
-            String description = resultSet.getString("description");
-            rowData[DESCRIPTION_INDEX] = description;
-
-            String columnDefault = resultSet.getString("adsrc");
-            rowData[COLUMN_DEFAULT_INDEX] = columnDefault;
-
+            rowData[DECIMAL_DIGITS_INDEX] = HyperTypes.needsDecimalDigits(hyperType) ? 2 : 0;
+            rowData[NUM_PREC_RADIX_INDEX] = 10;
+            rowData[NULLABLE_INDEX] = notNull ? DatabaseMetaData.columnNoNulls : DatabaseMetaData.columnNullable;
+            rowData[DESCRIPTION_INDEX] = resultSet.getString("description");
+            rowData[COLUMN_DEFAULT_INDEX] = resultSet.getString("adsrc");
             rowData[SQL_DATA_TYPE_INDEX] = null;
-
             rowData[SQL_DATE_TIME_SUB_INDEX] = null;
-
-            Integer charOctetLength = isCharType(resolvedTypeName) ? columnSize : null;
-            rowData[CHAR_OCTET_LENGTH_INDEX] = charOctetLength;
-
-            int ordinalPosition = resultSet.getInt("attnum");
-            rowData[ORDINAL_POSITION_INDEX] = ordinalPosition;
-
-            String isNullable = resultSet.getBoolean("attnotnull") ? "NO" : "YES";
-            rowData[IS_NULLABLE_INDEX] = isNullable;
-
+            rowData[CHAR_OCTET_LENGTH_INDEX] = HyperTypes.needsCharOctetLength(hyperType) ? columnSize : null;
+            rowData[ORDINAL_POSITION_INDEX] = resultSet.getInt("attnum");
+            rowData[IS_NULLABLE_INDEX] = notNull ? "NO" : "YES";
             rowData[SCOPE_CATALOG_INDEX] = null;
             rowData[SCOPE_SCHEMA_INDEX] = null;
             rowData[SCOPE_TABLE_INDEX] = null;
@@ -252,15 +206,11 @@ final class QueryMetadataUtil {
 
             String identity = resultSet.getString("attidentity");
             String defval = resultSet.getString("adsrc");
-            String autoIncrement = "NO";
-            if ((defval != null && defval.contains("nextval(")) || identity != null) {
-                autoIncrement = "YES";
-            }
-            rowData[AUTO_INCREMENT_INDEX] = autoIncrement;
+            rowData[AUTO_INCREMENT_INDEX] =
+                    (defval != null && defval.contains("nextval(")) || identity != null ? "YES" : "NO";
 
             String generated = resultSet.getString("attgenerated");
-            String generatedColumn = generated != null ? "YES" : "NO";
-            rowData[GENERATED_COLUMN_INDEX] = generatedColumn;
+            rowData[GENERATED_COLUMN_INDEX] = generated != null ? "YES" : "NO";
 
             data.add(Arrays.asList(rowData));
         }
@@ -445,18 +395,6 @@ final class QueryMetadataUtil {
             immutableEntry(
                     "MATERIALIZED VIEW",
                     ImmutableMap.of("SCHEMAS", "c.relkind = 'm'", "NOSCHEMAS", "c.relkind = 'm'")));
-
-    private static boolean isDecimalType(String typeName) {
-        return JDBCType.NUMERIC.toString().equals(typeName)
-                || JDBCType.DECIMAL.toString().equals(typeName)
-                || JDBCType.REAL.toString().equals(typeName)
-                || JDBCType.DOUBLE.toString().equals(typeName);
-    }
-
-    private static boolean isCharType(String typeName) {
-        return JDBCType.VARCHAR.toString().equals(typeName)
-                || JDBCType.CHAR.toString().equals(typeName);
-    }
 
     public static String quoteStringLiteral(String v) {
         StringBuilder result = new StringBuilder();
