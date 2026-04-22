@@ -135,7 +135,7 @@ class SyncIteratorAdapterTest {
     }
 
     @Test
-    void testHasNextAfterErrorReturnsFalseWithoutRequestingNewFuture() {
+    void testHasNextAfterErrorRethrowsWithoutRequestingNewFuture() {
         val nextCallCount = new AtomicInteger(0);
         AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
             @Override
@@ -156,8 +156,12 @@ class SyncIteratorAdapterTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("stream error");
 
-        // After a terminal error, hasNext() must return false without re-driving the iterator.
-        assertThat(adapter.hasNext()).isFalse();
+        // Subsequent calls must re-surface the same error without re-driving the iterator. This
+        // preserves the original error for callers that probe the stream twice (e.g. execute()
+        // followed by getResultSet()) instead of masking it as an empty stream.
+        assertThatThrownBy(adapter::hasNext)
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("stream error");
         assertThat(nextCallCount.get()).isEqualTo(1);
     }
 

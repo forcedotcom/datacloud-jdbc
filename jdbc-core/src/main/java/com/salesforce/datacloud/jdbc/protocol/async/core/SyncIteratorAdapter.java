@@ -32,6 +32,8 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
     private Optional<T> nextValue;
     /** Whether iteration has completed (either naturally or due to interruption). */
     private boolean done;
+    /** Terminal error from a previous call, re-thrown on subsequent invocations. */
+    private RuntimeException terminalError;
 
     /**
      * Creates a new sync adapter wrapping the given async iterator.
@@ -55,6 +57,9 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
      */
     @Override
     public boolean hasNext() {
+        if (terminalError != null) {
+            throw terminalError;
+        }
         if (done) {
             return false;
         }
@@ -82,14 +87,14 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
                     } catch (Exception ignore) {
                     }
                 } catch (ExecutionException | CompletionException ee) {
-                    // The async stream is permanently dead after an error; mark done so that any
-                    // retry on hasNext() returns false instead of requesting a new future.
-                    done = true;
+                    // The async stream is permanently dead after an error. Cache the exception so a
+                    // retried hasNext() re-surfaces it instead of requesting a new future (which
+                    // would hit "Unfulfilled previous future" or mask the original error).
                     Throwable cause = ee.getCause();
-                    if (cause instanceof RuntimeException) {
-                        throw (RuntimeException) cause;
-                    }
-                    throw new RuntimeException(cause);
+                    terminalError = (cause instanceof RuntimeException)
+                            ? (RuntimeException) cause
+                            : new RuntimeException(cause);
+                    throw terminalError;
                 }
             }
         } finally {
