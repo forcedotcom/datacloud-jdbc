@@ -66,8 +66,7 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
         // we close the iterator (triggering gRPC cancellation) and then re-wait on the *same* future
         // rather than requesting a new one (which would hit "Unfulfilled previous future").
         boolean interrupted = false;
-        CompletableFuture<Optional<T>> future =
-                asyncIterator.next().toCompletableFuture();
+        CompletableFuture<Optional<T>> future = asyncIterator.next().toCompletableFuture();
         try {
             while (true) {
                 try {
@@ -82,14 +81,11 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
                         asyncIterator.close();
                     } catch (Exception ignore) {
                     }
-                } catch (ExecutionException ee) {
+                } catch (ExecutionException | CompletionException ee) {
+                    // The async stream is permanently dead after an error; mark done so that any
+                    // retry on hasNext() returns false instead of requesting a new future.
+                    done = true;
                     Throwable cause = ee.getCause();
-                    if (cause instanceof RuntimeException) {
-                        throw (RuntimeException) cause;
-                    }
-                    throw new RuntimeException(cause);
-                } catch (CompletionException ce) {
-                    Throwable cause = ce.getCause();
                     if (cause instanceof RuntimeException) {
                         throw (RuntimeException) cause;
                     }

@@ -95,13 +95,15 @@ class SyncIteratorAdapterTest {
                 closeCalled.set(true);
                 // Simulate async gRPC onError: complete the future on a different thread after a delay
                 new Thread(() -> {
-                    try {
-                        Thread.sleep(50);
-                    } catch (InterruptedException e) {
-                        // ignore
-                    }
-                    blockingFuture.completeExceptionally(new RuntimeException("CANCELLED: call closed by client"));
-                }).start();
+                            try {
+                                Thread.sleep(50);
+                            } catch (InterruptedException e) {
+                                // ignore
+                            }
+                            blockingFuture.completeExceptionally(
+                                    new RuntimeException("CANCELLED: call closed by client"));
+                        })
+                        .start();
             }
         };
 
@@ -130,6 +132,33 @@ class SyncIteratorAdapterTest {
                 .isNotNull()
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("CANCELLED");
+    }
+
+    @Test
+    void testHasNextAfterErrorReturnsFalseWithoutRequestingNewFuture() {
+        val nextCallCount = new AtomicInteger(0);
+        AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
+            @Override
+            public CompletionStage<Optional<String>> next() {
+                nextCallCount.incrementAndGet();
+                val failed = new CompletableFuture<Optional<String>>();
+                failed.completeExceptionally(new RuntimeException("stream error"));
+                return failed;
+            }
+
+            @Override
+            public void close() {}
+        };
+
+        val adapter = new SyncIteratorAdapter<>(asyncIterator);
+
+        assertThatThrownBy(adapter::hasNext)
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("stream error");
+
+        // After a terminal error, hasNext() must return false without re-driving the iterator.
+        assertThat(adapter.hasNext()).isFalse();
+        assertThat(nextCallCount.get()).isEqualTo(1);
     }
 
     @Test
