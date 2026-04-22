@@ -182,31 +182,36 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
         return getSqlKeywords();
     }
 
-    // Used by JDBC clients to discover which scalar numeric functions (e.g. ABS, CEIL) can be used in SQL escape syntax {fn ...}
+    // Used by JDBC clients to discover which scalar numeric functions (e.g. ABS, CEIL) can be used in SQL escape syntax
+    // {fn ...}
     @Override
     public String getNumericFunctions() {
         return "";
     }
 
-    // Used by JDBC clients to discover which scalar string functions (e.g. CONCAT, SUBSTRING) can be used in SQL escape syntax {fn ...}
+    // Used by JDBC clients to discover which scalar string functions (e.g. CONCAT, SUBSTRING) can be used in SQL escape
+    // syntax {fn ...}
     @Override
     public String getStringFunctions() {
         return "";
     }
 
-    // Used by JDBC clients to discover which system functions (e.g. USER, IFNULL) can be used in SQL escape syntax {fn ...}
+    // Used by JDBC clients to discover which system functions (e.g. USER, IFNULL) can be used in SQL escape syntax {fn
+    // ...}
     @Override
     public String getSystemFunctions() {
         return "";
     }
 
-    // Used by JDBC clients to discover which time/date functions (e.g. NOW, CURDATE) can be used in SQL escape syntax {fn ...}
+    // Used by JDBC clients to discover which time/date functions (e.g. NOW, CURDATE) can be used in SQL escape syntax
+    // {fn ...}
     @Override
     public String getTimeDateFunctions() {
         return "";
     }
 
-    // Used by JDBC clients to escape wildcard characters in DatabaseMetaData search patterns (e.g. getTables, getColumns)
+    // Used by JDBC clients to escape wildcard characters in DatabaseMetaData search patterns (e.g. getTables,
+    // getColumns)
     @Override
     public String getSearchStringEscape() {
         return "\\";
