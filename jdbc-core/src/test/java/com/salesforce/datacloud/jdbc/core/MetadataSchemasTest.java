@@ -6,7 +6,8 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
+import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import java.sql.Types;
 import java.util.Arrays;
 import java.util.List;
@@ -93,7 +94,7 @@ class MetadataSchemasTest {
     @Test
     void columnsSchemaHasExpectedJdbcTypeIds() {
         List<Integer> typeIds = MetadataSchemas.COLUMNS.stream()
-                .map(c -> c.getType().getType().getVendorTypeNumber())
+                .map(c -> HyperTypes.toJdbcTypeCode(c.getType()))
                 .collect(Collectors.toList());
         assertThat(typeIds).isEqualTo(COLUMN_TYPE_IDS);
         assertThat(typeIds).hasSize(24);

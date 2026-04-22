@@ -168,11 +168,12 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case TINYINT:
-            case SMALLINT:
-            case INTEGER:
-            case BIGINT: {
+        switch (metadata.getColumn(columnIndex).getType().getKind()) {
+            case INT8:
+            case INT16:
+            case INT32:
+            case INT64:
+            case OID: {
                 OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
                 wasNull = !v.isPresent();
                 return v.orElse(0L);
@@ -201,11 +202,12 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case TINYINT:
-            case SMALLINT:
-            case INTEGER:
-            case BIGINT: {
+        switch (metadata.getColumn(columnIndex).getType().getKind()) {
+            case INT8:
+            case INT16:
+            case INT32:
+            case INT64:
+            case OID: {
                 OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
                 wasNull = !v.isPresent();
                 return v.orElse(0L);
@@ -218,11 +220,12 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-        switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case TINYINT:
-            case SMALLINT:
-            case INTEGER:
-            case BIGINT: {
+        switch (metadata.getColumn(columnIndex).getType().getKind()) {
+            case INT8:
+            case INT16:
+            case INT32:
+            case INT64:
+            case OID: {
                 OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
                 wasNull = !v.isPresent();
                 return v.isPresent() ? new BigDecimal(v.getAsLong()) : null;
@@ -288,8 +291,8 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case INTEGER: {
+        switch (metadata.getColumn(columnIndex).getType().getKind()) {
+            case INT32: {
                 val v = getInt(columnIndex);
                 if (wasNull) {
                     return null;
@@ -299,9 +302,10 @@ public abstract class SimpleResultSet<SELF>
             case CHAR:
             case VARCHAR:
                 return getString(columnIndex);
+            default:
+                throw new SQLException("Unsupported column type in `getObject`: "
+                        + metadata.getColumn(columnIndex).getType().toString());
         }
-        throw new SQLException("Unsupported column type in `getObject`: "
-                + metadata.getColumn(columnIndex).getType().toString());
     }
 
     @Override

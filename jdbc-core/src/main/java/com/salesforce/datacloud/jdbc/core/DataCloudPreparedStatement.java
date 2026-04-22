@@ -4,13 +4,15 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toArrowByteArray;
+import static com.salesforce.datacloud.jdbc.protocol.data.ArrowUtils.toArrowByteArray;
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCDateFromDateAndCalendar;
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimeFromTimeAndCalendar;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
+import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
+import com.salesforce.datacloud.jdbc.protocol.data.ParameterAccumulator;
 import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.io.IOException;
@@ -51,25 +53,29 @@ import salesforce.cdp.hyperdb.v1.QueryParameterArrow;
 @Slf4j
 public class DataCloudPreparedStatement extends DataCloudStatement implements PreparedStatement {
     private String sql;
-    private final ParameterManager parameterManager;
+    private final ParameterAccumulator parameterManager;
     private final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     // True if we are currently fetching metadata from the server, this influences the query param generation
     // to not return any data.
     private boolean fetchingMetadata = false;
 
-    DataCloudPreparedStatement(DataCloudConnection connection, ParameterManager parameterManager) {
+    DataCloudPreparedStatement(DataCloudConnection connection, ParameterAccumulator parameterManager) {
         super(connection);
         this.parameterManager = parameterManager;
     }
 
-    DataCloudPreparedStatement(DataCloudConnection connection, String sql, ParameterManager parameterManager) {
+    DataCloudPreparedStatement(DataCloudConnection connection, String sql, ParameterAccumulator parameterManager) {
         super(connection);
         this.sql = sql;
         this.parameterManager = parameterManager;
     }
 
-    private <T> void setParameter(int parameterIndex, int sqlType, T value) throws SQLException {
-        parameterManager.setParameter(parameterIndex, sqlType, value);
+    private <T> void setParameter(int parameterIndex, HyperType type, T value) throws SQLException {
+        try {
+            parameterManager.setParameter(parameterIndex, type, value);
+        } catch (IllegalArgumentException ex) {
+            throw new SQLException(ex.getMessage(), ex);
+        }
     }
 
     @Override
@@ -94,6 +100,10 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
             encodedRow = toArrowByteArray(parameterManager.getParameters(), calendar);
         } catch (IOException e) {
             throw new SQLException("Failed to encode parameters on prepared statement", e);
+        } catch (IllegalArgumentException e) {
+            // Thrown when a parameter is bound with a HyperType we cannot currently encode as
+            // Arrow (e.g. INTERVAL, JSON). Surface as a JDBC spec-compliant SQLException.
+            throw new SQLException("Failed to encode parameters on prepared statement: " + e.getMessage(), "HY000", e);
         }
 
         if (fetchingMetadata) {
@@ -131,52 +141,61 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public void setNull(int parameterIndex, int sqlType) throws SQLException {
-        setParameter(parameterIndex, sqlType, null);
+        setParameter(parameterIndex, hyperTypeForJdbcCode(sqlType), null);
+    }
+
+    private static HyperType hyperTypeForJdbcCode(int sqlType) throws SQLException {
+        try {
+            return com.salesforce.datacloud.jdbc.core.types.HyperTypes.fromJdbcTypeCode(sqlType, true);
+        } catch (IllegalArgumentException ex) {
+            throw new SQLException("Unsupported JDBC type code: " + sqlType, "HYC00", ex);
+        }
     }
 
     @Override
     public void setBoolean(int parameterIndex, boolean x) throws SQLException {
-        setParameter(parameterIndex, Types.BOOLEAN, x);
+        setParameter(parameterIndex, HyperType.bool(false), x);
     }
 
     @Override
     public void setByte(int parameterIndex, byte x) throws SQLException {
-        setParameter(parameterIndex, Types.TINYINT, x);
+        setParameter(parameterIndex, HyperType.int8(false), x);
     }
 
     @Override
     public void setShort(int parameterIndex, short x) throws SQLException {
-        setParameter(parameterIndex, Types.SMALLINT, x);
+        setParameter(parameterIndex, HyperType.int16(false), x);
     }
 
     @Override
     public void setInt(int parameterIndex, int x) throws SQLException {
-        setParameter(parameterIndex, Types.INTEGER, x);
+        setParameter(parameterIndex, HyperType.int32(false), x);
     }
 
     @Override
     public void setLong(int parameterIndex, long x) throws SQLException {
-        setParameter(parameterIndex, Types.BIGINT, x);
+        setParameter(parameterIndex, HyperType.int64(false), x);
     }
 
     @Override
     public void setFloat(int parameterIndex, float x) throws SQLException {
-        setParameter(parameterIndex, Types.FLOAT, x);
+        setParameter(parameterIndex, HyperType.float8(false), x);
     }
 
     @Override
     public void setDouble(int parameterIndex, double x) throws SQLException {
-        setParameter(parameterIndex, Types.DOUBLE, x);
+        setParameter(parameterIndex, HyperType.float8(false), x);
     }
 
     @Override
     public void setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
-        setParameter(parameterIndex, Types.DECIMAL, x);
+        HyperType type = x != null ? HyperType.decimal(x.precision(), x.scale(), true) : HyperType.decimal(0, 0, true);
+        setParameter(parameterIndex, type, x);
     }
 
     @Override
     public void setString(int parameterIndex, String x) throws SQLException {
-        setParameter(parameterIndex, Types.VARCHAR, x);
+        setParameter(parameterIndex, HyperType.varcharUnlimited(true), x);
     }
 
     @Override
@@ -186,17 +205,17 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public void setDate(int parameterIndex, Date x) throws SQLException {
-        setParameter(parameterIndex, Types.DATE, x);
+        setParameter(parameterIndex, HyperType.date(true), x);
     }
 
     @Override
     public void setTime(int parameterIndex, Time x) throws SQLException {
-        setParameter(parameterIndex, Types.TIME, x);
+        setParameter(parameterIndex, HyperType.time(true), x);
     }
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x) throws SQLException {
-        setParameter(parameterIndex, Types.TIMESTAMP, toWallClockAsUtc(x, null));
+        setParameter(parameterIndex, HyperType.timestamp(true), toWallClockAsUtc(x, null));
     }
 
     @Override
@@ -229,17 +248,17 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
         // or store LocalDateTime digits directly.
         if (targetSqlType == Types.TIMESTAMP) {
             if (x instanceof Timestamp) {
-                setParameter(parameterIndex, Types.TIMESTAMP, toWallClockAsUtc((Timestamp) x, null));
+                setParameter(parameterIndex, HyperType.timestamp(true), toWallClockAsUtc((Timestamp) x, null));
                 return;
             }
             if (x instanceof LocalDateTime) {
                 LocalDateTime ldt = (LocalDateTime) x;
                 // Encode LDT digits as if they were in UTC — no JVM-TZ shift applied.
-                setParameter(parameterIndex, Types.TIMESTAMP, Timestamp.from(ldt.toInstant(ZoneOffset.UTC)));
+                setParameter(parameterIndex, HyperType.timestamp(true), Timestamp.from(ldt.toInstant(ZoneOffset.UTC)));
                 return;
             }
         }
-        setParameter(parameterIndex, targetSqlType, x);
+        setParameter(parameterIndex, hyperTypeForJdbcCode(targetSqlType), x);
     }
 
     @Override
@@ -307,18 +326,18 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
     @Override
     public void setDate(int parameterIndex, Date x, Calendar cal) throws SQLException {
         val utcDate = getUTCDateFromDateAndCalendar(x, cal);
-        setParameter(parameterIndex, Types.DATE, utcDate);
+        setParameter(parameterIndex, HyperType.date(true), utcDate);
     }
 
     @Override
     public void setTime(int parameterIndex, Time x, Calendar cal) throws SQLException {
         val utcTime = getUTCTimeFromTimeAndCalendar(x, cal);
-        setParameter(parameterIndex, Types.TIME, utcTime);
+        setParameter(parameterIndex, HyperType.time(true), utcTime);
     }
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
-        setParameter(parameterIndex, Types.TIMESTAMP, toWallClockAsUtc(x, cal));
+        setParameter(parameterIndex, HyperType.timestamp(true), toWallClockAsUtc(x, cal));
     }
 
     /**
