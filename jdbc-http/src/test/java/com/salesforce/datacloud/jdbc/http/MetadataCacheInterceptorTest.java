@@ -4,13 +4,17 @@
  */
 package com.salesforce.datacloud.jdbc.http;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.salesforce.datacloud.jdbc.auth.ResponseEnum;
+import java.io.IOException;
 import lombok.SneakyThrows;
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -61,6 +65,44 @@ public class MetadataCacheInterceptorTest {
                 .url(URL)
                 .method(POST, RequestBody.create("{test: test}", MediaType.parse("application/json")))
                 .build();
+    }
+
+    @Test
+    @SneakyThrows
+    public void testMetadataRequestWithBodyReadFailurePropagatesException() {
+        ResponseBody failingBody = mock(ResponseBody.class);
+        when(failingBody.string()).thenThrow(new IOException("network error"));
+
+        Response failingResponse = new Response.Builder()
+                .code(200)
+                .request(buildRequest())
+                .protocol(Protocol.HTTP_1_1)
+                .message("OK")
+                .body(failingBody)
+                .build();
+
+        doReturn(failingResponse).when(chain).proceed(any(Request.class));
+
+        assertThatThrownBy(() -> metadataCacheInterceptor.intercept(chain))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("network error");
+    }
+
+    @Test
+    @SneakyThrows
+    public void testMetadataRequestWithNullBodyReturnsOriginalResponse() {
+        Response nullBodyResponse = new Response.Builder()
+                .code(200)
+                .request(buildRequest())
+                .protocol(Protocol.HTTP_1_1)
+                .message("OK")
+                .body(null)
+                .build();
+
+        doReturn(nullBodyResponse).when(chain).proceed(any(Request.class));
+
+        Response result = metadataCacheInterceptor.intercept(chain);
+        assertThat(result).isSameAs(nullBodyResponse);
     }
 
     private Response buildResponse(int statusCode, ResponseEnum responseEnum) {

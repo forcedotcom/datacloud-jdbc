@@ -150,6 +150,58 @@ public class MetadataResultSetTest {
 
     @Test
     @SneakyThrows
+    public void testGetColumnsDecimalDigitsAndCharOctetLength() {
+        assertWithConnection(connection -> {
+            val metaData = connection.getMetaData();
+            try (val columns = metaData.getColumns(null, null, null, null)) {
+                while (columns.next()) {
+                    val typeName = columns.getString("TYPE_NAME");
+                    val decimalDigits = columns.getInt("DECIMAL_DIGITS");
+                    val charOctetLength = columns.getString("CHAR_OCTET_LENGTH");
+                    val sqlDateTimeSub = columns.getString("SQL_DATETIME_SUB");
+
+                    assertThat(sqlDateTimeSub)
+                            .as("SQL_DATETIME_SUB should be null")
+                            .isNull();
+
+                    if ("VARCHAR".equals(typeName) || "CHAR".equals(typeName)) {
+                        assertThat(charOctetLength)
+                                .as("CHAR_OCTET_LENGTH for %s", typeName)
+                                .isNotNull();
+                    } else if ("INTEGER".equals(typeName) || "BIGINT".equals(typeName) || "BOOLEAN".equals(typeName)) {
+                        assertThat(charOctetLength)
+                                .as("CHAR_OCTET_LENGTH for non-char type %s", typeName)
+                                .isNull();
+                        assertThat(decimalDigits)
+                                .as("DECIMAL_DIGITS for integer type %s", typeName)
+                                .isEqualTo(0);
+                    }
+                }
+            }
+        });
+    }
+
+    @Test
+    @SneakyThrows
+    public void testGetSchemasFiltersOutSystemSchemas() {
+        assertWithConnection(connection -> {
+            val metaData = connection.getMetaData();
+            try (val schemas = metaData.getSchemas()) {
+                while (schemas.next()) {
+                    val schemaName = schemas.getString("TABLE_SCHEM");
+                    assertThat(schemaName)
+                            .as("Should not return pg_ prefixed schemas")
+                            .doesNotStartWith("pg_");
+                    assertThat(schemaName)
+                            .as("Should not return tableau prefixed schemas")
+                            .doesNotStartWith("tableau");
+                }
+            }
+        });
+    }
+
+    @Test
+    @SneakyThrows
     @Disabled
     public void testMetadataResultSetColumnLookup() {
         // Test MetadataResultSet column lookup through DatabaseMetaData

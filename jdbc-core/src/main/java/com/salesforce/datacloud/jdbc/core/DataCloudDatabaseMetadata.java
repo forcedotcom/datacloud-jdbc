@@ -20,6 +20,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.RowIdLifetime;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.List;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
@@ -181,34 +182,46 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
         return getSqlKeywords();
     }
 
+    // Used by JDBC clients to discover which scalar numeric functions (e.g. ABS, CEIL) can be used in SQL escape syntax
+    // {fn ...}
     @Override
     public String getNumericFunctions() {
-        return null;
+        return "";
     }
 
+    // Used by JDBC clients to discover which scalar string functions (e.g. CONCAT, SUBSTRING) can be used in SQL escape
+    // syntax {fn ...}
     @Override
     public String getStringFunctions() {
-        return null;
+        return "";
     }
 
+    // Used by JDBC clients to discover which system functions (e.g. USER, IFNULL) can be used in SQL escape syntax {fn
+    // ...}
     @Override
     public String getSystemFunctions() {
-        return null;
+        return "";
     }
 
+    // Used by JDBC clients to discover which time/date functions (e.g. NOW, CURDATE) can be used in SQL escape syntax
+    // {fn ...}
     @Override
     public String getTimeDateFunctions() {
-        return null;
+        return "";
     }
 
+    // Used by JDBC clients to escape wildcard characters in DatabaseMetaData search patterns (e.g. getTables,
+    // getColumns)
     @Override
     public String getSearchStringEscape() {
         return "\\";
     }
 
+    // Used by JDBC clients to discover which non-alphanumeric characters can appear in unquoted identifier names
+    // is empty to keep it simple for now, too much quoting shouldn't be an issue
     @Override
     public String getExtraNameCharacters() {
-        return null;
+        return "";
     }
 
     @Override
@@ -228,7 +241,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public boolean nullPlusNonNullIsNull() {
-        return false;
+        return true;
     }
 
     @Override
@@ -326,14 +339,16 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
         return true;
     }
 
+    // Intermediate level requires features like dynamic SQL that Hyper does not expose in gRPC protocol
     @Override
     public boolean supportsANSI92IntermediateSQL() {
-        return true;
+        return false;
     }
 
+    // Full level additionally requires assertions, temporary tables with preserve semantics, and domain definitions
     @Override
     public boolean supportsANSI92FullSQL() {
-        return true;
+        return false;
     }
 
     @Override
@@ -613,7 +628,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getDefaultTransactionIsolation() {
-        return Connection.TRANSACTION_SERIALIZABLE;
+        return Connection.TRANSACTION_NONE;
     }
 
     @Override
@@ -647,14 +662,16 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     }
 
     @Override
-    public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern) {
-        return null;
+    public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern)
+            throws SQLException {
+        throw new SQLFeatureNotSupportedException("getProcedures is not supported");
     }
 
     @Override
     public ResultSet getProcedureColumns(
-            String catalog, String schemaPattern, String procedureNamePattern, String columnNamePattern) {
-        return null;
+            String catalog, String schemaPattern, String procedureNamePattern, String columnNamePattern)
+            throws SQLException {
+        throw new SQLFeatureNotSupportedException("getProcedureColumns is not supported");
     }
 
     @Override
@@ -806,8 +823,9 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     }
 
     @Override
-    public ResultSet getUDTs(String catalog, String schemaPattern, String typeNamePattern, int[] types) {
-        return null;
+    public ResultSet getUDTs(String catalog, String schemaPattern, String typeNamePattern, int[] types)
+            throws SQLException {
+        throw new SQLFeatureNotSupportedException("getUDTs is not supported");
     }
 
     @Override
@@ -831,19 +849,20 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     }
 
     @Override
-    public ResultSet getSuperTypes(String catalog, String schemaPattern, String typeNamePattern) {
-        return null;
+    public ResultSet getSuperTypes(String catalog, String schemaPattern, String typeNamePattern) throws SQLException {
+        throw new SQLFeatureNotSupportedException("getSuperTypes is not supported");
     }
 
     @Override
-    public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern) {
-        return null;
+    public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern) throws SQLException {
+        throw new SQLFeatureNotSupportedException("getSuperTables is not supported");
     }
 
     @Override
     public ResultSet getAttributes(
-            String catalog, String schemaPattern, String typeNamePattern, String attributeNamePattern) {
-        return null;
+            String catalog, String schemaPattern, String typeNamePattern, String attributeNamePattern)
+            throws SQLException {
+        throw new SQLFeatureNotSupportedException("getAttributes is not supported");
     }
 
     @Override
@@ -853,7 +872,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getResultSetHoldability() {
-        return 0;
+        return ResultSet.HOLD_CURSORS_OVER_COMMIT;
     }
 
     @Override
@@ -868,7 +887,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getJDBCMajorVersion() {
-        return 1;
+        return 4;
     }
 
     @Override
@@ -878,7 +897,7 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
 
     @Override
     public int getSQLStateType() {
-        return 0;
+        return DatabaseMetaData.sqlStateSQL;
     }
 
     @Override
@@ -912,25 +931,28 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     }
 
     @Override
-    public ResultSet getClientInfoProperties() {
-        return null;
+    public ResultSet getClientInfoProperties() throws SQLException {
+        throw new SQLFeatureNotSupportedException("getClientInfoProperties is not supported");
     }
 
     @Override
-    public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern) {
-        return null;
+    public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern)
+            throws SQLException {
+        throw new SQLFeatureNotSupportedException("getFunctions is not supported");
     }
 
     @Override
     public ResultSet getFunctionColumns(
-            String catalog, String schemaPattern, String functionNamePattern, String columnNamePattern) {
-        return null;
+            String catalog, String schemaPattern, String functionNamePattern, String columnNamePattern)
+            throws SQLException {
+        throw new SQLFeatureNotSupportedException("getFunctionColumns is not supported");
     }
 
     @Override
     public ResultSet getPseudoColumns(
-            String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) {
-        return null;
+            String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern)
+            throws SQLException {
+        throw new SQLFeatureNotSupportedException("getPseudoColumns is not supported");
     }
 
     @Override

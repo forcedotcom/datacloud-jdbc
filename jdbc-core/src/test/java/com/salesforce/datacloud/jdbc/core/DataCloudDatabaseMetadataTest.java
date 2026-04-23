@@ -18,6 +18,7 @@ import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -233,22 +234,22 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetNumericFunctions() {
-        assertThat(dataCloudDatabaseMetadata.getNumericFunctions()).isNull();
+        assertThat(dataCloudDatabaseMetadata.getNumericFunctions()).isEqualTo("");
     }
 
     @Test
     public void testGetStringFunctions() {
-        assertThat(dataCloudDatabaseMetadata.getStringFunctions()).isNull();
+        assertThat(dataCloudDatabaseMetadata.getStringFunctions()).isEqualTo("");
     }
 
     @Test
     public void testGetSystemFunctions() {
-        assertThat(dataCloudDatabaseMetadata.getSystemFunctions()).isNull();
+        assertThat(dataCloudDatabaseMetadata.getSystemFunctions()).isEqualTo("");
     }
 
     @Test
     public void testGetTimeDateFunctions() {
-        assertThat(dataCloudDatabaseMetadata.getTimeDateFunctions()).isNull();
+        assertThat(dataCloudDatabaseMetadata.getTimeDateFunctions()).isEqualTo("");
     }
 
     @Test
@@ -258,7 +259,7 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetExtraNameCharacters() {
-        assertThat(dataCloudDatabaseMetadata.getExtraNameCharacters()).isNull();
+        assertThat(dataCloudDatabaseMetadata.getExtraNameCharacters()).isEqualTo("");
     }
 
     @Test
@@ -278,7 +279,7 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testNullPlusNonNullIsNull() {
-        assertThat(dataCloudDatabaseMetadata.nullPlusNonNullIsNull()).isFalse();
+        assertThat(dataCloudDatabaseMetadata.nullPlusNonNullIsNull()).isTrue();
     }
 
     @Test
@@ -369,12 +370,12 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testSupportsANSI92IntermediateSQL() {
-        assertThat(dataCloudDatabaseMetadata.supportsANSI92IntermediateSQL()).isTrue();
+        assertThat(dataCloudDatabaseMetadata.supportsANSI92IntermediateSQL()).isFalse();
     }
 
     @Test
     public void testSupportsANSI92FullSQL() {
-        assertThat(dataCloudDatabaseMetadata.supportsANSI92FullSQL()).isTrue();
+        assertThat(dataCloudDatabaseMetadata.supportsANSI92FullSQL()).isFalse();
     }
 
     @Test
@@ -666,8 +667,7 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetDefaultTransactionIsolation() {
-        assertThat(dataCloudDatabaseMetadata.getDefaultTransactionIsolation())
-                .isEqualTo(Connection.TRANSACTION_SERIALIZABLE);
+        assertThat(dataCloudDatabaseMetadata.getDefaultTransactionIsolation()).isEqualTo(Connection.TRANSACTION_NONE);
     }
 
     @Test
@@ -707,15 +707,16 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetProcedures() {
-        assertThat(dataCloudDatabaseMetadata.getProcedures(StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
-                .isNull();
+        assertThatThrownBy(() -> dataCloudDatabaseMetadata.getProcedures(
+                        StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
     public void testGetProcedureColumns() {
-        assertThat(dataCloudDatabaseMetadata.getProcedureColumns(
+        assertThatThrownBy(() -> dataCloudDatabaseMetadata.getProcedureColumns(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
-                .isNull();
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
@@ -1292,10 +1293,11 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
+    @SneakyThrows
     public void testGetUDTs() {
-        assertThat(dataCloudDatabaseMetadata.getUDTs(
+        assertThatThrownBy(() -> dataCloudDatabaseMetadata.getUDTs(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, new int[] {}))
-                .isNull();
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
@@ -1324,22 +1326,27 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
+    @SneakyThrows
     public void testGetSuperTypes() {
-        assertThat(dataCloudDatabaseMetadata.getSuperTypes(StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
-                .isNull();
+        assertThatThrownBy(() -> dataCloudDatabaseMetadata.getSuperTypes(
+                        StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
+    @SneakyThrows
     public void testGetSuperTables() {
-        assertThat(dataCloudDatabaseMetadata.getSuperTables(StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
-                .isNull();
+        assertThatThrownBy(() -> dataCloudDatabaseMetadata.getSuperTables(
+                        StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
+    @SneakyThrows
     public void testGetAttributes() {
-        assertThat(dataCloudDatabaseMetadata.getAttributes(
+        assertThatThrownBy(() -> dataCloudDatabaseMetadata.getAttributes(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
-                .isNull();
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
@@ -1349,7 +1356,7 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetResultSetHoldability() {
-        assertThat(dataCloudDatabaseMetadata.getResultSetHoldability()).isEqualTo(0);
+        assertThat(dataCloudDatabaseMetadata.getResultSetHoldability()).isEqualTo(ResultSet.HOLD_CURSORS_OVER_COMMIT);
     }
 
     @Test
@@ -1364,7 +1371,7 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetJDBCMajorVersion() {
-        assertThat(dataCloudDatabaseMetadata.getJDBCMajorVersion()).isEqualTo(1);
+        assertThat(dataCloudDatabaseMetadata.getJDBCMajorVersion()).isEqualTo(4);
     }
 
     @Test
@@ -1374,7 +1381,7 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetSQLStateType() {
-        assertThat(dataCloudDatabaseMetadata.getSQLStateType()).isEqualTo(0);
+        assertThat(dataCloudDatabaseMetadata.getSQLStateType()).isEqualTo(DatabaseMetaData.sqlStateSQL);
     }
 
     @Test
@@ -1497,28 +1504,34 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
+    @SneakyThrows
     public void testGetClientInfoProperties() {
-        assertThat(dataCloudDatabaseMetadata.getClientInfoProperties()).isNull();
+        assertThatThrownBy(() -> dataCloudDatabaseMetadata.getClientInfoProperties())
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
+    @SneakyThrows
     public void testGetFunctions() {
-        assertThat(dataCloudDatabaseMetadata.getFunctions(StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
-                .isNull();
+        assertThatThrownBy(() ->
+                        dataCloudDatabaseMetadata.getFunctions(StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
+    @SneakyThrows
     public void testGetFunctionColumns() {
-        assertThat(dataCloudDatabaseMetadata.getFunctionColumns(
+        assertThatThrownBy(() -> dataCloudDatabaseMetadata.getFunctionColumns(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
-                .isNull();
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
+    @SneakyThrows
     public void testGetPseudoColumns() {
-        assertThat(dataCloudDatabaseMetadata.getPseudoColumns(
+        assertThatThrownBy(() -> dataCloudDatabaseMetadata.getPseudoColumns(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
-                .isNull();
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
