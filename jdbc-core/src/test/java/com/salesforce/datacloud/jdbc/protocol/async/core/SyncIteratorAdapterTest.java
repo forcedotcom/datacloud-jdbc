@@ -76,6 +76,96 @@ class SyncIteratorAdapterTest {
     }
 
     @Test
+    void testInterruptWithAsyncCloseSurfacesGrpcError() throws Exception {
+        val blockingFuture = new CompletableFuture<Optional<String>>();
+        val closeCalled = new AtomicBoolean(false);
+        val iteratorStartedBlocking = new CountDownLatch(1);
+
+        // Simulate real gRPC behavior: close() does NOT synchronously complete the future.
+        // The onError callback fires asynchronously after cancellation propagates through gRPC.
+        AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
+            @Override
+            public CompletionStage<Optional<String>> next() {
+                iteratorStartedBlocking.countDown();
+                return blockingFuture;
+            }
+
+            @Override
+            public void close() {
+                closeCalled.set(true);
+                // Simulate async gRPC onError: complete the future on a different thread after a delay
+                new Thread(() -> {
+                            try {
+                                Thread.sleep(50);
+                            } catch (InterruptedException e) {
+                                // ignore
+                            }
+                            blockingFuture.completeExceptionally(
+                                    new RuntimeException("CANCELLED: call closed by client"));
+                        })
+                        .start();
+            }
+        };
+
+        val adapter = new SyncIteratorAdapter<>(asyncIterator);
+        val thrownException = new java.util.concurrent.atomic.AtomicReference<Throwable>();
+
+        Thread thread = new Thread(() -> {
+            try {
+                adapter.hasNext();
+            } catch (Throwable t) {
+                thrownException.set(t);
+            }
+        });
+
+        thread.start();
+        assertThat(iteratorStartedBlocking.await(5, TimeUnit.SECONDS)).isTrue();
+
+        thread.interrupt();
+        thread.join(5000);
+        assertThat(thread.isAlive()).isFalse();
+
+        // Must not throw IllegalStateException("Unfulfilled previous future when next is requested")
+        // Instead, the gRPC cancellation error should surface
+        assertThat(closeCalled.get()).isTrue();
+        assertThat(thrownException.get())
+                .isNotNull()
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("CANCELLED");
+    }
+
+    @Test
+    void testHasNextAfterErrorRethrowsWithoutRequestingNewFuture() {
+        val nextCallCount = new AtomicInteger(0);
+        AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
+            @Override
+            public CompletionStage<Optional<String>> next() {
+                nextCallCount.incrementAndGet();
+                val failed = new CompletableFuture<Optional<String>>();
+                failed.completeExceptionally(new RuntimeException("stream error"));
+                return failed;
+            }
+
+            @Override
+            public void close() {}
+        };
+
+        val adapter = new SyncIteratorAdapter<>(asyncIterator);
+
+        assertThatThrownBy(adapter::hasNext)
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("stream error");
+
+        // Subsequent calls must re-surface the same error without re-driving the iterator. This
+        // preserves the original error for callers that probe the stream twice (e.g. execute()
+        // followed by getResultSet()) instead of masking it as an empty stream.
+        assertThatThrownBy(adapter::hasNext)
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("stream error");
+        assertThat(nextCallCount.get()).isEqualTo(1);
+    }
+
+    @Test
     void testNormalIteration() {
         val values = new String[] {"a", "b", "c"};
         val index = new AtomicInteger(0);

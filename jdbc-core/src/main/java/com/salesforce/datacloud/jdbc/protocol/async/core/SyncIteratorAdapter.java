@@ -8,6 +8,7 @@ import com.salesforce.datacloud.jdbc.protocol.CloseableIterator;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
@@ -31,6 +32,8 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
     private Optional<T> nextValue;
     /** Whether iteration has completed (either naturally or due to interruption). */
     private boolean done;
+    /** Terminal error from a previous call, re-thrown on subsequent invocations. */
+    private RuntimeException terminalError;
 
     /**
      * Creates a new sync adapter wrapping the given async iterator.
@@ -54,6 +57,9 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
      */
     @Override
     public boolean hasNext() {
+        if (terminalError != null) {
+            throw terminalError;
+        }
         if (done) {
             return false;
         }
@@ -61,37 +67,34 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
             return nextValue.isPresent();
         }
 
-        // Block waiting for next value
+        // Block waiting for next value. The future is hoisted out of the loop so that on interrupt
+        // we close the iterator (triggering gRPC cancellation) and then re-wait on the *same* future
+        // rather than requesting a new one (which would hit "Unfulfilled previous future").
         boolean interrupted = false;
+        CompletableFuture<Optional<T>> future = asyncIterator.next().toCompletableFuture();
         try {
             while (true) {
                 try {
-                    nextValue = asyncIterator.next().toCompletableFuture().get();
+                    nextValue = future.get();
                     if (!nextValue.isPresent()) {
                         done = true;
                     }
                     return nextValue.isPresent();
                 } catch (InterruptedException ie) {
                     interrupted = true;
-                    // This will cause the ongoing call to be stopped and thus the future will get an error element
-                    // which will cause the while loop to exit.
                     try {
                         asyncIterator.close();
                     } catch (Exception ignore) {
                     }
-                    return hasNext();
-                } catch (ExecutionException ee) {
+                } catch (ExecutionException | CompletionException ee) {
+                    // The async stream is permanently dead after an error. Cache the exception so a
+                    // retried hasNext() re-surfaces it instead of requesting a new future (which
+                    // would hit "Unfulfilled previous future" or mask the original error).
                     Throwable cause = ee.getCause();
-                    if (cause instanceof RuntimeException) {
-                        throw (RuntimeException) cause;
-                    }
-                    throw new RuntimeException(cause);
-                } catch (CompletionException ce) {
-                    Throwable cause = ce.getCause();
-                    if (cause instanceof RuntimeException) {
-                        throw (RuntimeException) cause;
-                    }
-                    throw new RuntimeException(cause);
+                    terminalError = (cause instanceof RuntimeException)
+                            ? (RuntimeException) cause
+                            : new RuntimeException(cause);
+                    throw terminalError;
                 }
             }
         } finally {
