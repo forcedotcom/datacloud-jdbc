@@ -452,59 +452,225 @@ class DatabaseMetadataIntegrationTest {
     @Test
     @SneakyThrows
     void getColumns_consistentWith_resultSetMetaData_forDataType() {
+        Map<String, String> mismatches = collectMismatches(
+                "DATA_TYPE", info -> jdbcTypeName((int) info.get("DATA_TYPE")) + "(" + info.get("DATA_TYPE") + ")");
+
+        // BUG: every entry below is a disagreement between the two metadata paths. The Arrow
+        // side is JDBC-spec-correct (java.sql.Types); the pg_catalog side falls through to
+        // raw Postgres type OIDs because QueryMetadataUtil's dbTypeToSql keys on short names
+        // while format_type() returns long names. Fixing QueryMetadataUtil so every type maps
+        // to the same java.sql.Types value as ResultSetMetaData will shrink this map to empty.
+        Map<String, String> expected = new LinkedHashMap<>();
+        expected.put("col_smallint", "arrow=SMALLINT(5), pg=<unknown>(21)");
+        expected.put("col_int", "arrow=INTEGER(4), pg=<unknown>(23)");
+        expected.put("col_nullable_int", "arrow=INTEGER(4), pg=<unknown>(23)");
+        expected.put("col_not_null_int", "arrow=INTEGER(4), pg=<unknown>(23)");
+        expected.put("col_bigint", "arrow=BIGINT(-5), pg=<unknown>(20)");
+        expected.put("col_double", "arrow=DOUBLE(8), pg=<unknown>(701)");
+        // BUG: DECIMAL vs NUMERIC is itself inconsistent — Arrow emits DECIMAL, pg_catalog
+        // emits NUMERIC. JDBC treats them as distinct Types constants even though SQL
+        // considers them synonyms.
+        expected.put("col_numeric_18_2", "arrow=DECIMAL(3), pg=NUMERIC(2)");
+        expected.put("col_numeric_10_5", "arrow=DECIMAL(3), pg=NUMERIC(2)");
+        expected.put("col_varchar_255", "arrow=VARCHAR(12), pg=<unknown>(1043)");
+        expected.put("col_char_1", "arrow=CHAR(1), pg=<unknown>(18)");
+        // oid reverses the pattern: getColumns() correctly says BIGINT (because "oid" is the
+        // only dbTypeToSql key that actually matches format_type() output), but Arrow sees
+        // the raw 32-bit unsigned and emits INTEGER. Either side could be "right".
+        expected.put("col_oid", "arrow=INTEGER(4), pg=BIGINT(-5)");
+        expected.put("col_int_array", "arrow=ARRAY(2003), pg=<unknown>(1007)");
+        expected.put("col_text_array", "arrow=ARRAY(2003), pg=<unknown>(1009)");
+        // BUG: json has no Arrow mapping either; hyperd returns it as Utf8 with metadata so
+        // the Arrow side reports VARCHAR. The pg_catalog side reports the raw pg OID 114.
+        expected.put("col_json", "arrow=VARCHAR(12), pg=<unknown>(114)");
+
+        assertThat(mismatches)
+                .as("DATA_TYPE disagreements between ResultSetMetaData and DatabaseMetaData.getColumns()")
+                .containsExactlyInAnyOrderEntriesOf(expected);
+    }
+
+    @Test
+    @SneakyThrows
+    void getColumns_consistentWith_resultSetMetaData_forTypeName() {
+        Map<String, String> mismatches = collectMismatches("TYPE_NAME", info -> String.valueOf(info.get("TYPE_NAME")));
+
+        // BUG: same root cause as DATA_TYPE. ResultSetMetaData returns JDBCType names ("INTEGER",
+        // "VARCHAR", ...); getColumns() returns whatever format_type() emitted ("integer",
+        // "character varying(255)", "array(integer)", ...) because dbTypeToSql doesn't match.
+        // Fixing the type mapping in QueryMetadataUtil will shrink this map toward empty.
+        Map<String, String> expected = new LinkedHashMap<>();
+        // BUG: Arrow emits uppercase JDBCType names while pg_catalog passes through format_type()
+        // output verbatim — so even "working" types disagree on casing.
+        expected.put("col_bool", "arrow=BOOLEAN, pg=boolean");
+        expected.put("col_smallint", "arrow=SMALLINT, pg=smallint");
+        expected.put("col_int", "arrow=INTEGER, pg=integer");
+        expected.put("col_nullable_int", "arrow=INTEGER, pg=integer");
+        expected.put("col_not_null_int", "arrow=INTEGER, pg=integer");
+        expected.put("col_bigint", "arrow=BIGINT, pg=bigint");
+        expected.put("col_double", "arrow=DOUBLE, pg=double precision");
+        expected.put("col_numeric_18_2", "arrow=DECIMAL, pg=NUMERIC");
+        expected.put("col_numeric_10_5", "arrow=DECIMAL, pg=NUMERIC");
+        expected.put("col_varchar_255", "arrow=VARCHAR, pg=character varying(255)");
+        expected.put("col_char_1", "arrow=CHAR, pg=character(1)");
+        // oid: Arrow sees it as a 32-bit int so reports INTEGER; pg_catalog maps it to BIGINT.
+        expected.put("col_oid", "arrow=INTEGER, pg=BIGINT");
+        expected.put("col_int_array", "arrow=ARRAY, pg=array(integer)");
+        expected.put("col_text_array", "arrow=ARRAY, pg=array(text)");
+        expected.put("col_json", "arrow=VARCHAR, pg=json");
+
+        assertThat(mismatches)
+                .as("TYPE_NAME disagreements between ResultSetMetaData and DatabaseMetaData.getColumns()")
+                .containsExactlyInAnyOrderEntriesOf(expected);
+    }
+
+    @Test
+    @SneakyThrows
+    void getColumns_consistentWith_resultSetMetaData_forPrecision() {
+        // Arrow side: ResultSetMetaData.getPrecision() — computed per-type in ColumnType.
+        // pg_catalog side: COLUMN_SIZE — hardcoded to 255 in QueryMetadataUtil.
+        Map<String, String> mismatches =
+                collectMismatches("COLUMN_SIZE", info -> info.get("COLUMN_SIZE").toString());
+
+        // BUG: COLUMN_SIZE is hardcoded to 255 in QueryMetadataUtil.constructColumnData
+        // regardless of the column. ResultSetMetaData.getPrecision() returns the correct
+        // per-type value (digit count for ints, declared precision for numeric/varchar, etc.).
+        // Fixing QueryMetadataUtil to derive COLUMN_SIZE from atttypmod / atttypid will shrink
+        // this map toward empty.
+        Map<String, String> expected = new LinkedHashMap<>();
+        expected.put("col_bool", "arrow=1, pg=255");
+        expected.put("col_smallint", "arrow=5, pg=255");
+        expected.put("col_int", "arrow=10, pg=255");
+        expected.put("col_nullable_int", "arrow=10, pg=255");
+        expected.put("col_not_null_int", "arrow=10, pg=255");
+        expected.put("col_bigint", "arrow=19, pg=255");
+        expected.put("col_double", "arrow=17, pg=255");
+        expected.put("col_numeric_18_2", "arrow=18, pg=255");
+        expected.put("col_numeric_10_5", "arrow=10, pg=255");
+        // Text columns with no declared length report Integer.MAX_VALUE on the Arrow side,
+        // 255 on the pg side. Both are arguably wrong — text in Postgres has no length limit.
+        expected.put("col_text", "arrow=" + Integer.MAX_VALUE + ", pg=255");
+        expected.put("col_varchar_255", "arrow=255, pg=255"); // coincidence — both match here.
+        expected.put("col_char_1", "arrow=1, pg=255");
+        expected.put("col_date", "arrow=13, pg=255");
+        expected.put("col_time", "arrow=15, pg=255");
+        expected.put("col_timestamp", "arrow=29, pg=255");
+        expected.put("col_timestamptz", "arrow=35, pg=255");
+        expected.put("col_oid", "arrow=10, pg=255");
+        // Arrays: ColumnType.getPrecisionOrStringLength delegates to the element type.
+        expected.put("col_int_array", "arrow=10, pg=255");
+        expected.put("col_text_array", "arrow=" + Integer.MAX_VALUE + ", pg=255");
+        // BUG: json has no explicit precision; Arrow treats it as Utf8 so returns MAX_VALUE.
+        expected.put("col_json", "arrow=" + Integer.MAX_VALUE + ", pg=255");
+        expected.remove("col_varchar_255"); // remove coincidental-match entry — not a mismatch.
+
+        assertThat(mismatches)
+                .as(
+                        "COLUMN_SIZE disagreements between ResultSetMetaData.getPrecision() and DatabaseMetaData.getColumns()")
+                .containsExactlyInAnyOrderEntriesOf(expected);
+    }
+
+    @Test
+    @SneakyThrows
+    void getColumns_consistentWith_resultSetMetaData_forScale() {
+        // Arrow side: ResultSetMetaData.getScale() — derived from atttypmod in Arrow Decimal.
+        // pg_catalog side: DECIMAL_DIGITS — hardcoded to 2 for decimal-ish types, else 0.
+        Map<String, String> mismatches = collectMismatches(
+                "DECIMAL_DIGITS", info -> info.get("DECIMAL_DIGITS").toString());
+
+        // BUG: DECIMAL_DIGITS ignores atttypmod and is hardcoded based on type name only.
+        // - Float/double report their precision as scale on the Arrow side (ColumnType.getScale
+        //   returns getPrecisionOrStringLength() for DOUBLE), which is itself questionable but
+        //   at least non-zero. pg_catalog reports 0 — numeric is the only type that hits its
+        //   scale branch because of the isDecimalType() check.
+        // - numeric(10,5) should report scale=5; pg_catalog hardcodes 2.
+        // - time/timestamp/timestamptz should expose fractional-second scale; Arrow reports 6
+        //   (microseconds), pg reports 0.
+        Map<String, String> expected = new LinkedHashMap<>();
+        expected.put("col_double", "arrow=17, pg=0");
+        expected.put("col_numeric_10_5", "arrow=5, pg=2");
+        expected.put("col_time", "arrow=6, pg=0");
+        expected.put("col_timestamp", "arrow=6, pg=0");
+        expected.put("col_timestamptz", "arrow=6, pg=0");
+
+        assertThat(mismatches)
+                .as(
+                        "DECIMAL_DIGITS disagreements between ResultSetMetaData.getScale() and DatabaseMetaData.getColumns()")
+                .containsExactlyInAnyOrderEntriesOf(expected);
+    }
+
+    @Test
+    @SneakyThrows
+    void getColumns_consistentWith_resultSetMetaData_forNullability() {
+        // Arrow side: ResultSetMetaData.isNullable() returns columnNullable (1) or
+        // columnNoNulls (0) based on Arrow field.isNullable().
+        // pg_catalog side: NULLABLE column derived from pg_attribute.attnotnull.
+        //
+        // BUG: hyperd emits Arrow fields with isNullable()=false for most columns in the response
+        // schema regardless of the column's DDL NOT NULL constraint, so the Arrow path reports
+        // columnNoNulls (0) where pg_catalog correctly reports columnNullable (1). The two int
+        // columns (col_nullable_int, col_not_null_int) happen to agree — likely because hyperd
+        // handles plain int columns differently in its Arrow schema emission.
+        Map<String, String> mismatches =
+                collectMismatches("NULLABLE", info -> info.get("NULLABLE").toString());
+
+        Map<String, String> expected = new LinkedHashMap<>();
+        for (String col : new String[] {
+            "col_bool",
+            "col_smallint",
+            "col_int",
+            "col_bigint",
+            "col_double",
+            "col_numeric_18_2",
+            "col_numeric_10_5",
+            "col_text",
+            "col_varchar_255",
+            "col_char_1",
+            "col_date",
+            "col_time",
+            "col_timestamp",
+            "col_timestamptz",
+            "col_json",
+            "col_oid",
+            "col_int_array",
+            "col_text_array"
+        }) {
+            expected.put(col, "arrow=0, pg=1");
+        }
+
+        assertThat(mismatches)
+                .as("NULLABLE disagreements between ResultSetMetaData and DatabaseMetaData.getColumns()")
+                .containsExactlyInAnyOrderEntriesOf(expected);
+    }
+
+    /**
+     * Runs the two metadata paths over every cross-check column and returns the set of columns
+     * whose {@code property} differs, formatted with {@code render}.
+     */
+    @SneakyThrows
+    private Map<String, String> collectMismatches(
+            String property, java.util.function.Function<Map<String, Object>, String> render) {
         try (val connection = getConnection()) {
-            Map<String, Integer> pgCatalogTypes = collectPgCatalogDataTypes(connection);
-            Map<String, Integer> arrowTypes = collectArrowDataTypes(connection);
+            Map<String, Map<String, Object>> pg = collectPgCatalogInfo(connection);
+            Map<String, Map<String, Object>> arrow = collectArrowInfo(connection);
 
             Map<String, String> mismatches = new LinkedHashMap<>();
-            for (Map.Entry<String, Integer> entry : arrowTypes.entrySet()) {
-                String col = entry.getKey();
+            for (String col : arrow.keySet()) {
                 if (CROSS_CHECK_EXCLUDED.contains(col)) {
                     continue;
                 }
-                int arrow = entry.getValue();
-                Integer pg = pgCatalogTypes.get(col);
-                assertThat(pg).as("getColumns() must return a row for %s", col).isNotNull();
-                if (arrow != pg) {
-                    mismatches.put(
-                            col,
-                            "ResultSetMetaData=" + arrow + " (" + jdbcTypeName(arrow) + "), getColumns()=" + pg + " ("
-                                    + jdbcTypeName(pg) + ")");
+                Map<String, Object> pgInfo = pg.get(col);
+                Map<String, Object> arrowInfo = arrow.get(col);
+                assertThat(pgInfo)
+                        .as("getColumns() must return a row for %s", col)
+                        .isNotNull();
+
+                Object pgVal = pgInfo.get(property);
+                Object arrowVal = arrowInfo.get(property);
+                if (pgVal == null ? arrowVal != null : !pgVal.equals(arrowVal)) {
+                    mismatches.put(col, "arrow=" + render.apply(arrowInfo) + ", pg=" + render.apply(pgInfo));
                 }
             }
-
-            // BUG: every entry below is a disagreement between the two metadata paths. The Arrow
-            // side is JDBC-spec-correct (java.sql.Types); the pg_catalog side falls through to
-            // raw Postgres type OIDs because QueryMetadataUtil's dbTypeToSql keys on short names
-            // while format_type() returns long names. Fixing QueryMetadataUtil so every type maps
-            // to the same java.sql.Types value as ResultSetMetaData will shrink this map to empty.
-            Map<String, String> expected = new LinkedHashMap<>();
-            expected.put("col_smallint", "ResultSetMetaData=5 (SMALLINT), getColumns()=21 (<unknown>)");
-            expected.put("col_int", "ResultSetMetaData=4 (INTEGER), getColumns()=23 (<unknown>)");
-            expected.put("col_nullable_int", "ResultSetMetaData=4 (INTEGER), getColumns()=23 (<unknown>)");
-            expected.put("col_not_null_int", "ResultSetMetaData=4 (INTEGER), getColumns()=23 (<unknown>)");
-            expected.put("col_bigint", "ResultSetMetaData=-5 (BIGINT), getColumns()=20 (<unknown>)");
-            expected.put("col_double", "ResultSetMetaData=8 (DOUBLE), getColumns()=701 (<unknown>)");
-            // BUG: DECIMAL vs NUMERIC is itself inconsistent — Arrow emits DECIMAL, pg_catalog
-            // emits NUMERIC. JDBC treats them as distinct Types constants even though SQL
-            // considers them synonyms.
-            expected.put("col_numeric_18_2", "ResultSetMetaData=3 (DECIMAL), getColumns()=2 (NUMERIC)");
-            expected.put("col_numeric_10_5", "ResultSetMetaData=3 (DECIMAL), getColumns()=2 (NUMERIC)");
-            expected.put("col_varchar_255", "ResultSetMetaData=12 (VARCHAR), getColumns()=1043 (<unknown>)");
-            expected.put("col_char_1", "ResultSetMetaData=1 (CHAR), getColumns()=18 (<unknown>)");
-            // oid reverses the pattern: getColumns() correctly says BIGINT (because "oid" is the
-            // only dbTypeToSql key that actually matches format_type() output), but Arrow sees
-            // the raw 32-bit unsigned and emits INTEGER. Either side could be "right".
-            expected.put("col_oid", "ResultSetMetaData=4 (INTEGER), getColumns()=-5 (BIGINT)");
-            expected.put("col_int_array", "ResultSetMetaData=2003 (ARRAY), getColumns()=1007 (<unknown>)");
-            expected.put("col_text_array", "ResultSetMetaData=2003 (ARRAY), getColumns()=1009 (<unknown>)");
-            // BUG: json has no Arrow mapping either; hyperd returns it as Utf8 with metadata so
-            // the Arrow side reports VARCHAR. The pg_catalog side reports the raw pg OID 114.
-            expected.put("col_json", "ResultSetMetaData=12 (VARCHAR), getColumns()=114 (<unknown>)");
-
-            assertThat(mismatches)
-                    .as("known disagreements between ResultSetMetaData and DatabaseMetaData.getColumns()")
-                    .containsExactlyInAnyOrderEntriesOf(expected);
+            return mismatches;
         }
     }
 
@@ -585,26 +751,40 @@ class DatabaseMetadataIntegrationTest {
         return sb.toString();
     }
 
-    private static Map<String, Integer> collectPgCatalogDataTypes(DataCloudConnection connection) throws SQLException {
-        Map<String, Integer> types = new LinkedHashMap<>();
+    private static Map<String, Map<String, Object>> collectPgCatalogInfo(DataCloudConnection connection)
+            throws SQLException {
+        Map<String, Map<String, Object>> info = new LinkedHashMap<>();
         try (val rs = connection.getMetaData().getColumns(null, TEST_SCHEMA, TEST_TABLE, "%")) {
             while (rs.next()) {
-                types.put(rs.getString("COLUMN_NAME"), rs.getInt("DATA_TYPE"));
+                Map<String, Object> row = new HashMap<>();
+                row.put("DATA_TYPE", rs.getInt("DATA_TYPE"));
+                row.put("TYPE_NAME", rs.getString("TYPE_NAME"));
+                row.put("COLUMN_SIZE", rs.getInt("COLUMN_SIZE"));
+                row.put("DECIMAL_DIGITS", rs.getInt("DECIMAL_DIGITS"));
+                row.put("NULLABLE", rs.getInt("NULLABLE"));
+                info.put(rs.getString("COLUMN_NAME"), row);
             }
         }
-        return types;
+        return info;
     }
 
-    private static Map<String, Integer> collectArrowDataTypes(DataCloudConnection connection) throws SQLException {
-        Map<String, Integer> types = new LinkedHashMap<>();
+    private static Map<String, Map<String, Object>> collectArrowInfo(DataCloudConnection connection)
+            throws SQLException {
+        Map<String, Map<String, Object>> info = new LinkedHashMap<>();
         try (val stmt = connection.createStatement();
                 val rs = stmt.executeQuery(selectEmptyRowset())) {
             val md = rs.getMetaData();
             for (int i = 1; i <= md.getColumnCount(); i++) {
-                types.put(md.getColumnName(i), md.getColumnType(i));
+                Map<String, Object> row = new HashMap<>();
+                row.put("DATA_TYPE", md.getColumnType(i));
+                row.put("TYPE_NAME", md.getColumnTypeName(i));
+                row.put("COLUMN_SIZE", md.getPrecision(i));
+                row.put("DECIMAL_DIGITS", md.getScale(i));
+                row.put("NULLABLE", md.isNullable(i));
+                info.put(md.getColumnName(i), row);
             }
         }
-        return types;
+        return info;
     }
 
     private static String jdbcTypeName(int code) {
