@@ -4,6 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.hyper;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,13 +27,24 @@ public class HyperServerConfig {
     @JsonProperty("grpc-request-timeout")
     String grpcRequestTimeoutSeconds = "70s";
 
+    // Path to a database file that hyperd will create/attach on startup.
+    // Handled separately in toArguments() because it uses -d short flag.
+    @Builder.Default
+    @JsonIgnore
+    String databasePath = null;
+
     public List<String> toArguments() {
         val mapper = new ObjectMapper();
         val map = mapper.convertValue(this, new TypeReference<Map<String, Object>>() {});
-        return map.entrySet().stream()
+        val args = map.entrySet().stream()
                 .filter(entry -> entry.getValue() != null)
                 .map(entry -> String.format("--%s=%s", entry.getKey().replace("_", "-"), entry.getValue()))
                 .collect(Collectors.toList());
+        if (databasePath != null) {
+            args.add("-d");
+            args.add(databasePath);
+        }
+        return args;
     }
 
     public HyperServerProcess start() {
