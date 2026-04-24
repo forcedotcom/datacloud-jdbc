@@ -33,7 +33,8 @@ class QueryResultArrowStreamTest {
             val chunkIterator = ChunkRangeIterator.of(queryClient, 0, 3, false, QueryResultArrowStream.OUTPUT_FORMAT);
 
             // Create ArrowStreamReader from the iterator
-            try (val reader = QueryResultArrowStream.toArrowStreamReader(chunkIterator)) {
+            try (val arrowStream = QueryResultArrowStream.toArrowStreamReader(chunkIterator)) {
+                val reader = arrowStream.getReader();
                 int rowCount = 0;
 
                 // Count all rows in the arrow stream
@@ -63,7 +64,8 @@ class QueryResultArrowStreamTest {
             val chunkIterator = ChunkRangeIterator.of(queryClient, 0, 3, false, QueryResultArrowStream.OUTPUT_FORMAT);
 
             // Create ArrowStreamReader from the iterator
-            try (val reader = QueryResultArrowStream.toArrowStreamReader(chunkIterator)) {
+            try (val arrowStream = QueryResultArrowStream.toArrowStreamReader(chunkIterator)) {
+                val reader = arrowStream.getReader();
                 int rowCount = 0;
 
                 // Count all rows in the arrow stream

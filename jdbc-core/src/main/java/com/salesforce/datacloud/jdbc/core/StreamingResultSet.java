@@ -9,6 +9,7 @@ import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.resultset.ForwardOnlyResultSet;
 import com.salesforce.datacloud.jdbc.core.resultset.ReadOnlyResultSet;
 import com.salesforce.datacloud.jdbc.core.resultset.ResultSetWithPositionalGetters;
+import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
 import com.salesforce.datacloud.jdbc.protocol.data.ArrowToHyperTypeMapper;
 import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
@@ -37,12 +38,13 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.ZoneId;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.arrow.vector.ipc.ArrowStreamReader;
+import org.apache.arrow.vector.VectorSchemaRoot;
 
 @Slf4j
 public class StreamingResultSet
@@ -73,43 +75,94 @@ public class StreamingResultSet
         this.closed = false;
     }
 
-    public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId) throws SQLException {
-        return of(resultStream, queryId, ZoneId.systemDefault());
+    public static StreamingResultSet of(QueryResultArrowStream.Result arrowStream, String queryId) throws SQLException {
+        return of(arrowStream, queryId, ZoneId.systemDefault());
     }
 
     /**
      * Creates a StreamingResultSet with a specified session timezone.
      *
-     * @param resultStream The Arrow stream containing query results
+     * <p>Ownership of {@code arrowStream} (both the reader and its backing allocator) transfers
+     * to the returned result set — callers must not close it separately.
+     *
+     * @param arrowStream The Arrow stream containing query results, owned by the result set
      * @param queryId The query identifier
      * @param sessionZone The session timezone to use for timestamp conversions
      * @return A new StreamingResultSet
      * @throws SQLException If an error occurs during ResultSet creation
      */
-    public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId, ZoneId sessionZone)
+    public static StreamingResultSet of(QueryResultArrowStream.Result arrowStream, String queryId, ZoneId sessionZone)
             throws SQLException {
         try {
-            val schemaRoot = resultStream.getVectorSchemaRoot();
-            val fields = schemaRoot.getSchema().getFields();
-
-            val columns = fields.stream()
-                    .map(field -> new ColumnMetadata(field.getName(), ArrowToHyperTypeMapper.toHyperType(field)))
-                    .collect(Collectors.toList());
-            val metadata = new DataCloudResultSetMetaData(columns);
-
-            val cursor = new ArrowStreamReaderCursor(resultStream, sessionZone);
-            val accessorList = cursor.createAccessors();
-            val accessors = accessorList.toArray(new QueryJDBCAccessor[0]);
-
-            val columnNameResolver = new ColumnNameResolver(columns);
-
-            return new StreamingResultSet(cursor, queryId, metadata, accessors, columnNameResolver);
+            val schemaRoot = arrowStream.getReader().getVectorSchemaRoot();
+            val cursor = ArrowStreamReaderCursor.streaming(arrowStream.getReader(), arrowStream, sessionZone);
+            return build(cursor, schemaRoot, queryId, null);
         } catch (IOException ex) {
             throw new SQLException("Unexpected error during ResultSet creation", "XX000", ex);
         } catch (IllegalArgumentException ex) {
             // Thrown by ArrowToHyperTypeMapper for Arrow types the driver does not model.
             throw new SQLException("Unsupported column type in query result: " + ex.getMessage(), "0A000", ex);
         }
+    }
+
+    /**
+     * Creates a StreamingResultSet over a pre-populated in-memory {@link VectorSchemaRoot}.
+     *
+     * <p>Used by the metadata path (e.g. {@code DatabaseMetaData.getTables}), where the rows are
+     * materialised into Arrow up front rather than streamed from the server. Ownership of
+     * {@code ownedResources} — typically the {@link org.apache.arrow.memory.BufferAllocator} and
+     * {@link VectorSchemaRoot} — transfers to the returned result set, which closes them when
+     * it is closed.
+     *
+     * @param columns optional column-metadata override. When non-null it takes precedence over
+     *     what would be derived from the Arrow schema so that {@link ColumnMetadata#getTypeName()}
+     *     overrides (e.g. {@code "TEXT"} for {@code getTables} rather than the derived
+     *     {@code "VARCHAR"}) are preserved on the way through.
+     */
+    public static StreamingResultSet ofInMemory(
+            VectorSchemaRoot schemaRoot,
+            AutoCloseable ownedResources,
+            String queryId,
+            ZoneId sessionZone,
+            List<ColumnMetadata> columns)
+            throws SQLException {
+        try {
+            val cursor = ArrowStreamReaderCursor.inMemory(schemaRoot, ownedResources, sessionZone);
+            return build(cursor, schemaRoot, queryId, columns);
+        } catch (IllegalArgumentException ex) {
+            throw new SQLException("Unsupported column type in result set: " + ex.getMessage(), "0A000", ex);
+        }
+    }
+
+    /**
+     * Overload that derives the column metadata from the Arrow schema. Prefer the overload that
+     * takes an explicit {@code columns} list if callers need to preserve JDBC-spec type names
+     * (e.g. {@code "TEXT"}).
+     */
+    public static StreamingResultSet ofInMemory(
+            VectorSchemaRoot schemaRoot, AutoCloseable ownedResources, String queryId, ZoneId sessionZone)
+            throws SQLException {
+        return ofInMemory(schemaRoot, ownedResources, queryId, sessionZone, null);
+    }
+
+    private static StreamingResultSet build(
+            ArrowStreamReaderCursor cursor,
+            VectorSchemaRoot schemaRoot,
+            String queryId,
+            List<ColumnMetadata> columnOverride)
+            throws SQLException {
+        final List<ColumnMetadata> columns;
+        if (columnOverride != null) {
+            columns = columnOverride;
+        } else {
+            columns = schemaRoot.getSchema().getFields().stream()
+                    .map(field -> new ColumnMetadata(field.getName(), ArrowToHyperTypeMapper.toHyperType(field)))
+                    .collect(Collectors.toList());
+        }
+        val metadata = new DataCloudResultSetMetaData(columns);
+        val accessors = cursor.createAccessors().toArray(new QueryJDBCAccessor[0]);
+        val columnNameResolver = new ColumnNameResolver(columns);
+        return new StreamingResultSet(cursor, queryId, metadata, accessors, columnNameResolver);
     }
 
     // --- Core ResultSet navigation ---
@@ -321,6 +374,10 @@ public class StreamingResultSet
 
     @Override
     public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
+        if (map == null || map.isEmpty()) {
+            // JDBC allows a null/empty type map to behave like plain getObject(int).
+            return getObject(columnIndex);
+        }
         val accessor = getAccessor(columnIndex);
         val result = accessor.getObject(map);
         updateWasNull(accessor);
@@ -329,10 +386,32 @@ public class StreamingResultSet
 
     @Override
     public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
+        if (type == null) {
+            throw new SQLException("Target type must not be null");
+        }
+        // Default implementation: get the raw Object and check if it matches the requested type.
+        // Accessors that need richer conversion (e.g. Arrow Decimal → BigInteger) can still
+        // override the accessor-level getObject(Class) — in that case we dispatch to them first.
         val accessor = getAccessor(columnIndex);
-        val result = accessor.getObject(type);
-        updateWasNull(accessor);
-        return result;
+        try {
+            val typed = accessor.getObject(type);
+            updateWasNull(accessor);
+            return typed;
+        } catch (SQLException ex) {
+            // Accessor does not implement typed getObject — fall back to raw + isInstance check.
+            val raw = accessor.getObject();
+            updateWasNull(accessor);
+            if (raw == null) {
+                return null;
+            }
+            if (type.isInstance(raw)) {
+                return type.cast(raw);
+            }
+            throw new SQLException(
+                    "Cannot convert column value to " + type.getName() + "; actual type is "
+                            + raw.getClass().getName(),
+                    ex);
+        }
     }
 
     @Override

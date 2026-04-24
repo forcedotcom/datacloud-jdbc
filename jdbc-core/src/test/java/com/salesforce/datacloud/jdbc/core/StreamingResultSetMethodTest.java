@@ -8,20 +8,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.ipc.ArrowStreamReader;
-import org.apache.arrow.vector.ipc.ArrowStreamWriter;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -38,6 +35,9 @@ class StreamingResultSetMethodTest {
 
     @SneakyThrows
     private StreamingResultSet createResultSet() {
+        // Build an in-memory VectorSchemaRoot with one VARCHAR column and one row ("hello"), then
+        // hand it to StreamingResultSet.ofInMemory. The result set owns the vector lifecycle and
+        // closes it via the returned AutoCloseable.
         val allocator = ext.getRootAllocator();
         val vector = new VarCharVector("col1", allocator);
         vector.allocateNew();
@@ -47,14 +47,7 @@ class StreamingResultSetMethodTest {
         val root = new VectorSchemaRoot(Arrays.asList(vector.getField()), Arrays.asList(vector));
         root.setRowCount(1);
 
-        val out = new ByteArrayOutputStream();
-        try (val writer = new ArrowStreamWriter(root, null, out)) {
-            writer.writeBatch();
-        }
-        root.close();
-
-        val reader = new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), allocator);
-        return StreamingResultSet.of(reader, QUERY_ID);
+        return StreamingResultSet.ofInMemory(root, root, QUERY_ID, ZoneId.systemDefault());
     }
 
     // --- Unsupported methods ---
