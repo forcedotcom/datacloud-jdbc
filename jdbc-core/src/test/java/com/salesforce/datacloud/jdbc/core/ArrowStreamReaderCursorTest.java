@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.stream.IntStream;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
@@ -38,15 +39,15 @@ class ArrowStreamReaderCursorTest {
     protected VectorSchemaRoot root;
 
     @Mock
-    protected AutoCloseable ownedResources;
+    protected BufferAllocator allocator;
 
     @Test
     @SneakyThrows
-    void closesOwnedResources() {
-        when(reader.getVectorSchemaRoot()).thenReturn(root);
-        val sut = ArrowStreamReaderCursor.streaming(reader, ownedResources, ZoneId.systemDefault());
+    void closesReaderAndAllocator() {
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         sut.close();
-        verify(ownedResources, times(1)).close();
+        verify(reader, times(1)).close();
+        verify(allocator, times(1)).close();
     }
 
     @Test
@@ -60,7 +61,7 @@ class ArrowStreamReaderCursorTest {
         when(reader.loadNextBatch()).thenReturn(false);
         when(root.getRowCount()).thenReturn(times);
 
-        val sut = ArrowStreamReaderCursor.streaming(reader, ownedResources, ZoneId.systemDefault());
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         IntStream.range(0, times + 1).forEach(i -> sut.next());
 
         verify(root, times(times + 1)).getRowCount();
@@ -73,7 +74,7 @@ class ArrowStreamReaderCursorTest {
         when(root.getRowCount()).thenReturn(1);
         when(reader.getVectorSchemaRoot()).thenReturn(root);
 
-        val sut = ArrowStreamReaderCursor.streaming(reader, ownedResources, ZoneId.systemDefault());
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
 
         assertThat(sut.next()).isTrue();
     }
@@ -85,7 +86,7 @@ class ArrowStreamReaderCursorTest {
         when(reader.getVectorSchemaRoot()).thenReturn(root);
         when(reader.loadNextBatch()).thenReturn(false);
 
-        val sut = ArrowStreamReaderCursor.streaming(reader, ownedResources, ZoneId.systemDefault());
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
 
         assertThat(sut.next()).isFalse();
     }
@@ -122,7 +123,7 @@ class ArrowStreamReaderCursorTest {
 
         try (RootAllocator readAlloc = new RootAllocator(Long.MAX_VALUE);
                 ArrowStreamReader streamReader = new ArrowStreamReader(new ByteArrayInputStream(ipc), readAlloc)) {
-            val sut = ArrowStreamReaderCursor.streaming(streamReader, streamReader, ZoneId.systemDefault());
+            val sut = new ArrowStreamReaderCursor(streamReader, readAlloc, ZoneId.systemDefault());
 
             assertThat(sut.next())
                     .as("skips zero-row batch, advances to row in second batch")
@@ -161,20 +162,8 @@ class ArrowStreamReaderCursorTest {
 
         try (RootAllocator readAlloc = new RootAllocator(Long.MAX_VALUE);
                 ArrowStreamReader streamReader = new ArrowStreamReader(new ByteArrayInputStream(ipc), readAlloc)) {
-            val sut = ArrowStreamReaderCursor.streaming(streamReader, streamReader, ZoneId.systemDefault());
+            val sut = new ArrowStreamReaderCursor(streamReader, readAlloc, ZoneId.systemDefault());
             assertThat(sut.next()).isFalse();
         }
-    }
-
-    @Test
-    @SneakyThrows
-    void inMemoryCursorReportsFalseWhenRowCountExhausted() {
-        when(root.getRowCount()).thenReturn(2);
-
-        val sut = ArrowStreamReaderCursor.inMemory(root, ownedResources, ZoneId.systemDefault());
-
-        assertThat(sut.next()).isTrue();
-        assertThat(sut.next()).isTrue();
-        assertThat(sut.next()).isFalse();
     }
 }

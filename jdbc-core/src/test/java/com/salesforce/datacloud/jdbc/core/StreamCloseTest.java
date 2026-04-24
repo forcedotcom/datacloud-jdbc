@@ -81,7 +81,7 @@ public class StreamCloseTest {
             // ByteStringReadableByteChannel(iterator, resource) → ArrowStreamReader
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     tracked, false, "test-query", null);
-            val resultSet = StreamingResultSet.of(arrowStream, "test-query");
+            val resultSet = StreamingResultSet.of(arrowStream.getReader(), arrowStream.getAllocator(), "test-query");
 
             // Read one row — stream is still open with remaining rows
             assertThat(resultSet.next()).isTrue();

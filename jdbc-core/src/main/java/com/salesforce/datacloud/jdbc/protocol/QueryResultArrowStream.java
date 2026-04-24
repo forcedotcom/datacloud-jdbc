@@ -9,7 +9,6 @@ import com.google.common.collect.FluentIterable;
 import com.salesforce.datacloud.jdbc.core.ByteStringReadableByteChannel;
 import lombok.Value;
 import lombok.val;
-import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
 import salesforce.cdp.hyperdb.v1.OutputFormat;
@@ -24,26 +23,15 @@ public class QueryResultArrowStream {
     private static final int ROOT_ALLOCATOR_MB_FROM_V2 = 100 * 1024 * 1024;
 
     /**
-     * Result of {@link #toArrowStreamReader(CloseableIterator)}: the {@link ArrowStreamReader} for
-     * loading batches plus the {@link RootAllocator} backing it. The caller is responsible for
-     * closing both — the reader closes its vectors, but the allocator outlives the reader and must
-     * be closed separately to return its budget to the JVM.
+     * Pair of the {@link ArrowStreamReader} that decodes gRPC chunks and the {@link RootAllocator}
+     * that backs it. Callers hand ownership to {@link
+     * com.salesforce.datacloud.jdbc.core.StreamingResultSet#of} which closes both; the pair is
+     * never closed directly.
      */
     @Value
-    public static class Result implements AutoCloseable {
+    public static class Result {
         ArrowStreamReader reader;
         RootAllocator allocator;
-
-        @Override
-        public void close() throws Exception {
-            // Order matters: the reader holds ArrowBuf instances whose accounting lives on the
-            // allocator, so the reader must release them before the allocator's budget check runs.
-            try {
-                reader.close();
-            } finally {
-                allocator.close();
-            }
-        }
     }
 
     public static Result toArrowStreamReader(CloseableIterator<QueryResult> iterator) {
@@ -73,7 +61,6 @@ public class QueryResultArrowStream {
                 };
         val channel = new ByteStringReadableByteChannel(closeable);
         RootAllocator allocator = new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2);
-        ArrowStreamReader reader = new ArrowStreamReader(channel, (BufferAllocator) allocator);
-        return new Result(reader, allocator);
+        return new Result(new ArrowStreamReader(channel, allocator), allocator);
     }
 }

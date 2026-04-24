@@ -220,7 +220,7 @@ public class DataCloudConnection implements Connection {
                     QueryResultArrowStream.OUTPUT_FORMAT);
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     iterator, connectionProperties.isIncludeCustomerDetailInReason(), queryId, null);
-            return StreamingResultSet.of(arrowStream, queryId);
+            return StreamingResultSet.of(arrowStream.getReader(), arrowStream.getAllocator(), queryId);
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createException(
                     connectionProperties.isIncludeCustomerDetailInReason(), null, queryId, ex);
@@ -263,7 +263,7 @@ public class DataCloudConnection implements Connection {
                     QueryResultArrowStream.OUTPUT_FORMAT);
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     iterator, connectionProperties.isIncludeCustomerDetailInReason(), queryId, null);
-            return StreamingResultSet.of(arrowStream, queryId);
+            return StreamingResultSet.of(arrowStream.getReader(), arrowStream.getAllocator(), queryId);
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createException(
                     connectionProperties.isIncludeCustomerDetailInReason(), null, queryId, ex);
