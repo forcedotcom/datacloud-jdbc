@@ -151,9 +151,8 @@ public final class HyperTypes {
                 return HyperType.array(HyperType.varcharUnlimited(nullable), nullable);
             case Types.NULL:
                 return HyperType.nullType();
-            default:
-                throw new IllegalArgumentException("Unsupported JDBC type code: " + jdbcTypeCode);
         }
+        throw new IllegalArgumentException("Unsupported JDBC type code: " + jdbcTypeCode);
     }
 
     /**
@@ -301,7 +300,9 @@ public final class HyperTypes {
                 return UNKNOWN_SCALE;
             case FLOAT4:
             case FLOAT8:
-                // Matches legacy behaviour: floating-point scale equals precision.
+                // Match Postgres JDBC: for binary floats it reports scale == precision (8 for
+                // REAL, 17 for DOUBLE). Binary floats have no decimal scale, so this is a
+                // display convention rather than a meaningful fractional-digit count.
                 return getPrecision(t);
             case DECIMAL:
                 return t.getScale();
@@ -412,6 +413,81 @@ public final class HyperTypes {
             default:
                 return false;
         }
+    }
+
+    /**
+     * {@code true} when the value is representable as a Java {@code long} (any-signed integer
+     * kind, including Hyper's {@code OID}). Used by {@code ResultSet.getLong / getInt /
+     * getDouble / getBigDecimal} to decide whether the accessor's integer path applies.
+     *
+     * <p>The switch is exhaustive on purpose: adding a new {@link HyperTypeKind} should prompt
+     * the author to decide whether it belongs in this family, rather than silently defaulting
+     * to {@code false}.
+     */
+    public static boolean isIntegerLike(HyperType t) {
+        switch (t.getKind()) {
+            case INT8:
+            case INT16:
+            case INT32:
+            case INT64:
+            case OID:
+                return true;
+            case BOOL:
+            case FLOAT4:
+            case FLOAT8:
+            case DECIMAL:
+            case CHAR:
+            case VARCHAR:
+            case BINARY:
+            case VARBINARY:
+            case DATE:
+            case TIME:
+            case TIME_TZ:
+            case TIMESTAMP:
+            case TIMESTAMP_TZ:
+            case ARRAY:
+            case NULL:
+            case INTERVAL:
+            case JSON:
+            case UNKNOWN:
+                return false;
+        }
+        throw new IllegalStateException("Unhandled HyperTypeKind: " + t.getKind());
+    }
+
+    /**
+     * {@code true} when the value is representable as a Java {@code String} through the JDBC
+     * {@code getString} / {@code getObject} text paths.
+     */
+    public static boolean isStringLike(HyperType t) {
+        switch (t.getKind()) {
+            case CHAR:
+            case VARCHAR:
+                return true;
+            case BOOL:
+            case INT8:
+            case INT16:
+            case INT32:
+            case INT64:
+            case OID:
+            case FLOAT4:
+            case FLOAT8:
+            case DECIMAL:
+            case BINARY:
+            case VARBINARY:
+            case DATE:
+            case TIME:
+            case TIME_TZ:
+            case TIMESTAMP:
+            case TIMESTAMP_TZ:
+            case ARRAY:
+            case NULL:
+            case INTERVAL:
+            case JSON:
+            case UNKNOWN:
+                return false;
+        }
+        throw new IllegalStateException("Unhandled HyperTypeKind: " + t.getKind());
     }
 
     // ----------------------------------------------------------------------

@@ -186,10 +186,16 @@ final class QueryMetadataUtil {
             rowData[DATA_TYPE_INDEX] = HyperTypes.toJdbcTypeCode(hyperType);
             rowData[TYPE_NAME_INDEX] = HyperTypes.toJdbcTypeName(hyperType);
 
-            int columnSize = 255;
+            // COLUMN_SIZE: per JDBC spec this is the declared precision (digits for numerics,
+            // characters for strings). HyperTypes.getPrecision already implements this for
+            // every HyperTypeKind, so we just forward.
+            int columnSize = HyperTypes.getPrecision(hyperType);
             rowData[COLUMN_SIZE_INDEX] = columnSize;
 
-            rowData[DECIMAL_DIGITS_INDEX] = HyperTypes.needsDecimalDigits(hyperType) ? 2 : 0;
+            // DECIMAL_DIGITS: only meaningful for fixed-scale decimals; for those the scale
+            // comes from the HyperType that PgCatalogTypeParser extracted from
+            // format_type(atttypmod) (e.g. "numeric(10,5)" → scale=5).
+            rowData[DECIMAL_DIGITS_INDEX] = HyperTypes.needsDecimalDigits(hyperType) ? hyperType.getScale() : 0;
             rowData[NUM_PREC_RADIX_INDEX] = 10;
             rowData[NULLABLE_INDEX] = notNull ? DatabaseMetaData.columnNoNulls : DatabaseMetaData.columnNullable;
             rowData[DESCRIPTION_INDEX] = resultSet.getString("description");

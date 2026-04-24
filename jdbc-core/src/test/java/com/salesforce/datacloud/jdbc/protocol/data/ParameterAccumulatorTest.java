@@ -13,13 +13,13 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class DefaultParameterAccumulatorTest {
+public class ParameterAccumulatorTest {
 
-    private DefaultParameterAccumulator accumulator;
+    private ParameterAccumulator accumulator;
 
     @BeforeEach
     void setUp() {
-        accumulator = new DefaultParameterAccumulator();
+        accumulator = new ParameterAccumulator();
     }
 
     @Test
