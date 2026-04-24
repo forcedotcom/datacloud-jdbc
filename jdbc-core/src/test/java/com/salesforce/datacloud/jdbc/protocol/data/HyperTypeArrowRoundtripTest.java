@@ -97,24 +97,25 @@ class HyperTypeArrowRoundtripTest {
     }
 
     @Test
-    void lossyRoundtrip_timeTzCollapsesToTime() {
-        // TIME WITH TIME ZONE cannot round-trip through Arrow today, and fixing it cleanly needs
-        // more than a metadata stamp:
+    void timeTzAsymmetry_preservedOnInputButDroppedOnOutput() {
+        // Not a bug — intended behavior. The SQL `time with time zone` offset matters on input
+        // (the value the client binds or writes is interpreted in the supplied offset), but by
+        // design it does not survive round-trip through the Arrow wire:
         //
         //   - Arrow's Time type has no timezone slot (unlike Timestamp, whose Timestamp.timezone
-        //     field we already use for TIMESTAMP_TZ). So a per-value offset cannot ride on the
+        //     field we already use for TIMESTAMP_TZ). A per-value offset cannot ride on the
         //     ArrowType itself.
-        //   - SQL `time with time zone` stores a per-*value* UTC offset (e.g. "14:00+02" vs
-        //     "14:00-05" in the same column). Field metadata is per-column, so it cannot carry
-        //     a value-varying offset.
-        //   - The driver's read-side QueryJDBCAccessorFactory has no TIME_TZ branch either —
-        //     server-returned `timetz` columns already collapse to the plain TimeVectorAccessor,
-        //     so the offset is dropped on ingress as well. Fixing the write-side alone would
-        //     create an asymmetry worse than the current uniform loss.
+        //   - A SQL `time with time zone` column can hold different offsets per value
+        //     ("14:00+02" and "14:00-05" in the same column), so the offset is inherently
+        //     per-value, not per-column. Field metadata is per-column, so it cannot carry it
+        //     either.
+        //   - The driver's read-side QueryJDBCAccessorFactory follows the same convention:
+        //     server-returned `timetz` columns decode through the plain TimeVectorAccessor, so
+        //     the canonical (server-normalised) time-of-day is what reaches the JDBC caller.
         //
-        // Proper round-trip needs a synthetic schema (e.g. struct{time, offset_seconds}) or a
-        // Hyper-protocol coordination. Leaving TIME_TZ explicitly pinned as lossy until that
-        // design lands.
+        // Pinning the asymmetry here so a future contributor doesn't "fix" the encode side in
+        // isolation and create a real bug — fixing this would take either a synthetic Arrow
+        // schema or Hyper-protocol coordination covering both directions.
         HyperType original = HyperType.timeTz(true);
         Field field = new Field("col", HyperTypeToArrow.toFieldType(original), null);
         assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.time(true));
