@@ -5,6 +5,8 @@
 package com.salesforce.datacloud.jdbc.protocol.data;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.TimeUnit;
@@ -35,10 +37,46 @@ public final class HyperTypeToArrow {
         return new Field(name, toFieldType(type), null);
     }
 
-    /** Map a {@link HyperType} to an Arrow {@link FieldType}. */
+    /**
+     * Map a {@link HyperType} to an Arrow {@link FieldType}.
+     *
+     * <p>For string kinds Arrow only has the unparameterised {@code Utf8}, so we stamp the
+     * Hyper-side length on the field as metadata using the same keys Hyper's own server emits
+     * ({@code hyper:type} and {@code hyper:max_string_length}). {@link ArrowToHyperTypeMapper}
+     * reads those keys back, letting CHAR(n) / CHAR(1) / VARCHAR(n) round-trip through Arrow
+     * without loss.
+     */
     public static FieldType toFieldType(HyperType type) {
         ArrowType arrowType = toArrowType(type);
-        return type.isNullable() ? FieldType.nullable(arrowType) : FieldType.notNullable(arrowType);
+        Map<String, String> metadata = metadataFor(type);
+        if (type.isNullable()) {
+            return new FieldType(true, arrowType, null, metadata);
+        }
+        return new FieldType(false, arrowType, null, metadata);
+    }
+
+    /** Hyper-compatible field metadata for types whose length is not carried in the ArrowType. */
+    private static Map<String, String> metadataFor(HyperType type) {
+        switch (type.getKind()) {
+            case CHAR:
+                if (type.getPrecision() == 1) {
+                    return Collections.singletonMap("hyper:type", "Char1");
+                }
+                // A general CHAR(n). Stamp both the discriminator and the length.
+                Map<String, String> charMeta = new HashMap<>();
+                charMeta.put("hyper:type", "Char");
+                charMeta.put("hyper:max_string_length", Integer.toString(type.getPrecision()));
+                return charMeta;
+            case VARCHAR:
+                if (type.getPrecision() == HyperType.UNLIMITED_LENGTH) {
+                    // No length to stamp — unbounded VARCHAR is indistinguishable from "text" in
+                    // Arrow and that's fine; both decode to varcharUnlimited.
+                    return null;
+                }
+                return Collections.singletonMap("hyper:max_string_length", Integer.toString(type.getPrecision()));
+            default:
+                return null;
+        }
     }
 
     /** Map a {@link HyperType} to an Arrow {@link ArrowType} (no nullability). */

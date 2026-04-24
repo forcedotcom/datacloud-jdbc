@@ -39,6 +39,16 @@ import lombok.val;
  *
  * Access to SQL values is provided via {@link ColumnAccessor} instances. This class
  * already takes care of casting from SQL types to the compatible Java types.
+ *
+ * <p><b>Planned for removal.</b> This implementation only covers the narrow slice of
+ * {@link HyperTypeKind} used by JDBC metadata result sets (INT32 for columns like
+ * {@code DATA_TYPE}, CHAR/VARCHAR for text columns, and INT8-INT64/OID via the
+ * {@code isIntegerLike} helper) — not the full query-result type universe. Rather
+ * than expanding the {@link #getLong}, {@link #getDouble}, {@link #getBigDecimal},
+ * {@link #getObject} switches to cover every kind, we intend to migrate
+ * {@code DataCloudMetadataResultSet} to build on {@link StreamingResultSet} so there
+ * is only one result-set implementation in the driver. Treat this class as
+ * maintenance-only until that refactor lands.
  */
 @AllArgsConstructor
 public abstract class SimpleResultSet<SELF>
