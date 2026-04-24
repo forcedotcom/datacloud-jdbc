@@ -78,10 +78,10 @@ public final class ArrowUtils {
     }
 
     public static byte[] toArrowByteArray(List<ParameterBinding> parameters, Calendar calendar) throws IOException {
-        RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
         Schema schema = ArrowUtils.createSchemaFromParameters(parameters);
 
-        try (VectorSchemaRoot root = VectorSchemaRoot.create(schema, allocator)) {
+        try (RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+                VectorSchemaRoot root = VectorSchemaRoot.create(schema, allocator)) {
             root.allocateNew();
             VectorPopulator.populateVectors(root, parameters, calendar);
 

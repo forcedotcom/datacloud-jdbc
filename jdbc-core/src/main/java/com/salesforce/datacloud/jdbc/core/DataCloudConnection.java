@@ -22,7 +22,6 @@ import com.salesforce.datacloud.jdbc.protocol.RowRangeIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncStreamObserverIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.SyncIteratorAdapter;
 import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
-import com.salesforce.datacloud.jdbc.protocol.data.DefaultParameterAccumulator;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
@@ -183,7 +182,7 @@ public class DataCloudConnection implements Connection {
     }
 
     private DataCloudPreparedStatement getQueryPreparedStatement(String sql) {
-        return new DataCloudPreparedStatement(this, sql, new DefaultParameterAccumulator());
+        return new DataCloudPreparedStatement(this, sql);
     }
 
     /**

@@ -19,8 +19,16 @@ public class ColumnMetadata {
     /**
      * Optional override for {@code ResultSetMetaData.getColumnTypeName}; {@code null} means the
      * JDBC layer should use the default derived from {@link #type}. Used for metadata result sets
-     * (e.g. {@code DatabaseMetaData.getTables}) where the JDBC spec pins a specific column-type
-     * label that differs from the underlying Hyper type.
+     * where the JDBC spec pins a specific column-type label that differs from the underlying
+     * Hyper type.
+     *
+     * <p>Example: the columns of {@link java.sql.DatabaseMetaData#getTables} are spec'd as
+     * {@code TEXT} and {@code SHORT} (see JDBC 4.2 §28.12), not {@code VARCHAR} / {@code SMALLINT}.
+     * {@link com.salesforce.datacloud.jdbc.core.MetadataSchemas} constructs those columns as
+     * {@code new ColumnMetadata("TABLE_NAME", HyperType.varcharUnlimited(true), "TEXT")} so that
+     * {@code ResultSetMetaData.getColumnTypeName} returns {@code "TEXT"} while the accessor
+     * machinery still sees a {@code VARCHAR}. Regular query result columns pass {@code null}
+     * (via the two-arg constructor) and get {@code "VARCHAR"} from {@link HyperType}.
      */
     String typeName;
 

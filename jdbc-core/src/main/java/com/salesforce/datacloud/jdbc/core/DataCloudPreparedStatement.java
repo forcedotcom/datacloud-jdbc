@@ -53,26 +53,25 @@ import salesforce.cdp.hyperdb.v1.QueryParameterArrow;
 @Slf4j
 public class DataCloudPreparedStatement extends DataCloudStatement implements PreparedStatement {
     private String sql;
-    private final ParameterAccumulator parameterManager;
+    // Package-private for tests that need to inspect bound parameters.
+    final ParameterAccumulator parameters = new ParameterAccumulator();
     private final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
     // True if we are currently fetching metadata from the server, this influences the query param generation
     // to not return any data.
     private boolean fetchingMetadata = false;
 
-    DataCloudPreparedStatement(DataCloudConnection connection, ParameterAccumulator parameterManager) {
+    DataCloudPreparedStatement(DataCloudConnection connection) {
         super(connection);
-        this.parameterManager = parameterManager;
     }
 
-    DataCloudPreparedStatement(DataCloudConnection connection, String sql, ParameterAccumulator parameterManager) {
+    DataCloudPreparedStatement(DataCloudConnection connection, String sql) {
         super(connection);
         this.sql = sql;
-        this.parameterManager = parameterManager;
     }
 
     private <T> void setParameter(int parameterIndex, HyperType type, T value) throws SQLException {
         try {
-            parameterManager.setParameter(parameterIndex, type, value);
+            parameters.setParameter(parameterIndex, type, value);
         } catch (IllegalArgumentException ex) {
             throw new SQLException(ex.getMessage(), ex);
         }
@@ -97,7 +96,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
         final byte[] encodedRow;
         try {
-            encodedRow = toArrowByteArray(parameterManager.getParameters(), calendar);
+            encodedRow = toArrowByteArray(parameters.getParameters(), calendar);
         } catch (IOException e) {
             throw new SQLException("Failed to encode parameters on prepared statement", e);
         } catch (IllegalArgumentException e) {
@@ -189,7 +188,13 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public void setBigDecimal(int parameterIndex, BigDecimal x) throws SQLException {
-        HyperType type = x != null ? HyperType.decimal(x.precision(), x.scale(), true) : HyperType.decimal(0, 0, true);
+        final HyperType type;
+        if (x == null) {
+            // Precision/scale are unknown; let Arrow encoding pick a suitable default.
+            type = HyperType.decimal(0, 0, true);
+        } else {
+            type = HyperType.decimal(x.precision(), x.scale(), true);
+        }
         setParameter(parameterIndex, type, x);
     }
 
@@ -235,7 +240,7 @@ public class DataCloudPreparedStatement extends DataCloudStatement implements Pr
 
     @Override
     public void clearParameters() {
-        parameterManager.clearParameters();
+        parameters.clearParameters();
     }
 
     @Override

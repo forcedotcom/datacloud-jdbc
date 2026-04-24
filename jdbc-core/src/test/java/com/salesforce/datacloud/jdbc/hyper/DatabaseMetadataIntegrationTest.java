@@ -262,15 +262,12 @@ class DatabaseMetadataIntegrationTest {
 
     @Test
     @SneakyThrows
-    void getColumns_numeric_10_5_exposesHardcodedScale() {
+    void getColumns_numeric_10_5_reportsDeclaredScale() {
         val info = getColumnInfo("col_numeric_10_5");
         assertThat(info.get("TYPE_NAME")).isEqualTo("DECIMAL");
         assertThat(info.get("DATA_TYPE")).isEqualTo(Types.DECIMAL);
-        // BUG: DECIMAL_DIGITS is hardcoded to 2 regardless of the actual scale. The SQL template
-        // fetches atttypmod but QueryMetadataUtil ignores it and returns the constant 2.
-        // Expected for numeric(10,5): DECIMAL_DIGITS=5.
-        // NOTE: we assert on the column-info row only. DECIMAL_DIGITS is not captured in the
-        // helper today, so this test only pins TYPE_NAME/DATA_TYPE for now.
+        assertThat(info.get("COLUMN_SIZE")).isEqualTo(10);
+        assertThat(info.get("DECIMAL_DIGITS")).isEqualTo(5);
     }
 
     @Test
@@ -288,7 +285,6 @@ class DatabaseMetadataIntegrationTest {
         val info = getColumnInfo("col_varchar_255");
         assertThat(info.get("TYPE_NAME")).isEqualTo("VARCHAR");
         assertThat(info.get("DATA_TYPE")).isEqualTo(Types.VARCHAR);
-        // BUG: COLUMN_SIZE is hardcoded to 255 in QueryMetadataUtil (accidentally "correct" here).
         assertThat(info.get("COLUMN_SIZE")).isEqualTo(255);
     }
 
@@ -298,8 +294,7 @@ class DatabaseMetadataIntegrationTest {
         val info = getColumnInfo("col_char_1");
         assertThat(info.get("TYPE_NAME")).isEqualTo("CHAR");
         assertThat(info.get("DATA_TYPE")).isEqualTo(Types.CHAR);
-        // BUG: COLUMN_SIZE should be 1 but is hardcoded to 255.
-        assertThat(info.get("COLUMN_SIZE")).isEqualTo(255);
+        assertThat(info.get("COLUMN_SIZE")).isEqualTo(1);
     }
 
     @Test
@@ -460,68 +455,35 @@ class DatabaseMetadataIntegrationTest {
     @Test
     @SneakyThrows
     void getColumns_consistentWith_resultSetMetaData_forPrecision() {
-        // Arrow side: ResultSetMetaData.getPrecision() — computed per-type in ColumnType.
-        // pg_catalog side: COLUMN_SIZE — hardcoded to 255 in QueryMetadataUtil.
+        // Arrow side: ResultSetMetaData.getPrecision() — computed per-type in HyperTypes.
+        // pg_catalog side: COLUMN_SIZE — now also derived via HyperTypes.getPrecision from the
+        // parsed HyperType, so the two paths should agree for every column.
         Map<String, String> mismatches =
                 collectMismatches("COLUMN_SIZE", info -> info.get("COLUMN_SIZE").toString());
-
-        // BUG: COLUMN_SIZE is hardcoded to 255 in QueryMetadataUtil.constructColumnData
-        // regardless of the column. ResultSetMetaData.getPrecision() returns the correct
-        // per-type value (digit count for ints, declared precision for numeric/varchar, etc.).
-        // Fixing QueryMetadataUtil to derive COLUMN_SIZE from atttypmod / atttypid will shrink
-        // this map toward empty.
-        Map<String, String> expected = new LinkedHashMap<>();
-        expected.put("col_bool", "arrow=1, pg=255");
-        expected.put("col_smallint", "arrow=5, pg=255");
-        expected.put("col_int", "arrow=10, pg=255");
-        expected.put("col_nullable_int", "arrow=10, pg=255");
-        expected.put("col_not_null_int", "arrow=10, pg=255");
-        expected.put("col_bigint", "arrow=19, pg=255");
-        expected.put("col_double", "arrow=17, pg=255");
-        expected.put("col_numeric_18_2", "arrow=18, pg=255");
-        expected.put("col_numeric_10_5", "arrow=10, pg=255");
-        // Text columns with no declared length report Integer.MAX_VALUE on the Arrow side,
-        // 255 on the pg side. Both are arguably wrong — text in Postgres has no length limit.
-        expected.put("col_text", "arrow=" + Integer.MAX_VALUE + ", pg=255");
-        expected.put("col_varchar_255", "arrow=255, pg=255"); // coincidence — both match here.
-        expected.put("col_char_1", "arrow=1, pg=255");
-        expected.put("col_date", "arrow=13, pg=255");
-        expected.put("col_time", "arrow=15, pg=255");
-        expected.put("col_timestamp", "arrow=29, pg=255");
-        expected.put("col_timestamptz", "arrow=35, pg=255");
-        expected.put("col_oid", "arrow=10, pg=255");
-        // Arrays: ColumnType.getPrecisionOrStringLength delegates to the element type.
-        expected.put("col_int_array", "arrow=10, pg=255");
-        expected.put("col_text_array", "arrow=" + Integer.MAX_VALUE + ", pg=255");
-        // BUG: json has no explicit precision; Arrow treats it as Utf8 so returns MAX_VALUE.
-        expected.put("col_json", "arrow=" + Integer.MAX_VALUE + ", pg=255");
-        expected.remove("col_varchar_255"); // remove coincidental-match entry — not a mismatch.
 
         assertThat(mismatches)
                 .as(
                         "COLUMN_SIZE disagreements between ResultSetMetaData.getPrecision() and DatabaseMetaData.getColumns()")
-                .containsExactlyInAnyOrderEntriesOf(expected);
+                .isEmpty();
     }
 
     @Test
     @SneakyThrows
     void getColumns_consistentWith_resultSetMetaData_forScale() {
-        // Arrow side: ResultSetMetaData.getScale() — derived from atttypmod in Arrow Decimal.
-        // pg_catalog side: DECIMAL_DIGITS — hardcoded to 2 for DECIMAL types, else 0.
+        // Arrow side: ResultSetMetaData.getScale() — derived from HyperTypes.getScale.
+        // pg_catalog side: DECIMAL_DIGITS — forwards the HyperType.getScale for DECIMAL, 0 else.
         Map<String, String> mismatches = collectMismatches(
                 "DECIMAL_DIGITS", info -> info.get("DECIMAL_DIGITS").toString());
 
         // Remaining mismatches reflect known simplifications, not type-mapping bugs:
         //   - col_double: Arrow returns 17 (HyperTypes.getScale returns precision for
-        //     FLOAT4/FLOAT8 by legacy convention). pg_catalog returns 0 because binary floats
-        //     have no decimal scale. pg is more defensible per the JDBC spec.
-        //   - col_numeric_10_5: pg_catalog still hardcodes DECIMAL_DIGITS=2 instead of reading
-        //     atttypmod. Expected to shrink once QueryMetadataUtil is taught to parse the typmod.
+        //     FLOAT4/FLOAT8 by Postgres JDBC convention). pg_catalog returns 0 because binary
+        //     floats have no decimal scale. pg is more defensible per the JDBC spec.
         //   - col_time / col_timestamp / col_timestamptz: Arrow reports 6 (microseconds);
-        //     pg_catalog reports 0 because fractional-second scale is not populated.
+        //     pg_catalog reports 0 because fractional-second scale is not populated from
+        //     atttypmod (covered by a follow-up).
         Map<String, String> expected = new LinkedHashMap<>();
         expected.put("col_double", "arrow=17, pg=0");
-        expected.put("col_numeric_10_5", "arrow=5, pg=2");
         expected.put("col_time", "arrow=6, pg=0");
         expected.put("col_timestamp", "arrow=6, pg=0");
         expected.put("col_timestamptz", "arrow=6, pg=0");
