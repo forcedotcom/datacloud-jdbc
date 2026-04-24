@@ -10,7 +10,6 @@ import com.salesforce.datacloud.jdbc.core.resultset.ForwardOnlyResultSet;
 import com.salesforce.datacloud.jdbc.core.resultset.ReadOnlyResultSet;
 import com.salesforce.datacloud.jdbc.core.resultset.ResultSetWithPositionalGetters;
 import com.salesforce.datacloud.jdbc.protocol.data.ArrowToHyperTypeMapper;
-import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.io.IOException;
@@ -42,6 +41,7 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
 
 @Slf4j
@@ -73,36 +73,40 @@ public class StreamingResultSet
         this.closed = false;
     }
 
-    public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId) throws SQLException {
-        return of(resultStream, queryId, ZoneId.systemDefault());
+    public static StreamingResultSet of(ArrowStreamReader reader, BufferAllocator allocator, String queryId)
+            throws SQLException {
+        return of(reader, allocator, queryId, ZoneId.systemDefault());
     }
 
     /**
-     * Creates a StreamingResultSet with a specified session timezone.
+     * Creates a StreamingResultSet from an {@link ArrowStreamReader} and its backing allocator.
      *
-     * @param resultStream The Arrow stream containing query results
-     * @param queryId The query identifier
-     * @param sessionZone The session timezone to use for timestamp conversions
-     * @return A new StreamingResultSet
-     * @throws SQLException If an error occurs during ResultSet creation
+     * <p>Ownership of both the reader and the allocator transfers to the returned result set —
+     * closing the result set closes the reader and then the allocator, in that order, so Arrow's
+     * buffer accounting clears before the allocator's budget check. Callers must not close
+     * either separately.
+     *
+     * <p>The column metadata (including any {@link ColumnMetadata#getTypeName()} override
+     * stamped under {@link com.salesforce.datacloud.jdbc.protocol.data.HyperTypeToArrow#JDBC_TYPE_NAME_METADATA_KEY})
+     * is derived from the Arrow schema via {@link ArrowToHyperTypeMapper#toColumnMetadata(org.apache.arrow.vector.types.pojo.Field)}.
+     *
+     * @param reader The Arrow stream, owned by the result set.
+     * @param allocator The allocator backing the reader, owned by the result set.
+     * @param queryId The query identifier.
+     * @param sessionZone The session timezone used for timestamp conversions.
      */
-    public static StreamingResultSet of(ArrowStreamReader resultStream, String queryId, ZoneId sessionZone)
+    public static StreamingResultSet of(
+            ArrowStreamReader reader, BufferAllocator allocator, String queryId, ZoneId sessionZone)
             throws SQLException {
         try {
-            val schemaRoot = resultStream.getVectorSchemaRoot();
-            val fields = schemaRoot.getSchema().getFields();
-
-            val columns = fields.stream()
-                    .map(field -> new ColumnMetadata(field.getName(), ArrowToHyperTypeMapper.toHyperType(field)))
+            val schemaRoot = reader.getVectorSchemaRoot();
+            val columns = schemaRoot.getSchema().getFields().stream()
+                    .map(ArrowToHyperTypeMapper::toColumnMetadata)
                     .collect(Collectors.toList());
             val metadata = new DataCloudResultSetMetaData(columns);
-
-            val cursor = new ArrowStreamReaderCursor(resultStream, sessionZone);
-            val accessorList = cursor.createAccessors();
-            val accessors = accessorList.toArray(new QueryJDBCAccessor[0]);
-
+            val cursor = new ArrowStreamReaderCursor(reader, allocator, sessionZone);
+            val accessors = cursor.createAccessors().toArray(new QueryJDBCAccessor[0]);
             val columnNameResolver = new ColumnNameResolver(columns);
-
             return new StreamingResultSet(cursor, queryId, metadata, accessors, columnNameResolver);
         } catch (IOException ex) {
             throw new SQLException("Unexpected error during ResultSet creation", "XX000", ex);
@@ -321,6 +325,10 @@ public class StreamingResultSet
 
     @Override
     public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
+        if (map == null || map.isEmpty()) {
+            // JDBC allows a null/empty type map to behave like plain getObject(int).
+            return getObject(columnIndex);
+        }
         val accessor = getAccessor(columnIndex);
         val result = accessor.getObject(map);
         updateWasNull(accessor);
@@ -329,10 +337,32 @@ public class StreamingResultSet
 
     @Override
     public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
+        if (type == null) {
+            throw new SQLException("Target type must not be null");
+        }
+        // Default implementation: get the raw Object and check if it matches the requested type.
+        // Accessors that need richer conversion (e.g. Arrow Decimal → BigInteger) can still
+        // override the accessor-level getObject(Class) — in that case we dispatch to them first.
         val accessor = getAccessor(columnIndex);
-        val result = accessor.getObject(type);
-        updateWasNull(accessor);
-        return result;
+        try {
+            val typed = accessor.getObject(type);
+            updateWasNull(accessor);
+            return typed;
+        } catch (SQLException ex) {
+            // Accessor does not implement typed getObject — fall back to raw + isInstance check.
+            val raw = accessor.getObject();
+            updateWasNull(accessor);
+            if (raw == null) {
+                return null;
+            }
+            if (type.isInstance(raw)) {
+                return type.cast(raw);
+            }
+            throw new SQLException(
+                    "Cannot convert column value to " + type.getName() + "; actual type is "
+                            + raw.getClass().getName(),
+                    ex);
+        }
     }
 
     @Override

@@ -32,8 +32,13 @@ class QueryResultArrowStreamTest {
             val queryClient = QueryAccessGrpcClient.of(queryId, stubProvider.getStub());
             val chunkIterator = ChunkRangeIterator.of(queryClient, 0, 3, false, QueryResultArrowStream.OUTPUT_FORMAT);
 
-            // Create ArrowStreamReader from the iterator
-            try (val reader = QueryResultArrowStream.toArrowStreamReader(chunkIterator)) {
+            // Create ArrowStreamReader from the iterator.
+            // Close order matters: the reader must close before the allocator because
+            // try-with-resources closes in reverse declaration order, and closing the allocator
+            // while the reader still holds buffers trips the leak detector.
+            val arrowStream = QueryResultArrowStream.toArrowStreamReader(chunkIterator);
+            try (val allocator = arrowStream.getAllocator();
+                    val reader = arrowStream.getReader()) {
                 int rowCount = 0;
 
                 // Count all rows in the arrow stream
@@ -62,8 +67,13 @@ class QueryResultArrowStreamTest {
             val queryClient = QueryAccessGrpcClient.of(queryId, stubProvider.getStub());
             val chunkIterator = ChunkRangeIterator.of(queryClient, 0, 3, false, QueryResultArrowStream.OUTPUT_FORMAT);
 
-            // Create ArrowStreamReader from the iterator
-            try (val reader = QueryResultArrowStream.toArrowStreamReader(chunkIterator)) {
+            // Create ArrowStreamReader from the iterator.
+            // Close order matters: the reader must close before the allocator because
+            // try-with-resources closes in reverse declaration order, and closing the allocator
+            // while the reader still holds buffers trips the leak detector.
+            val arrowStream = QueryResultArrowStream.toArrowStreamReader(chunkIterator);
+            try (val allocator = arrowStream.getAllocator();
+                    val reader = arrowStream.getReader()) {
                 int rowCount = 0;
 
                 // Count all rows in the arrow stream

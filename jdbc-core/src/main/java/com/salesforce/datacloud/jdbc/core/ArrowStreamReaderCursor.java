@@ -17,16 +17,27 @@ import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
 
+/**
+ * Row cursor over an {@link ArrowStreamReader} that drives the {@link StreamingResultSet}.
+ *
+ * <p>The cursor owns the supplied {@link BufferAllocator} alongside the reader: closing the
+ * cursor closes the reader (which releases ArrowBuf accounting) and then the allocator (which
+ * returns its budget). This is the single place that guarantees root-allocator hygiene for the
+ * driver; callers of {@link StreamingResultSet#of} hand ownership over and do not close the
+ * allocator themselves.
+ */
 @Slf4j
 class ArrowStreamReaderCursor implements AutoCloseable {
 
     private static final int INIT_ROW_NUMBER = -1;
 
     private final ArrowStreamReader reader;
+    private final BufferAllocator allocator;
     private final ZoneId sessionZone;
 
     @lombok.Getter
@@ -34,8 +45,9 @@ class ArrowStreamReaderCursor implements AutoCloseable {
 
     private final AtomicInteger currentIndex = new AtomicInteger(INIT_ROW_NUMBER);
 
-    ArrowStreamReaderCursor(ArrowStreamReader reader, ZoneId sessionZone) {
+    ArrowStreamReaderCursor(ArrowStreamReader reader, BufferAllocator allocator, ZoneId sessionZone) {
         this.reader = reader;
+        this.allocator = allocator;
         this.sessionZone = sessionZone;
     }
 
@@ -86,6 +98,12 @@ class ArrowStreamReaderCursor implements AutoCloseable {
     @SneakyThrows
     @Override
     public void close() {
-        reader.close();
+        // Close the reader first: it releases the buffers accounted against the allocator, so the
+        // allocator's closing budget check passes. Reversing the order trips a leak detector.
+        try {
+            reader.close();
+        } finally {
+            allocator.close();
+        }
     }
 }

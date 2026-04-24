@@ -36,7 +36,15 @@ import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 
-/** Populates vectors in a VectorSchemaRoot with values from a list of parameters. */
+/**
+ * Populates vectors in a {@link VectorSchemaRoot} with Java values, dispatching per column by
+ * {@link HyperTypeKind}.
+ *
+ * <p>The primitive {@link #setCell(ValueVector, HyperTypeKind, int, Object, Calendar)} is the
+ * single place the driver converts a Java {@link Object} into the right Arrow setter call. Both
+ * the JDBC parameter-encoding path (single row) and the JDBC metadata path (many rows) go
+ * through it.
+ */
 public final class VectorPopulator {
 
     private VectorPopulator() {
@@ -44,14 +52,10 @@ public final class VectorPopulator {
     }
 
     /**
-     * Populates the vectors in the given VectorSchemaRoot using the {@link HyperType} of each
-     * parameter to decide which typed setter to dispatch to.
-     *
-     * @param root the VectorSchemaRoot to populate
+     * Populate a single-row VSR from a list of {@link ParameterBinding}s. Used by the parameter
+     * encoding path; the VSR's schema is built from the bindings' {@link HyperType}s.
      */
     public static void populateVectors(VectorSchemaRoot root, List<ParameterBinding> parameters, Calendar calendar) {
-        VectorValueSetterFactory factory = new VectorValueSetterFactory(calendar);
-
         for (int i = 0; i < parameters.size(); i++) {
             ParameterBinding binding = parameters.get(i);
             if (binding == null) {
@@ -62,32 +66,59 @@ public final class VectorPopulator {
             HyperTypeKind kind = binding.getType().getKind();
             ValueVector vector =
                     root.getVector(root.getSchema().getFields().get(i).getName());
-            Object value = binding.getValue();
-
-            @SuppressWarnings(value = "unchecked")
-            VectorValueSetter<ValueVector> setter = (VectorValueSetter<ValueVector>) factory.getSetter(kind);
-
-            if (setter != null) {
-                setter.setValue(vector, value);
-            } else {
-                throw new UnsupportedOperationException("Unsupported HyperTypeKind for parameter binding: " + kind);
-            }
+            setCell(vector, kind, 0, binding.getValue(), calendar);
         }
-        root.setRowCount(1); // Set row count to 1 since we have exactly one row
+        root.setRowCount(1);
+    }
+
+    /**
+     * Populate {@code root} from a row-major list of Java values. {@code columns} supplies the
+     * per-column {@link HyperType} used to dispatch the setter; row {@code r}, column {@code c}
+     * is taken from {@code rows.get(r).get(c)} (a missing/short row yields a null cell).
+     *
+     * <p>Row count is set to {@code rows.size()}. Used by the metadata path.
+     */
+    public static void populateVectors(
+            VectorSchemaRoot root, List<ColumnMetadata> columns, List<List<Object>> rows, Calendar calendar) {
+        int rowCount = rows == null ? 0 : rows.size();
+        for (int c = 0; c < columns.size(); c++) {
+            ValueVector vector = root.getVector(columns.get(c).getName());
+            HyperTypeKind kind = columns.get(c).getType().getKind();
+            for (int r = 0; r < rowCount; r++) {
+                List<Object> row = rows.get(r);
+                Object value = row == null || c >= row.size() ? null : row.get(c);
+                setCell(vector, kind, r, value, calendar);
+            }
+            vector.setValueCount(rowCount);
+        }
+        root.setRowCount(rowCount);
+    }
+
+    /** Sets cell ({@code vector}, {@code index}) to {@code value}, or null if value is null. */
+    static void setCell(ValueVector vector, HyperTypeKind kind, int index, Object value, Calendar calendar) {
+        @SuppressWarnings("unchecked")
+        VectorValueSetter<ValueVector> setter =
+                (VectorValueSetter<ValueVector>) VectorValueSetterFactory.getSetter(kind, calendar);
+        if (setter == null) {
+            throw new UnsupportedOperationException("Unsupported HyperTypeKind for vector population: " + kind);
+        }
+        setter.setValue(vector, index, value);
     }
 }
 
 @FunctionalInterface
 interface VectorValueSetter<T extends ValueVector> {
-    void setValue(T vector, Object value);
+    void setValue(T vector, int index, Object value);
 }
 
-/** Factory for creating appropriate setter instances based on {@link HyperTypeKind}. */
-class VectorValueSetterFactory {
-    private final Map<HyperTypeKind, VectorValueSetter<?>> setterMap;
+/** Factory for indexed setters keyed by {@link HyperTypeKind}. */
+final class VectorValueSetterFactory {
+    private VectorValueSetterFactory() {}
 
-    VectorValueSetterFactory(Calendar calendar) {
-        setterMap = ImmutableMap.ofEntries(
+    private static final Map<HyperTypeKind, VectorValueSetter<?>> SETTERS_NO_CAL = build(null);
+
+    private static Map<HyperTypeKind, VectorValueSetter<?>> build(Calendar calendar) {
+        return ImmutableMap.ofEntries(
                 Maps.immutableEntry(HyperTypeKind.VARCHAR, new VarCharVectorSetter()),
                 Maps.immutableEntry(HyperTypeKind.CHAR, new VarCharVectorSetter()),
                 Maps.immutableEntry(HyperTypeKind.FLOAT4, new Float4VectorSetter()),
@@ -104,8 +135,13 @@ class VectorValueSetterFactory {
                 Maps.immutableEntry(HyperTypeKind.INT8, new TinyIntVectorSetter()));
     }
 
-    VectorValueSetter<?> getSetter(HyperTypeKind kind) {
-        return setterMap.get(kind);
+    static VectorValueSetter<?> getSetter(HyperTypeKind kind, Calendar calendar) {
+        if (calendar == null) {
+            return SETTERS_NO_CAL.get(kind);
+        }
+        // Only TIME uses the calendar; build a per-call map rather than caching so tests that
+        // pass different Calendars cannot race. This path is cold (parameter-binding only).
+        return build(calendar).get(kind);
     }
 }
 
@@ -118,36 +154,38 @@ abstract class BaseVectorSetter<T extends ValueVector, V> implements VectorValue
     }
 
     @Override
-    public void setValue(T vector, Object value) {
+    public void setValue(T vector, int index, Object value) {
         if (value == null) {
-            setNullValue(vector);
+            setNullValue(vector, index);
         } else if (valueType.isInstance(value)) {
-            setValueInternal(vector, valueType.cast(value));
+            setValueInternal(vector, index, valueType.cast(value));
         } else {
             throw new IllegalArgumentException(
                     "Value for " + vector.getClass().getSimpleName() + " must be of type " + valueType.getSimpleName());
         }
     }
 
-    protected abstract void setNullValue(T vector);
+    protected abstract void setNullValue(T vector, int index);
 
-    protected abstract void setValueInternal(T vector, V value);
+    protected abstract void setValueInternal(T vector, int index, V value);
 }
 
 /** Setter implementation for VarCharVector. */
-class VarCharVectorSetter extends BaseVectorSetter<VarCharVector, String> {
+class VarCharVectorSetter extends BaseVectorSetter<VarCharVector, Object> {
     VarCharVectorSetter() {
-        super(String.class);
+        super(Object.class); // accept String, Number, Boolean, byte[] — coerce to UTF-8 bytes
     }
 
     @Override
-    protected void setValueInternal(VarCharVector vector, String value) {
-        vector.setSafe(0, value.getBytes(StandardCharsets.UTF_8));
+    protected void setValueInternal(VarCharVector vector, int index, Object value) {
+        byte[] bytes =
+                value instanceof byte[] ? (byte[]) value : value.toString().getBytes(StandardCharsets.UTF_8);
+        vector.setSafe(index, bytes);
     }
 
     @Override
-    protected void setNullValue(VarCharVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(VarCharVector vector, int index) {
+        vector.setNull(index);
     }
 }
 
@@ -158,13 +196,13 @@ class Float4VectorSetter extends BaseVectorSetter<Float4Vector, Float> {
     }
 
     @Override
-    protected void setValueInternal(Float4Vector vector, Float value) {
-        vector.setSafe(0, value);
+    protected void setValueInternal(Float4Vector vector, int index, Float value) {
+        vector.setSafe(index, value);
     }
 
     @Override
-    protected void setNullValue(Float4Vector vector) {
-        vector.setNull(0);
+    protected void setNullValue(Float4Vector vector, int index) {
+        vector.setNull(index);
     }
 }
 
@@ -175,64 +213,64 @@ class Float8VectorSetter extends BaseVectorSetter<Float8Vector, Double> {
     }
 
     @Override
-    protected void setValueInternal(Float8Vector vector, Double value) {
-        vector.setSafe(0, value);
+    protected void setValueInternal(Float8Vector vector, int index, Double value) {
+        vector.setSafe(index, value);
     }
 
     @Override
-    protected void setNullValue(Float8Vector vector) {
-        vector.setNull(0);
+    protected void setNullValue(Float8Vector vector, int index) {
+        vector.setNull(index);
     }
 }
 
-/** Setter implementation for IntVector. */
-class IntVectorSetter extends BaseVectorSetter<IntVector, Integer> {
+/** Setter implementation for IntVector. Accepts any Number to support metadata rows using long/int. */
+class IntVectorSetter extends BaseVectorSetter<IntVector, Number> {
     IntVectorSetter() {
-        super(Integer.class);
+        super(Number.class);
     }
 
     @Override
-    protected void setValueInternal(IntVector vector, Integer value) {
-        vector.setSafe(0, value);
+    protected void setValueInternal(IntVector vector, int index, Number value) {
+        vector.setSafe(index, value.intValue());
     }
 
     @Override
-    protected void setNullValue(IntVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(IntVector vector, int index) {
+        vector.setNull(index);
     }
 }
 
 /** Setter implementation for SmallIntVector. */
-class SmallIntVectorSetter extends BaseVectorSetter<SmallIntVector, Short> {
+class SmallIntVectorSetter extends BaseVectorSetter<SmallIntVector, Number> {
     SmallIntVectorSetter() {
-        super(Short.class);
+        super(Number.class);
     }
 
     @Override
-    protected void setValueInternal(SmallIntVector vector, Short value) {
-        vector.setSafe(0, value);
+    protected void setValueInternal(SmallIntVector vector, int index, Number value) {
+        vector.setSafe(index, value.shortValue());
     }
 
     @Override
-    protected void setNullValue(SmallIntVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(SmallIntVector vector, int index) {
+        vector.setNull(index);
     }
 }
 
 /** Setter implementation for BigIntVector. */
-class BigIntVectorSetter extends BaseVectorSetter<BigIntVector, Long> {
+class BigIntVectorSetter extends BaseVectorSetter<BigIntVector, Number> {
     BigIntVectorSetter() {
-        super(Long.class);
+        super(Number.class);
     }
 
     @Override
-    protected void setValueInternal(BigIntVector vector, Long value) {
-        vector.setSafe(0, value);
+    protected void setValueInternal(BigIntVector vector, int index, Number value) {
+        vector.setSafe(index, value.longValue());
     }
 
     @Override
-    protected void setNullValue(BigIntVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(BigIntVector vector, int index) {
+        vector.setNull(index);
     }
 }
 
@@ -243,13 +281,13 @@ class BitVectorSetter extends BaseVectorSetter<BitVector, Boolean> {
     }
 
     @Override
-    protected void setValueInternal(BitVector vector, Boolean value) {
-        vector.setSafe(0, Boolean.TRUE.equals(value) ? 1 : 0);
+    protected void setValueInternal(BitVector vector, int index, Boolean value) {
+        vector.setSafe(index, Boolean.TRUE.equals(value) ? 1 : 0);
     }
 
     @Override
-    protected void setNullValue(BitVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(BitVector vector, int index) {
+        vector.setNull(index);
     }
 }
 
@@ -260,13 +298,13 @@ class DecimalVectorSetter extends BaseVectorSetter<DecimalVector, BigDecimal> {
     }
 
     @Override
-    protected void setValueInternal(DecimalVector vector, BigDecimal value) {
-        vector.setSafe(0, value.unscaledValue().longValue());
+    protected void setValueInternal(DecimalVector vector, int index, BigDecimal value) {
+        vector.setSafe(index, value.unscaledValue().longValue());
     }
 
     @Override
-    protected void setNullValue(DecimalVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(DecimalVector vector, int index) {
+        vector.setNull(index);
     }
 }
 
@@ -277,14 +315,14 @@ class DateDayVectorSetter extends BaseVectorSetter<DateDayVector, Date> {
     }
 
     @Override
-    protected void setValueInternal(DateDayVector vector, Date value) {
+    protected void setValueInternal(DateDayVector vector, int index, Date value) {
         long daysSinceEpoch = value.toLocalDate().toEpochDay();
-        vector.setSafe(0, (int) daysSinceEpoch);
+        vector.setSafe(index, (int) daysSinceEpoch);
     }
 
     @Override
-    protected void setNullValue(DateDayVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(DateDayVector vector, int index) {
+        vector.setNull(index);
     }
 }
 
@@ -298,18 +336,18 @@ class TimeMicroVectorSetter extends BaseVectorSetter<TimeMicroVector, Time> {
     }
 
     @Override
-    protected void setValueInternal(TimeMicroVector vector, Time value) {
+    protected void setValueInternal(TimeMicroVector vector, int index, Time value) {
         LocalDateTime localDateTime = new Timestamp(value.getTime()).toLocalDateTime();
         localDateTime = adjustForCalendar(localDateTime, calendar, TimeZone.getTimeZone("UTC"));
         long midnightMillis = localDateTime.toLocalTime().toNanoOfDay() / 1_000_000;
         long microsecondsSinceMidnight = millisToMicrosecondsSinceMidnight(midnightMillis);
 
-        vector.setSafe(0, microsecondsSinceMidnight);
+        vector.setSafe(index, microsecondsSinceMidnight);
     }
 
     @Override
-    protected void setNullValue(TimeMicroVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(TimeMicroVector vector, int index) {
+        vector.setNull(index);
     }
 }
 
@@ -329,15 +367,15 @@ class TimeStampMicroVectorSetter extends BaseVectorSetter<TimeStampMicroVector, 
     }
 
     @Override
-    protected void setValueInternal(TimeStampMicroVector vector, Timestamp value) {
+    protected void setValueInternal(TimeStampMicroVector vector, int index, Timestamp value) {
         Instant instant = value.toInstant();
         long microsecondsSinceEpoch = instant.getEpochSecond() * 1_000_000 + instant.getNano() / 1_000;
-        vector.setSafe(0, microsecondsSinceEpoch);
+        vector.setSafe(index, microsecondsSinceEpoch);
     }
 
     @Override
-    protected void setNullValue(TimeStampMicroVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(TimeStampMicroVector vector, int index) {
+        vector.setNull(index);
     }
 }
 
@@ -353,31 +391,31 @@ class TimeStampMicroTZVectorSetter extends BaseVectorSetter<TimeStampMicroTZVect
     }
 
     @Override
-    protected void setValueInternal(TimeStampMicroTZVector vector, Timestamp value) {
+    protected void setValueInternal(TimeStampMicroTZVector vector, int index, Timestamp value) {
         Instant instant = value.toInstant();
         long microsecondsSinceEpoch = instant.getEpochSecond() * 1_000_000 + instant.getNano() / 1_000;
-        vector.setSafe(0, microsecondsSinceEpoch);
+        vector.setSafe(index, microsecondsSinceEpoch);
     }
 
     @Override
-    protected void setNullValue(TimeStampMicroTZVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(TimeStampMicroTZVector vector, int index) {
+        vector.setNull(index);
     }
 }
 
 /** Setter implementation for TinyIntVectorSetter. */
-class TinyIntVectorSetter extends BaseVectorSetter<TinyIntVector, Byte> {
+class TinyIntVectorSetter extends BaseVectorSetter<TinyIntVector, Number> {
     TinyIntVectorSetter() {
-        super(Byte.class);
+        super(Number.class);
     }
 
     @Override
-    protected void setValueInternal(TinyIntVector vector, Byte value) {
-        vector.setSafe(0, value);
+    protected void setValueInternal(TinyIntVector vector, int index, Number value) {
+        vector.setSafe(index, value.byteValue());
     }
 
     @Override
-    protected void setNullValue(TinyIntVector vector) {
-        vector.setNull(0);
+    protected void setNullValue(TinyIntVector vector, int index) {
+        vector.setNull(index);
     }
 }

@@ -152,8 +152,11 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             val iterator = executeAdaptiveQuery(sql);
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     iterator, includeCustomerDetail, iterator.getQueryStatus().getQueryId(), sql);
-            resultSet =
-                    StreamingResultSet.of(arrowStream, iterator.getQueryStatus().getQueryId(), sessionZone);
+            resultSet = StreamingResultSet.of(
+                    arrowStream.getReader(),
+                    arrowStream.getAllocator(),
+                    iterator.getQueryStatus().getQueryId(),
+                    sessionZone);
             log.info(
                     "executeAdaptiveQuery completed. queryId={}, sessionZone={}",
                     queryHandle.getQueryStatus().getQueryId(),
@@ -368,7 +371,10 @@ public class DataCloudStatement implements Statement, AutoCloseable {
                                     adaptiveIter.getQueryStatus().getQueryId(),
                                     null);
                             resultSet = StreamingResultSet.of(
-                                    arrowStream, adaptiveIter.getQueryStatus().getQueryId(), sessionZone);
+                                    arrowStream.getReader(),
+                                    arrowStream.getAllocator(),
+                                    adaptiveIter.getQueryStatus().getQueryId(),
+                                    sessionZone);
                         } else if (resultSet == null) {
                             log.warn(
                                     "Prefer acquiring async result sets from helper methods DataCloudConnection::getChunkBasedResultSet and DataCloudConnection::getRowBasedResultSet. We will wait for the query's results to be produced in their entirety before returning a result set.");

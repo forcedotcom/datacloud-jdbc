@@ -4,13 +4,16 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.time.ZoneId;
 import java.util.stream.IntStream;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
 import org.junit.jupiter.api.Test;
@@ -28,12 +31,16 @@ class ArrowStreamReaderCursorTest {
     @Mock
     protected VectorSchemaRoot root;
 
+    @Mock
+    protected BufferAllocator allocator;
+
     @Test
     @SneakyThrows
-    void closesTheReader() {
-        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
+    void closesReaderAndAllocator() {
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         sut.close();
         verify(reader, times(1)).close();
+        verify(allocator, times(1)).close();
     }
 
     @Test
@@ -44,7 +51,7 @@ class ArrowStreamReaderCursorTest {
         when(reader.loadNextBatch()).thenReturn(true);
         when(root.getRowCount()).thenReturn(times);
 
-        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         IntStream.range(0, times + 1).forEach(i -> sut.next());
 
         verify(root, times(times + 1)).getRowCount();
@@ -59,7 +66,7 @@ class ArrowStreamReaderCursorTest {
         when(reader.getVectorSchemaRoot()).thenReturn(root);
         when(reader.loadNextBatch()).thenReturn(result);
 
-        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
 
         assertThat(sut.next()).isEqualTo(result);
     }

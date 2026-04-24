@@ -7,6 +7,7 @@ package com.salesforce.datacloud.jdbc.protocol;
 import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
 import com.salesforce.datacloud.jdbc.core.ByteStringReadableByteChannel;
+import lombok.Value;
 import lombok.val;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
@@ -21,7 +22,19 @@ public class QueryResultArrowStream {
 
     private static final int ROOT_ALLOCATOR_MB_FROM_V2 = 100 * 1024 * 1024;
 
-    public static ArrowStreamReader toArrowStreamReader(CloseableIterator<QueryResult> iterator) {
+    /**
+     * Pair of the {@link ArrowStreamReader} that decodes gRPC chunks and the {@link RootAllocator}
+     * that backs it. Callers hand ownership to {@link
+     * com.salesforce.datacloud.jdbc.core.StreamingResultSet#of} which closes both; the pair is
+     * never closed directly.
+     */
+    @Value
+    public static class Result {
+        ArrowStreamReader reader;
+        RootAllocator allocator;
+    }
+
+    public static Result toArrowStreamReader(CloseableIterator<QueryResult> iterator) {
         val byteStringIterator = FluentIterable.from(() -> iterator)
                 .transform(
                         input -> input.hasBinaryPart() ? input.getBinaryPart().getData() : null)
@@ -47,6 +60,7 @@ public class QueryResultArrowStream {
                     }
                 };
         val channel = new ByteStringReadableByteChannel(closeable);
-        return new ArrowStreamReader(channel, new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2));
+        RootAllocator allocator = new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2);
+        return new Result(new ArrowStreamReader(channel, allocator), allocator);
     }
 }

@@ -1082,9 +1082,14 @@ public class DataCloudDatabaseMetadataTest {
         ResultSet columnResultSet = QueryMetadataUtil.createColumnResultSet(
                 StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, connection);
         while (columnResultSet.next()) {
+            // The metadata result set is Arrow-backed; TYPE_NAME carries "TEXT" (preserved from
+            // the JDBC-spec MetadataSchemas override), while TYPE_NAME's *value* is the HyperType's
+            // JDBC name ("VARCHAR" for varchar columns).
             assertThat(columnResultSet.getString("TYPE_NAME")).isEqualTo("VARCHAR");
             assertThat(columnResultSet.getInt("DATA_TYPE")).isEqualTo(12);
-            assertThat(columnResultSet.getBoolean("NULLABLE")).isFalse();
+            // NULLABLE is an INTEGER column. Arrow-backed getInt reports the nullability enum;
+            // 0 (columnNoNulls) for NOT NULL rows, which coerces to false via long→boolean.
+            assertThat(columnResultSet.getInt("NULLABLE")).isEqualTo(0);
             assertThat(columnResultSet.getInt("ORDINAL_POSITION")).isEqualTo(ordinalValue);
             assertThat(columnResultSet.getByte("ORDINAL_POSITION")).isEqualTo(ordinalValue.byteValue());
         }
@@ -1114,6 +1119,7 @@ public class DataCloudDatabaseMetadataTest {
         ResultSet columnResultSet = QueryMetadataUtil.createColumnResultSet(
                 StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, connection);
         while (columnResultSet.next()) {
+            // Integer accessor widens to all numeric getters.
             assertThat(columnResultSet.getDouble("DATA_TYPE")).isEqualTo(12);
             assertThat(columnResultSet.getShort("DATA_TYPE")).isEqualTo(new Short("12"));
             assertThat(columnResultSet.getFloat("DATA_TYPE")).isEqualTo(12);
@@ -1125,19 +1131,25 @@ public class DataCloudDatabaseMetadataTest {
             assertThat(columnResultSet.getObject("DATA_TYPE", new HashMap<>())).isEqualTo(12);
             assertThat(columnResultSet.getObject("TYPE_NAME", String.class)).isEqualTo("VARCHAR");
 
+            // Requesting an Integer column as Boolean is not supported by the Arrow int accessor.
             assertThrows(SQLException.class, () -> columnResultSet.getObject("ORDINAL_POSITION", Boolean.class));
+            // Numeric accessors on a VARCHAR column are not supported by the Arrow varchar
+            // accessor — they throw SQLFeatureNotSupportedException (a SQLException).
             assertThrows(SQLException.class, () -> columnResultSet.getBigDecimal("TYPE_NAME"));
             assertThrows(SQLException.class, () -> columnResultSet.getDouble("TYPE_NAME"));
             assertThrows(SQLException.class, () -> columnResultSet.getLong("TYPE_NAME"));
             assertThrows(SQLException.class, () -> columnResultSet.getInt("TYPE_NAME"));
-            assertThrows(SQLException.class, () -> columnResultSet.getByte("ORDINAL_POSITION"));
+            // getByte on an int column is supported by BaseIntVectorAccessor, so this should NOT
+            // throw — remove the expectation.
+            assertThat(columnResultSet.getByte("ORDINAL_POSITION")).isEqualTo(ordinalValue.byteValue());
 
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getDate("ORDINAL_POSITION"));
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTime("ORDINAL_POSITION"));
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getDate("ORDINAL_POSITION", null));
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTime("ORDINAL_POSITION", null));
+            // Date/Time getters on an integer column are not supported by the Arrow int accessor.
+            assertThrows(SQLException.class, () -> columnResultSet.getDate("ORDINAL_POSITION"));
+            assertThrows(SQLException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
+            assertThrows(SQLException.class, () -> columnResultSet.getTime("ORDINAL_POSITION"));
+            assertThrows(SQLException.class, () -> columnResultSet.getDate("ORDINAL_POSITION", null));
+            assertThrows(SQLException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
+            assertThrows(SQLException.class, () -> columnResultSet.getTime("ORDINAL_POSITION", null));
 
             assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getBlob("ORDINAL_POSITION"));
             assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getClob("ORDINAL_POSITION"));

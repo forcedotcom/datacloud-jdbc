@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
@@ -38,23 +39,28 @@ class StreamingResultSetMethodTest {
 
     @SneakyThrows
     private StreamingResultSet createResultSet() {
-        val allocator = ext.getRootAllocator();
-        val vector = new VarCharVector("col1", allocator);
+        // Build a single-row VARCHAR batch, serialise to IPC bytes, and wrap in an
+        // ArrowStreamReader. Using a fresh RootAllocator so the result set owns its own
+        // allocator lifecycle (independent of the shared test extension allocator).
+        val writeAllocator = ext.getRootAllocator();
+        val vector = new VarCharVector("col1", writeAllocator);
         vector.allocateNew();
         vector.set(0, "hello".getBytes(StandardCharsets.UTF_8));
         vector.setValueCount(1);
 
-        val root = new VectorSchemaRoot(Arrays.asList(vector.getField()), Arrays.asList(vector));
-        root.setRowCount(1);
-
         val out = new ByteArrayOutputStream();
-        try (val writer = new ArrowStreamWriter(root, null, out)) {
-            writer.writeBatch();
+        try (VectorSchemaRoot root = new VectorSchemaRoot(Arrays.asList(vector.getField()), Arrays.asList(vector))) {
+            root.setRowCount(1);
+            try (ArrowStreamWriter writer = new ArrowStreamWriter(root, null, out)) {
+                writer.start();
+                writer.writeBatch();
+                writer.end();
+            }
         }
-        root.close();
 
-        val reader = new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), allocator);
-        return StreamingResultSet.of(reader, QUERY_ID);
+        RootAllocator readerAllocator = new RootAllocator(Long.MAX_VALUE);
+        ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), readerAllocator);
+        return StreamingResultSet.of(reader, readerAllocator, QUERY_ID);
     }
 
     // --- Unsupported methods ---
