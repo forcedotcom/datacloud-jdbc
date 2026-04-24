@@ -6,7 +6,6 @@ package com.salesforce.datacloud.jdbc.core.metadata;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.salesforce.datacloud.jdbc.core.DataCloudMetadataResultSet;
 import com.salesforce.datacloud.jdbc.core.MetadataSchemas;
 import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
@@ -24,9 +23,7 @@ class DataCloudResultSetMetaDataTest {
 
     @BeforeEach
     public void init() throws SQLException {
-        DataCloudMetadataResultSet dataCloudMetadataResultSet =
-                DataCloudMetadataResultSet.of(new DataCloudResultSetMetaData(COLUMNS_SCHEMA), null);
-        resultSetMetaData = dataCloudMetadataResultSet.getMetaData();
+        resultSetMetaData = new DataCloudResultSetMetaData(COLUMNS_SCHEMA);
     }
 
     @Test

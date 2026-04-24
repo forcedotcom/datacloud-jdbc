@@ -13,7 +13,7 @@ import static com.salesforce.datacloud.jdbc.core.QueryMetadataUtil.createTableTy
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
-import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
+import com.salesforce.datacloud.jdbc.core.metadata.MetadataResultSets;
 import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
@@ -706,39 +706,39 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
     @Override
     public ResultSet getColumnPrivileges(String catalog, String schema, String table, String columnNamePattern)
             throws SQLException {
-        return DataCloudMetadataResultSet.empty();
+        return MetadataResultSets.emptyNoColumns();
     }
 
     @Override
     public ResultSet getTablePrivileges(String catalog, String schemaPattern, String tableNamePattern)
             throws SQLException {
-        return DataCloudMetadataResultSet.empty();
+        return MetadataResultSets.emptyNoColumns();
     }
 
     @Override
     public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable)
             throws SQLException {
-        return DataCloudMetadataResultSet.empty();
+        return MetadataResultSets.emptyNoColumns();
     }
 
     @Override
     public ResultSet getVersionColumns(String catalog, String schema, String table) throws SQLException {
-        return DataCloudMetadataResultSet.empty();
+        return MetadataResultSets.emptyNoColumns();
     }
 
     @Override
     public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
-        return DataCloudMetadataResultSet.empty();
+        return MetadataResultSets.emptyNoColumns();
     }
 
     @Override
     public ResultSet getImportedKeys(String catalog, String schema, String table) throws SQLException {
-        return DataCloudMetadataResultSet.empty();
+        return MetadataResultSets.emptyNoColumns();
     }
 
     @Override
     public ResultSet getExportedKeys(String catalog, String schema, String table) throws SQLException {
-        return DataCloudMetadataResultSet.empty();
+        return MetadataResultSets.emptyNoColumns();
     }
 
     @Override
@@ -750,19 +750,18 @@ public class DataCloudDatabaseMetadata implements DatabaseMetaData {
             String foreignSchema,
             String foreignTable)
             throws SQLException {
-        return DataCloudMetadataResultSet.empty();
+        return MetadataResultSets.emptyNoColumns();
     }
 
     @Override
     public ResultSet getTypeInfo() throws SQLException {
-        return DataCloudMetadataResultSet.of(
-                new DataCloudResultSetMetaData(MetadataSchemas.TYPE_INFO), HyperTypes.typeInfoRows());
+        return MetadataResultSets.ofRawRows(MetadataSchemas.TYPE_INFO, HyperTypes.typeInfoRows());
     }
 
     @Override
     public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate)
             throws SQLException {
-        return DataCloudMetadataResultSet.empty();
+        return MetadataResultSets.emptyNoColumns();
     }
 
     @Override
