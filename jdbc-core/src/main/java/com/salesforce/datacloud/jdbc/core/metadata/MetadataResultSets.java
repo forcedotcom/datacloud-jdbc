@@ -6,16 +6,31 @@ package com.salesforce.datacloud.jdbc.core.metadata;
 
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
 import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.protocol.data.HyperTypeToArrow;
+import com.salesforce.datacloud.jdbc.protocol.data.VectorPopulator;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.ipc.ArrowStreamReader;
+import org.apache.arrow.vector.ipc.ArrowStreamWriter;
+import org.apache.arrow.vector.types.pojo.Schema;
 
 /**
- * Factory for Arrow-backed metadata result sets. This is the single entry point callers use to
- * materialise a list of {@link ColumnMetadata} + row values into a {@link StreamingResultSet},
- * replacing the historical row-based {@code DataCloudMetadataResultSet}.
+ * Factory for Arrow-backed metadata result sets. Materialises a row-oriented list of metadata
+ * values into the Arrow IPC format used by every other driver result set, so streaming query
+ * results and materialised metadata results both flow through {@link StreamingResultSet}.
+ *
+ * <p>Each call builds a fresh single-batch Arrow stream: a writer-side {@link VectorSchemaRoot}
+ * is populated via {@link VectorPopulator} (the same code path the JDBC parameter encoder uses),
+ * serialised to bytes, and wrapped in an {@link ArrowStreamReader} that the result set owns.
  */
 public final class MetadataResultSets {
 
@@ -38,12 +53,17 @@ public final class MetadataResultSets {
      * inner list in {@code rows} supplies values in column order.
      */
     public static StreamingResultSet of(List<ColumnMetadata> columns, List<List<Object>> rows) throws SQLException {
-        MetadataArrowBuilder.Result built = MetadataArrowBuilder.build(columns, rows);
-        // Pass the original columns through as the metadata override so that JDBC-spec type names
-        // ("TEXT", "INTEGER", "SHORT") survive the round-trip via Arrow — if we rederived from the
-        // Arrow schema we would get the generic {@code HyperType}-derived names ("VARCHAR" etc.).
-        return StreamingResultSet.ofInMemory(
-                built.getRoot(), built, /*queryId=*/ null, ZoneId.systemDefault(), columns);
+        byte[] ipcBytes = writeArrowStream(columns, rows);
+        // Allocator is handed to StreamingResultSet along with the reader; the result set owns
+        // its lifecycle and closes it when close() is called.
+        RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+        try {
+            ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(ipcBytes), allocator);
+            return StreamingResultSet.of(reader, allocator, /*queryId=*/ null, ZoneId.systemDefault());
+        } catch (SQLException | RuntimeException ex) {
+            allocator.close();
+            throw ex;
+        }
     }
 
     /**
@@ -53,6 +73,36 @@ public final class MetadataResultSets {
      */
     public static StreamingResultSet ofRawRows(List<ColumnMetadata> columns, List<Object> rawRows) throws SQLException {
         return of(columns, coerceRows(rawRows));
+    }
+
+    /**
+     * Build the Arrow schema, populate a VSR via the shared {@link VectorPopulator}, and write it
+     * out as a single-batch Arrow IPC stream.
+     */
+    private static byte[] writeArrowStream(List<ColumnMetadata> columns, List<List<Object>> rows) throws SQLException {
+        Schema schema = new Schema(columns.stream()
+                .map(c -> HyperTypeToArrow.toField(c.getName(), c.getType(), c.getTypeName()))
+                .collect(Collectors.toList()));
+        try (RootAllocator writeAllocator = new RootAllocator(Long.MAX_VALUE);
+                VectorSchemaRoot root = VectorSchemaRoot.create(schema, writeAllocator)) {
+            root.allocateNew();
+            VectorPopulator.populateVectors(root, columns, rows, /*calendar=*/ null);
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try (ArrowStreamWriter writer = new ArrowStreamWriter(root, null, out)) {
+                writer.start();
+                // Skip writeBatch() for empty results — writing a zero-row batch confuses the
+                // cursor (see ArrowStreamReaderCursor.next), which interprets a successfully
+                // loaded batch as "at least one row available".
+                if (root.getRowCount() > 0) {
+                    writer.writeBatch();
+                }
+                writer.end();
+            }
+            return out.toByteArray();
+        } catch (IOException ex) {
+            throw new SQLException("Failed to build metadata result set", "XX000", ex);
+        }
     }
 
     @SuppressWarnings("unchecked")

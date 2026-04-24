@@ -13,6 +13,7 @@ import java.time.ZoneId;
 import java.util.stream.IntStream;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
 import org.junit.jupiter.api.Test;
@@ -31,15 +32,15 @@ class ArrowStreamReaderCursorTest {
     protected VectorSchemaRoot root;
 
     @Mock
-    protected AutoCloseable ownedResources;
+    protected BufferAllocator allocator;
 
     @Test
     @SneakyThrows
-    void closesOwnedResources() {
-        when(reader.getVectorSchemaRoot()).thenReturn(root);
-        val sut = ArrowStreamReaderCursor.streaming(reader, ownedResources, ZoneId.systemDefault());
+    void closesReaderAndAllocator() {
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         sut.close();
-        verify(ownedResources, times(1)).close();
+        verify(reader, times(1)).close();
+        verify(allocator, times(1)).close();
     }
 
     @Test
@@ -50,7 +51,7 @@ class ArrowStreamReaderCursorTest {
         when(reader.loadNextBatch()).thenReturn(true);
         when(root.getRowCount()).thenReturn(times);
 
-        val sut = ArrowStreamReaderCursor.streaming(reader, ownedResources, ZoneId.systemDefault());
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         IntStream.range(0, times + 1).forEach(i -> sut.next());
 
         verify(root, times(times + 1)).getRowCount();
@@ -65,20 +66,8 @@ class ArrowStreamReaderCursorTest {
         when(reader.getVectorSchemaRoot()).thenReturn(root);
         when(reader.loadNextBatch()).thenReturn(result);
 
-        val sut = ArrowStreamReaderCursor.streaming(reader, ownedResources, ZoneId.systemDefault());
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
 
         assertThat(sut.next()).isEqualTo(result);
-    }
-
-    @Test
-    @SneakyThrows
-    void inMemoryCursorReportsFalseWhenRowCountExhausted() {
-        when(root.getRowCount()).thenReturn(2);
-
-        val sut = ArrowStreamReaderCursor.inMemory(root, ownedResources, ZoneId.systemDefault());
-
-        assertThat(sut.next()).isTrue();
-        assertThat(sut.next()).isTrue();
-        assertThat(sut.next()).isFalse();
     }
 }
