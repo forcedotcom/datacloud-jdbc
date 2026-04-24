@@ -54,7 +54,13 @@ public final class HyperTypes {
             case INT32:
                 return JDBCType.INTEGER;
             case INT64:
+                return JDBCType.BIGINT;
             case OID:
+                // Hyper's OID is an unsigned 32-bit internal type. We surface it as BIGINT to
+                // match the pgjdbc reference (see JDBCReferenceTest): pgjdbc reports oid with
+                // Types.BIGINT, which keeps `getLong("oid_col")` working for integer-treating
+                // callers. HyperType.oid stays a distinct kind so the pg_catalog path can keep
+                // precision/display accurate (10 digits for the u32 range).
                 return JDBCType.BIGINT;
             case FLOAT4:
                 return JDBCType.REAL;

@@ -6,10 +6,9 @@ package com.salesforce.datacloud.jdbc.protocol.data;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Collections;
 import java.util.stream.Stream;
-import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
-import org.apache.arrow.vector.types.pojo.FieldType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -27,8 +26,10 @@ class HyperTypeArrowRoundtripTest {
 
     /**
      * Core positive cases. Every HyperType listed here must round-trip back to an equal
-     * HyperType. Kinds with documented lossy encodings (CHAR/bounded VARCHAR, TIME_TZ) live in
-     * {@link #deviationsFromRoundtrip()} instead.
+     * HyperType. CHAR(n) / CHAR(1) / VARCHAR(n) round-trip via {@code hyper:*} field metadata
+     * stamped by {@link HyperTypeToArrow#toFieldType} and read back by
+     * {@link ArrowToHyperTypeMapper}. TIME_TZ lives in {@link #lossyRoundtrip_timeTzCollapsesToTime}
+     * instead (see comment there for why it stays lossy).
      */
     static Stream<Arguments> encodableTypes() {
         return Stream.of(
@@ -42,6 +43,10 @@ class HyperTypeArrowRoundtripTest {
                 Arguments.of(HyperType.float8(false)),
                 Arguments.of(HyperType.decimal(10, 2, true)),
                 Arguments.of(HyperType.decimal(38, 0, false)),
+                Arguments.of(HyperType.fixedChar(1, true)),
+                Arguments.of(HyperType.fixedChar(16, true)),
+                Arguments.of(HyperType.varchar(255, false)),
+                Arguments.of(HyperType.varchar(1024, true)),
                 Arguments.of(HyperType.varcharUnlimited(true)),
                 Arguments.of(HyperType.binary(16, true)),
                 Arguments.of(HyperType.varbinary(false)),
@@ -56,21 +61,16 @@ class HyperTypeArrowRoundtripTest {
     @ParameterizedTest
     @MethodSource("encodableTypes")
     void roundtripReproducesHyperType(HyperType original) {
-        // Forward: HyperType -> Arrow.
-        ArrowType arrowType = HyperTypeToArrow.toArrowType(original);
-        Field field = HyperTypeKind.ARRAY == original.getKind()
-                // Arrow list Fields need a child field whose type matches the list element.
-                ? new Field(
-                        "col",
-                        new FieldType(original.isNullable(), arrowType, null),
-                        java.util.Collections.singletonList(new Field(
-                                "",
-                                new FieldType(
-                                        original.getElement().isNullable(),
-                                        HyperTypeToArrow.toArrowType(original.getElement()),
-                                        null),
-                                java.util.Collections.emptyList())))
-                : new Field("col", new FieldType(original.isNullable(), arrowType, null), null);
+        // Forward via the full toField helper so any field-level metadata (hyper:type,
+        // hyper:max_string_length) travels alongside the ArrowType.
+        Field field;
+        if (original.getKind() == HyperTypeKind.ARRAY) {
+            // Arrow list Fields need a child field whose type matches the list element.
+            Field child = new Field("", HyperTypeToArrow.toFieldType(original.getElement()), Collections.emptyList());
+            field = new Field("col", HyperTypeToArrow.toFieldType(original), Collections.singletonList(child));
+        } else {
+            field = new Field("col", HyperTypeToArrow.toFieldType(original), null);
+        }
 
         // Reverse: Arrow Field -> HyperType.
         HyperType roundTripped = ArrowToHyperTypeMapper.toHyperType(field);
@@ -96,37 +96,27 @@ class HyperTypeArrowRoundtripTest {
         assertThat(HyperTypeKind.NULL).isNotNull();
     }
 
-    /**
-     * Known, documented lossy round-trips. Each is something Arrow cannot preserve without
-     * additional Hyper-specific field metadata, which the Arrow stream Hyper emits today does
-     * not include on the parameter-binding side. Fixing any of these needs
-     * {@link HyperTypeToArrow} to stamp hyper:* metadata on the Field and
-     * {@link ArrowToHyperTypeMapper} to read it back.
-     */
-    @Test
-    void lossyRoundtrip_fixedCharCollapsesToVarcharUnlimited() {
-        // HyperTypeToArrow maps CHAR(n) to Utf8 (Arrow has no fixed-length string). The reverse
-        // mapping has no length hint and reports unlimited VARCHAR.
-        HyperType original = HyperType.fixedChar(16, true);
-        Field field = new Field("col", new FieldType(true, HyperTypeToArrow.toArrowType(original), null), null);
-        assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.varcharUnlimited(true));
-    }
-
-    @Test
-    void lossyRoundtrip_boundedVarcharCollapsesToUnlimited() {
-        // HyperTypeToArrow maps VARCHAR(n) to Utf8 with no length metadata; the reverse cannot
-        // reconstruct the declared bound.
-        HyperType original = HyperType.varchar(255, false);
-        Field field = new Field("col", new FieldType(false, HyperTypeToArrow.toArrowType(original), null), null);
-        assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.varcharUnlimited(false));
-    }
-
     @Test
     void lossyRoundtrip_timeTzCollapsesToTime() {
-        // HyperTypeToArrow maps both TIME and TIME_TZ to Arrow Time(MICROSECOND, 64); Arrow Time
-        // has no timezone slot, so the distinction is lost on the way back.
+        // TIME WITH TIME ZONE cannot round-trip through Arrow today, and fixing it cleanly needs
+        // more than a metadata stamp:
+        //
+        //   - Arrow's Time type has no timezone slot (unlike Timestamp, whose Timestamp.timezone
+        //     field we already use for TIMESTAMP_TZ). So a per-value offset cannot ride on the
+        //     ArrowType itself.
+        //   - SQL `time with time zone` stores a per-*value* UTC offset (e.g. "14:00+02" vs
+        //     "14:00-05" in the same column). Field metadata is per-column, so it cannot carry
+        //     a value-varying offset.
+        //   - The driver's read-side QueryJDBCAccessorFactory has no TIME_TZ branch either —
+        //     server-returned `timetz` columns already collapse to the plain TimeVectorAccessor,
+        //     so the offset is dropped on ingress as well. Fixing the write-side alone would
+        //     create an asymmetry worse than the current uniform loss.
+        //
+        // Proper round-trip needs a synthetic schema (e.g. struct{time, offset_seconds}) or a
+        // Hyper-protocol coordination. Leaving TIME_TZ explicitly pinned as lossy until that
+        // design lands.
         HyperType original = HyperType.timeTz(true);
-        Field field = new Field("col", new FieldType(true, HyperTypeToArrow.toArrowType(original), null), null);
+        Field field = new Field("col", HyperTypeToArrow.toFieldType(original), null);
         assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.time(true));
     }
 }
