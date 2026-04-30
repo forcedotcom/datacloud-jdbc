@@ -5,6 +5,7 @@
 package com.salesforce.datacloud.jdbc;
 
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProvider;
+import com.salesforce.datacloud.jdbc.auth.DirectCdpTokenProcessor;
 import com.salesforce.datacloud.jdbc.auth.SalesforceAuthProperties;
 import com.salesforce.datacloud.jdbc.core.ConnectionProperties;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
@@ -24,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.logging.Logger;
 import javax.sql.DataSource;
@@ -44,24 +46,6 @@ import lombok.val;
 @Slf4j
 @Builder
 public class DataCloudDatasource implements DataSource {
-<<<<<<< Updated upstream
-=======
-    private static final String USERNAME_PROPERTY = "userName";
-    private static final String PASSWORD_PROPERTY = "password";
-    private static final String PRIVATE_KEY_PROPERTY = "privateKey";
-    private static final String REFRESH_TOKEN_PROPERTY = "refreshToken";
-    private static final String CORE_TOKEN_PROPERTY = "coreToken";
-    private static final String CLIENT_ID_PROPERTY = "clientId";
-    private static final String CLIENT_SECRET_PROPERTY = "clientSecret";
-    private static final String INTERNAL_ENDPOINT_PROPERTY = "internalEndpoint";
-    private static final String PORT_PROPERTY = "port";
-    private static final String TENANT_ID_PROPERTY = "tenantId";
-    private static final String DATASPACE_PROPERTY = "dataspace";
-    private static final String CORE_TENANT_ID_PROPERTY = "coreTenantId";
-    private static final String CDP_TOKEN_PROPERTY = "cdpToken";
-    private static final String TENANT_URL_PROPERTY = "tenantUrl";
-
->>>>>>> Stashed changes
     protected static final String NOT_SUPPORTED_IN_DATACLOUD_QUERY =
             "Datasource method is not supported in Data Cloud query";
 
@@ -119,6 +103,15 @@ public class DataCloudDatasource implements DataSource {
             val connectionProperties = ConnectionProperties.ofDestructive(properties);
             val grpcChannelProperties = GrpcChannelProperties.ofDestructive(properties);
             val httpClientProperties = HttpClientProperties.ofDestructive(properties);
+
+            if (DirectCdpTokenProcessor.hasCdpToken(properties)) {
+                log.info("Using direct CDP token authentication");
+                val cdpTokenProcessor = DirectCdpTokenProcessor.ofDestructive(properties);
+                PropertyParsingUtils.validateRemainingProperties(properties);
+                return createConnectionWithCdpToken(
+                        connectionProperties, grpcChannelProperties, httpClientProperties, cdpTokenProcessor, jdbcUrl);
+            }
+
             val authProperties = SalesforceAuthProperties.ofDestructive(loginUrl, properties);
             PropertyParsingUtils.validateRemainingProperties(properties);
 
@@ -179,6 +172,26 @@ public class DataCloudDatasource implements DataSource {
                 dataspaceClient);
     }
 
+    private static DataCloudConnection createConnectionWithCdpToken(
+            @NonNull ConnectionProperties connectionProperties,
+            @NonNull GrpcChannelProperties grpcChannelProperties,
+            @NonNull HttpClientProperties httpClientProperties,
+            @NonNull DirectCdpTokenProcessor cdpTokenProcessor,
+            JdbcURL jdbcUrl)
+            throws SQLException {
+        val tokenSupplier = new TokenProcessorSupplier(cdpTokenProcessor);
+        val authInterceptor = AuthorizationHeaderInterceptor.of(tokenSupplier);
+
+        val host = cdpTokenProcessor.getDataCloudToken().getTenantUrl();
+        final ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(host, 443)
+                .intercept(authInterceptor)
+                .intercept(TracingHeadersInterceptor.of());
+        val stubProvider = JdbcDriverStubProvider.of(builder, grpcChannelProperties);
+
+        return DataCloudConnection.of(
+                stubProvider, connectionProperties, jdbcUrl, "", cdpTokenProcessor::getLakehouse, Collections::emptyList);
+    }
+
     @Override
     public Connection getConnection(String username, String password) throws SQLException {
         throw new SQLException(NOT_SUPPORTED_IN_DATACLOUD_QUERY, SqlErrorCodes.FEATURE_NOT_SUPPORTED);
@@ -219,71 +232,4 @@ public class DataCloudDatasource implements DataSource {
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         return false;
     }
-<<<<<<< Updated upstream
-=======
-
-    private String getConnectionUrl() {
-        return connectionUrl;
-    }
-
-    public void setConnectionUrl(String connectionUrl) {
-        this.connectionUrl = connectionUrl;
-    }
-
-    public void setUserName(String userName) {
-        this.properties.setProperty(USERNAME_PROPERTY, userName);
-    }
-
-    public void setPassword(String password) {
-        this.properties.setProperty(PASSWORD_PROPERTY, password);
-    }
-
-    public void setPrivateKey(String privateKey) {
-        this.properties.setProperty(PRIVATE_KEY_PROPERTY, privateKey);
-    }
-
-    public void setRefreshToken(String refreshToken) {
-        this.properties.setProperty(REFRESH_TOKEN_PROPERTY, refreshToken);
-    }
-
-    public void setCoreToken(String coreToken) {
-        this.properties.setProperty(CORE_TOKEN_PROPERTY, coreToken);
-    }
-
-    public void setInternalEndpoint(String internalEndpoint) {
-        this.properties.setProperty(INTERNAL_ENDPOINT_PROPERTY, internalEndpoint);
-    }
-
-    public void setPort(String port) {
-        this.properties.setProperty(PORT_PROPERTY, port);
-    }
-
-    public void setTenantId(String tenantId) {
-        this.properties.setProperty(TENANT_ID_PROPERTY, tenantId);
-    }
-
-    public void setDataspace(String dataspace) {
-        this.properties.setProperty(DATASPACE_PROPERTY, dataspace);
-    }
-
-    public void setCoreTenantId(String coreTenantId) {
-        this.properties.setProperty(CORE_TENANT_ID_PROPERTY, coreTenantId);
-    }
-
-    public void setClientId(String clientId) {
-        this.properties.setProperty(CLIENT_ID_PROPERTY, clientId);
-    }
-
-    public void setClientSecret(String clientSecret) {
-        this.properties.setProperty(CLIENT_SECRET_PROPERTY, clientSecret);
-    }
-
-    public void setCdpToken(String cdpToken) {
-        this.properties.setProperty(CDP_TOKEN_PROPERTY, cdpToken);
-    }
-
-    public void setTenantUrl(String tenantUrl) {
-        this.properties.setProperty(TENANT_URL_PROPERTY, tenantUrl);
-    }
->>>>>>> Stashed changes
 }

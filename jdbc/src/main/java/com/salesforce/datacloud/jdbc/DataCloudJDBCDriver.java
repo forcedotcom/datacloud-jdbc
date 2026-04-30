@@ -6,13 +6,6 @@ package com.salesforce.datacloud.jdbc;
 
 import static com.salesforce.datacloud.jdbc.config.DriverVersion.formatDriverInfo;
 
-<<<<<<< Updated upstream
-=======
-import com.salesforce.datacloud.jdbc.auth.AuthenticationSettings;
-import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProcessor;
-import com.salesforce.datacloud.jdbc.auth.DirectCdpTokenProcessor;
-import com.salesforce.datacloud.jdbc.auth.TokenProcessor;
->>>>>>> Stashed changes
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import java.sql.Driver;
@@ -87,46 +80,4 @@ public class DataCloudJDBCDriver implements Driver {
     public Logger getParentLogger() {
         return null;
     }
-<<<<<<< Updated upstream
-=======
-
-    private static TokenProcessor getTokenProcessor(Properties properties) throws DataCloudJDBCException {
-        if (DirectCdpTokenProcessor.hasCdpToken(properties)) {
-            log.info("Using direct CDP token authentication");
-            return DirectCdpTokenProcessor.of(properties);
-        }
-
-        if (!AuthenticationSettings.hasAny(properties)) {
-            throw new DataCloudJDBCException("No authentication settings provided");
-        }
-
-        return DataCloudTokenProcessor.of(properties);
-    }
-
-    static DataCloudConnection oauthBasedConnection(String url, Properties properties) throws SQLException {
-        val connectionString = DataCloudConnectionString.of(url);
-        addClientUsernameIfRequired(properties);
-        connectionString.withParameters(properties);
-        properties.setProperty(LOGIN_URL, connectionString.getLoginUrl());
-
-        val tokenProcessor = getTokenProcessor(properties);
-        val authInterceptor = TokenProcessorSupplier.of(tokenProcessor);
-
-        val host = tokenProcessor.getDataCloudToken().getTenantUrl();
-        final ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(
-                        host, DataCloudConnection.DEFAULT_PORT)
-                .intercept(TracingHeadersInterceptor.of());
-
-        val dataspaceClient = new DataspaceClient(properties, tokenProcessor);
-
-        return DataCloudConnection.of(
-                builder, properties, authInterceptor, tokenProcessor::getLakehouse, dataspaceClient, connectionString);
-    }
-
-    static void addClientUsernameIfRequired(Properties properties) {
-        if (properties.containsKey(USER)) {
-            properties.computeIfAbsent(USER_NAME, p -> properties.get(USER));
-        }
-    }
->>>>>>> Stashed changes
 }
