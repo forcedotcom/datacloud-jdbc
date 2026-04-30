@@ -304,4 +304,55 @@ public class DataCloudStatementFunctionalTest {
             assertThat(stmt.getTargetMaxRows()).isEqualTo(0);
         });
     }
+
+    @Test
+    @SneakyThrows
+    public void getQueryStatusThrowsBeforeExecute() {
+        assertWithStatement(stmt -> assertThatThrownBy(stmt::getQueryStatus)
+                .isInstanceOf(SQLException.class)
+                .hasMessage(EXECUTED_MESSAGE));
+    }
+
+    @Test
+    @SneakyThrows
+    public void getQueryStatusAfterFullIterationAdaptivePathExposesExecutionStats() {
+        assertWithStatement(stmt -> {
+            val rs = stmt.executeQuery("SELECT g FROM generate_series(1, 100) g");
+            while (rs.next()) {
+                // drain
+            }
+            val status = stmt.getQueryStatus();
+            assertThat(status).isNotNull();
+            assertThat(status.getQueryId()).isNotEmpty();
+            assertThat(status.allResultsProduced()).isTrue();
+            assertThat(status.getExecutionStatistics()).isNotNull();
+            assertThat(status.getExecutionStatistics().getWallClockTime()).isNotNull();
+        });
+    }
+
+    @Test
+    @SneakyThrows
+    public void getQueryStatusAfterAsyncGetResultSetExposesExecutionStats() {
+        assertWithConnection(connection -> {
+            try (val stmt = connection.createStatement().unwrap(DataCloudStatement.class)) {
+                stmt.executeAsyncQuery("SELECT g FROM generate_series(1, 100) g");
+
+                // Before consuming results, the status should be the initial view without stats.
+                val initial = stmt.getQueryStatus();
+                assertThat(initial.getQueryId()).isNotEmpty();
+                assertThat(initial.getExecutionStatistics()).isNull();
+
+                // getResultSet() internally calls waitFor; the observed status should be captured.
+                val rs = stmt.getResultSet();
+                while (rs.next()) {
+                    // drain
+                }
+
+                val terminal = stmt.getQueryStatus();
+                assertThat(terminal.allResultsProduced()).isTrue();
+                assertThat(terminal.getExecutionStatistics()).isNotNull();
+                assertThat(terminal.getExecutionStatistics().getWallClockTime()).isNotNull();
+            }
+        });
+    }
 }

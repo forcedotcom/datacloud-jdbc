@@ -8,8 +8,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
+import com.salesforce.datacloud.query.v3.QueryExecutionStatistics;
+import com.salesforce.datacloud.query.v3.QueryStatus;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import java.time.Duration;
 import lombok.val;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,6 +68,55 @@ public class AsyncQueryAccessHandleTest {
                     assertThrows(StatusRuntimeException.class, () -> AsyncQueryAccessHandle.of(stub, param));
             assertThat(exception.getStatus().getCode()).isEqualTo(Status.Code.INVALID_ARGUMENT);
             assertThat(exception.getStatus().getDescription()).contains("unknown column 'a'");
+        });
+    }
+
+    @Test
+    public void testObserveQueryStatus_replacesLatestWrapperStatus() {
+        LocalHyperTestBase.assertWithStubProvider(stubProvider -> {
+            val stub = stubProvider.getStub();
+            val param = QueryParam.newBuilder()
+                    .setQuery("SELECT pg_sleep(10)")
+                    .setTransferMode(QueryParam.TransferMode.ASYNC)
+                    .setOutputFormat(OutputFormat.ARROW_IPC)
+                    .build();
+
+            val handle = AsyncQueryAccessHandle.of(stub, param);
+            val initial = handle.getLatestWrapperStatus();
+            assertThat(initial).isNotNull();
+            assertThat(initial.getExecutionStatistics()).isNull();
+
+            val externallyObserved = new QueryStatus(
+                    initial.getQueryId(),
+                    7L,
+                    42L,
+                    1.0,
+                    QueryStatus.CompletionStatus.FINISHED,
+                    new QueryExecutionStatistics(Duration.ofMillis(500), 42L));
+
+            handle.observeQueryStatus(externallyObserved);
+
+            val after = handle.getLatestWrapperStatus();
+            assertThat(after).isSameAs(externallyObserved);
+            assertThat(after.allResultsProduced()).isTrue();
+            assertThat(after.getExecutionStatistics().getRowsProcessed()).isEqualTo(42L);
+        });
+    }
+
+    @Test
+    public void testObserveQueryStatus_nullIsIgnored() {
+        LocalHyperTestBase.assertWithStubProvider(stubProvider -> {
+            val stub = stubProvider.getStub();
+            val param = QueryParam.newBuilder()
+                    .setQuery("SELECT pg_sleep(10)")
+                    .setTransferMode(QueryParam.TransferMode.ASYNC)
+                    .setOutputFormat(OutputFormat.ARROW_IPC)
+                    .build();
+
+            val handle = AsyncQueryAccessHandle.of(stub, param);
+            val initial = handle.getLatestWrapperStatus();
+            handle.observeQueryStatus(null);
+            assertThat(handle.getLatestWrapperStatus()).isSameAs(initial);
         });
     }
 }

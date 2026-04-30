@@ -185,4 +185,73 @@ class AsyncQueryResultIteratorTest extends InterceptedHyperTestBase {
         // Verify no query info polling was needed
         verifyGetQueryInfo(0);
     }
+
+    @Test
+    void getLatestWrapperStatus_returnsWrapperReflectingProtoStatus() throws Exception {
+        val stub = setupStub();
+
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
+                .withRequest(req -> req.getQuery().equals(TEST_QUERY))
+                .willProxyTo((request, observer) -> {
+                    observer.onNext(ExecuteQueryResponse.newBuilder()
+                            .setQueryInfo(QueryInfo.newBuilder()
+                                    .setQueryStatus(QueryStatus.newBuilder()
+                                            .setQueryId(TEST_QUERY_ID)
+                                            .setCompletionStatus(QueryStatus.CompletionStatus.FINISHED)
+                                            .setChunkCount(1)
+                                            .build())
+                                    .build())
+                            .build());
+                    observer.onNext(ExecuteQueryResponse.newBuilder()
+                            .setQueryResult(QueryResult.newBuilder().build())
+                            .build());
+                    observer.onCompleted();
+                }));
+
+        val queryParam = QueryParam.newBuilder()
+                .setQuery(TEST_QUERY)
+                .setOutputFormat(OutputFormat.ARROW_IPC)
+                .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
+                .build();
+
+        try (val iterator = AsyncQueryResultIterator.of(stub, queryParam)) {
+            iterator.next().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+            val wrapper = iterator.getLatestWrapperStatus();
+            assertThat(wrapper).isNotNull();
+            assertThat(wrapper.getQueryId()).isEqualTo(TEST_QUERY_ID);
+            assertThat(wrapper.allResultsProduced()).isTrue();
+        }
+    }
+
+    @Test
+    void getLatestWrapperStatus_returnsNullBeforeAnyNext() throws Exception {
+        val stub = setupStub();
+
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
+                .withRequest(req -> req.getQuery().equals(TEST_QUERY))
+                .willProxyTo((request, observer) -> {
+                    observer.onNext(ExecuteQueryResponse.newBuilder()
+                            .setQueryInfo(QueryInfo.newBuilder()
+                                    .setQueryStatus(QueryStatus.newBuilder()
+                                            .setQueryId(TEST_QUERY_ID)
+                                            .setCompletionStatus(QueryStatus.CompletionStatus.FINISHED)
+                                            .setChunkCount(1)
+                                            .build())
+                                    .build())
+                            .build());
+                    observer.onCompleted();
+                }));
+
+        val queryParam = QueryParam.newBuilder()
+                .setQuery(TEST_QUERY)
+                .setOutputFormat(OutputFormat.ARROW_IPC)
+                .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
+                .build();
+
+        try (val iterator = AsyncQueryResultIterator.of(stub, queryParam)) {
+            // Before any next() call the internal queryStatus is null; the wrapper accessor must return null.
+            assertThat(iterator.getLatestWrapperStatus()).isNull();
+        }
+    }
 }

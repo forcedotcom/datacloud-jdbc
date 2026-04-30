@@ -408,6 +408,61 @@ public class QueryResultIteratorTest extends InterceptedHyperTestBase {
     }
 
     @Test
+    public void getLatestWrapperStatus_returnsWrapperReflectingProtoStatus() throws Exception {
+        val stub = setupStub();
+        val params = setupExecuteQuery(
+                TEST_QUERY_ID,
+                TEST_QUERY,
+                QueryParam.TransferMode.ADAPTIVE,
+                executeQueryResponse(
+                        TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1));
+        val iterator = QueryResultIterator.of(stub, params);
+        iterator.hasNext();
+
+        val wrapper = iterator.getLatestWrapperStatus();
+        assertThat(wrapper).isNotNull();
+        assertThat(wrapper.getQueryId()).isEqualTo(TEST_QUERY_ID);
+        assertThat(wrapper.allResultsProduced()).isTrue();
+    }
+
+    @Test
+    public void getLatestWrapperStatus_returnsNullWhenProtoStatusMissing() throws Exception {
+        val stub = setupStub();
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
+                .withRequest(req ->
+                        req.getQuery().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
+                .willReturn(GrpcMock.statusException(Status.CANCELLED)));
+
+        val iterator = QueryResultIterator.of(
+                stub,
+                QueryParam.newBuilder()
+                        .setQuery(TEST_QUERY)
+                        .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
+                        .build());
+
+        assertThat(iterator.getLatestWrapperStatus()).isNull();
+    }
+
+    @Test
+    public void observeQueryStatus_defaultImplementationIsNoOp() {
+        val stub = setupStub();
+        val params = setupExecuteQuery(
+                TEST_QUERY_ID,
+                TEST_QUERY,
+                QueryParam.TransferMode.ADAPTIVE,
+                executeQueryResponse(
+                        TEST_QUERY_ID, salesforce.cdp.hyperdb.v1.QueryStatus.CompletionStatus.FINISHED, 1));
+        QueryAccessHandle handle = QueryResultIterator.of(stub, params);
+        ((QueryResultIterator) handle).hasNext();
+
+        // The adaptive iterator inherits the default no-op observeQueryStatus().
+        // It should not throw and should not mutate the observed status.
+        val before = ((QueryResultIterator) handle).getQueryStatus();
+        handle.observeQueryStatus(null);
+        assertThat(((QueryResultIterator) handle).getQueryStatus()).isSameAs(before);
+    }
+
+    @Test
     public void whenExecuteQueryThrowsCancelledWithoutQueryId_shouldFailQuery() {
         val stub = setupStub();
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
