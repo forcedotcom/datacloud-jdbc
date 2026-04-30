@@ -8,7 +8,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  actions: write
 
 jobs:
   release-please:
@@ -32,19 +31,22 @@ jobs:
     needs: release-please
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     steps:
       - name: Trigger Maven Central publish
         uses: actions/github-script@v7
+        env:
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const tagName = process.env.TAG_NAME;
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'release.yml',
               ref: 'main',
-              inputs: {
-                tag_name: '${{ needs.release-please.outputs.tag_name }}'
-              }
+              inputs: { tag_name: tagName }
             });
-            console.log('Triggered Maven Central publish workflow for tag: ${{ needs.release-please.outputs.tag_name }}');
+            console.log(`Triggered Maven Central publish workflow for tag: ${tagName}`);
