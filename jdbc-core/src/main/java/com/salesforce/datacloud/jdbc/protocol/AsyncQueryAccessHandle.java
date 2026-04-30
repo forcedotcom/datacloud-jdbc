@@ -6,22 +6,29 @@ package com.salesforce.datacloud.jdbc.protocol;
 
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncStreamObserverIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.SyncIteratorAdapter;
-import lombok.AllArgsConstructor;
+import com.salesforce.datacloud.query.v3.QueryStatus;
+import java.sql.SQLException;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryParam;
-import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Slf4j
-@AllArgsConstructor
 public class AsyncQueryAccessHandle implements QueryAccessHandle {
     @Getter
-    private final QueryStatus queryStatus;
+    private final salesforce.cdp.hyperdb.v1.QueryStatus queryStatus;
 
-    public static AsyncQueryAccessHandle of(HyperServiceGrpc.HyperServiceStub stub, QueryParam param) {
+    private volatile QueryStatus latestWrapperStatus;
+
+    private AsyncQueryAccessHandle(salesforce.cdp.hyperdb.v1.QueryStatus queryStatus, QueryStatus initial) {
+        this.queryStatus = queryStatus;
+        this.latestWrapperStatus = initial;
+    }
+
+    public static AsyncQueryAccessHandle of(HyperServiceGrpc.HyperServiceStub stub, QueryParam param)
+            throws SQLException {
         val message = "executeQuery. mode=" + param.getTransferMode();
         // Submit request to start feeding the iterator
         val asyncIterator = new AsyncStreamObserverIterator<QueryParam, ExecuteQueryResponse>(message, log);
@@ -32,6 +39,19 @@ public class AsyncQueryAccessHandle implements QueryAccessHandle {
         val queryStatus = messages.next().getQueryInfo().getQueryStatus();
         // Consume all the remaining messages to ensure that the initial compilation succeeded.
         messages.forEachRemaining(x -> {});
-        return new AsyncQueryAccessHandle(queryStatus);
+        val initialWrapper = QueryStatus.of(queryStatus);
+        return new AsyncQueryAccessHandle(queryStatus, initialWrapper);
+    }
+
+    @Override
+    public QueryStatus getLatestWrapperStatus() {
+        return latestWrapperStatus;
+    }
+
+    @Override
+    public void observeQueryStatus(QueryStatus status) {
+        if (status != null) {
+            this.latestWrapperStatus = status;
+        }
     }
 }

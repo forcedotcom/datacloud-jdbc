@@ -127,6 +127,33 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         return queryHandle.getQueryStatus().getQueryId();
     }
 
+    /**
+     * Returns the most recent {@link QueryStatus} observed by this statement for the last executed query.
+     *
+     * <p>This is a non-blocking accessor that reflects what the driver has already seen via the
+     * {@code ExecuteQuery} streaming response or, for async queries, via a previous
+     * {@link DataCloudConnection#waitFor} call made by the driver. It issues no additional RPCs.
+     *
+     * <p>Guarantees:
+     * <ul>
+     *   <li>After {@link #executeQuery(String)} completes and the caller has iterated the
+     *       {@link ResultSet} to completion ({@code next()} returns {@code false}), the returned
+     *       status is terminal ({@code FINISHED} or {@code RESULTS_PRODUCED}) with
+     *       {@link QueryStatus#getExecutionStatistics()} populated when the server supplied it.</li>
+     *   <li>For queries launched via {@link #executeAsyncQuery(String)}, the status reflects the
+     *       initial server response until the caller either retrieves results via {@link #getResultSet()}
+     *       (which waits for completion) or independently calls
+     *       {@link DataCloudConnection#waitFor(String, java.util.function.Predicate)}.</li>
+     * </ul>
+     *
+     * @return the latest observed wrapper {@link QueryStatus}; never {@code null} once a query has been executed.
+     * @throws SQLException if a query has not been executed from this statement.
+     */
+    public QueryStatus getQueryStatus() throws SQLException {
+        assertQueryExecuted();
+        return queryHandle.getLatestWrapperStatus();
+    }
+
     @Override
     public boolean execute(String sql) throws SQLException {
         log.debug("Entering execute");
@@ -374,6 +401,9 @@ public class DataCloudStatement implements Statement, AutoCloseable {
                                     "Prefer acquiring async result sets from helper methods DataCloudConnection::getChunkBasedResultSet and DataCloudConnection::getRowBasedResultSet. We will wait for the query's results to be produced in their entirety before returning a result set.");
                             val status = connection.waitFor(
                                     queryHandle.getQueryStatus().getQueryId(), QueryStatus::allResultsProduced);
+                            // Feed the observed status (including execution stats) back into the
+                            // handle so later getQueryStatus() reflects it.
+                            queryHandle.observeQueryStatus(status);
                             resultSet = connection.getChunkBasedResultSet(
                                     queryHandle.getQueryStatus().getQueryId(), 0, status.getChunkCount());
                         }

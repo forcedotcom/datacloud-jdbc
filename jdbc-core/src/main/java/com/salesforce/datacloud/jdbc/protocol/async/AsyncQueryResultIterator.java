@@ -8,6 +8,7 @@ import com.salesforce.datacloud.jdbc.protocol.QueryAccessHandle;
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.Step;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
+import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import lombok.AccessLevel;
@@ -210,5 +211,10 @@ public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, Que
     @Override
     public QueryStatus getQueryStatus() {
         return queryStatus;
+    }
+
+    @Override
+    public com.salesforce.datacloud.query.v3.QueryStatus getLatestWrapperStatus() throws SQLException {
+        return queryStatus == null ? null : com.salesforce.datacloud.query.v3.QueryStatus.of(queryStatus);
     }
 }
