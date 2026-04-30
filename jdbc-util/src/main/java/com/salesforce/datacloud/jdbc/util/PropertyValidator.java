@@ -16,45 +16,32 @@
 package com.salesforce.datacloud.jdbc.util;
 
 import com.google.common.collect.ImmutableSet;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
+import java.sql.SQLException;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.experimental.UtilityClass;
 
 /**
- * Validates incoming JDBC properties and raises user errors for unknown properties.
- *
- * This does not validate presence of required keys (handled elsewhere), and it
- * deliberately allows any subkey under the {@code querySetting.} namespace to
- * defer detailed validation to the server.
+ * @deprecated Use {@link PropertyParsingUtils#validateRemainingProperties(Properties)} instead.
  */
+@Deprecated
 @UtilityClass
 public class PropertyValidator {
 
     private static final Set<String> KNOWN_KEYS = ImmutableSet.<String>builder()
-            // Auth and basics
             .add("loginURL", "user", "userName", "password", "privateKey", "clientId", "clientSecret")
             .add("refreshToken", "coreToken", "cdpToken", "tenantUrl")
-            // Connection and metadata
             .add("dataspace", "workload", "external-client-context")
-            // Driver/HTTP options
             .add("User-Agent", "maxRetries")
-            // Direct connection/testing
             .add("direct")
-            // Statement properties
             .add("queryTimeout", "queryTimeoutLocalEnforcementDelay")
-            // DataSource-specific extras (passed through)
             .add("internalEndpoint", "port", "tenantId", "coreTenantId")
             .build();
 
-    private static final Set<String> KNOWN_PREFIXES = ImmutableSet.of(
-            // Session settings
-            "querySetting.",
-            // gRPC channel configuration
-            "grpc.");
+    private static final Set<String> KNOWN_PREFIXES = ImmutableSet.of("querySetting.", "grpc.");
 
-    public static void validate(Properties properties) throws DataCloudJDBCException {
+    public static void validate(Properties properties) throws SQLException {
         if (properties == null || properties.isEmpty()) {
             return;
         }
@@ -65,7 +52,7 @@ public class PropertyValidator {
                 .collect(Collectors.toSet());
 
         if (!unknown.isEmpty()) {
-            throw new DataCloudJDBCException("Unknown JDBC properties: " + String.join(", ", unknown)
+            throw new SQLException("Unknown JDBC properties: " + String.join(", ", unknown)
                     + ". Review documentation and use 'querySetting.<name>' for session settings if applicable.");
         }
     }

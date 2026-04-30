@@ -1,36 +1,20 @@
-/*
- * Copyright (c) 2024, Salesforce, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/**
+ * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
+ * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
  */
 package com.salesforce.datacloud.jdbc.auth;
 
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.optional;
-import static com.salesforce.datacloud.jdbc.util.PropertiesExtensions.required;
+import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptional;
+import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeRequired;
 
 import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
-import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import java.sql.SQLException;
 import java.util.Optional;
 import java.util.Properties;
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 
 @Slf4j
-@RequiredArgsConstructor(access = AccessLevel.PRIVATE)
-public class DirectCdpTokenProcessor implements TokenProcessor {
+public class DirectCdpTokenProcessor {
     static final String CDP_TOKEN_KEY = "cdpToken";
     static final String TENANT_URL_KEY = "tenantUrl";
     static final String DATASPACE_KEY = "dataspace";
@@ -39,75 +23,68 @@ public class DirectCdpTokenProcessor implements TokenProcessor {
     private final String cdpToken;
     private final String tenantUrl;
     private final String dataspace;
-    private final TokenCache cache;
+    private DataCloudToken cachedDataCloudToken;
 
-    public static boolean hasCdpToken(Properties properties) {
-        return optional(properties, CDP_TOKEN_KEY).isPresent()
-                && optional(properties, TENANT_URL_KEY).isPresent();
+    private DirectCdpTokenProcessor(String cdpToken, String tenantUrl, String dataspace) {
+        this.cdpToken = cdpToken;
+        this.tenantUrl = tenantUrl;
+        this.dataspace = dataspace;
     }
 
-    public static DirectCdpTokenProcessor of(Properties properties) throws DataCloudJDBCException {
+    public static boolean hasCdpToken(Properties properties) {
+        return properties != null
+                && properties.containsKey(CDP_TOKEN_KEY)
+                && properties.containsKey(TENANT_URL_KEY);
+    }
+
+    public static DirectCdpTokenProcessor ofDestructive(Properties properties) throws SQLException {
         try {
-            val cdpToken = required(properties, CDP_TOKEN_KEY);
-            val tenantUrl = required(properties, TENANT_URL_KEY);
-            val dataspace = optional(properties, DATASPACE_KEY).orElse(null);
-            val processor = new DirectCdpTokenProcessor(cdpToken, tenantUrl, dataspace, new TokenCacheImpl());
+            String cdpToken = takeRequired(properties, CDP_TOKEN_KEY);
+            String tenantUrl = takeRequired(properties, TENANT_URL_KEY);
+            String dataspace = takeOptional(properties, DATASPACE_KEY).orElse(null);
+            DirectCdpTokenProcessor processor = new DirectCdpTokenProcessor(cdpToken, tenantUrl, dataspace);
             processor.validateToken();
             return processor;
         } catch (IllegalArgumentException ex) {
-            throw new DataCloudJDBCException(ex.getMessage(), "28000", ex);
+            throw new SQLException(ex.getMessage(), "28000", ex);
         }
     }
 
-    private void validateToken() throws DataCloudJDBCException {
+    private void validateToken() throws SQLException {
         try {
-            val token = buildDataCloudToken();
+            DataCloudToken token = buildDataCloudToken();
             token.getTenantId();
-            cache.setDataCloudToken(token);
+            cachedDataCloudToken = token;
         } catch (Exception ex) {
-            throw new DataCloudJDBCException(
+            throw new SQLException(
                     "Invalid CDP token: unable to parse JWT or extract tenant ID. " + ex.getMessage(), "28000", ex);
         }
     }
 
-    @Override
-    public AuthenticationSettings getSettings() {
-        return null;
-    }
-
-    @Override
-    public OAuthToken getOAuthToken() throws SQLException {
-        throw new DataCloudJDBCException(
-                "OAuth token is not available when using direct CDP token authentication", "28000");
-    }
-
-    @Override
     public DataCloudToken getDataCloudToken() throws SQLException {
-        val cachedToken = cache.getDataCloudToken();
-        if (cachedToken != null && cachedToken.isAlive()) {
-            return cachedToken;
+        if (cachedDataCloudToken != null && cachedDataCloudToken.isAlive()) {
+            return cachedDataCloudToken;
         }
 
         try {
-            val token = buildDataCloudToken();
-            cache.setDataCloudToken(token);
+            DataCloudToken token = buildDataCloudToken();
+            cachedDataCloudToken = token;
             return token;
         } catch (Exception ex) {
-            cache.clearDataCloudToken();
-            throw new DataCloudJDBCException(ex.getMessage(), "28000", ex);
+            cachedDataCloudToken = null;
+            throw new SQLException(ex.getMessage(), "28000", ex);
         }
     }
 
-    @Override
     public String getLakehouse() throws SQLException {
-        val tenantId = getDataCloudToken().getTenantId();
-        val response = "lakehouse:" + tenantId + ";" + Optional.ofNullable(dataspace).orElse("");
+        String tenantId = getDataCloudToken().getTenantId();
+        String response = "lakehouse:" + tenantId + ";" + Optional.ofNullable(dataspace).orElse("");
         log.info("Lakehouse: {}", response);
         return response;
     }
 
     private DataCloudToken buildDataCloudToken() throws SQLException {
-        val response = new DataCloudTokenResponse();
+        DataCloudTokenResponse response = new DataCloudTokenResponse();
         response.setToken(cdpToken);
         response.setInstanceUrl(tenantUrl);
         response.setTokenType("Bearer");
