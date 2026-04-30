@@ -5,6 +5,7 @@
 package com.salesforce.datacloud.jdbc;
 
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProvider;
+import com.salesforce.datacloud.jdbc.auth.DirectCdpTokenProcessor;
 import com.salesforce.datacloud.jdbc.auth.SalesforceAuthProperties;
 import com.salesforce.datacloud.jdbc.core.ConnectionProperties;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
@@ -24,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Properties;
 import java.util.logging.Logger;
 import javax.sql.DataSource;
@@ -101,6 +103,15 @@ public class DataCloudDatasource implements DataSource {
             val connectionProperties = ConnectionProperties.ofDestructive(properties);
             val grpcChannelProperties = GrpcChannelProperties.ofDestructive(properties);
             val httpClientProperties = HttpClientProperties.ofDestructive(properties);
+
+            if (DirectCdpTokenProcessor.hasCdpToken(properties)) {
+                log.info("Using direct CDP token authentication");
+                val cdpTokenProcessor = DirectCdpTokenProcessor.ofDestructive(properties);
+                PropertyParsingUtils.validateRemainingProperties(properties);
+                return createConnectionWithCdpToken(
+                        connectionProperties, grpcChannelProperties, httpClientProperties, cdpTokenProcessor, jdbcUrl);
+            }
+
             val authProperties = SalesforceAuthProperties.ofDestructive(loginUrl, properties);
             PropertyParsingUtils.validateRemainingProperties(properties);
 
@@ -159,6 +170,31 @@ public class DataCloudDatasource implements DataSource {
                 authProperties.getUserName() != null ? authProperties.getUserName() : "",
                 tokenProvider::getLakehouseName,
                 dataspaceClient);
+    }
+
+    private static DataCloudConnection createConnectionWithCdpToken(
+            @NonNull ConnectionProperties connectionProperties,
+            @NonNull GrpcChannelProperties grpcChannelProperties,
+            @NonNull HttpClientProperties httpClientProperties,
+            @NonNull DirectCdpTokenProcessor cdpTokenProcessor,
+            JdbcURL jdbcUrl)
+            throws SQLException {
+        val tokenSupplier = new TokenProcessorSupplier(cdpTokenProcessor);
+        val authInterceptor = AuthorizationHeaderInterceptor.of(tokenSupplier);
+
+        val host = cdpTokenProcessor.getDataCloudToken().getTenantUrl();
+        final ManagedChannelBuilder<?> builder = ManagedChannelBuilder.forAddress(host, 443)
+                .intercept(authInterceptor)
+                .intercept(TracingHeadersInterceptor.of());
+        val stubProvider = JdbcDriverStubProvider.of(builder, grpcChannelProperties);
+
+        return DataCloudConnection.of(
+                stubProvider,
+                connectionProperties,
+                jdbcUrl,
+                "",
+                cdpTokenProcessor::getLakehouse,
+                Collections::emptyList);
     }
 
     @Override
