@@ -60,10 +60,7 @@ message ErrorInfo {
   // MANDATORY FIELD
   string primary_message = 1;
   // The SQL state error code
-  // For upstream services:
-  //  - ALLOWED to be empty
-  //  - if set restrict to Class 28 (Invalid Authorization Specification) or
-  //    Class 42 (Syntax Error or Access Rule Violation)
+  // Treated as InternalError, if empty
   string sqlstate = 2;
   // A suggestion on what what to do about the problem
   // Differs from customer_detail by offering advise rather than hard facts

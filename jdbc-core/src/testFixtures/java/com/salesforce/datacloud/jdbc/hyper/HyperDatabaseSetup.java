@@ -46,7 +46,7 @@ public final class HyperDatabaseSetup {
      */
     public static void executeStatement(HyperServiceGrpc.HyperServiceStub stub, String sql) {
         QueryParam param = QueryParam.newBuilder()
-                .setQuery(sql)
+                .setSql(sql)
                 .setOutputFormat(OutputFormat.ARROW_IPC)
                 .setTransferMode(QueryParam.TransferMode.SYNC)
                 .build();
@@ -126,7 +126,7 @@ public final class HyperDatabaseSetup {
     public static void executeStatementWithDatabase(
             HyperServiceGrpc.HyperServiceStub stub, String databasePath, String databaseAlias, String sql) {
         QueryParam param = QueryParam.newBuilder()
-                .setQuery(sql)
+                .setSql(sql)
                 .setOutputFormat(OutputFormat.ARROW_IPC)
                 .setTransferMode(QueryParam.TransferMode.SYNC)
                 .addDatabases(AttachedDatabase.newBuilder()

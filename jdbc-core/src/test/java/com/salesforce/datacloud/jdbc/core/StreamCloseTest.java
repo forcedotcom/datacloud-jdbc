@@ -63,7 +63,7 @@ public class StreamCloseTest {
         try {
             val stub = HyperServiceGrpc.newStub(channel);
             val queryParam = QueryParam.newBuilder()
-                    .setQuery("select a from generate_series(1, 10000) as s(a)")
+                    .setSql("select a from generate_series(1, 10000) as s(a)")
                     .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
                     .setOutputFormat(OutputFormat.ARROW_IPC)
                     .build();

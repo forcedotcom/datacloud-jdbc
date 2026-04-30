@@ -49,7 +49,7 @@ class AsyncQueryResultIteratorTest extends InterceptedHyperTestBase {
 
         // Setup executeQuery to return initial data with RUNNING status
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
-                .withRequest(req -> req.getQuery().equals(TEST_QUERY))
+                .withRequest(req -> req.getSql().equals(TEST_QUERY))
                 .willProxyTo((request, observer) -> {
                     // First response: query info with running status
                     observer.onNext(ExecuteQueryResponse.newBuilder()
@@ -95,7 +95,7 @@ class AsyncQueryResultIteratorTest extends InterceptedHyperTestBase {
                 }));
 
         val queryParam = QueryParam.newBuilder()
-                .setQuery(TEST_QUERY)
+                .setSql(TEST_QUERY)
                 .setOutputFormat(OutputFormat.ARROW_IPC)
                 .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
                 .build();
@@ -144,7 +144,7 @@ class AsyncQueryResultIteratorTest extends InterceptedHyperTestBase {
 
         // Setup executeQuery to return finished status immediately with inline data
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
-                .withRequest(req -> req.getQuery().equals(TEST_QUERY))
+                .withRequest(req -> req.getSql().equals(TEST_QUERY))
                 .willProxyTo((request, observer) -> {
                     observer.onNext(ExecuteQueryResponse.newBuilder()
                             .setQueryInfo(QueryInfo.newBuilder()
@@ -164,7 +164,7 @@ class AsyncQueryResultIteratorTest extends InterceptedHyperTestBase {
                 }));
 
         val queryParam = QueryParam.newBuilder()
-                .setQuery(TEST_QUERY)
+                .setSql(TEST_QUERY)
                 .setOutputFormat(OutputFormat.ARROW_IPC)
                 .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
                 .build();

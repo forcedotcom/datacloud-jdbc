@@ -41,7 +41,7 @@ public class AsyncQueryResultIteratorTest {
             val stub = stubProvider.getStub();
 
             val queryParam = QueryParam.newBuilder()
-                    .setQuery("SELECT s FROM generate_series(1, 100) s")
+                    .setSql("SELECT s FROM generate_series(1, 100) s")
                     .setOutputFormat(OutputFormat.ARROW_IPC)
                     .setTransferMode(QueryParam.TransferMode.SYNC)
                     .build();
@@ -93,7 +93,7 @@ public class AsyncQueryResultIteratorTest {
 
             // Use an invalid query to trigger an error
             val queryParam = QueryParam.newBuilder()
-                    .setQuery("SELECT * FROM non_existent_table")
+                    .setSql("SELECT * FROM non_existent_table")
                     .setOutputFormat(OutputFormat.ARROW_IPC)
                     .setTransferMode(QueryParam.TransferMode.SYNC)
                     .build();
@@ -104,7 +104,7 @@ public class AsyncQueryResultIteratorTest {
 
                 // Async iteration with error handling
                 CompletionStage<Void> iteration =
-                        consumeAllWithErrorHandling(iterator, queryParam.getQuery(), chunkCount, errorHolder);
+                        consumeAllWithErrorHandling(iterator, queryParam.getSql(), chunkCount, errorHolder);
 
                 // Wait for completion
                 iteration.toCompletableFuture().join();

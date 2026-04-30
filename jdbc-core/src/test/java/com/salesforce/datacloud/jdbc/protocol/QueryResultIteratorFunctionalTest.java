@@ -56,7 +56,7 @@ public class QueryResultIteratorFunctionalTest extends InterceptedHyperTestBase 
         val stub = getInterceptedStub();
 
         val query = QueryParam.newBuilder()
-                .setQuery("SELECT g FROM generate_series(1,5) g")
+                .setSql("SELECT g FROM generate_series(1,5) g")
                 .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
                 .setOutputFormat(OutputFormat.JSON_ARRAY)
                 .build();
@@ -79,7 +79,7 @@ public class QueryResultIteratorFunctionalTest extends InterceptedHyperTestBase 
     void canHandleAsyncMode() {
         val stub = getInterceptedStub();
         val query = QueryParam.newBuilder()
-                .setQuery("SELECT g FROM generate_series(1,5) g")
+                .setSql("SELECT g FROM generate_series(1,5) g")
                 .setTransferMode(QueryParam.TransferMode.ASYNC)
                 .setOutputFormat(OutputFormat.JSON_ARRAY)
                 .build();
