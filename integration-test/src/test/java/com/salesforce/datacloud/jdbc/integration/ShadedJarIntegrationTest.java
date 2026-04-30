@@ -101,7 +101,13 @@ public class ShadedJarIntegrationTest {
         log.info("  Attempting connection to: {}", jdbcUrl);
 
         // Test connection creation and query execution - this will fail if gRPC service files are broken
-        try (Connection conn = DriverManager.getConnection(jdbcUrl, props)) {
+        // The test OAuth endpoint at login.test2.pc-rnd.salesforce.com intermittently returns
+        // HTTP 400 {"error":"unknown_error","error_description":"retry your request"}. This is
+        // treated as test-environment instability: HTTP 400 is not retriable per HTTP semantics,
+        // so the driver is correct not to retry it. If the same behavior is observed outside the
+        // test environment, the upstream service should return an appropriate (5xx / 429) status
+        // and the fix belongs in the driver's core retry policy, not here.
+        try (Connection conn = connectWithRetry(jdbcUrl, props)) {
             log.info("  Connection established successfully");
 
             // Verify connection is not closed
@@ -120,5 +126,60 @@ public class ShadedJarIntegrationTest {
             log.error("  Connection failed: {}", e.getMessage());
             throw new AssertionError("Connection failed: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Opens a JDBC connection with a bounded retry on a test-environment-specific OAuth
+     * response ({@code HTTP 400 {"error":"unknown_error","error_description":"retry your request"}})
+     * from {@code login.test2.pc-rnd.salesforce.com}. This is scoped to the integration test
+     * because HTTP 400 is non-retriable per standard HTTP semantics — the driver is correct
+     * not to retry it. If this pattern ever appears against a non-test environment, the upstream
+     * service should be changed to return an appropriate retriable status (5xx / 429) and the
+     * driver's core retry policy will then handle it automatically.
+     *
+     * Exponential backoff capped at a total of ~60 seconds of retries.
+     */
+    private static Connection connectWithRetry(String jdbcUrl, Properties props) throws SQLException {
+        final long deadline = System.currentTimeMillis() + 60_000L;
+        long delayMs = 1_000L;
+        int attempt = 0;
+        SQLException lastTransient = null;
+        while (true) {
+            attempt++;
+            try {
+                return DriverManager.getConnection(jdbcUrl, props);
+            } catch (SQLException e) {
+                if (!isTransientOAuthRetryRequest(e)) {
+                    throw e;
+                }
+                lastTransient = e;
+                long remaining = deadline - System.currentTimeMillis();
+                if (remaining <= 0) {
+                    throw e;
+                }
+                long sleep = Math.min(delayMs, remaining);
+                log.warn(
+                        "  OAuth returned transient 'retry your request' (attempt {}); sleeping {}ms before retry",
+                        attempt,
+                        sleep);
+                try {
+                    Thread.sleep(sleep);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw lastTransient;
+                }
+                delayMs = Math.min(delayMs * 2, 15_000L);
+            }
+        }
+    }
+
+    private static boolean isTransientOAuthRetryRequest(SQLException e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            String msg = t.getMessage();
+            if (msg != null && msg.contains("HTTP 400") && msg.contains("retry your request")) {
+                return true;
+            }
+        }
+        return false;
     }
 }
