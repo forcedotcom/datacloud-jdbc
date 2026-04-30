@@ -32,9 +32,7 @@ public class DirectCdpTokenProcessor {
     }
 
     public static boolean hasCdpToken(Properties properties) {
-        return properties != null
-                && properties.containsKey(CDP_TOKEN_KEY)
-                && properties.containsKey(TENANT_URL_KEY);
+        return properties != null && properties.containsKey(CDP_TOKEN_KEY) && properties.containsKey(TENANT_URL_KEY);
     }
 
     public static DirectCdpTokenProcessor ofDestructive(Properties properties) throws SQLException {
@@ -78,7 +76,8 @@ public class DirectCdpTokenProcessor {
 
     public String getLakehouse() throws SQLException {
         String tenantId = getDataCloudToken().getTenantId();
-        String response = "lakehouse:" + tenantId + ";" + Optional.ofNullable(dataspace).orElse("");
+        String response =
+                "lakehouse:" + tenantId + ";" + Optional.ofNullable(dataspace).orElse("");
         log.info("Lakehouse: {}", response);
         return response;
     }

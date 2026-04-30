@@ -189,7 +189,12 @@ public class DataCloudDatasource implements DataSource {
         val stubProvider = JdbcDriverStubProvider.of(builder, grpcChannelProperties);
 
         return DataCloudConnection.of(
-                stubProvider, connectionProperties, jdbcUrl, "", cdpTokenProcessor::getLakehouse, Collections::emptyList);
+                stubProvider,
+                connectionProperties,
+                jdbcUrl,
+                "",
+                cdpTokenProcessor::getLakehouse,
+                Collections::emptyList);
     }
 
     @Override
