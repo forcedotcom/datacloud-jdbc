@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.43.0](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.2...v0.43.0) (2026-05-05)
+
+
+### Features
+
+* Avatical Removal Part 3/3 - Remove Avatica dependency completely ([#166](https://github.com/forcedotcom/datacloud-jdbc/issues/166)) ([0e7d912](https://github.com/forcedotcom/datacloud-jdbc/commit/0e7d912c4f9de5b16ae915e70edfb04cf5fac1ee))
+* Expose query execution statistics in QueryStatus ([#164](https://github.com/forcedotcom/datacloud-jdbc/issues/164)) ([f01c77a](https://github.com/forcedotcom/datacloud-jdbc/commit/f01c77aacec47f693095b0591ceb515192c9d302))
+* implement timezone and timestamp handling with JDBC 4.2 support ([#158](https://github.com/forcedotcom/datacloud-jdbc/issues/158)) ([d0301f5](https://github.com/forcedotcom/datacloud-jdbc/commit/d0301f59f3ee8ace08fa163fa3b3f0905c4e921b))
+* Improve authentication error logging and retry handling ([#140](https://github.com/forcedotcom/datacloud-jdbc/issues/140)) ([0d42ad1](https://github.com/forcedotcom/datacloud-jdbc/commit/0d42ad151ff782818a568f59a432611b8a60dc81))
+* Improve virtual thread compatibility ([#165](https://github.com/forcedotcom/datacloud-jdbc/issues/165)) ([18d9f38](https://github.com/forcedotcom/datacloud-jdbc/commit/18d9f38f02f2e92d8dd9420cdd71d0f93e7a521f))
+
+
+### Bug Fixes
+
+* async interrupt race condition in SyncIteratorAdapter ([#170](https://github.com/forcedotcom/datacloud-jdbc/issues/170)) ([e81a0e6](https://github.com/forcedotcom/datacloud-jdbc/commit/e81a0e6f179e192520d612ced5143bb8eab62d2e))
+* correct DatabaseMetaData.getTableTypes() to return table type names ([#162](https://github.com/forcedotcom/datacloud-jdbc/issues/162)) ([a5399bb](https://github.com/forcedotcom/datacloud-jdbc/commit/a5399bb426b57a1652d92469d70f09f3124ca046))
+* JDBC spec compliance and small metadata bug fixes ([#171](https://github.com/forcedotcom/datacloud-jdbc/issues/171)) ([5a78b40](https://github.com/forcedotcom/datacloud-jdbc/commit/5a78b40c11d4c9d086a9ae51a93c5814dec72958))
+* Upgrade 3PP versions and fix gRPC stream leak exposed by gRPC 1.80 ([#168](https://github.com/forcedotcom/datacloud-jdbc/issues/168)) ([c0d2086](https://github.com/forcedotcom/datacloud-jdbc/commit/c0d2086db8e6dc4f548a8e7e2ae61e56bb034b65))
+
 ## [0.42.2](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.1...v0.42.2) (2026-03-05)
 
 
