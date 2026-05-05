@@ -352,7 +352,7 @@ public class QueryResultIteratorTest extends InterceptedHyperTestBase {
         val stub = setupStub();
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
                 .withRequest(req ->
-                        req.getQuery().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
+                        req.getSql().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
                 .willReturn(GrpcMock.stream(GrpcMock.response(queryInfoResponse))
                         .and(GrpcMock.statusException(Status.CANCELLED))));
 
@@ -360,7 +360,7 @@ public class QueryResultIteratorTest extends InterceptedHyperTestBase {
         val iterator = QueryResultIterator.of(
                 stub,
                 QueryParam.newBuilder()
-                        .setQuery(TEST_QUERY)
+                        .setSql(TEST_QUERY)
                         .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
                         .build());
 
@@ -412,12 +412,12 @@ public class QueryResultIteratorTest extends InterceptedHyperTestBase {
         val stub = setupStub();
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
                 .withRequest(req ->
-                        req.getQuery().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
+                        req.getSql().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
                 .willReturn(GrpcMock.statusException(Status.CANCELLED)));
         assertThatThrownBy(() -> QueryResultIterator.of(
                                 stub,
                                 QueryParam.newBuilder()
-                                        .setQuery(TEST_QUERY)
+                                        .setSql(TEST_QUERY)
                                         .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
                                         .build())
                         .hasNext())

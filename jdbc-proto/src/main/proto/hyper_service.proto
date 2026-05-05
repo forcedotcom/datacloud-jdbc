@@ -39,9 +39,17 @@ service HyperService {
   // By default, this call will only return one update before ending the
   // stream. A client can opt into a streaming mode that will continuously push
   // updates until the query is done or a timeout is reached.
+  // The function fails with status code `INTERNAL`/`FAILED_PRECONDITION` if
+  // the original query encountered a system/user error. Then, the error details
+  // are the same as for the original query.
+  // Other error codes indicate that the `GetQueryInfo` call itself failed.
   rpc GetQueryInfo(QueryInfoParam) returns (stream QueryInfo);
   // Retrieve the results of a previous `ExecuteQuery`. See
   // `QueryParam::TransferMode`
+  // The function fails with status code `FAILED_PRECONDITION` if
+  // the original query encountered a system/user error. Use `GetQueryInfo`
+  // to retrieve details.
+  // Other error codes indicate that the `GetQueryResult` call itself failed.
   rpc GetQueryResult(QueryResultParam) returns (stream QueryResult);
   // Attempts to cancel a query started via `ExecuteQuery`.
   // The call is successful regardless of whether the query was actually
@@ -100,7 +108,7 @@ message QueryParam {
   // See
   // https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/dc-sql-reference/
   // for documentation of Hyper's SQL.
-  string query = 1;
+  string sql = 1;
   // Specify the list of attached databases for this query (optional)
   repeated AttachedDatabase databases = 2;
   // Specify the output format for query result data chunks. ARROW_IPC is
@@ -371,6 +379,26 @@ message QueryStatus {
   google.protobuf.Timestamp expiration_time = 6;
   // The Query execution statistics which contains elapsedTime
   QueryExecutionStatistics execution_stats = 7;
+  // The time at which the original result was computed if the result was served
+  // from the query result cache. Not populated for non-cached results.
+  optional google.protobuf.Timestamp result_computed_at = 8;
+  // Details on the staleness of the result.
+  enum Staleness {
+    // Not used since this enum is only used for response fields.
+    // This value is necessary to satisfy the Salesforce proto guidelines.
+    STALENESS_UNSPECIFIED = 0;
+    // The query contains volatile functions (e.g., `CURRENT_TIMESTAMP`)
+    // which have not been re-evaluated since the result was computed.
+    VOLATILE_FUNCTIONS = 1;
+    // The underlying data has changed since the result was computed.
+    STALE_DATA = 2;
+    // The query accesses remote data (e.g., BYOL Live Tables) for which no
+    // version information is available.
+    REMOTE_DATA = 3;
+  }
+  // See `Staleness`
+  // If empty, the result is fresh (i.e., non-stale).
+  repeated Staleness staleness_reasons = 9;
 }
 
 // The query execution stats present in QueryStatus response

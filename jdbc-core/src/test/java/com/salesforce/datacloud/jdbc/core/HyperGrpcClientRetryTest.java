@@ -102,7 +102,7 @@ public class HyperGrpcClientRetryTest {
     @Test
     public void testExecuteQueryWithRetry() {
         Iterator<ExecuteQueryResponse> queryResultIterator = hyperServiceStub.executeQuery(
-                QueryParam.newBuilder().setQuery(query).build());
+                QueryParam.newBuilder().setSql(query).build());
 
         assertDoesNotThrow(() -> {
             boolean responseReceived = false;

@@ -193,11 +193,11 @@ public class InterceptedHyperTestBase {
                 .build();
 
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
-                .withRequest(req -> req.getQuery().equals(query) && req.getTransferMode() == mode)
+                .withRequest(req -> req.getSql().equals(query) && req.getTransferMode() == mode)
                 .willReturn(
                         Stream.concat(Stream.of(first), Stream.of(responses)).collect(Collectors.toList())));
         return QueryParam.newBuilder()
-                .setQuery(query)
+                .setSql(query)
                 .setTransferMode(mode)
                 .setOutputFormat(OutputFormat.ARROW_IPC)
                 .build();

@@ -93,7 +93,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     protected QueryParam.Builder getQueryParamBuilder(
             String sql, QueryTimeout queryTimeout, QueryParam.TransferMode transferMode) throws SQLException {
         val builder = QueryParam.newBuilder()
-                .setQuery(sql)
+                .setSql(sql)
                 .setOutputFormat(QueryResultArrowStream.OUTPUT_FORMAT)
                 .setTransferMode(transferMode);
 
