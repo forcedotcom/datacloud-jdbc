@@ -56,13 +56,19 @@ public abstract class Step<T> {
     }
 
     /**
-     * Re-types a {@link NeedDispatch} from one element type to another. The wrapped
-     * {@link Runnable} does not depend on the element type, so this is a safe upcast that
-     * avoids reallocating a new {@code NeedDispatch} at every iterator boundary.
+     * Forwards an incoming step (from a child iterator over element type {@code U}) as a step
+     * over element type {@code T}. Only {@link NeedDispatch} steps are forwardable across element
+     * types — the wrapped {@link Runnable} does not depend on the element type, so the cast is
+     * safe and no reallocation is needed. Any other subtype is a programming error in the
+     * consumer (which should have unwrapped {@link Value} or {@link Done} before getting here).
      */
     @SuppressWarnings("unchecked")
-    public static <U> Step<U> retypeNeedDispatch(NeedDispatch<?> step) {
-        return (Step<U>) step;
+    public static <T> Step<T> forward(Step<?> step) {
+        if (step instanceof NeedDispatch) {
+            return (Step<T>) step;
+        }
+        throw new IllegalArgumentException("Step.forward only supports NeedDispatch, got: "
+                + (step == null ? "null" : step.getClass().getSimpleName()));
     }
 
     /** A produced item. */
@@ -81,12 +87,13 @@ public abstract class Step<T> {
 
     /**
      * Sentinel asking the synchronous pump to execute {@code dispatch} on the caller thread,
-     * then re-invoke {@code next()} to continue iteration.
+     * then re-invoke {@code next()} to continue iteration. Not parameterized over element type —
+     * the dispatch thunk (a stub call kicking off a fresh gRPC stream) is element-type-agnostic.
      */
     @lombok.Value
     @lombok.EqualsAndHashCode(callSuper = false)
     @AllArgsConstructor(access = AccessLevel.PRIVATE)
-    public static final class NeedDispatch<T> extends Step<T> {
+    public static class NeedDispatch<T> extends Step<T> {
         Runnable dispatch;
     }
 }

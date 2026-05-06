@@ -147,11 +147,11 @@ public class AsyncQueryInfoIterator implements AsyncIterator<QueryInfo> {
         } else if (step instanceof Step.NeedDispatch) {
             // The underlying AsyncStreamObserverIterator never emits NeedDispatch today, but a
             // safe upcast keeps this code correct if it ever does.
-            return CompletableFuture.completedFuture(Step.<QueryInfo>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+            return CompletableFuture.completedFuture(Step.forward(step));
         } else if (step instanceof Step.Done) {
             // Stream ended without value
             if (isQueryFinished) {
-                return CompletableFuture.completedFuture(Step.<QueryInfo>done());
+                return CompletableFuture.completedFuture(Step.done());
             }
             // Need to start a new stream
             ++retryCount;
