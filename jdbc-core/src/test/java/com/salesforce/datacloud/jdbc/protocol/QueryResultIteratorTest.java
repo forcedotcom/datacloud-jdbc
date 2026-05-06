@@ -408,6 +408,24 @@ public class QueryResultIteratorTest extends InterceptedHyperTestBase {
     }
 
     @Test
+    public void getQueryStatus_returnsNullWhenProtoStatusMissing() {
+        val stub = setupStub();
+        GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())
+                .withRequest(req ->
+                        req.getSql().equals(TEST_QUERY) && req.getTransferMode() == QueryParam.TransferMode.ADAPTIVE)
+                .willReturn(GrpcMock.statusException(Status.CANCELLED)));
+
+        val iterator = QueryResultIterator.of(
+                stub,
+                QueryParam.newBuilder()
+                        .setSql(TEST_QUERY)
+                        .setTransferMode(QueryParam.TransferMode.ADAPTIVE)
+                        .build());
+
+        assertThat(iterator.getQueryStatus()).isNull();
+    }
+
+    @Test
     public void whenExecuteQueryThrowsCancelledWithoutQueryId_shouldFailQuery() {
         val stub = setupStub();
         GrpcMock.stubFor(GrpcMock.serverStreamingMethod(HyperServiceGrpc.getExecuteQueryMethod())

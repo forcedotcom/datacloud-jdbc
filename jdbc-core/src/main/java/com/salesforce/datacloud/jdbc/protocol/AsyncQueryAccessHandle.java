@@ -6,8 +6,6 @@ package com.salesforce.datacloud.jdbc.protocol;
 
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncStreamObserverIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.SyncIteratorAdapter;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
@@ -16,10 +14,12 @@ import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Slf4j
-@AllArgsConstructor
-public class AsyncQueryAccessHandle implements QueryAccessHandle {
-    @Getter
+public class AsyncQueryAccessHandle implements RawQueryHandle {
     private final QueryStatus queryStatus;
+
+    private AsyncQueryAccessHandle(QueryStatus queryStatus) {
+        this.queryStatus = queryStatus;
+    }
 
     public static AsyncQueryAccessHandle of(HyperServiceGrpc.HyperServiceStub stub, QueryParam param) {
         val message = "executeQuery. mode=" + param.getTransferMode();
@@ -33,5 +33,10 @@ public class AsyncQueryAccessHandle implements QueryAccessHandle {
         // Consume all the remaining messages to ensure that the initial compilation succeeded.
         messages.forEachRemaining(x -> {});
         return new AsyncQueryAccessHandle(queryStatus);
+    }
+
+    @Override
+    public QueryStatus getQueryStatus() {
+        return queryStatus;
     }
 }

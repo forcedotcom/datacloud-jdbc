@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
@@ -109,8 +110,24 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         return builder;
     }
 
+    /**
+     * Single per-execution handle. Exposes the proto status via {@link QueryHandle#getQueryStatus()}
+     * (used internally for query-id extraction and exception reporting) and the wrapper status via
+     * {@link QueryHandle#getStatus()} (used by the public {@link #getQueryStatus()} accessor).
+     */
     @Getter
-    protected QueryAccessHandle queryHandle;
+    protected QueryHandle queryHandle;
+
+    /**
+     * Latest wrapper status observed by this statement on the async path. Updated from
+     * {@link #getResultSet()} after {@link DataCloudConnection#waitFor}, and read by the async
+     * path's anonymous {@link QueryHandle} via {@link QueryHandle#getStatus()}. Null on the
+     * adaptive path, where the wrapper is derived from the iterator's proto on each read.
+     */
+    private final AtomicReference<QueryStatus> asyncLatestStatus = new AtomicReference<>();
+
+    /** Set on the adaptive path; null on the async path. Used by {@link #getResultSet()}. */
+    private QueryResultIterator adaptiveIterator;
 
     private void assertQueryExecuted() throws SQLException {
         if (queryHandle == null) {
@@ -125,6 +142,33 @@ public class DataCloudStatement implements Statement, AutoCloseable {
     public String getQueryId() throws SQLException {
         assertQueryExecuted();
         return queryHandle.getQueryStatus().getQueryId();
+    }
+
+    /**
+     * Returns the most recent {@link QueryStatus} observed by this statement for the last executed query.
+     *
+     * <p>This is a non-blocking accessor that reflects what the driver has already seen via the
+     * {@code ExecuteQuery} streaming response or, for async queries, via a previous
+     * {@link DataCloudConnection#waitFor} call made by the driver. It issues no additional RPCs.
+     *
+     * <p>Guarantees:
+     * <ul>
+     *   <li>After {@link #executeQuery(String)} completes and the caller has iterated the
+     *       {@link ResultSet} to completion ({@code next()} returns {@code false}), the returned
+     *       status is terminal ({@code FINISHED} or {@code RESULTS_PRODUCED}) with
+     *       {@link QueryStatus#getExecutionStatistics()} populated when the server supplied it.</li>
+     *   <li>For queries launched via {@link #executeAsyncQuery(String)}, the status reflects the
+     *       initial server response until the caller either retrieves results via {@link #getResultSet()}
+     *       (which waits for completion) or independently calls
+     *       {@link DataCloudConnection#waitFor(String, java.util.function.Predicate)}.</li>
+     * </ul>
+     *
+     * @return the latest observed wrapper {@link QueryStatus}; never {@code null} once a query has been executed.
+     * @throws SQLException if a query has not been executed from this statement.
+     */
+    public QueryStatus getQueryStatus() throws SQLException {
+        assertQueryExecuted();
+        return queryHandle.getStatus();
     }
 
     @Override
@@ -184,7 +228,19 @@ public class DataCloudStatement implements Statement, AutoCloseable {
                 .withDeadlineAfter(
                         queryTimeout.getLocalDeadline().getRemaining().toMillis(), TimeUnit.MILLISECONDS);
         val iterator = QueryResultIterator.of(stub, queryParam);
-        queryHandle = iterator;
+        adaptiveIterator = iterator;
+        queryHandle = new QueryHandle() {
+            @Override
+            public salesforce.cdp.hyperdb.v1.QueryStatus getQueryStatus() {
+                return iterator.getQueryStatus();
+            }
+
+            @Override
+            public QueryStatus getStatus() throws SQLException {
+                val proto = iterator.getQueryStatus();
+                return proto == null ? null : QueryStatus.of(proto);
+            }
+        };
         // Ensure query status is initialized
         iterator.hasNext();
         return iterator;
@@ -205,7 +261,21 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             // We set the deadline based off the query timeout here as the server-side doesn't properly enforce
             // the query timeout during the initial compilation phase. By setting the deadline, we can ensure
             // that the query timeout is enforced also when the server hangs during compilation.
-            queryHandle = AsyncQueryAccessHandle.of(stub, queryParam);
+            val handle = AsyncQueryAccessHandle.of(stub, queryParam);
+            // Seed the observable wrapper from the initial proto so callers see a non-null wrapper
+            // before the result set is consumed.
+            asyncLatestStatus.set(QueryStatus.of(handle.getQueryStatus()));
+            queryHandle = new QueryHandle() {
+                @Override
+                public salesforce.cdp.hyperdb.v1.QueryStatus getQueryStatus() {
+                    return handle.getQueryStatus();
+                }
+
+                @Override
+                public QueryStatus getStatus() {
+                    return asyncLatestStatus.get();
+                }
+            };
             log.info(
                     "executeAsyncQuery completed. queryId={}",
                     queryHandle.getQueryStatus().getQueryId());
@@ -360,20 +430,25 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             val sessionZone = resolveSessionTimeZone();
             return logTimedValue(
                     () -> {
-                        if (resultSet == null && queryHandle instanceof QueryResultIterator) {
-                            val adaptiveIter = (QueryResultIterator) queryHandle;
+                        if (resultSet == null && adaptiveIterator != null) {
                             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
-                                    adaptiveIter,
+                                    adaptiveIterator,
                                     includeCustomerDetail,
-                                    adaptiveIter.getQueryStatus().getQueryId(),
+                                    adaptiveIterator.getQueryStatus().getQueryId(),
                                     null);
                             resultSet = StreamingResultSet.of(
-                                    arrowStream, adaptiveIter.getQueryStatus().getQueryId(), sessionZone);
+                                    arrowStream,
+                                    adaptiveIterator.getQueryStatus().getQueryId(),
+                                    sessionZone);
                         } else if (resultSet == null) {
                             log.warn(
                                     "Prefer acquiring async result sets from helper methods DataCloudConnection::getChunkBasedResultSet and DataCloudConnection::getRowBasedResultSet. We will wait for the query's results to be produced in their entirety before returning a result set.");
                             val status = connection.waitFor(
                                     queryHandle.getQueryStatus().getQueryId(), QueryStatus::allResultsProduced);
+                            // Update the observable wrapper so later getQueryStatus() reflects the
+                            // terminal status (including execution stats). The async-path anonymous
+                            // QueryHandle reads from this same AtomicReference.
+                            asyncLatestStatus.set(status);
                             resultSet = connection.getChunkBasedResultSet(
                                     queryHandle.getQueryStatus().getQueryId(), 0, status.getChunkCount());
                         }
