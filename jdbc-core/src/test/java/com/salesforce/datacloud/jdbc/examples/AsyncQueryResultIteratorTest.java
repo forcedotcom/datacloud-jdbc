@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.hyper.LocalHyperTestBase;
 import com.salesforce.datacloud.jdbc.protocol.async.AsyncQueryResultIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.core.Step;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -67,18 +68,19 @@ public class AsyncQueryResultIteratorTest {
      * chains to the next iteration.
      */
     private CompletionStage<Void> consumeAllAsync(AsyncQueryResultIterator iterator, AtomicInteger chunkCount) {
-        return iterator.next().thenCompose(opt -> {
-            if (!opt.isPresent()) {
-                // End of results - return completed future
+        return iterator.next().thenCompose(step -> {
+            if (step instanceof Step.NeedDispatch) {
+                // Drive the dispatch thunk so the gRPC stub call fires; then continue iteration.
+                ((Step.NeedDispatch<?>) step).getDispatch().run();
+                return consumeAllAsync(iterator, chunkCount);
+            } else if (step instanceof Step.Value) {
+                val count = chunkCount.incrementAndGet();
+                log.info("Async: Received chunk {}", count);
+                return consumeAllAsync(iterator, chunkCount);
+            } else if (step instanceof Step.Done) {
                 return CompletableFuture.completedFuture(null);
             }
-
-            // Process this chunk
-            val count = chunkCount.incrementAndGet();
-            log.info("Async: Received chunk {}", count);
-
-            // Chain to next iteration (recursive async call)
-            return consumeAllAsync(iterator, chunkCount);
+            throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
         });
     }
 
@@ -131,12 +133,17 @@ public class AsyncQueryResultIteratorTest {
             AtomicReference<SQLException> errorHolder) {
 
         return iterator.next()
-                .thenCompose(opt -> {
-                    if (!opt.isPresent()) {
-                        return CompletableFuture.completedFuture(null);
+                .thenCompose(step -> {
+                    if (step instanceof Step.NeedDispatch) {
+                        ((Step.NeedDispatch<?>) step).getDispatch().run();
+                        return consumeAllWithErrorHandling(iterator, query, chunkCount, errorHolder);
+                    } else if (step instanceof Step.Value) {
+                        chunkCount.incrementAndGet();
+                        return consumeAllWithErrorHandling(iterator, query, chunkCount, errorHolder);
+                    } else if (step instanceof Step.Done) {
+                        return CompletableFuture.completedFuture((Void) null);
                     }
-                    chunkCount.incrementAndGet();
-                    return consumeAllWithErrorHandling(iterator, query, chunkCount, errorHolder);
+                    throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
                 })
                 .exceptionally(throwable -> {
                     // Unwrap CompletionException if needed

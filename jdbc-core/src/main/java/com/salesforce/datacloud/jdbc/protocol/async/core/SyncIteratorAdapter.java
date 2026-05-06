@@ -19,6 +19,11 @@ import java.util.concurrent.ExecutionException;
  * It is intended as a compatibility layer for existing synchronous code that cannot be
  * easily migrated to async patterns.</p>
  *
+ * <p>When the underlying async iterator returns a {@link Step.NeedDispatch}, the dispatch thunk
+ * is run on the caller thread (the one currently blocked inside {@link #hasNext()}). This is how
+ * follow-up gRPC calls are kept on the caller's thread so {@link io.grpc.ClientInterceptor}
+ * {@code start} callbacks observe caller-thread {@link ThreadLocal}s.</p>
+ *
  * <p>Thread interruptions during blocking operations will close the underlying async iterator
  * and re-set the thread's interrupt flag.</p>
  *
@@ -53,6 +58,9 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
      * If the thread is interrupted while waiting, the underlying async iterator is closed
      * and the thread's interrupt flag is restored.</p>
      *
+     * <p>If the async iterator returns a {@link Step.NeedDispatch}, its dispatch thunk runs on
+     * this (caller) thread and iteration continues until a value or end-of-stream is observed.</p>
+     *
      * @throws RuntimeException if the underlying async operation fails
      */
     @Override
@@ -67,40 +75,57 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
             return nextValue.isPresent();
         }
 
-        // Block waiting for next value. The future is hoisted out of the loop so that on interrupt
-        // we close the iterator (triggering gRPC cancellation) and then re-wait on the *same* future
-        // rather than requesting a new one (which would hit "Unfulfilled previous future").
-        boolean interrupted = false;
-        CompletableFuture<Optional<T>> future = asyncIterator.next().toCompletableFuture();
-        try {
-            while (true) {
-                try {
-                    nextValue = future.get();
-                    if (!nextValue.isPresent()) {
-                        done = true;
-                    }
-                    return nextValue.isPresent();
-                } catch (InterruptedException ie) {
-                    interrupted = true;
+        // Outer pump: each iteration either gets a value/done, or runs a dispatch thunk and tries again.
+        while (true) {
+            // Block waiting for the next step. The future is hoisted out of the inner loop so that on
+            // interrupt we close the iterator (triggering gRPC cancellation) and then re-wait on the
+            // *same* future rather than requesting a new one (which would hit "Unfulfilled previous future").
+            boolean interrupted = false;
+            CompletableFuture<Step<T>> future = asyncIterator.next().toCompletableFuture();
+            Step<T> step;
+            try {
+                while (true) {
                     try {
-                        asyncIterator.close();
-                    } catch (Exception ignore) {
+                        step = future.get();
+                        break;
+                    } catch (InterruptedException ie) {
+                        interrupted = true;
+                        try {
+                            asyncIterator.close();
+                        } catch (Exception ignore) {
+                        }
+                    } catch (ExecutionException | CompletionException ee) {
+                        // The async stream is permanently dead after an error. Cache the exception so a
+                        // retried hasNext() re-surfaces it instead of requesting a new future (which
+                        // would hit "Unfulfilled previous future" or mask the original error).
+                        Throwable cause = ee.getCause();
+                        terminalError = (cause instanceof RuntimeException)
+                                ? (RuntimeException) cause
+                                : new RuntimeException(cause);
+                        throw terminalError;
                     }
-                } catch (ExecutionException | CompletionException ee) {
-                    // The async stream is permanently dead after an error. Cache the exception so a
-                    // retried hasNext() re-surfaces it instead of requesting a new future (which
-                    // would hit "Unfulfilled previous future" or mask the original error).
-                    Throwable cause = ee.getCause();
-                    terminalError = (cause instanceof RuntimeException)
-                            ? (RuntimeException) cause
-                            : new RuntimeException(cause);
-                    throw terminalError;
+                }
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
                 }
             }
-        } finally {
-            if (interrupted) {
-                Thread.currentThread().interrupt();
+
+            if (step instanceof Step.NeedDispatch) {
+                // Run the dispatch thunk on this (caller) thread so any gRPC ClientInterceptor.start
+                // callbacks fire here and observe caller-thread ThreadLocals. Then re-pump.
+                ((Step.NeedDispatch<T>) step).getDispatch().run();
+                continue;
+            } else if (step instanceof Step.Value) {
+                T item = ((Step.Value<T>) step).getItem();
+                nextValue = Optional.of(item);
+                return true;
+            } else if (step instanceof Step.Done) {
+                nextValue = Optional.empty();
+                done = true;
+                return false;
             }
+            throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
         }
     }
 

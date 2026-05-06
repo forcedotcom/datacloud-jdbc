@@ -6,8 +6,8 @@ package com.salesforce.datacloud.jdbc.protocol.async;
 
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncStreamObserverIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.core.Step;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +36,18 @@ import salesforce.cdp.hyperdb.v1.QueryResultParam;
  *
  * <p>The returned {@link CompletionStage} from {@link #next()} may complete exceptionally with
  * {@link io.grpc.StatusRuntimeException} if a gRPC error occurs.</p>
+ *
+ * <p>When this iterator needs to start a new {@code getQueryResult} stream, it does NOT call
+ * the gRPC stub from inside the {@link CompletionStage} chain (which would run on a gRPC
+ * executor thread). Instead, it emits {@link Step.NeedDispatch}; the synchronous pump then
+ * runs the stub call on the caller thread so {@link io.grpc.ClientInterceptor#interceptCall}
+ * {@code start} callbacks observe caller-thread {@link ThreadLocal}s.</p>
+ *
+ * <p>This iterator is not safe for concurrent calls to {@link #next()}; callers must wait for
+ * the previous {@link CompletionStage} to complete before calling again, per the
+ * {@link AsyncIterator#next()} contract. The {@code awaitingFirstResponseFromNew} flag and
+ * other instance fields are mutated without synchronization and rely on the happens-before
+ * relationship established by completion of the prior stage.</p>
  */
 @Slf4j
 public abstract class AsyncResultRangeIterator implements AsyncIterator<QueryResult> {
@@ -48,6 +60,13 @@ public abstract class AsyncResultRangeIterator implements AsyncIterator<QueryRes
     protected boolean omitSchema;
     /** The current gRPC stream iterator, null if no active stream. */
     protected AsyncStreamObserverIterator<QueryResultParam, QueryResult> iterator;
+    /**
+     * Marker that the next response observed will be the first from a freshly created iterator.
+     * Set when {@link Step.NeedDispatch} is emitted for a new stream, cleared as soon as the
+     * stream produces a step. Used to drive {@link #handleEmptyFirstResult()} when the new
+     * stream produces no data.
+     */
+    private boolean awaitingFirstResponseFromNew;
 
     protected AsyncResultRangeIterator(QueryAccessGrpcClient client, OutputFormat outputFormat, boolean omitSchema) {
         this.client = client;
@@ -94,55 +113,65 @@ public abstract class AsyncResultRangeIterator implements AsyncIterator<QueryRes
     /**
      * Handles the case when a newly created iterator returns empty on first request.
      *
-     * <p>The default implementation returns empty, signaling end of iteration.
+     * <p>The default implementation returns {@link Step#done()}, signaling end of iteration.
      * Subclasses can override to implement retry logic (e.g., for empty first chunks).</p>
      *
      * @return a CompletionStage with the result to return
      */
-    protected CompletionStage<Optional<QueryResult>> handleEmptyFirstResult() {
-        return CompletableFuture.completedFuture(Optional.empty());
+    protected CompletionStage<Step<QueryResult>> handleEmptyFirstResult() {
+        return CompletableFuture.completedFuture(Step.<QueryResult>done());
     }
 
     @Override
-    public CompletionStage<Optional<QueryResult>> next() {
-        return fetchNext(false);
+    public CompletionStage<Step<QueryResult>> next() {
+        return fetchNext();
     }
 
     /**
-     * Fetches the next result, creating a new gRPC stream if needed.
-     *
-     * @param isFirstFromNewIterator true if this is the first fetch from a newly created iterator
-     * @return a CompletionStage with the next result or empty if iteration is complete
+     * Fetches the next result, emitting {@link Step.NeedDispatch} when a new gRPC stream needs
+     * to be started.
      */
-    private CompletionStage<Optional<QueryResult>> fetchNext(boolean isFirstFromNewIterator) {
-        // If no active iterator, try to create one
+    private CompletionStage<Step<QueryResult>> fetchNext() {
+        // If no active iterator, ask the pump to dispatch a new gRPC call on the caller thread.
         if (iterator == null) {
             if (!hasMoreToFetch()) {
-                return CompletableFuture.completedFuture(Optional.empty());
+                return CompletableFuture.completedFuture(Step.<QueryResult>done());
             }
-            // Build request and create new iterator
-            QueryResultParam param = buildQueryResultParam();
-            iterator = new AsyncStreamObserverIterator<>(buildLogMessage(), log);
-            client.getStub().getQueryResult(param, iterator.getObserver());
-            isFirstFromNewIterator = true;
+            // Build request and create the receiving observer/iterator now (so the observer is
+            // wired before the stub call). The stub call itself happens inside the dispatch
+            // thunk, which the synchronous pump executes on the caller thread.
+            final QueryResultParam param = buildQueryResultParam();
+            final AsyncStreamObserverIterator<QueryResultParam, QueryResult> newIter =
+                    new AsyncStreamObserverIterator<>(buildLogMessage(), log);
+            iterator = newIter;
+            awaitingFirstResponseFromNew = true;
+            Runnable dispatch = () -> client.getStub().getQueryResult(param, newIter.getObserver());
+            return CompletableFuture.completedFuture(Step.<QueryResult>needDispatch(dispatch));
         }
 
-        boolean firstFromNew = isFirstFromNewIterator;
-        return iterator.next().thenCompose(opt -> {
-            if (opt.isPresent()) {
-                onResultReceived(opt.get());
+        boolean firstFromNew = awaitingFirstResponseFromNew;
+        awaitingFirstResponseFromNew = false;
+        return iterator.next().thenCompose(step -> {
+            if (step instanceof Step.Value) {
+                QueryResult result = ((Step.Value<QueryResult>) step).getItem();
+                onResultReceived(result);
                 if (!omitSchema) {
                     omitSchema = true;
                 }
-                return CompletableFuture.completedFuture(opt);
+                return CompletableFuture.completedFuture(Step.<QueryResult>value(result));
+            } else if (step instanceof Step.NeedDispatch) {
+                return CompletableFuture.completedFuture(
+                        Step.<QueryResult>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+            } else if (step instanceof Step.Done) {
+                // Current stream exhausted.
+                iterator = null;
+                if (firstFromNew) {
+                    return handleEmptyFirstResult();
+                }
+                // Try to fetch more from a new iterator (which may emit NeedDispatch).
+                return fetchNext();
             }
-            // Iterator exhausted
-            iterator = null;
-            if (firstFromNew) {
-                return handleEmptyFirstResult();
-            }
-            // Try to fetch more from a new iterator
-            return fetchNext(false);
+            throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
         });
     }
 

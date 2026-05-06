@@ -8,7 +8,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
@@ -22,14 +21,14 @@ class SyncIteratorAdapterTest {
 
     @Test
     void testInterruptHandlingRestoresInterruptFlag() throws Exception {
-        val blockingFuture = new CompletableFuture<Optional<String>>();
+        val blockingFuture = new CompletableFuture<Step<String>>();
         val closeCalled = new AtomicBoolean(false);
         val iteratorStartedBlocking = new CountDownLatch(1);
 
         // Create an async iterator that blocks indefinitely until closed
         AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
             @Override
-            public CompletionStage<Optional<String>> next() {
+            public CompletionStage<Step<String>> next() {
                 iteratorStartedBlocking.countDown();
                 return blockingFuture;
             }
@@ -77,7 +76,7 @@ class SyncIteratorAdapterTest {
 
     @Test
     void testInterruptWithAsyncCloseSurfacesGrpcError() throws Exception {
-        val blockingFuture = new CompletableFuture<Optional<String>>();
+        val blockingFuture = new CompletableFuture<Step<String>>();
         val closeCalled = new AtomicBoolean(false);
         val iteratorStartedBlocking = new CountDownLatch(1);
 
@@ -85,7 +84,7 @@ class SyncIteratorAdapterTest {
         // The onError callback fires asynchronously after cancellation propagates through gRPC.
         AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
             @Override
-            public CompletionStage<Optional<String>> next() {
+            public CompletionStage<Step<String>> next() {
                 iteratorStartedBlocking.countDown();
                 return blockingFuture;
             }
@@ -139,9 +138,9 @@ class SyncIteratorAdapterTest {
         val nextCallCount = new AtomicInteger(0);
         AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
             @Override
-            public CompletionStage<Optional<String>> next() {
+            public CompletionStage<Step<String>> next() {
                 nextCallCount.incrementAndGet();
-                val failed = new CompletableFuture<Optional<String>>();
+                val failed = new CompletableFuture<Step<String>>();
                 failed.completeExceptionally(new RuntimeException("stream error"));
                 return failed;
             }
@@ -172,12 +171,12 @@ class SyncIteratorAdapterTest {
 
         AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
             @Override
-            public CompletionStage<Optional<String>> next() {
+            public CompletionStage<Step<String>> next() {
                 int i = index.getAndIncrement();
                 if (i < values.length) {
-                    return CompletableFuture.completedFuture(Optional.of(values[i]));
+                    return CompletableFuture.completedFuture(Step.value(values[i]));
                 }
-                return CompletableFuture.completedFuture(Optional.empty());
+                return CompletableFuture.completedFuture(Step.<String>done());
             }
 
             @Override
@@ -203,8 +202,8 @@ class SyncIteratorAdapterTest {
     void testEmptyIterator() {
         AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
             @Override
-            public CompletionStage<Optional<String>> next() {
-                return CompletableFuture.completedFuture(Optional.empty());
+            public CompletionStage<Step<String>> next() {
+                return CompletableFuture.completedFuture(Step.<String>done());
             }
 
             @Override
@@ -213,5 +212,45 @@ class SyncIteratorAdapterTest {
 
         val adapter = new SyncIteratorAdapter<>(asyncIterator);
         assertThat(adapter.hasNext()).isFalse();
+    }
+
+    @Test
+    void testNeedDispatchRunsThunkOnPumpThreadAndContinues() {
+        val dispatchedOnThread = new java.util.concurrent.atomic.AtomicReference<String>();
+        val dispatchedCount = new AtomicInteger(0);
+        val callCount = new AtomicInteger(0);
+
+        AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
+            @Override
+            public CompletionStage<Step<String>> next() {
+                int call = callCount.getAndIncrement();
+                switch (call) {
+                    case 0:
+                        // First call: ask pump to dispatch a thunk on its own thread
+                        return CompletableFuture.completedFuture(Step.<String>needDispatch(() -> {
+                            dispatchedOnThread.set(Thread.currentThread().getName());
+                            dispatchedCount.incrementAndGet();
+                        }));
+                    case 1:
+                        return CompletableFuture.completedFuture(Step.value("only"));
+                    default:
+                        return CompletableFuture.completedFuture(Step.<String>done());
+                }
+            }
+
+            @Override
+            public void close() {}
+        };
+
+        val adapter = new SyncIteratorAdapter<>(asyncIterator);
+        val callerThread = Thread.currentThread().getName();
+
+        assertThat(adapter.hasNext()).isTrue();
+        assertThat(adapter.next()).isEqualTo("only");
+        assertThat(adapter.hasNext()).isFalse();
+
+        // The dispatch thunk must have run on the same thread that called hasNext().
+        assertThat(dispatchedCount.get()).isEqualTo(1);
+        assertThat(dispatchedOnThread.get()).isEqualTo(callerThread);
     }
 }

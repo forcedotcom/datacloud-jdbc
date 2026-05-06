@@ -6,12 +6,16 @@ package com.salesforce.datacloud.jdbc.protocol.async.core;
 
 import com.google.protobuf.AbstractMessage;
 import io.grpc.stub.ClientResponseObserver;
-import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import org.slf4j.Logger;
 
 /**
  * Asynchronous iterator over a gRPC response.
+ *
+ * <p>This iterator only consumes an already-running gRPC stream — it never initiates an RPC
+ * itself, so it never emits {@link Step.NeedDispatch}. Each call to {@link #next()} produces
+ * either {@link Step.Value} (next message), {@link Step.Done} (stream completed), or completes
+ * the stage exceptionally on stream error.</p>
  *
  * @param <ReqT>  the request message type
  * @param <RespT> the response message type
@@ -44,11 +48,12 @@ public class AsyncStreamObserverIterator<ReqT, RespT extends AbstractMessage> im
      * {@inheritDoc}
      *
      * <p>Requests the next message from the gRPC stream. The returned stage completes
-     * when a message is received, the stream ends, or an error occurs.</p>
+     * with {@link Step.Value} when a message is received, {@link Step.Done} when the stream ends,
+     * or exceptionally on stream error.</p>
      */
     @Override
-    public CompletionStage<Optional<RespT>> next() {
-        return observer.requestNext();
+    public CompletionStage<Step<RespT>> next() {
+        return observer.requestNext().thenApply(opt -> opt.isPresent() ? Step.value(opt.get()) : Step.<RespT>done());
     }
 
     /**
