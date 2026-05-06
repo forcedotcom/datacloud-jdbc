@@ -6,29 +6,22 @@ package com.salesforce.datacloud.jdbc.protocol;
 
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncStreamObserverIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.SyncIteratorAdapter;
-import com.salesforce.datacloud.query.v3.QueryStatus;
-import java.sql.SQLException;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import salesforce.cdp.hyperdb.v1.ExecuteQueryResponse;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryParam;
+import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Slf4j
-public class AsyncQueryAccessHandle implements QueryAccessHandle {
-    @Getter
-    private final salesforce.cdp.hyperdb.v1.QueryStatus queryStatus;
+public class AsyncQueryAccessHandle implements RawQueryHandle {
+    private final QueryStatus queryStatus;
 
-    private volatile QueryStatus latestWrapperStatus;
-
-    private AsyncQueryAccessHandle(salesforce.cdp.hyperdb.v1.QueryStatus queryStatus, QueryStatus initial) {
+    private AsyncQueryAccessHandle(QueryStatus queryStatus) {
         this.queryStatus = queryStatus;
-        this.latestWrapperStatus = initial;
     }
 
-    public static AsyncQueryAccessHandle of(HyperServiceGrpc.HyperServiceStub stub, QueryParam param)
-            throws SQLException {
+    public static AsyncQueryAccessHandle of(HyperServiceGrpc.HyperServiceStub stub, QueryParam param) {
         val message = "executeQuery. mode=" + param.getTransferMode();
         // Submit request to start feeding the iterator
         val asyncIterator = new AsyncStreamObserverIterator<QueryParam, ExecuteQueryResponse>(message, log);
@@ -39,19 +32,11 @@ public class AsyncQueryAccessHandle implements QueryAccessHandle {
         val queryStatus = messages.next().getQueryInfo().getQueryStatus();
         // Consume all the remaining messages to ensure that the initial compilation succeeded.
         messages.forEachRemaining(x -> {});
-        val initialWrapper = QueryStatus.of(queryStatus);
-        return new AsyncQueryAccessHandle(queryStatus, initialWrapper);
+        return new AsyncQueryAccessHandle(queryStatus);
     }
 
     @Override
-    public QueryStatus getLatestWrapperStatus() {
-        return latestWrapperStatus;
-    }
-
-    @Override
-    public void observeQueryStatus(QueryStatus status) {
-        if (status != null) {
-            this.latestWrapperStatus = status;
-        }
+    public QueryStatus getQueryStatus() {
+        return queryStatus;
     }
 }

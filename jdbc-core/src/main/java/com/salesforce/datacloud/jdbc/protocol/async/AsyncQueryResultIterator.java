@@ -4,10 +4,9 @@
  */
 package com.salesforce.datacloud.jdbc.protocol.async;
 
-import com.salesforce.datacloud.jdbc.protocol.QueryAccessHandle;
+import com.salesforce.datacloud.jdbc.protocol.RawQueryHandle;
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncIterator;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
-import java.sql.SQLException;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -32,7 +31,7 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  */
 @Slf4j
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, QueryAccessHandle {
+public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, RawQueryHandle {
 
     // Iterator over the execute query stream (handles inline results and query info)
     private final AsyncExecuteQueryIterator executeQueryIterator;
@@ -191,10 +190,5 @@ public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, Que
     @Override
     public QueryStatus getQueryStatus() {
         return queryStatus;
-    }
-
-    @Override
-    public com.salesforce.datacloud.query.v3.QueryStatus getLatestWrapperStatus() throws SQLException {
-        return queryStatus == null ? null : com.salesforce.datacloud.query.v3.QueryStatus.of(queryStatus);
     }
 }
