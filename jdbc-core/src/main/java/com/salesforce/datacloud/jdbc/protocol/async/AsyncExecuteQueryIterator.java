@@ -93,10 +93,9 @@ public class AsyncExecuteQueryIterator implements AsyncIterator<QueryResult> {
                         // Not a result, fetch next message
                         return fetchNext();
                     } else if (step instanceof Step.NeedDispatch) {
-                        return CompletableFuture.completedFuture(
-                                Step.<QueryResult>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+                        return CompletableFuture.completedFuture(Step.forward(step));
                     } else if (step instanceof Step.Done) {
-                        return CompletableFuture.completedFuture(Step.<QueryResult>done());
+                        return CompletableFuture.completedFuture(Step.done());
                     }
                     throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
                 })

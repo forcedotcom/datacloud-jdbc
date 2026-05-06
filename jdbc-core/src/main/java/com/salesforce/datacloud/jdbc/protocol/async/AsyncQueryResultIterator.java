@@ -102,8 +102,7 @@ public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, Que
                 } else if (step instanceof Step.Value) {
                     return CompletableFuture.completedFuture(step);
                 } else if (step instanceof Step.NeedDispatch) {
-                    return CompletableFuture.completedFuture(
-                            Step.<QueryResult>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+                    return CompletableFuture.completedFuture(Step.forward(step));
                 } else if (step instanceof Step.Done) {
                     // Execute query stream ended, continue with chunk fetching
                     executeQueryStreamExhausted = true;
@@ -142,8 +141,7 @@ public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, Que
                 } else if (step instanceof Step.NeedDispatch) {
                     // Propagate NeedDispatch from the chunk iterator's stub call so the pump runs
                     // it on the caller thread.
-                    return CompletableFuture.completedFuture(
-                            Step.<QueryResult>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+                    return CompletableFuture.completedFuture(Step.forward(step));
                 } else if (step instanceof Step.Done) {
                     // Chunk iterator exhausted
                     chunkIterator = null;
@@ -183,8 +181,7 @@ public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, Que
                 }
             } else if (step instanceof Step.NeedDispatch) {
                 // Forward the info iterator's NeedDispatch upward.
-                return CompletableFuture.completedFuture(
-                        Step.<QueryResult>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+                return CompletableFuture.completedFuture(Step.forward(step));
             } else if (step instanceof Step.Done) {
                 // Should never happen — callers of pollForMoreChunks should not call it when
                 // the query is already finished.

@@ -158,10 +158,9 @@ public abstract class AsyncResultRangeIterator implements AsyncIterator<QueryRes
                 if (!omitSchema) {
                     omitSchema = true;
                 }
-                return CompletableFuture.completedFuture(Step.<QueryResult>value(result));
+                return CompletableFuture.completedFuture(Step.value(result));
             } else if (step instanceof Step.NeedDispatch) {
-                return CompletableFuture.completedFuture(
-                        Step.<QueryResult>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+                return CompletableFuture.completedFuture(Step.forward(step));
             } else if (step instanceof Step.Done) {
                 // Current stream exhausted.
                 iterator = null;

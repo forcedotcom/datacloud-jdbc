@@ -114,7 +114,16 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
             if (step instanceof Step.NeedDispatch) {
                 // Run the dispatch thunk on this (caller) thread so any gRPC ClientInterceptor.start
                 // callbacks fire here and observe caller-thread ThreadLocals. Then re-pump.
-                ((Step.NeedDispatch<T>) step).getDispatch().run();
+                //
+                // If the dispatch thunk throws (e.g. a host interceptor's start() rejects the call),
+                // cache the exception so subsequent hasNext() calls re-surface it rather than
+                // re-driving the iterator into an unspecified state.
+                try {
+                    ((Step.NeedDispatch<T>) step).getDispatch().run();
+                } catch (RuntimeException re) {
+                    terminalError = re;
+                    throw terminalError;
+                }
                 continue;
             } else if (step instanceof Step.Value) {
                 T item = ((Step.Value<T>) step).getItem();
