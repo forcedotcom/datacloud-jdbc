@@ -6,7 +6,6 @@ package com.salesforce.datacloud.jdbc.protocol;
 
 import com.salesforce.datacloud.jdbc.protocol.async.AsyncQueryResultIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.SyncIteratorAdapter;
-import java.sql.SQLException;
 import lombok.extern.slf4j.Slf4j;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.QueryParam;
@@ -26,7 +25,7 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  * @see AsyncQueryResultIterator
  */
 @Slf4j
-public class QueryResultIterator extends SyncIteratorAdapter<QueryResult> implements QueryAccessHandle {
+public class QueryResultIterator extends SyncIteratorAdapter<QueryResult> implements RawQueryHandle {
 
     /**
      * Initializes a new query result iterator. Will start query execution.
@@ -53,11 +52,5 @@ public class QueryResultIterator extends SyncIteratorAdapter<QueryResult> implem
     @Override
     public QueryStatus getQueryStatus() {
         return asyncIterator.getQueryStatus();
-    }
-
-    @Override
-    public com.salesforce.datacloud.query.v3.QueryStatus getLatestWrapperStatus() throws SQLException {
-        QueryStatus proto = asyncIterator.getQueryStatus();
-        return proto == null ? null : com.salesforce.datacloud.query.v3.QueryStatus.of(proto);
     }
 }
