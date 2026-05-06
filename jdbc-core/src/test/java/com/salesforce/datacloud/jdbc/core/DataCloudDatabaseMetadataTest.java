@@ -10,6 +10,7 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.lenient;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
@@ -18,7 +19,6 @@ import com.salesforce.datacloud.jdbc.util.JdbcURL;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
@@ -234,22 +234,22 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetNumericFunctions() {
-        assertThat(dataCloudDatabaseMetadata.getNumericFunctions()).isEqualTo("");
+        assertThat(dataCloudDatabaseMetadata.getNumericFunctions()).isEmpty();
     }
 
     @Test
     public void testGetStringFunctions() {
-        assertThat(dataCloudDatabaseMetadata.getStringFunctions()).isEqualTo("");
+        assertThat(dataCloudDatabaseMetadata.getStringFunctions()).isEmpty();
     }
 
     @Test
     public void testGetSystemFunctions() {
-        assertThat(dataCloudDatabaseMetadata.getSystemFunctions()).isEqualTo("");
+        assertThat(dataCloudDatabaseMetadata.getSystemFunctions()).isEmpty();
     }
 
     @Test
     public void testGetTimeDateFunctions() {
-        assertThat(dataCloudDatabaseMetadata.getTimeDateFunctions()).isEqualTo("");
+        assertThat(dataCloudDatabaseMetadata.getTimeDateFunctions()).isEmpty();
     }
 
     @Test
@@ -259,7 +259,7 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetExtraNameCharacters() {
-        assertThat(dataCloudDatabaseMetadata.getExtraNameCharacters()).isEqualTo("");
+        assertThat(dataCloudDatabaseMetadata.getExtraNameCharacters()).isEmpty();
     }
 
     @Test
@@ -940,6 +940,7 @@ public class DataCloudDatabaseMetadataTest {
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(false);
+        lenient().when(resultSetMock.getString("datatype")).thenReturn("text");
 
         Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
         Mockito.when(connection.createStatement()).thenReturn(statement);
@@ -1030,6 +1031,7 @@ public class DataCloudDatabaseMetadataTest {
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(false);
+        lenient().when(resultSetMock.getString("datatype")).thenReturn("text");
         Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
 
         ResultSet resultSet = dataCloudDatabaseMetadata.getColumns(null, null, null, null);
@@ -1047,6 +1049,7 @@ public class DataCloudDatabaseMetadataTest {
                 .thenReturn(true)
                 .thenReturn(true)
                 .thenReturn(false);
+        lenient().when(resultSetMock.getString("datatype")).thenReturn("text");
         Mockito.when(statement.executeQuery(anyString())).thenReturn(resultSetMock);
         Mockito.when(connection.createStatement()).thenReturn(statement);
 
@@ -1221,8 +1224,25 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     @SneakyThrows
-    public void testGetTypeInfo() {
-        assertExpectedEmptyResultSet(dataCloudDatabaseMetadata.getTypeInfo());
+    public void testGetTypeInfo() throws SQLException {
+        ResultSet resultSet = dataCloudDatabaseMetadata.getTypeInfo();
+        assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(18);
+        assertThat(resultSet.getMetaData().getColumnName(1)).isEqualTo("TYPE_NAME");
+        assertThat(resultSet.getMetaData().getColumnName(2)).isEqualTo("DATA_TYPE");
+        assertThat(resultSet.getMetaData().getColumnName(3)).isEqualTo("PRECISION");
+
+        int rowCount = 0;
+        while (resultSet.next()) {
+            rowCount++;
+            String typeName = resultSet.getString("TYPE_NAME");
+            assertThat(typeName).isNotEmpty();
+            int dataType = resultSet.getInt("DATA_TYPE");
+            assertThat(dataType).isNotEqualTo(0);
+            assertThat(resultSet.getShort("NULLABLE")).isEqualTo((short) java.sql.DatabaseMetaData.typeNullable);
+        }
+        assertThat(rowCount)
+                .as("getTypeInfo should return one row per HyperTypeKind")
+                .isGreaterThan(10);
     }
 
     @Test
@@ -1293,7 +1313,6 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
-    @SneakyThrows
     public void testGetUDTs() {
         assertThatThrownBy(() -> dataCloudDatabaseMetadata.getUDTs(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, new int[] {}))
@@ -1326,7 +1345,6 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
-    @SneakyThrows
     public void testGetSuperTypes() {
         assertThatThrownBy(() -> dataCloudDatabaseMetadata.getSuperTypes(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
@@ -1334,7 +1352,6 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
-    @SneakyThrows
     public void testGetSuperTables() {
         assertThatThrownBy(() -> dataCloudDatabaseMetadata.getSuperTables(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
@@ -1342,7 +1359,6 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
-    @SneakyThrows
     public void testGetAttributes() {
         assertThatThrownBy(() -> dataCloudDatabaseMetadata.getAttributes(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
@@ -1356,7 +1372,8 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetResultSetHoldability() {
-        assertThat(dataCloudDatabaseMetadata.getResultSetHoldability()).isEqualTo(ResultSet.HOLD_CURSORS_OVER_COMMIT);
+        assertThat(dataCloudDatabaseMetadata.getResultSetHoldability())
+                .isEqualTo(java.sql.ResultSet.HOLD_CURSORS_OVER_COMMIT);
     }
 
     @Test
@@ -1381,7 +1398,7 @@ public class DataCloudDatabaseMetadataTest {
 
     @Test
     public void testGetSQLStateType() {
-        assertThat(dataCloudDatabaseMetadata.getSQLStateType()).isEqualTo(DatabaseMetaData.sqlStateSQL);
+        assertThat(dataCloudDatabaseMetadata.getSQLStateType()).isEqualTo(java.sql.DatabaseMetaData.sqlStateSQL);
     }
 
     @Test
@@ -1504,14 +1521,12 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
-    @SneakyThrows
     public void testGetClientInfoProperties() {
         assertThatThrownBy(() -> dataCloudDatabaseMetadata.getClientInfoProperties())
                 .isInstanceOf(SQLFeatureNotSupportedException.class);
     }
 
     @Test
-    @SneakyThrows
     public void testGetFunctions() {
         assertThatThrownBy(() ->
                         dataCloudDatabaseMetadata.getFunctions(StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
@@ -1519,7 +1534,6 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
-    @SneakyThrows
     public void testGetFunctionColumns() {
         assertThatThrownBy(() -> dataCloudDatabaseMetadata.getFunctionColumns(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))
@@ -1527,7 +1541,6 @@ public class DataCloudDatabaseMetadataTest {
     }
 
     @Test
-    @SneakyThrows
     public void testGetPseudoColumns() {
         assertThatThrownBy(() -> dataCloudDatabaseMetadata.getPseudoColumns(
                         StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY))

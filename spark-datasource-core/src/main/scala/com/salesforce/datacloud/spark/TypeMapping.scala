@@ -14,7 +14,8 @@ import org.apache.spark.sql.types.{
   StringType,
   DateType,
   TimestampType,
-  DecimalType
+  DecimalType,
+  NullType
 }
 import java.sql.Types
 import org.apache.spark.sql.types.BinaryType
@@ -44,32 +45,34 @@ private object TypeMapping {
       md: ResultSetMetaData,
       columnId: Int
   ): Option[DataType] = {
+    // The underlying driver routes every ResultSetMetaData through
+    // com.salesforce.datacloud.jdbc.protocol.data.HyperType; see HyperTypes#toJdbcType for the
+    // full table of HyperTypeKind -> java.sql.Types mappings that drive this switch.
     md.getColumnType(columnId) match {
-      // See
-      //   https://github.com/forcedotcom/datacloud-jdbc/blob/dff10a6be48af2ed3d814fd7ce7f10d640ecf5f3/jdbc-core/src/main/java/com/salesforce/datacloud/jdbc/util/ArrowUtils.java#L227
-      //   https://github.com/apache/spark/blob/633419a8c7a342f7cd93f84e1241adee1e1195f0/sql/core/src/main/scala/org/apache/spark/sql/jdbc/PostgresDialect.scala#L57
       case Types.BOOLEAN  => Some(BooleanType)
+      case Types.TINYINT  => Some(ByteType)
       case Types.SMALLINT => Some(ShortType)
       case Types.INTEGER  => Some(IntegerType)
       case Types.BIGINT   => Some(LongType)
-      case Types.DECIMAL =>
+      case Types.DECIMAL | Types.NUMERIC =>
         Some(
           DecimalType(
             md.getPrecision(columnId),
             md.getScale(columnId)
           )
         )
-      case Types.REAL   => Some(FloatType)
-      case Types.DOUBLE => Some(DoubleType)
-      case Types.DATE   => Some(DateType)
+      case Types.REAL                 => Some(FloatType)
+      case Types.FLOAT | Types.DOUBLE => Some(DoubleType)
+      case Types.DATE                 => Some(DateType)
       case Types.TIMESTAMP | Types.TIMESTAMP_WITH_TIMEZONE =>
         Some(TimestampType)
-      case Types.VARCHAR       => Some(StringType)
-      case Types.LONGVARCHAR   => Some(StringType)
-      case Types.BINARY        => Some(BinaryType)
-      case Types.VARBINARY     => Some(BinaryType)
-      case Types.LONGVARBINARY => Some(BinaryType)
-      case _                   => None
+      case Types.CHAR | Types.VARCHAR | Types.LONGVARCHAR | Types.NCHAR |
+          Types.NVARCHAR | Types.LONGNVARCHAR =>
+        Some(StringType)
+      case Types.BINARY | Types.VARBINARY | Types.LONGVARBINARY =>
+        Some(BinaryType)
+      case Types.NULL => Some(NullType)
+      case _          => None
     }
   }
 
@@ -117,6 +120,9 @@ private object TypeMapping {
       case Types.BOOLEAN =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
           row.setBoolean(pos, rs.getBoolean(pos + 1))
+      case Types.TINYINT =>
+        (rs: ResultSet, row: InternalRow, pos: Int) =>
+          row.setByte(pos, rs.getByte(pos + 1))
       case Types.SMALLINT =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
           row.setShort(pos, rs.getShort(pos + 1))
@@ -126,7 +132,7 @@ private object TypeMapping {
       case Types.BIGINT =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
           row.setLong(pos, rs.getLong(pos + 1))
-      case Types.DECIMAL =>
+      case Types.DECIMAL | Types.NUMERIC =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
           row.update(
             pos,
@@ -135,7 +141,7 @@ private object TypeMapping {
       case Types.REAL =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
           row.setFloat(pos, rs.getFloat(pos + 1))
-      case Types.DOUBLE =>
+      case Types.FLOAT | Types.DOUBLE =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
           row.setDouble(pos, rs.getDouble(pos + 1))
       case Types.DATE =>
@@ -156,7 +162,8 @@ private object TypeMapping {
               SparkDateTimeUtils.fromJavaTimestamp
             )
           )
-      case Types.VARCHAR | Types.LONGVARCHAR =>
+      case Types.CHAR | Types.VARCHAR | Types.LONGVARCHAR | Types.NCHAR |
+          Types.NVARCHAR | Types.LONGNVARCHAR =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
           // We use getBytes for better performance, to avoid encoding UTF-8 to Java's UTF-16.
           row.update(
@@ -166,6 +173,8 @@ private object TypeMapping {
       case Types.BINARY | Types.VARBINARY | Types.LONGVARBINARY =>
         (rs: ResultSet, row: InternalRow, pos: Int) =>
           row.update(pos, rs.getBytes(pos + 1))
+      case Types.NULL =>
+        (_: ResultSet, row: InternalRow, pos: Int) => row.setNullAt(pos)
     }
   }
 

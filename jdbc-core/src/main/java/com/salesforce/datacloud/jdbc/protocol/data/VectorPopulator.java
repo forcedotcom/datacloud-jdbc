@@ -2,14 +2,13 @@
  * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
  * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
  */
-package com.salesforce.datacloud.jdbc.util;
+package com.salesforce.datacloud.jdbc.protocol.data;
 
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.adjustForCalendar;
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.millisToMicrosecondsSinceMidnight;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.Date;
@@ -36,7 +35,6 @@ import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.types.pojo.Field;
 
 /** Populates vectors in a VectorSchemaRoot with values from a list of parameters. */
 public final class VectorPopulator {
@@ -46,26 +44,33 @@ public final class VectorPopulator {
     }
 
     /**
-     * Populates the vectors in the given VectorSchemaRoot.
+     * Populates the vectors in the given VectorSchemaRoot using the {@link HyperType} of each
+     * parameter to decide which typed setter to dispatch to.
      *
-     * @param root The VectorSchemaRoot to populate.
+     * @param root the VectorSchemaRoot to populate
      */
     public static void populateVectors(VectorSchemaRoot root, List<ParameterBinding> parameters, Calendar calendar) {
         VectorValueSetterFactory factory = new VectorValueSetterFactory(calendar);
 
         for (int i = 0; i < parameters.size(); i++) {
-            Field field = root.getSchema().getFields().get(i);
-            ValueVector vector = root.getVector(field.getName());
-            Object value = parameters.get(i) == null ? null : parameters.get(i).getValue();
+            ParameterBinding binding = parameters.get(i);
+            if (binding == null) {
+                // No binding for this parameter — vector stays as created (null values). We cannot
+                // invoke a setter without a HyperTypeKind to dispatch on.
+                continue;
+            }
+            HyperTypeKind kind = binding.getType().getKind();
+            ValueVector vector =
+                    root.getVector(root.getSchema().getFields().get(i).getName());
+            Object value = binding.getValue();
 
             @SuppressWarnings(value = "unchecked")
-            VectorValueSetter<ValueVector> setter =
-                    (VectorValueSetter<ValueVector>) factory.getSetter(vector.getClass());
+            VectorValueSetter<ValueVector> setter = (VectorValueSetter<ValueVector>) factory.getSetter(kind);
 
             if (setter != null) {
                 setter.setValue(vector, value);
             } else {
-                throw new UnsupportedOperationException("Unsupported vector type: " + vector.getClass());
+                throw new UnsupportedOperationException("Unsupported HyperTypeKind for parameter binding: " + kind);
             }
         }
         root.setRowCount(1); // Set row count to 1 since we have exactly one row
@@ -77,30 +82,30 @@ interface VectorValueSetter<T extends ValueVector> {
     void setValue(T vector, Object value);
 }
 
-/** Factory for creating appropriate setter instances based on vector type. */
+/** Factory for creating appropriate setter instances based on {@link HyperTypeKind}. */
 class VectorValueSetterFactory {
-    private final Map<Class<? extends ValueVector>, VectorValueSetter<?>> setterMap;
+    private final Map<HyperTypeKind, VectorValueSetter<?>> setterMap;
 
     VectorValueSetterFactory(Calendar calendar) {
         setterMap = ImmutableMap.ofEntries(
-                Maps.immutableEntry(VarCharVector.class, new VarCharVectorSetter()),
-                Maps.immutableEntry(Float4Vector.class, new Float4VectorSetter()),
-                Maps.immutableEntry(Float8Vector.class, new Float8VectorSetter()),
-                Maps.immutableEntry(IntVector.class, new IntVectorSetter()),
-                Maps.immutableEntry(SmallIntVector.class, new SmallIntVectorSetter()),
-                Maps.immutableEntry(BigIntVector.class, new BigIntVectorSetter()),
-                Maps.immutableEntry(BitVector.class, new BitVectorSetter()),
-                Maps.immutableEntry(DecimalVector.class, new DecimalVectorSetter()),
-                Maps.immutableEntry(DateDayVector.class, new DateDayVectorSetter()),
-                Maps.immutableEntry(TimeMicroVector.class, new TimeMicroVectorSetter(calendar)),
-                Maps.immutableEntry(TimeStampMicroVector.class, new TimeStampMicroVectorSetter()),
-                Maps.immutableEntry(TimeStampMicroTZVector.class, new TimeStampMicroTZVectorSetter()),
-                Maps.immutableEntry(TinyIntVector.class, new TinyIntVectorSetter()));
+                Maps.immutableEntry(HyperTypeKind.VARCHAR, new VarCharVectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.CHAR, new VarCharVectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.FLOAT4, new Float4VectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.FLOAT8, new Float8VectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.INT32, new IntVectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.INT16, new SmallIntVectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.INT64, new BigIntVectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.BOOL, new BitVectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.DECIMAL, new DecimalVectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.DATE, new DateDayVectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.TIME, new TimeMicroVectorSetter(calendar)),
+                Maps.immutableEntry(HyperTypeKind.TIMESTAMP, new TimeStampMicroVectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.TIMESTAMP_TZ, new TimeStampMicroTZVectorSetter()),
+                Maps.immutableEntry(HyperTypeKind.INT8, new TinyIntVectorSetter()));
     }
 
-    @SuppressWarnings("unchecked")
-    <T extends ValueVector> VectorValueSetter<T> getSetter(Class<T> vectorClass) {
-        return (VectorValueSetter<T>) setterMap.get(vectorClass);
+    VectorValueSetter<?> getSetter(HyperTypeKind kind) {
+        return setterMap.get(kind);
     }
 }
 
@@ -339,7 +344,7 @@ class TimeStampMicroVectorSetter extends BaseVectorSetter<TimeStampMicroVector, 
 /**
  * Setter for TZ-aware TimeStampMicroTZVector (TIMESTAMP WITH TIME ZONE).
  * Stores the Timestamp's true UTC instant — no wall-clock shift applied.
- * Used when the parameter is bound as Types.TIMESTAMP_WITH_TIMEZONE.
+ * Used when the parameter is bound as {@link HyperType#timestampTz(boolean)}.
  */
 class TimeStampMicroTZVectorSetter extends BaseVectorSetter<TimeStampMicroTZVector, Timestamp> {
 

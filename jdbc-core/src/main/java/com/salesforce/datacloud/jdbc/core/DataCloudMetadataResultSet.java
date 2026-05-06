@@ -4,10 +4,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.resultset.ColumnAccessor;
 import com.salesforce.datacloud.jdbc.core.resultset.SimpleResultSet;
+import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;

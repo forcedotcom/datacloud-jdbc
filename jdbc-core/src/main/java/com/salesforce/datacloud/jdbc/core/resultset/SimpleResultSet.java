@@ -5,6 +5,8 @@
 package com.salesforce.datacloud.jdbc.core.resultset;
 
 import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
+import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
+import com.salesforce.datacloud.jdbc.protocol.data.HyperTypeKind;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -37,6 +39,16 @@ import lombok.val;
  *
  * Access to SQL values is provided via {@link ColumnAccessor} instances. This class
  * already takes care of casting from SQL types to the compatible Java types.
+ *
+ * <p><b>Planned for removal.</b> This implementation only covers the narrow slice of
+ * {@link HyperTypeKind} used by JDBC metadata result sets (INT32 for columns like
+ * {@code DATA_TYPE}, CHAR/VARCHAR for text columns, and INT8-INT64/OID via the
+ * {@code isIntegerLike} helper) — not the full query-result type universe. Rather
+ * than expanding the {@link #getLong}, {@link #getDouble}, {@link #getBigDecimal},
+ * {@link #getObject} switches to cover every kind, we intend to migrate
+ * {@code DataCloudMetadataResultSet} to build on {@link StreamingResultSet} so there
+ * is only one result-set implementation in the driver. Treat this class as
+ * maintenance-only until that refactor lands.
  */
 @AllArgsConstructor
 public abstract class SimpleResultSet<SELF>
@@ -168,19 +180,13 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public long getLong(int columnIndex) throws SQLException {
-        switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case TINYINT:
-            case SMALLINT:
-            case INTEGER:
-            case BIGINT: {
-                OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
-                wasNull = !v.isPresent();
-                return v.orElse(0L);
-            }
-            default:
-                throw new SQLException("Unsupported column type for integer-like types: "
-                        + metadata.getColumn(columnIndex).getType().toString());
+        val type = metadata.getColumn(columnIndex).getType();
+        if (!HyperTypes.isIntegerLike(type)) {
+            throw new SQLException("Unsupported column type for integer-like types: " + type);
         }
+        OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
+        wasNull = !v.isPresent();
+        return v.orElse(0L);
     }
 
     private static final double LONG_MAX_DOUBLE = StrictMath.nextDown((double) Long.MAX_VALUE);
@@ -201,38 +207,26 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public double getDouble(int columnIndex) throws SQLException {
-        switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case TINYINT:
-            case SMALLINT:
-            case INTEGER:
-            case BIGINT: {
-                OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
-                wasNull = !v.isPresent();
-                return v.orElse(0L);
-            }
-            default:
-                throw new SQLException("Unsupported column type for floating-point types: "
-                        + metadata.getColumn(columnIndex).getType().toString());
+        val type = metadata.getColumn(columnIndex).getType();
+        if (!HyperTypes.isIntegerLike(type)) {
+            throw new SQLException("Unsupported column type for floating-point types: " + type);
         }
+        OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
+        wasNull = !v.isPresent();
+        return v.orElse(0L);
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
-        switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case TINYINT:
-            case SMALLINT:
-            case INTEGER:
-            case BIGINT: {
-                OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
-                wasNull = !v.isPresent();
-                return v.isPresent() ? new BigDecimal(v.getAsLong()) : null;
-            }
+        val type = metadata.getColumn(columnIndex).getType();
+        if (!HyperTypes.isIntegerLike(type)) {
             // TODO: apparently, PostgreSQL does not support float/decimal conversion. Double-check this with test
             // cases.
-            default:
-                throw new SQLException("Unsupported column type for numeric types: "
-                        + metadata.getColumn(columnIndex).getType().toString());
+            throw new SQLException("Unsupported column type for numeric types: " + type);
         }
+        OptionalLong v = getAccessor(columnIndex).getAnyInteger(getSubclass());
+        wasNull = !v.isPresent();
+        return v.isPresent() ? new BigDecimal(v.getAsLong()) : null;
     }
 
     @Override
@@ -288,20 +282,15 @@ public abstract class SimpleResultSet<SELF>
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        switch (metadata.getColumn(columnIndex).getType().getType()) {
-            case INTEGER: {
-                val v = getInt(columnIndex);
-                if (wasNull) {
-                    return null;
-                }
-                return v;
-            }
-            case CHAR:
-            case VARCHAR:
-                return getString(columnIndex);
+        val type = metadata.getColumn(columnIndex).getType();
+        if (type.getKind() == HyperTypeKind.INT32) {
+            val v = getInt(columnIndex);
+            return wasNull ? null : v;
         }
-        throw new SQLException("Unsupported column type in `getObject`: "
-                + metadata.getColumn(columnIndex).getType().toString());
+        if (HyperTypes.isStringLike(type)) {
+            return getString(columnIndex);
+        }
+        throw new SQLException("Unsupported column type in `getObject`: " + type);
     }
 
     @Override

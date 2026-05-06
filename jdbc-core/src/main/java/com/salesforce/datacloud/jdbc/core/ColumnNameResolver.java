@@ -4,7 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;

@@ -5,12 +5,12 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.resultset.ForwardOnlyResultSet;
 import com.salesforce.datacloud.jdbc.core.resultset.ReadOnlyResultSet;
 import com.salesforce.datacloud.jdbc.core.resultset.ResultSetWithPositionalGetters;
-import com.salesforce.datacloud.jdbc.util.ArrowToColumnTypeMapper;
+import com.salesforce.datacloud.jdbc.protocol.data.ArrowToHyperTypeMapper;
+import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.QueryStatus;
 import java.io.IOException;
@@ -93,11 +93,7 @@ public class StreamingResultSet
             val fields = schemaRoot.getSchema().getFields();
 
             val columns = fields.stream()
-                    .map(field -> {
-                        val type = ArrowToColumnTypeMapper.toColumnType(field);
-                        return new ColumnMetadata(
-                                field.getName(), type, type.getType().getName());
-                    })
+                    .map(field -> new ColumnMetadata(field.getName(), ArrowToHyperTypeMapper.toHyperType(field)))
                     .collect(Collectors.toList());
             val metadata = new DataCloudResultSetMetaData(columns);
 
@@ -110,6 +106,9 @@ public class StreamingResultSet
             return new StreamingResultSet(cursor, queryId, metadata, accessors, columnNameResolver);
         } catch (IOException ex) {
             throw new SQLException("Unexpected error during ResultSet creation", "XX000", ex);
+        } catch (IllegalArgumentException ex) {
+            // Thrown by ArrowToHyperTypeMapper for Arrow types the driver does not model.
+            throw new SQLException("Unsupported column type in query result: " + ex.getMessage(), "0A000", ex);
         }
     }
 

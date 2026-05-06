@@ -4,6 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.core.metadata;
 
+import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
+import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
@@ -58,32 +60,34 @@ public class DataCloudResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int getColumnType(int column) throws SQLException {
-        return getColumn(column).getType().getType().getVendorTypeNumber();
+        return HyperTypes.toJdbcTypeCode(getColumn(column).getType());
     }
 
     @Override
     public String getColumnTypeName(int column) throws SQLException {
-        return getColumn(column).getTypeName();
+        ColumnMetadata col = getColumn(column);
+        String override = col.getTypeName();
+        return override != null ? override : HyperTypes.toJdbcTypeName(col.getType());
     }
 
     @Override
     public String getColumnClassName(int column) throws SQLException {
-        return getColumn(column).getType().getJavaType().getName();
+        return HyperTypes.toJavaClass(getColumn(column).getType()).getName();
     }
 
     @Override
     public boolean isSigned(int column) throws SQLException {
-        return getColumn(column).getType().isSigned();
+        return HyperTypes.isSigned(getColumn(column).getType());
     }
 
     @Override
     public int getPrecision(int column) throws SQLException {
-        return getColumn(column).getType().getPrecisionOrStringLength();
+        return HyperTypes.getPrecision(getColumn(column).getType());
     }
 
     @Override
     public int getScale(int column) throws SQLException {
-        return getColumn(column).getType().getScale();
+        return HyperTypes.getScale(getColumn(column).getType());
     }
 
     @Override
@@ -95,7 +99,7 @@ public class DataCloudResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int getColumnDisplaySize(int column) throws SQLException {
-        return getColumn(column).getType().getDisplaySize();
+        return HyperTypes.getDisplaySize(getColumn(column).getType());
     }
 
     @Override
@@ -162,7 +166,7 @@ public class DataCloudResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public boolean isCaseSensitive(int column) throws SQLException {
-        return getColumn(column).getType().isCaseSensitive();
+        return HyperTypes.isCaseSensitive(getColumn(column).getType());
     }
 
     @Override

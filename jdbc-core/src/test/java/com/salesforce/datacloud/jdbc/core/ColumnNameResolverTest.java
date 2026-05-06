@@ -7,9 +7,8 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnType;
-import java.sql.JDBCType;
+import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,7 +22,7 @@ import org.junit.jupiter.api.Test;
 public class ColumnNameResolverTest {
 
     private ColumnMetadata createColumn(String name) {
-        return new ColumnMetadata(name, new ColumnType(JDBCType.VARCHAR, true), "VARCHAR");
+        return new ColumnMetadata(name, HyperType.varcharUnlimited(true), "VARCHAR");
     }
 
     @Test
@@ -76,7 +75,7 @@ public class ColumnNameResolverTest {
     @Test
     public void testFindColumnWithNullLabels() throws SQLException {
         List<ColumnMetadata> columns = new ArrayList<>();
-        columns.add(new ColumnMetadata(null, new ColumnType(JDBCType.VARCHAR, true), "VARCHAR"));
+        columns.add(new ColumnMetadata(null, HyperType.varcharUnlimited(true), "VARCHAR"));
         columns.add(createColumn("Col2"));
 
         ColumnNameResolver resolver = new ColumnNameResolver(columns);
@@ -124,7 +123,7 @@ public class ColumnNameResolverTest {
     public void testDuplicateColumnNames() throws SQLException {
         List<ColumnMetadata> columns = new ArrayList<>();
         columns.add(createColumn("Duplicate"));
-        columns.add(new ColumnMetadata("Other", new ColumnType(JDBCType.INTEGER, true), "INTEGER"));
+        columns.add(new ColumnMetadata("Other", HyperType.int32(true), "INTEGER"));
         columns.add(createColumn("Duplicate"));
 
         ColumnNameResolver resolver = new ColumnNameResolver(columns);
