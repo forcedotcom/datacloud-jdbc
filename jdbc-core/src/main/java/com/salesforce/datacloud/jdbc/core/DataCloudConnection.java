@@ -7,10 +7,9 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.config.DriverVersion.formatDriverInfo;
 import static com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler.createException;
 import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
-import static com.salesforce.datacloud.jdbc.util.ArrowUtils.toColumnMetaData;
+import static com.salesforce.datacloud.jdbc.protocol.data.ArrowUtils.toColumnMetaData;
 
 import com.google.protobuf.Empty;
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -22,6 +21,7 @@ import com.salesforce.datacloud.jdbc.protocol.QuerySchemaAccessor;
 import com.salesforce.datacloud.jdbc.protocol.RowRangeIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncStreamObserverIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.SyncIteratorAdapter;
+import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
@@ -182,7 +182,7 @@ public class DataCloudConnection implements Connection {
     }
 
     private DataCloudPreparedStatement getQueryPreparedStatement(String sql) {
-        return new DataCloudPreparedStatement(this, sql, new DefaultParameterManager());
+        return new DataCloudPreparedStatement(this, sql);
     }
 
     /**
@@ -281,6 +281,12 @@ public class DataCloudConnection implements Connection {
             return new DataCloudResultSetMetaData(columns);
         } catch (StatusRuntimeException ex) {
             throw createException(connectionProperties.isIncludeCustomerDetailInReason(), null, queryId, ex);
+        } catch (IllegalArgumentException ex) {
+            // Thrown by ArrowToHyperTypeMapper for Arrow types the driver does not model.
+            throw new SQLException(
+                    "Unsupported column type in query schema for queryId=" + queryId + ": " + ex.getMessage(),
+                    "0A000",
+                    ex);
         }
     }
 

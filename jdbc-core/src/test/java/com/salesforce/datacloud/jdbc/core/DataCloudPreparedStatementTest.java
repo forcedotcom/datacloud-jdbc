@@ -15,6 +15,8 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
+import com.salesforce.datacloud.jdbc.protocol.data.ParameterBinding;
 import com.salesforce.datacloud.jdbc.util.DateTimeUtils;
 import com.salesforce.datacloud.jdbc.util.GrpcUtils;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
@@ -37,16 +39,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 
 public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
 
     private DataCloudConnection connection;
-
-    @Mock
-    private ParameterManager mockParameterManager;
 
     private DataCloudPreparedStatement preparedStatement;
 
@@ -55,8 +53,7 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
     @BeforeEach
     public void beforeEach() throws SQLException {
         connection = getInterceptedClientConnection();
-        mockParameterManager = mock(ParameterManager.class);
-        preparedStatement = new DataCloudPreparedStatement(connection, "SELECT * FROM table", mockParameterManager);
+        preparedStatement = new DataCloudPreparedStatement(connection, "SELECT * FROM table");
     }
 
     @Test
@@ -94,14 +91,11 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
         preparedStatement.setInt(2, 123);
 
         preparedStatement.clearParameters();
-        verify(mockParameterManager).clearParameters();
+        assertThat(preparedStatement.parameters.getParameters()).isEmpty();
     }
 
     @Test
     void testSetParameterNegativeIndexThrowsSQLException() {
-        ParameterManager parameterManager = new DefaultParameterManager();
-        preparedStatement = new DataCloudPreparedStatement(connection, parameterManager);
-
         assertThatThrownBy(() -> preparedStatement.setString(0, "TEST"))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Parameter index must be greater than 0");
@@ -115,39 +109,51 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
     @SneakyThrows
     void testAllSetMethods() {
         preparedStatement.setString(1, "TEST");
-        verify(mockParameterManager).setParameter(1, Types.VARCHAR, "TEST");
+        assertThat(preparedStatement.parameters.getParameters().get(0))
+                .isEqualTo(new ParameterBinding(HyperType.varcharUnlimited(true), "TEST"));
 
         preparedStatement.setBoolean(2, true);
-        verify(mockParameterManager).setParameter(2, Types.BOOLEAN, true);
+        assertThat(preparedStatement.parameters.getParameters().get(1))
+                .isEqualTo(new ParameterBinding(HyperType.bool(false), true));
 
         preparedStatement.setByte(3, (byte) 1);
-        verify(mockParameterManager).setParameter(3, Types.TINYINT, (byte) 1);
+        assertThat(preparedStatement.parameters.getParameters().get(2))
+                .isEqualTo(new ParameterBinding(HyperType.int8(false), (byte) 1));
 
         preparedStatement.setShort(4, (short) 2);
-        verify(mockParameterManager).setParameter(4, Types.SMALLINT, (short) 2);
+        assertThat(preparedStatement.parameters.getParameters().get(3))
+                .isEqualTo(new ParameterBinding(HyperType.int16(false), (short) 2));
 
         preparedStatement.setInt(5, 3);
-        verify(mockParameterManager).setParameter(5, Types.INTEGER, 3);
+        assertThat(preparedStatement.parameters.getParameters().get(4))
+                .isEqualTo(new ParameterBinding(HyperType.int32(false), 3));
 
         preparedStatement.setLong(6, 4L);
-        verify(mockParameterManager).setParameter(6, Types.BIGINT, 4L);
+        assertThat(preparedStatement.parameters.getParameters().get(5))
+                .isEqualTo(new ParameterBinding(HyperType.int64(false), 4L));
 
         preparedStatement.setFloat(7, 5.0f);
-        verify(mockParameterManager).setParameter(7, Types.FLOAT, 5.0f);
+        assertThat(preparedStatement.parameters.getParameters().get(6))
+                .isEqualTo(new ParameterBinding(HyperType.float8(false), 5.0f));
 
         preparedStatement.setDouble(8, 6.0);
-        verify(mockParameterManager).setParameter(8, Types.DOUBLE, 6.0);
+        assertThat(preparedStatement.parameters.getParameters().get(7))
+                .isEqualTo(new ParameterBinding(HyperType.float8(false), 6.0));
 
-        preparedStatement.setBigDecimal(9, new java.math.BigDecimal("7.0"));
-        verify(mockParameterManager).setParameter(9, Types.DECIMAL, new java.math.BigDecimal("7.0"));
+        BigDecimal bd9 = new BigDecimal("7.0");
+        preparedStatement.setBigDecimal(9, bd9);
+        assertThat(preparedStatement.parameters.getParameters().get(8))
+                .isEqualTo(new ParameterBinding(HyperType.decimal(bd9.precision(), bd9.scale(), true), bd9));
 
         Date date = new Date(System.currentTimeMillis());
         preparedStatement.setDate(10, date);
-        verify(mockParameterManager).setParameter(10, Types.DATE, date);
+        assertThat(preparedStatement.parameters.getParameters().get(9))
+                .isEqualTo(new ParameterBinding(HyperType.date(true), date));
 
         Time time = new Time(System.currentTimeMillis());
         preparedStatement.setTime(11, time);
-        verify(mockParameterManager).setParameter(11, Types.TIME, time);
+        assertThat(preparedStatement.parameters.getParameters().get(10))
+                .isEqualTo(new ParameterBinding(HyperType.time(true), time));
 
         // setTimestamp normalizes to wall-clock-as-UTC before storing.
         // In the JVM default timezone the wall-clock extracted from the epoch and re-encoded
@@ -157,22 +163,28 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
                 java.time.LocalDateTime.ofInstant(timestamp.toInstant(), java.time.ZoneId.systemDefault());
         Timestamp expectedStored = Timestamp.from(wallClock.toInstant(java.time.ZoneOffset.UTC));
         preparedStatement.setTimestamp(12, timestamp);
-        verify(mockParameterManager).setParameter(12, Types.TIMESTAMP, expectedStored);
+        assertThat(preparedStatement.parameters.getParameters().get(11))
+                .isEqualTo(new ParameterBinding(HyperType.timestamp(true), expectedStored));
 
         preparedStatement.setNull(13, Types.NULL);
-        verify(mockParameterManager).setParameter(13, Types.NULL, null);
+        assertThat(preparedStatement.parameters.getParameters().get(12))
+                .isEqualTo(new ParameterBinding(HyperType.nullType(), null));
 
         preparedStatement.setObject(14, "TEST");
-        verify(mockParameterManager).setParameter(14, Types.VARCHAR, "TEST");
+        assertThat(preparedStatement.parameters.getParameters().get(13))
+                .isEqualTo(new ParameterBinding(HyperType.varcharUnlimited(true), "TEST"));
 
         preparedStatement.setObject(15, null);
-        verify(mockParameterManager).setParameter(15, Types.NULL, null);
+        assertThat(preparedStatement.parameters.getParameters().get(14))
+                .isEqualTo(new ParameterBinding(HyperType.nullType(), null));
 
         preparedStatement.setObject(16, "TEST", Types.VARCHAR);
-        verify(mockParameterManager).setParameter(16, Types.VARCHAR, "TEST");
+        assertThat(preparedStatement.parameters.getParameters().get(15))
+                .isEqualTo(new ParameterBinding(HyperType.varcharUnlimited(true), "TEST"));
 
         preparedStatement.setObject(17, null, Types.VARCHAR);
-        verify(mockParameterManager).setParameter(17, Types.NULL, null);
+        assertThat(preparedStatement.parameters.getParameters().get(16))
+                .isEqualTo(new ParameterBinding(HyperType.nullType(), null));
 
         try (MockedStatic<DateTimeUtils> mockedDateTimeUtil = mockStatic(DateTimeUtils.class)) {
             mockedDateTimeUtil
@@ -183,7 +195,8 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
 
             mockedDateTimeUtil.verify(
                     () -> DateTimeUtils.getUTCDateFromDateAndCalendar(Date.valueOf("1970-01-01"), calendar), times(1));
-            verify(mockParameterManager).setParameter(18, Types.DATE, Date.valueOf("1969-12-31"));
+            assertThat(preparedStatement.parameters.getParameters().get(17))
+                    .isEqualTo(new ParameterBinding(HyperType.date(true), Date.valueOf("1969-12-31")));
         }
 
         try (MockedStatic<DateTimeUtils> mockedDateTimeUtil = mockStatic(DateTimeUtils.class)) {
@@ -195,7 +208,8 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
 
             mockedDateTimeUtil.verify(
                     () -> DateTimeUtils.getUTCTimeFromTimeAndCalendar(Time.valueOf("00:00:00"), calendar), times(1));
-            verify(mockParameterManager).setParameter(19, Types.TIME, Time.valueOf("22:00:00"));
+            assertThat(preparedStatement.parameters.getParameters().get(18))
+                    .isEqualTo(new ParameterBinding(HyperType.time(true), Time.valueOf("22:00:00")));
         }
 
         {
@@ -208,7 +222,8 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
                     ts.toInstant(), calendar.getTimeZone().toZoneId());
             Timestamp tsExpectedStored = Timestamp.from(tsWallClock.toInstant(java.time.ZoneOffset.UTC));
             preparedStatement.setTimestamp(20, ts, calendar);
-            verify(mockParameterManager).setParameter(20, Types.TIMESTAMP, tsExpectedStored);
+            assertThat(preparedStatement.parameters.getParameters().get(19))
+                    .isEqualTo(new ParameterBinding(HyperType.timestamp(true), tsExpectedStored));
         }
 
         assertThatThrownBy(() -> preparedStatement.setObject(1, new InvalidClass()))

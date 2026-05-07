@@ -8,7 +8,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudMetadataResultSet;
 import com.salesforce.datacloud.jdbc.core.MetadataSchemas;
-import java.sql.JDBCType;
+import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
@@ -65,7 +66,9 @@ class DataCloudResultSetMetaDataTest {
 
     @Test
     public void testGetColumnDisplaySize() throws SQLException {
-        assertThat(resultSetMetaData.getColumnDisplaySize(1)).isEqualTo(-1);
+        // Column 1 (TABLE_CAT) is VARCHAR unbounded
+        assertThat(resultSetMetaData.getColumnDisplaySize(1)).isEqualTo(HyperType.UNLIMITED_LENGTH);
+        // Column 5 (DATA_TYPE) is INTEGER -> 10 digits + 1 sign = 11
         assertThat(resultSetMetaData.getColumnDisplaySize(5)).isEqualTo(11);
     }
 
@@ -79,7 +82,7 @@ class DataCloudResultSetMetaDataTest {
 
     @Test
     public void testGetColumnLabelWithNullColumnNameReturnsDefaultValue() throws SQLException {
-        ColumnMetadata columnMetadata = new ColumnMetadata(null, new ColumnType(JDBCType.VARCHAR, true), "TEXT");
+        ColumnMetadata columnMetadata = new ColumnMetadata(null, HyperType.varcharUnlimited(true), "TEXT");
         resultSetMetaData = new DataCloudResultSetMetaData(new ColumnMetadata[] {columnMetadata});
         assertThat(resultSetMetaData.getColumnLabel(1)).isEqualTo("C0");
     }
@@ -99,7 +102,9 @@ class DataCloudResultSetMetaDataTest {
 
     @Test
     public void testGetPrecision() throws SQLException {
-        assertThat(resultSetMetaData.getPrecision(1)).isEqualTo(-1);
+        // Column 1 (TABLE_CAT) is VARCHAR unbounded
+        assertThat(resultSetMetaData.getPrecision(1)).isEqualTo(HyperType.UNLIMITED_LENGTH);
+        // Column 5 (DATA_TYPE) is INTEGER -> 10 digits
         assertThat(resultSetMetaData.getPrecision(5)).isEqualTo(10);
     }
 
@@ -117,14 +122,6 @@ class DataCloudResultSetMetaDataTest {
     @Test
     public void testGetCatalogName() throws SQLException {
         assertThat(resultSetMetaData.getCatalogName(1)).isEqualTo(StringUtils.EMPTY);
-    }
-
-    @Test
-    public void getColumnType() throws SQLException {
-        for (int i = 1; i <= COLUMNS_SCHEMA.size(); i++) {
-            assertThat(resultSetMetaData.getColumnType(i))
-                    .isEqualTo(COLUMNS_SCHEMA.get(i - 1).getType().getType().getVendorTypeNumber());
-        }
     }
 
     @Test
@@ -156,37 +153,37 @@ class DataCloudResultSetMetaDataTest {
         assertThat(resultSetMetaData.getColumnClassName(1)).isEqualTo("java.lang.String");
         assertThat(resultSetMetaData.getColumnClassName(17)).isEqualTo("java.lang.Integer");
 
-        // Cover remaining Java types from ColumnType.getJavaTypeName() switch
-        assertThat(metaDataWithColumnType(JDBCType.BOOLEAN).getColumnClassName(1))
-                .isEqualTo("java.lang.Boolean");
-        assertThat(metaDataWithColumnType(JDBCType.SMALLINT).getColumnClassName(1))
+        // Cover remaining Java types
+        assertThat(metaDataWithType(HyperType.bool(true)).getColumnClassName(1)).isEqualTo("java.lang.Boolean");
+        assertThat(metaDataWithType(HyperType.int16(true)).getColumnClassName(1))
                 .isEqualTo("java.lang.Integer");
-        assertThat(metaDataWithColumnType(JDBCType.BIGINT).getColumnClassName(1))
+        assertThat(metaDataWithType(HyperType.int64(true)).getColumnClassName(1))
                 .isEqualTo("java.lang.Long");
-        assertThat(metaDataWithColumnType(JDBCType.NUMERIC).getColumnClassName(1))
+        assertThat(metaDataWithType(HyperType.decimal(10, 2, true)).getColumnClassName(1))
                 .isEqualTo("java.math.BigDecimal");
-        assertThat(metaDataWithColumnType(JDBCType.FLOAT).getColumnClassName(1)).isEqualTo("java.lang.Float");
-        assertThat(metaDataWithColumnType(JDBCType.DOUBLE).getColumnClassName(1))
+        assertThat(metaDataWithType(HyperType.float4(true)).getColumnClassName(1))
+                .isEqualTo("java.lang.Float");
+        assertThat(metaDataWithType(HyperType.float8(true)).getColumnClassName(1))
                 .isEqualTo("java.lang.Double");
-        assertThat(metaDataWithColumnType(JDBCType.CHAR).getColumnClassName(1)).isEqualTo("java.lang.String");
-        assertThat(metaDataWithColumnType(JDBCType.BINARY).getColumnClassName(1))
+        assertThat(metaDataWithType(HyperType.fixedChar(1, true)).getColumnClassName(1))
+                .isEqualTo("java.lang.String");
+        assertThat(metaDataWithType(HyperType.binary(10, true)).getColumnClassName(1))
                 .isEqualTo("[B");
-        assertThat(metaDataWithColumnType(JDBCType.DATE).getColumnClassName(1)).isEqualTo("java.sql.Date");
-        assertThat(metaDataWithColumnType(JDBCType.TIME).getColumnClassName(1)).isEqualTo("java.sql.Time");
-        assertThat(metaDataWithColumnType(JDBCType.TIMESTAMP).getColumnClassName(1))
+        assertThat(metaDataWithType(HyperType.date(true)).getColumnClassName(1)).isEqualTo("java.sql.Date");
+        assertThat(metaDataWithType(HyperType.time(true)).getColumnClassName(1)).isEqualTo("java.sql.Time");
+        assertThat(metaDataWithType(HyperType.timestamp(true)).getColumnClassName(1))
                 .isEqualTo("java.sql.Timestamp");
-        assertThat(metaDataWithColumnType(JDBCType.TIMESTAMP_WITH_TIMEZONE).getColumnClassName(1))
+        assertThat(metaDataWithType(HyperType.timestampTz(true)).getColumnClassName(1))
                 .isEqualTo("java.sql.Timestamp");
-        assertThat(metaDataWithColumnType(JDBCType.ARRAY, new ColumnType(JDBCType.VARCHAR, true))
+        assertThat(metaDataWithType(HyperType.array(HyperType.varcharUnlimited(true), true))
                         .getColumnClassName(1))
                 .isEqualTo("java.sql.Array");
     }
 
     @Test
-    public void columnTypeWithNullableConstructor() throws SQLException {
-        // Covers ColumnType(JDBCType type, boolean nullable)
-        ColumnType nonNullable = new ColumnType(JDBCType.VARCHAR, false);
-        ColumnType nullable = new ColumnType(JDBCType.INTEGER, true);
+    public void nullableVsNonNullableColumn() throws SQLException {
+        HyperType nonNullable = HyperType.varcharUnlimited(false);
+        HyperType nullable = HyperType.int32(true);
         DataCloudResultSetMetaData metaNonNullable =
                 new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nonNullable, "TEXT")});
         DataCloudResultSetMetaData metaNullable =
@@ -196,15 +193,8 @@ class DataCloudResultSetMetaDataTest {
         assertThat(metaNullable.isNullable(1)).isEqualTo(ResultSetMetaData.columnNullable);
     }
 
-    private static DataCloudResultSetMetaData metaDataWithColumnType(JDBCType jdbcType) {
-        return metaDataWithColumnType(jdbcType, null);
-    }
-
-    private static DataCloudResultSetMetaData metaDataWithColumnType(JDBCType jdbcType, ColumnType arrayElementType) {
-        ColumnType columnType = arrayElementType != null
-                ? new ColumnType(jdbcType, arrayElementType, true)
-                : new ColumnType(jdbcType, true);
-        return new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", columnType, "TEXT")});
+    private static DataCloudResultSetMetaData metaDataWithType(HyperType type) {
+        return new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", type, "TEXT")});
     }
 
     @Test

@@ -12,15 +12,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.salesforce.datacloud.jdbc.core.DataCloudMetadataResultSet;
 import com.salesforce.datacloud.jdbc.core.MetadataSchemas;
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnMetadata;
-import com.salesforce.datacloud.jdbc.core.metadata.ColumnType;
 import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
+import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.sql.Blob;
 import java.sql.Clob;
-import java.sql.JDBCType;
 import java.sql.NClob;
 import java.sql.Ref;
 import java.sql.ResultSet;
@@ -420,7 +419,7 @@ class SimpleResultSetTest {
     @Test
     void tinyintColumnSupportsGetLongGetDoubleGetBigDecimal() throws SQLException {
         List<ColumnMetadata> schema =
-                Collections.singletonList(new ColumnMetadata("val", new ColumnType(JDBCType.TINYINT, true), "TINYINT"));
+                Collections.singletonList(new ColumnMetadata("val", HyperType.int8(true), "TINYINT"));
         SimpleResultSet<?> rs = DataCloudMetadataResultSet.of(
                 new DataCloudResultSetMetaData(schema), Arrays.asList(Collections.singletonList(42L)));
 
@@ -432,7 +431,7 @@ class SimpleResultSetTest {
     @Test
     void tinyintColumnSupportsGetDouble() throws SQLException {
         List<ColumnMetadata> schema =
-                Collections.singletonList(new ColumnMetadata("val", new ColumnType(JDBCType.TINYINT, true), "TINYINT"));
+                Collections.singletonList(new ColumnMetadata("val", HyperType.int8(true), "TINYINT"));
         SimpleResultSet<?> rs = DataCloudMetadataResultSet.of(
                 new DataCloudResultSetMetaData(schema), Arrays.asList(Collections.singletonList(7L)));
 
@@ -443,7 +442,7 @@ class SimpleResultSetTest {
     @Test
     void tinyintColumnSupportsGetBigDecimal() throws SQLException {
         List<ColumnMetadata> schema =
-                Collections.singletonList(new ColumnMetadata("val", new ColumnType(JDBCType.TINYINT, true), "TINYINT"));
+                Collections.singletonList(new ColumnMetadata("val", HyperType.int8(true), "TINYINT"));
         SimpleResultSet<?> rs = DataCloudMetadataResultSet.of(
                 new DataCloudResultSetMetaData(schema), Arrays.asList(Collections.singletonList(99L)));
 

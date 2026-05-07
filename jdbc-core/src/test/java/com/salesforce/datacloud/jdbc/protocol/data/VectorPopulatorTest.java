@@ -2,7 +2,7 @@
  * This file is part of https://github.com/forcedotcom/datacloud-jdbc which is released under the
  * Apache 2.0 license. See https://github.com/forcedotcom/datacloud-jdbc/blob/main/LICENSE.txt
  */
-package com.salesforce.datacloud.jdbc.util;
+package com.salesforce.datacloud.jdbc.protocol.data;
 
 // import static org.mockito.Mockito.mock;
 // import static org.mockito.Mockito.spy;
@@ -12,7 +12,7 @@ package com.salesforce.datacloud.jdbc.util;
 // import static org.mockito.Mockito.withSettings;
 //
 // import com.google.common.collect.ImmutableList;
-// import com.salesforce.datacloud.jdbc.core.model.ParameterBinding;
+// import com.salesforce.datacloud.jdbc.protocol.data.ParameterBinding;
 // import java.math.BigDecimal;
 // import java.nio.charset.StandardCharsets;
 // import java.sql.Date;
