@@ -17,7 +17,7 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 @Slf4j
 @AllArgsConstructor
-public class AsyncQueryAccessHandle implements QueryAccessHandle {
+public class AsyncQueryAccessHandle implements RawQueryHandle {
     @Getter
     private final QueryStatus queryStatus;
 

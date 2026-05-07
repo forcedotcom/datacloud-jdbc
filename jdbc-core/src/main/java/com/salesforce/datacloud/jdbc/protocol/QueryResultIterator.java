@@ -25,7 +25,7 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  * @see AsyncQueryResultIterator
  */
 @Slf4j
-public class QueryResultIterator extends SyncIteratorAdapter<QueryResult> implements QueryAccessHandle {
+public class QueryResultIterator extends SyncIteratorAdapter<QueryResult> implements RawQueryHandle {
 
     /**
      * Initializes a new query result iterator. Will start query execution.

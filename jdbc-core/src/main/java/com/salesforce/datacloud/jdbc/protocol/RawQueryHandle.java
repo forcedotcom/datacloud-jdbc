@@ -7,9 +7,9 @@ package com.salesforce.datacloud.jdbc.protocol;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
 
 /**
- * To access a query result one has to have the query id. By exposing a method to get the QueryStatus, the query id can
- * be accessed. We share the full query status to also allow seamless access to other query state.
+ * Lower-level protocol view over a query result. Exposes the gRPC proto {@link QueryStatus},
+ * which carries the query id and any state observed by the protocol layer.
  */
-public interface QueryAccessHandle {
+public interface RawQueryHandle {
     QueryStatus getQueryStatus();
 }
