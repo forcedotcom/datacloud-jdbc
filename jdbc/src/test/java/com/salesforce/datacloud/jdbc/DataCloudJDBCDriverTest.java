@@ -110,4 +110,31 @@ public class DataCloudJDBCDriverTest {
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Failed to connect to");
     }
+
+    @Test
+    public void testConnectUsingDirectCdpToken() throws Exception {
+        // A signed JWT with audienceTenantId=a360/falcondev/a6d726a73f534327a6a8e2e0f3cc3840
+        final String fakeToken =
+                "eyJraWQiOiJDT1JFLjAwRE9LMDAwMDAwOVp6ci4xNzE4MDUyMTU0NDIyIiwidHlwIjoiSldUIiwiYWxnIjoiRVMyNTYifQ.eyJzdWIiOiJodHRwczovL2xvZ2luLnRlc3QxLnBjLXJuZC5zYWxlc2ZvcmNlLmNvbS9pZC8wMERPSzAwMDAwMDlaenIyQUUvMDA1T0swMDAwMDBVeTkxWUFDIiwic2NwIjoiY2RwX3Byb2ZpbGVfYXBpIGNkcF9pbmdlc3RfYXBpIGNkcF9pZGVudGl0eXJlc29sdXRpb25fYXBpIGNkcF9zZWdtZW50X2FwaSBjZHBfcXVlcnlfYXBpIGNkcF9hcGkiLCJpc3MiOiJodHRwczovL2xvZ2luLnRlc3QxLnBjLXJuZC5zYWxlc2ZvcmNlLmNvbS8iLCJvcmdJZCI6IjAwRE9LMDAwMDAwOVp6ciIsImlzc3VlclRlbmFudElkIjoiY29yZS9mYWxjb250ZXN0MS1jb3JlNG9yYTE1LzAwRE9LMDAwMDAwOVp6cjJBRSIsInNmYXBwaWQiOiIzTVZHOVhOVDlUbEI3VmtZY0tIVm5sUUZzWEd6cUJuMGszUC5zNHJBU0I5V09oRU1OdkgyNzNpM1NFRzF2bWl3WF9YY2NXOUFZbHA3VnJnQ3BGb0ZXIiwiYXVkaWVuY2VUZW5hbnRJZCI6ImEzNjAvZmFsY29uZGV2L2E2ZDcyNmE3M2Y1MzQzMjdhNmE4ZTJlMGYzY2MzODQwIiwiY3VzdG9tX2F0dHJpYnV0ZXMiOnsiZGF0YXNwYWNlIjoiZGVmYXVsdCJ9LCJhdWQiOiJhcGkuYTM2MC5zYWxlc2ZvcmNlLmNvbSIsIm5iZiI6MTcyMDczMTAyMSwic2ZvaWQiOiIwMERPSzAwMDAwMDlaenIiLCJzZnVpZCI6IjAwNU9LMDAwMDAwVXk5MSIsImV4cCI6MTcyMDczODI4MCwiaWF0IjoxNzIwNzMxMDgxLCJqdGkiOiIwYjYwMzc4OS1jMGI2LTQwZTMtYmIzNi03NDQ3MzA2MzAxMzEifQ.lXgeAhJIiGoxgNpBi0W5oBWyn2_auB2bFxxajGuK6DMHlkqDhHJAlFN_uf6QPSjGSJCh5j42Ow5SrEptUDJwmQ";
+
+        Properties properties = new Properties();
+        properties.setProperty("cdpToken", fakeToken);
+        properties.setProperty("tenantUrl", "test.c360a.salesforce.com");
+
+        try (java.sql.Connection conn = DriverManager.getConnection(VALID_URL, properties)) {
+            assertThat(conn).isNotNull();
+            assertThat(conn.getMetaData().getUserName()).isEqualTo("");
+        }
+    }
+
+    @Test
+    public void testConnectUsingDirectCdpTokenRejectsInvalidJwt() {
+        Properties properties = new Properties();
+        properties.setProperty("cdpToken", "not-a-valid-jwt");
+        properties.setProperty("tenantUrl", "test.c360a.salesforce.com");
+
+        assertThatThrownBy(() -> DriverManager.getConnection(VALID_URL, properties))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("Invalid CDP token");
+    }
 }
