@@ -114,7 +114,19 @@ public class SyncIteratorAdapter<T> implements CloseableIterator<T> {
             if (step instanceof Step.NeedDispatch) {
                 // Run the dispatch thunk on this (caller) thread so any gRPC ClientInterceptor.start
                 // callbacks fire here and observe caller-thread ThreadLocals. Then re-pump.
-                ((Step.NeedDispatch<T>) step).getDispatch().run();
+                //
+                // If the thunk throws (e.g. AuthorizationHeaderInterceptor.start() failing a token
+                // refresh — propagated as SQLException through @SneakyThrows, hence catch Exception
+                // not RuntimeException), cache it. Without caching, the upstream async iterator is
+                // left with a wired-but-never-started stream observer, and a retried hasNext()
+                // would block forever on a future that nothing will complete. Mirrors the
+                // ExecutionException handler above.
+                try {
+                    ((Step.NeedDispatch<T>) step).getDispatch().run();
+                } catch (Exception ex) {
+                    terminalError = (ex instanceof RuntimeException) ? (RuntimeException) ex : new RuntimeException(ex);
+                    throw terminalError;
+                }
                 continue;
             } else if (step instanceof Step.Value) {
                 T item = ((Step.Value<T>) step).getItem();

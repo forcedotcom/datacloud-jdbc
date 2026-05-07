@@ -253,4 +253,70 @@ class SyncIteratorAdapterTest {
         assertThat(dispatchedCount.get()).isEqualTo(1);
         assertThat(dispatchedOnThread.get()).isEqualTo(callerThread);
     }
+
+    @Test
+    void testDispatchRuntimeExceptionIsCachedAsTerminal() {
+        val callCount = new AtomicInteger(0);
+        AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
+            @Override
+            public CompletionStage<Step<String>> next() {
+                callCount.incrementAndGet();
+                return CompletableFuture.completedFuture(Step.<String>needDispatch(() -> {
+                    throw new RuntimeException("interceptor blew up");
+                }));
+            }
+
+            @Override
+            public void close() {}
+        };
+
+        val adapter = new SyncIteratorAdapter<>(asyncIterator);
+
+        assertThatThrownBy(adapter::hasNext)
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("interceptor blew up");
+
+        // Subsequent hasNext() must re-throw the cached error rather than re-driving the
+        // (half-initialized) async iterator into a hang.
+        assertThatThrownBy(adapter::hasNext)
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("interceptor blew up");
+        assertThat(callCount.get()).isEqualTo(1);
+    }
+
+    @Test
+    void testDispatchSneakyCheckedExceptionIsCachedAsTerminal() {
+        // AuthorizationHeaderInterceptor.start() re-throws as SQLException via @SneakyThrows.
+        // SQLException is checked, so a `catch (RuntimeException)` would miss it. Verify the
+        // pump catches it via `catch (Exception)` and surfaces it as a terminal error.
+        val callCount = new AtomicInteger(0);
+        AsyncIterator<String> asyncIterator = new AsyncIterator<String>() {
+            @Override
+            public CompletionStage<Step<String>> next() {
+                callCount.incrementAndGet();
+                return CompletableFuture.completedFuture(Step.<String>needDispatch(SneakyThrower::throwSqlException));
+            }
+
+            @Override
+            public void close() {}
+        };
+
+        val adapter = new SyncIteratorAdapter<>(asyncIterator);
+
+        assertThatThrownBy(adapter::hasNext)
+                .isInstanceOf(RuntimeException.class)
+                .hasCauseInstanceOf(java.sql.SQLException.class)
+                .hasRootCauseMessage("token refresh failed");
+
+        // The cached terminal error must be re-thrown without re-driving the async iterator.
+        assertThatThrownBy(adapter::hasNext).isInstanceOf(RuntimeException.class);
+        assertThat(callCount.get()).isEqualTo(1);
+    }
+
+    private static final class SneakyThrower {
+        @lombok.SneakyThrows
+        static void throwSqlException() {
+            throw new java.sql.SQLException("token refresh failed");
+        }
+    }
 }
