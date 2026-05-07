@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.42.3](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.2...v0.42.3) (2026-05-07)
+
+
+### Bug Fixes
+
+* propagate caller ThreadLocals to follow-up gRPC calls in async iterators ([#181](https://github.com/forcedotcom/datacloud-jdbc/issues/181)) ([7ac79f8](https://github.com/forcedotcom/datacloud-jdbc/commit/7ac79f8eff319e5a11163db5d1a92bc0491a5b00))
+* async interrupt race condition in SyncIteratorAdapter ([#170](https://github.com/forcedotcom/datacloud-jdbc/issues/170)) ([e81a0e6](https://github.com/forcedotcom/datacloud-jdbc/commit/e81a0e6f179e192520d612ced5143bb8eab62d2e))
+
+
+### Notes
+
+This is a hotfix release backported from `main` onto `v0.42.2`. It contains only the two bug fixes above; it does not include other features merged to `main` since `0.42.2` (Avatica removal, timezone/JDBC 4.2 support, query execution statistics, etc.).
+
 ## [0.42.2](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.1...v0.42.2) (2026-03-05)
 
 
