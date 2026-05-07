@@ -5,12 +5,12 @@
 package com.salesforce.datacloud.jdbc.hyper;
 
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncStreamObserverIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.core.Step;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -55,15 +55,19 @@ public final class HyperDatabaseSetup {
                 new AsyncStreamObserverIterator<>(sql, log);
         stub.executeQuery(param, iterator.getObserver());
 
-        // Drain the response stream
+        // Drain the response stream. AsyncStreamObserverIterator never emits NeedDispatch.
         try {
             while (true) {
-                CompletionStage<Optional<ExecuteQueryResponse>> next = iterator.next();
-                Optional<ExecuteQueryResponse> response =
+                CompletionStage<Step<ExecuteQueryResponse>> next = iterator.next();
+                Step<ExecuteQueryResponse> step =
                         next.toCompletableFuture().get(STATEMENT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-                if (!response.isPresent()) {
+                if (step instanceof Step.Value) {
+                    continue;
+                } else if (step instanceof Step.Done) {
                     break;
                 }
+                throw new IllegalStateException("Unexpected Step subtype from AsyncStreamObserverIterator: "
+                        + step.getClass());
             }
         } catch (ExecutionException e) {
             throw new RuntimeException("Failed to execute: " + sql, e.getCause());
@@ -141,12 +145,16 @@ public final class HyperDatabaseSetup {
 
         try {
             while (true) {
-                CompletionStage<Optional<ExecuteQueryResponse>> next = iterator.next();
-                Optional<ExecuteQueryResponse> response =
+                CompletionStage<Step<ExecuteQueryResponse>> next = iterator.next();
+                Step<ExecuteQueryResponse> step =
                         next.toCompletableFuture().get(STATEMENT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-                if (!response.isPresent()) {
+                if (step instanceof Step.Value) {
+                    continue;
+                } else if (step instanceof Step.Done) {
                     break;
                 }
+                throw new IllegalStateException("Unexpected Step subtype from AsyncStreamObserverIterator: "
+                        + step.getClass());
             }
         } catch (ExecutionException e) {
             throw new RuntimeException("Failed to execute: " + sql, e.getCause());

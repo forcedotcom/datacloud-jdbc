@@ -7,6 +7,7 @@ package com.salesforce.datacloud.jdbc.protocol.async;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salesforce.datacloud.jdbc.core.InterceptedHyperTestBase;
+import com.salesforce.datacloud.jdbc.protocol.async.core.Step;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -30,6 +31,25 @@ class AsyncQueryResultIteratorTest extends InterceptedHyperTestBase {
 
     private HyperServiceGrpc.HyperServiceStub setupStub() {
         return getInterceptedStub().withDeadlineAfter(30000, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Drives the async iterator like the synchronous pump: runs any {@link Step.NeedDispatch}
+     * thunk and re-invokes {@code next()} until a {@link Step.Value} or {@link Step.Done} arrives.
+     */
+    private static <T> CompletableFuture<Optional<T>> drainStep(
+            com.salesforce.datacloud.jdbc.protocol.async.core.AsyncIterator<T> iterator) {
+        return iterator.next().toCompletableFuture().thenCompose(step -> {
+            if (step instanceof Step.NeedDispatch) {
+                ((Step.NeedDispatch<T>) step).getDispatch().run();
+                return drainStep(iterator);
+            } else if (step instanceof Step.Value) {
+                return CompletableFuture.completedFuture(Optional.of(((Step.Value<T>) step).getItem()));
+            } else if (step instanceof Step.Done) {
+                return CompletableFuture.completedFuture(Optional.<T>empty());
+            }
+            throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
+        });
     }
 
     /**
@@ -104,8 +124,7 @@ class AsyncQueryResultIteratorTest extends InterceptedHyperTestBase {
             val resultCount = new AtomicInteger(0);
 
             // First call should return quickly with the inline result
-            CompletableFuture<Optional<QueryResult>> firstFuture =
-                    iterator.next().toCompletableFuture();
+            CompletableFuture<Optional<QueryResult>> firstFuture = drainStep(iterator);
 
             // Should complete quickly since data is available
             Optional<QueryResult> firstResult = firstFuture.get(5, TimeUnit.SECONDS);
@@ -116,8 +135,7 @@ class AsyncQueryResultIteratorTest extends InterceptedHyperTestBase {
             iteratorReceivedFirstResult.countDown();
 
             // Second call will need to poll for query info - this will hang initially
-            CompletableFuture<Optional<QueryResult>> secondFuture =
-                    iterator.next().toCompletableFuture();
+            CompletableFuture<Optional<QueryResult>> secondFuture = drainStep(iterator);
 
             // Verify the future is not completed yet (query info is delayed)
             assertThat(secondFuture.isDone()).isFalse();
@@ -171,11 +189,11 @@ class AsyncQueryResultIteratorTest extends InterceptedHyperTestBase {
 
         try (val iterator = AsyncQueryResultIterator.of(stub, queryParam)) {
             // First result should be available
-            Optional<QueryResult> first = iterator.next().toCompletableFuture().get(5, TimeUnit.SECONDS);
+            Optional<QueryResult> first = drainStep(iterator).get(5, TimeUnit.SECONDS);
             assertThat(first).isPresent();
 
             // Second call should return empty (finished)
-            Optional<QueryResult> second = iterator.next().toCompletableFuture().get(5, TimeUnit.SECONDS);
+            Optional<QueryResult> second = drainStep(iterator).get(5, TimeUnit.SECONDS);
             assertThat(second).isEmpty();
 
             assertThat(iterator.getQueryStatus().getCompletionStatus())
