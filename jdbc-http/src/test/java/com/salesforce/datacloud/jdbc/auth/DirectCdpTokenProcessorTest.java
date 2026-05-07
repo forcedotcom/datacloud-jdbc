@@ -7,6 +7,8 @@ package com.salesforce.datacloud.jdbc.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
+import java.lang.reflect.Field;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.UUID;
@@ -111,6 +113,60 @@ class DirectCdpTokenProcessorTest {
     void hasCdpTokenReturnsTrueWhenBothPresent() {
         Properties props = propertiesForCdpToken(FAKE_TOKEN, TENANT_URL);
         assertThat(DirectCdpTokenProcessor.hasCdpToken(props)).isTrue();
+    }
+
+    @Test
+    void getDataCloudTokenRebuildsWhenCachedTokenExpired() throws Exception {
+        DirectCdpTokenProcessor processor =
+                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(FAKE_TOKEN, TENANT_URL));
+
+        DataCloudTokenResponse expiredResponse = new DataCloudTokenResponse();
+        expiredResponse.setToken(FAKE_TOKEN);
+        expiredResponse.setInstanceUrl(TENANT_URL);
+        expiredResponse.setTokenType("Bearer");
+        expiredResponse.setExpiresIn(-1);
+        DataCloudToken expired = DataCloudToken.of(expiredResponse);
+        assertThat(expired.isAlive()).isFalse();
+
+        Field cache = DirectCdpTokenProcessor.class.getDeclaredField("cachedDataCloudToken");
+        cache.setAccessible(true);
+        cache.set(processor, expired);
+
+        DataCloudToken rebuilt = processor.getDataCloudToken();
+        assertThat(rebuilt).isNotSameAs(expired);
+        assertThat(rebuilt.isAlive()).isTrue();
+    }
+
+    @Test
+    void getDataCloudTokenRebuildsAfterCacheCleared() throws Exception {
+        DirectCdpTokenProcessor processor =
+                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(FAKE_TOKEN, TENANT_URL));
+
+        Field cache = DirectCdpTokenProcessor.class.getDeclaredField("cachedDataCloudToken");
+        cache.setAccessible(true);
+        cache.set(processor, null);
+
+        DataCloudToken rebuilt = processor.getDataCloudToken();
+        assertThat(rebuilt.getAccessToken()).isEqualTo("Bearer " + FAKE_TOKEN);
+        assertThat(rebuilt.getTenantId()).isEqualTo(FAKE_TENANT_ID);
+    }
+
+    @Test
+    void getDataCloudTokenWrapsRebuildFailure() throws Exception {
+        DirectCdpTokenProcessor processor =
+                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(FAKE_TOKEN, TENANT_URL));
+
+        Field cache = DirectCdpTokenProcessor.class.getDeclaredField("cachedDataCloudToken");
+        cache.setAccessible(true);
+        cache.set(processor, null);
+
+        Field tenantUrl = DirectCdpTokenProcessor.class.getDeclaredField("tenantUrl");
+        tenantUrl.setAccessible(true);
+        tenantUrl.set(processor, null);
+
+        SQLException ex = assertThrows(SQLException.class, processor::getDataCloudToken);
+        assertThat(ex.getSQLState()).isEqualTo("28000");
+        assertThat(cache.get(processor)).isNull();
     }
 
     @Test

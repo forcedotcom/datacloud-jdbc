@@ -5,12 +5,14 @@
 package com.salesforce.datacloud.jdbc.interceptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.salesforce.datacloud.jdbc.auth.DataCloudToken;
 import com.salesforce.datacloud.jdbc.auth.DataCloudTokenProvider;
 import com.salesforce.datacloud.jdbc.auth.DirectCdpTokenProcessor;
+import java.sql.SQLException;
 import java.util.Properties;
 import lombok.val;
 import org.junit.jupiter.api.Test;
@@ -60,5 +62,25 @@ class TokenProcessorSupplierTest {
 
         assertThat(supplier.getToken()).isEqualTo("Bearer custom");
         assertThat(supplier.getAudience()).isEqualTo("custom-tenant");
+    }
+
+    @Test
+    void getTokenPropagatesSupplierException() {
+        val supplier = new TokenProcessorSupplier(() -> {
+            throw new SQLException("supplier failed");
+        });
+
+        assertThatThrownBy(supplier::getToken).isInstanceOf(SQLException.class).hasMessage("supplier failed");
+    }
+
+    @Test
+    void getAudiencePropagatesSupplierException() {
+        val supplier = new TokenProcessorSupplier(() -> {
+            throw new SQLException("supplier failed");
+        });
+
+        assertThatThrownBy(supplier::getAudience)
+                .isInstanceOf(SQLException.class)
+                .hasMessage("supplier failed");
     }
 }
