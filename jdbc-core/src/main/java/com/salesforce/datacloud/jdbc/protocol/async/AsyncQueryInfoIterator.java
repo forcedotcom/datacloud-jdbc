@@ -6,10 +6,10 @@ package com.salesforce.datacloud.jdbc.protocol.async;
 
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncStreamObserverIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.core.Step;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -28,6 +28,13 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  *
  * <p>This iterator keeps iterating until the query is finished. For finished queries it'll do
  * at most a single RPC call and return all infos returned from that call.</p>
+ *
+ * <p>When this iterator needs to start a new {@code getQueryInfo} stream, it does NOT call the
+ * gRPC stub from inside the {@link CompletionStage} chain (which would run on a gRPC executor
+ * thread). Instead it emits {@link Step.NeedDispatch}; the synchronous pump runs the stub call
+ * on the caller thread so {@link io.grpc.ClientInterceptor#interceptCall} {@code start} callbacks
+ * observe caller-thread {@link ThreadLocal}s. The retry path on CANCELLED also flows through
+ * this same NeedDispatch mechanism, so retries also dispatch on the caller thread.</p>
  */
 @Slf4j
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -52,19 +59,27 @@ public class AsyncQueryInfoIterator implements AsyncIterator<QueryInfo> {
     private int retryCount;
 
     @Override
-    public CompletionStage<Optional<QueryInfo>> next() {
+    public CompletionStage<Step<QueryInfo>> next() {
         return nextInternal();
     }
 
-    private CompletionStage<Optional<QueryInfo>> nextInternal() {
-        // If we're finished, return empty
+    private CompletionStage<Step<QueryInfo>> nextInternal() {
+        // If we're finished, return done
         if (isQueryFinished) {
-            return CompletableFuture.completedFuture(Optional.empty());
+            return CompletableFuture.completedFuture(Step.<QueryInfo>done());
         }
 
-        // If we don't have an iterator yet, create one
+        // If we don't have an iterator yet, ask the pump to dispatch a new gRPC call on the
+        // caller thread.
         if (iterator == null) {
-            startNewGrpcCall();
+            QueryInfoParam request =
+                    client.getQueryInfoParamBuilder().setStreaming(true).build();
+            String message = String.format("getQueryInfo queryId=%s, streaming=%s", client.getQueryId(), true);
+            final AsyncStreamObserverIterator<QueryInfoParam, QueryInfo> newIter =
+                    new AsyncStreamObserverIterator<>(message, log);
+            iterator = newIter;
+            Runnable dispatch = () -> client.getStub().getQueryInfo(request, newIter.getObserver());
+            return CompletableFuture.completedFuture(Step.<QueryInfo>needDispatch(dispatch));
         }
 
         // Request next from current iterator
@@ -77,7 +92,7 @@ public class AsyncQueryInfoIterator implements AsyncIterator<QueryInfo> {
      * Attempts to retry on CANCELLED errors, up to 2 retries.
      * If no retry is needed or possible, returns the result or error as-is.
      */
-    private CompletionStage<Optional<QueryInfo>> attemptRetry(Optional<QueryInfo> result, Throwable error) {
+    private CompletionStage<Step<QueryInfo>> attemptRetry(Step<QueryInfo> result, Throwable error) {
         // No need to retry
         if (result != null) {
             return CompletableFuture.completedFuture(result);
@@ -97,13 +112,14 @@ public class AsyncQueryInfoIterator implements AsyncIterator<QueryInfo> {
                 ++retryCount;
                 iterator = null;
                 // This will recursively call nextInternal() again but is bounded by the
-                // retry count. If this returns failure the retries are exhausted
+                // retry count. The recursion re-emits a NeedDispatch for the new getQueryInfo
+                // stream so the retry's stub call also runs on the caller thread.
                 return nextInternal();
             }
         }
 
         // No more retry budget, forward the current error
-        CompletableFuture<Optional<QueryInfo>> future = new CompletableFuture<>();
+        CompletableFuture<Step<QueryInfo>> future = new CompletableFuture<>();
         future.completeExceptionally(cause);
         return future;
     }
@@ -112,33 +128,37 @@ public class AsyncQueryInfoIterator implements AsyncIterator<QueryInfo> {
      * Processes a successful result from the stream.
      * Updates the finished flag based on query status and handles stream end by reconnecting if needed.
      */
-    private CompletionStage<Optional<QueryInfo>> processResult(Optional<QueryInfo> value, Throwable error) {
+    private CompletionStage<Step<QueryInfo>> processResult(Step<QueryInfo> step, Throwable error) {
         // If there is an error we forward it
         if (error != null) {
-            CompletableFuture<Optional<QueryInfo>> future = new CompletableFuture<>();
+            CompletableFuture<Step<QueryInfo>> future = new CompletableFuture<>();
             future.completeExceptionally(error);
             return future;
         }
 
-        // Process the value
-        if (value.isPresent()) {
+        if (step instanceof Step.Value) {
             retryCount = 0;
-            QueryInfo info = value.get();
+            QueryInfo info = ((Step.Value<QueryInfo>) step).getItem();
             if (info.hasQueryStatus()) {
                 isQueryFinished =
                         (info.getQueryStatus().getCompletionStatus() == QueryStatus.CompletionStatus.FINISHED);
             }
-            return CompletableFuture.completedFuture(Optional.of(info));
-        } else {
+            return CompletableFuture.completedFuture(Step.<QueryInfo>value(info));
+        } else if (step instanceof Step.NeedDispatch) {
+            // The underlying AsyncStreamObserverIterator never emits NeedDispatch today, but a
+            // safe upcast keeps this code correct if it ever does.
+            return CompletableFuture.completedFuture(Step.<QueryInfo>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+        } else if (step instanceof Step.Done) {
             // Stream ended without value
             if (isQueryFinished) {
-                return CompletableFuture.completedFuture(Optional.empty());
+                return CompletableFuture.completedFuture(Step.<QueryInfo>done());
             }
             // Need to start a new stream
             ++retryCount;
             iterator = null;
             return nextInternal();
         }
+        throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
     }
 
     /**
@@ -153,17 +173,6 @@ public class AsyncQueryInfoIterator implements AsyncIterator<QueryInfo> {
             java.util.function.BiFunction<? super T, Throwable, ? extends CompletionStage<U>> fn) {
 
         return source.handle(fn).thenCompose(Function.identity());
-    }
-
-    /**
-     * Starts a new streaming gRPC call to fetch query info updates.
-     */
-    private void startNewGrpcCall() {
-        QueryInfoParam request =
-                client.getQueryInfoParamBuilder().setStreaming(true).build();
-        String message = String.format("getQueryInfo queryId=%s, streaming=%s", client.getQueryId(), true);
-        iterator = new AsyncStreamObserverIterator<>(message, log);
-        client.getStub().getQueryInfo(request, iterator.getObserver());
     }
 
     @Override

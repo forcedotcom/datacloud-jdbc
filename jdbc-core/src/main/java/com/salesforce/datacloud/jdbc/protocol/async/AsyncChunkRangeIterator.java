@@ -4,8 +4,8 @@
  */
 package com.salesforce.datacloud.jdbc.protocol.async;
 
+import com.salesforce.datacloud.jdbc.protocol.async.core.Step;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import lombok.NonNull;
@@ -87,7 +87,7 @@ public class AsyncChunkRangeIterator extends AsyncResultRangeIterator {
     }
 
     @Override
-    protected CompletionStage<Optional<QueryResult>> handleEmptyFirstResult() {
+    protected CompletionStage<Step<QueryResult>> handleEmptyFirstResult() {
         if ((chunkId == 1) && (chunkId < limitChunkId)) {
             // In special cases on adaptive timeout Hyper can produce an empty first chunk
             // We thus retry immediately with next chunk in this case
@@ -99,7 +99,7 @@ public class AsyncChunkRangeIterator extends AsyncResultRangeIterator {
                     client.getQueryId(),
                     chunkId - 1,
                     limitChunkId);
-            return CompletableFuture.completedFuture(Optional.empty());
+            return CompletableFuture.completedFuture(Step.<QueryResult>done());
         }
     }
 }

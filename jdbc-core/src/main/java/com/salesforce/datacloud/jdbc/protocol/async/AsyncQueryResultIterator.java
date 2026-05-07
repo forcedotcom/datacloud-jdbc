@@ -6,8 +6,8 @@ package com.salesforce.datacloud.jdbc.protocol.async;
 
 import com.salesforce.datacloud.jdbc.protocol.QueryAccessHandle;
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.core.Step;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import lombok.AccessLevel;
@@ -15,6 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import salesforce.cdp.hyperdb.v1.HyperServiceGrpc;
 import salesforce.cdp.hyperdb.v1.OutputFormat;
+import salesforce.cdp.hyperdb.v1.QueryInfo;
 import salesforce.cdp.hyperdb.v1.QueryParam;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 import salesforce.cdp.hyperdb.v1.QueryStatus;
@@ -28,6 +29,10 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  *
  * <p>This is the async equivalent of
  * {@link com.salesforce.datacloud.jdbc.protocol.QueryResultIterator}.</p>
+ *
+ * <p>{@link Step.NeedDispatch} produced by sub-iterators ({@code AsyncQueryInfoIterator},
+ * {@code AsyncChunkRangeIterator}) is propagated upward unchanged so the synchronous pump runs
+ * the dispatch thunk on the caller thread.</p>
  */
 @Slf4j
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -81,29 +86,31 @@ public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, Que
     }
 
     @Override
-    public CompletionStage<Optional<QueryResult>> next() {
+    public CompletionStage<Step<QueryResult>> next() {
         // If execute query stream is not exhausted, try to get next from it
         if (!executeQueryStreamExhausted) {
-            return AsyncQueryInfoIterator.handleCompose(executeQueryIterator.next(), (opt, error) -> {
+            return AsyncQueryInfoIterator.handleCompose(executeQueryIterator.next(), (step, error) -> {
                 // Always try to update queryStatus
                 if (executeQueryIterator.getQueryStatus() != null) {
                     queryStatus = executeQueryIterator.getQueryStatus();
                 }
 
                 if (error != null) {
-                    CompletableFuture<Optional<QueryResult>> future = new CompletableFuture<>();
+                    CompletableFuture<Step<QueryResult>> future = new CompletableFuture<>();
                     future.completeExceptionally(error);
                     return future;
-                } else {
-                    if (opt.isPresent()) {
-
-                        return CompletableFuture.completedFuture(opt);
-                    }
+                } else if (step instanceof Step.Value) {
+                    return CompletableFuture.completedFuture(step);
+                } else if (step instanceof Step.NeedDispatch) {
+                    return CompletableFuture.completedFuture(
+                            Step.<QueryResult>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+                } else if (step instanceof Step.Done) {
                     // Execute query stream ended, continue with chunk fetching
                     executeQueryStreamExhausted = true;
                     initializeQueryClientIfNeeded();
                     return continueWithChunks();
                 }
+                throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
             });
         }
 
@@ -124,18 +131,25 @@ public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, Que
         }
     }
 
-    private CompletionStage<Optional<QueryResult>> continueWithChunks() {
+    private CompletionStage<Step<QueryResult>> continueWithChunks() {
         // At this point queryClient is guaranteed to be initialized
 
         // If we have an active chunk iterator, try that first
         if (chunkIterator != null) {
-            return chunkIterator.next().thenCompose(opt -> {
-                if (opt.isPresent()) {
-                    return CompletableFuture.completedFuture(opt);
+            return chunkIterator.next().thenCompose(step -> {
+                if (step instanceof Step.Value) {
+                    return CompletableFuture.completedFuture(step);
+                } else if (step instanceof Step.NeedDispatch) {
+                    // Propagate NeedDispatch from the chunk iterator's stub call so the pump runs
+                    // it on the caller thread.
+                    return CompletableFuture.completedFuture(
+                            Step.<QueryResult>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+                } else if (step instanceof Step.Done) {
+                    // Chunk iterator exhausted
+                    chunkIterator = null;
+                    return continueWithChunks();
                 }
-                // Chunk iterator exhausted
-                chunkIterator = null;
-                return continueWithChunks();
+                throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
             });
         }
 
@@ -150,29 +164,35 @@ public class AsyncQueryResultIterator implements AsyncIterator<QueryResult>, Que
         // Check if query is finished
         if (((queryStatus.getCompletionStatus() == QueryStatus.CompletionStatus.FINISHED)
                 || (queryStatus.getCompletionStatus() == QueryStatus.CompletionStatus.RESULTS_PRODUCED))) {
-            return CompletableFuture.completedFuture(Optional.empty());
+            return CompletableFuture.completedFuture(Step.<QueryResult>done());
         }
 
         // Need to poll for more info
         return pollForMoreChunks();
     }
 
-    private CompletionStage<Optional<QueryResult>> pollForMoreChunks() {
-        return infoMessages.next().thenCompose(opt -> {
-            if (opt.isPresent()) {
-                if (opt.get().hasQueryStatus()) {
-                    queryStatus = opt.get().getQueryStatus();
+    private CompletionStage<Step<QueryResult>> pollForMoreChunks() {
+        return infoMessages.next().thenCompose(step -> {
+            if (step instanceof Step.Value) {
+                QueryInfo info = ((Step.Value<QueryInfo>) step).getItem();
+                if (info.hasQueryStatus()) {
+                    queryStatus = info.getQueryStatus();
                     return continueWithChunks();
                 } else {
                     return pollForMoreChunks();
                 }
+            } else if (step instanceof Step.NeedDispatch) {
+                // Forward the info iterator's NeedDispatch upward.
+                return CompletableFuture.completedFuture(
+                        Step.<QueryResult>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+            } else if (step instanceof Step.Done) {
+                // Should never happen — callers of pollForMoreChunks should not call it when
+                // the query is already finished.
+                CompletableFuture<Step<QueryResult>> future = new CompletableFuture<>();
+                future.completeExceptionally(new RuntimeException("Unexpected end in next()"));
+                return future;
             }
-
-            // This should never happen, callers of pollForMoreChunks should not call it when the query is already
-            // finished
-            CompletableFuture<Optional<QueryResult>> future = new CompletableFuture<>();
-            future.completeExceptionally(new RuntimeException("Unexpected end in next()"));
-            return future;
+            throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
         });
     }
 

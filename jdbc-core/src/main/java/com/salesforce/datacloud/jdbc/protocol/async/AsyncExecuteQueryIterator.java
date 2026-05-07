@@ -6,9 +6,9 @@ package com.salesforce.datacloud.jdbc.protocol.async;
 
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncStreamObserverIterator;
+import com.salesforce.datacloud.jdbc.protocol.async.core.Step;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -34,6 +34,10 @@ import salesforce.cdp.hyperdb.v1.QueryStatus;
  *
  * <p>CANCELLED errors are treated as normal stream completion, as the V3 protocol
  * uses cancellation to signal expected end-of-stream in case of server side RPC timeout.</p>
+ *
+ * <p>The {@code executeQuery} stub call is started eagerly in {@link #of} on the caller thread,
+ * so this iterator never needs to emit {@link Step.NeedDispatch} during iteration — it only
+ * forwards {@link Step.Value}/{@link Step.Done} from the underlying stream observer.</p>
  */
 @Slf4j
 @AllArgsConstructor
@@ -70,29 +74,31 @@ public class AsyncExecuteQueryIterator implements AsyncIterator<QueryResult> {
     }
 
     @Override
-    public CompletionStage<Optional<QueryResult>> next() {
+    public CompletionStage<Step<QueryResult>> next() {
         return fetchNext();
     }
 
-    private CompletionStage<Optional<QueryResult>> fetchNext() {
+    private CompletionStage<Step<QueryResult>> fetchNext() {
         return streamIterator
                 .next()
-                .thenCompose(opt -> {
-                    if (opt.isPresent()) {
-                        ExecuteQueryResponse response = opt.get();
+                .thenCompose(step -> {
+                    if (step instanceof Step.Value) {
+                        ExecuteQueryResponse response = ((Step.Value<ExecuteQueryResponse>) step).getItem();
                         if (response.hasQueryResult()) {
-                            return CompletableFuture.completedFuture(Optional.of(response.getQueryResult()));
+                            return CompletableFuture.completedFuture(Step.value(response.getQueryResult()));
                         }
-
                         if (response.hasQueryInfo()) {
                             queryInfo = response.getQueryInfo();
                         }
-
                         // Not a result, fetch next message
                         return fetchNext();
+                    } else if (step instanceof Step.NeedDispatch) {
+                        return CompletableFuture.completedFuture(
+                                Step.<QueryResult>retypeNeedDispatch((Step.NeedDispatch<?>) step));
+                    } else if (step instanceof Step.Done) {
+                        return CompletableFuture.completedFuture(Step.<QueryResult>done());
                     }
-                    // Stream ended normally
-                    return CompletableFuture.completedFuture(Optional.empty());
+                    throw new IllegalStateException("Unknown Step subtype: " + step.getClass());
                 })
                 .exceptionally(error -> {
                     // Handle errors - convert CANCELLED to end-of-stream if we have query info
@@ -105,7 +111,7 @@ public class AsyncExecuteQueryIterator implements AsyncIterator<QueryResult> {
                     if (cause instanceof StatusRuntimeException) {
                         StatusRuntimeException ex = (StatusRuntimeException) cause;
                         if (ex.getStatus().getCode() == Status.Code.CANCELLED && (queryInfo != null)) {
-                            return Optional.empty();
+                            return Step.done();
                         }
                     }
                     // Re-throw other errors
