@@ -17,7 +17,7 @@ net-jodah-failsafe = "3.3.2"
 # Minimum Netty 4.1.x version, enforced via dependency constraints in `java-base-conventions.gradle.kts`
 # to fix security vulnerabilities in transitive dependencies pulled in by gRPC and Arrow.
 # This is soft pinned to 4.1.* in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
-netty = "4.1.132.Final"
+netty = "4.2.13.Final"
 # This is soft pinned to 4.* (as we didn't invest in the upgrade yet) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 okhttp3 = "4.12.0"
 org-apache-commons-commons-lang3 = "3.20.0"
