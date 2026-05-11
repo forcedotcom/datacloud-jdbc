@@ -9,6 +9,7 @@ import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.resultset.ForwardOnlyResultSet;
 import com.salesforce.datacloud.jdbc.core.resultset.ReadOnlyResultSet;
 import com.salesforce.datacloud.jdbc.core.resultset.ResultSetWithPositionalGetters;
+import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
 import com.salesforce.datacloud.jdbc.protocol.data.ArrowToHyperTypeMapper;
 import com.salesforce.datacloud.jdbc.util.ThrowingJdbcSupplier;
 import com.salesforce.datacloud.query.v3.QueryStatus;
@@ -113,6 +114,28 @@ public class StreamingResultSet
         } catch (IllegalArgumentException ex) {
             // Thrown by ArrowToHyperTypeMapper for Arrow types the driver does not model.
             throw new SQLException("Unsupported column type in query result: " + ex.getMessage(), "0A000", ex);
+        }
+    }
+
+    /**
+     * Hand the reader + allocator pair from {@link QueryResultArrowStream.Result} to {@link
+     * #of(ArrowStreamReader, BufferAllocator, String, ZoneId)} and close both on construction
+     * failure. Without this, an {@code of} call that throws (for example {@code SQLException}
+     * wrapping an unsupported Arrow type) would leak the 100 MB
+     * {@link org.apache.arrow.memory.RootAllocator} held by {@code Result}.
+     */
+    public static StreamingResultSet ofClosingOnFailure(
+            QueryResultArrowStream.Result arrowStream, String queryId, ZoneId sessionZone) throws SQLException {
+        try {
+            return of(arrowStream.getReader(), arrowStream.getAllocator(), queryId, sessionZone);
+        } catch (SQLException | RuntimeException ex) {
+            try {
+                arrowStream.getReader().close();
+            } catch (Exception suppressed) {
+                ex.addSuppressed(suppressed);
+            }
+            arrowStream.getAllocator().close();
+            throw ex;
         }
     }
 

@@ -6,7 +6,11 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
+import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -14,7 +18,9 @@ import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
@@ -23,6 +29,10 @@ import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
 import org.apache.arrow.vector.ipc.ArrowStreamWriter;
+import org.apache.arrow.vector.types.pojo.ArrowType;
+import org.apache.arrow.vector.types.pojo.Field;
+import org.apache.arrow.vector.types.pojo.FieldType;
+import org.apache.arrow.vector.types.pojo.Schema;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -134,6 +144,37 @@ class StreamingResultSetMethodTest {
     }
 
     // --- Lifecycle and navigation ---
+
+    @Test
+    @SneakyThrows
+    void ofClosingOnFailureClosesAllocatorWhenSchemaIsUnsupported() {
+        // Build an Arrow IPC stream containing one column of LargeUtf8, which
+        // ArrowToHyperTypeMapper does not model — StreamingResultSet.of will throw SQLException.
+        // Without the leak fix, the RootAllocator passed in would never be closed.
+        val unsupportedField = new Field("col", new FieldType(true, new ArrowType.LargeUtf8(), null), null);
+        val schema = new Schema(Collections.singletonList(unsupportedField));
+        val out = new ByteArrayOutputStream();
+        try (RootAllocator writeAllocator = new RootAllocator(Long.MAX_VALUE);
+                VectorSchemaRoot root = VectorSchemaRoot.create(schema, writeAllocator)) {
+            root.setRowCount(0);
+            try (ArrowStreamWriter writer = new ArrowStreamWriter(root, null, out)) {
+                writer.start();
+                writer.end();
+            }
+        }
+
+        val readerAllocator = spy(new RootAllocator(Long.MAX_VALUE));
+        val reader = spy(new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), readerAllocator));
+        val arrowStream = new QueryResultArrowStream.Result(reader, readerAllocator);
+
+        assertThatThrownBy(() -> StreamingResultSet.ofClosingOnFailure(arrowStream, QUERY_ID, ZoneId.systemDefault()))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("Unsupported column type");
+
+        // The leak fix must close both the reader and the allocator before re-throwing.
+        verify(reader, atLeastOnce()).close();
+        verify(readerAllocator, atLeastOnce()).close();
+    }
 
     @Test
     void closeAndIsClosed() throws Exception {
