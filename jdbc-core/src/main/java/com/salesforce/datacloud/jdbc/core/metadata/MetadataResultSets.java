@@ -5,6 +5,7 @@
 package com.salesforce.datacloud.jdbc.core.metadata;
 
 import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
+import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
 import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperTypeToArrow;
 import com.salesforce.datacloud.jdbc.protocol.data.VectorPopulator;
@@ -62,13 +63,9 @@ public final class MetadataResultSets {
         // Allocator is handed to StreamingResultSet along with the reader; the result set owns
         // its lifecycle and closes it when close() is called.
         RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
-        try {
-            ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(ipcBytes), allocator);
-            return StreamingResultSet.of(reader, allocator, /*queryId=*/ null, ZoneId.systemDefault());
-        } catch (SQLException | RuntimeException ex) {
-            allocator.close();
-            throw ex;
-        }
+        ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(ipcBytes), allocator);
+        return StreamingResultSet.of(
+                new QueryResultArrowStream.Result(reader, allocator), /*queryId=*/ null, ZoneId.systemDefault());
     }
 
     /**

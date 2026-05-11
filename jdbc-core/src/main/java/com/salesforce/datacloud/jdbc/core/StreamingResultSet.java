@@ -74,25 +74,38 @@ public class StreamingResultSet
         this.closed = false;
     }
 
-    public static StreamingResultSet of(ArrowStreamReader reader, BufferAllocator allocator, String queryId)
-            throws SQLException {
-        return of(reader, allocator, queryId, ZoneId.systemDefault());
-    }
-
     /**
-     * Creates a StreamingResultSet from an {@link ArrowStreamReader} and its backing allocator.
+     * Creates a StreamingResultSet from a {@link QueryResultArrowStream.Result} (reader paired
+     * with its backing allocator).
      *
      * <p>Ownership of both the reader and the allocator transfers to the returned result set —
      * closing the result set closes the reader and then the allocator, in that order, so Arrow's
-     * buffer accounting clears before the allocator's budget check. Callers must not close
-     * either separately.
+     * buffer accounting clears before the allocator's budget check. If construction itself
+     * throws (for example a {@link SQLException} wrapping an unsupported Arrow type), this
+     * method closes both before re-throwing so the 100 MB {@link
+     * org.apache.arrow.memory.RootAllocator} does not leak. Callers must not close either
+     * separately on success.
      *
-     * @param reader The Arrow stream, owned by the result set.
-     * @param allocator The allocator backing the reader, owned by the result set.
-     * @param queryId The query identifier.
+     * @param arrowStream The Arrow stream + allocator pair, both owned by the result set.
+     * @param queryId The query identifier (may be {@code null} for synthesized result sets).
      * @param sessionZone The session timezone used for timestamp conversions.
      */
-    public static StreamingResultSet of(
+    public static StreamingResultSet of(QueryResultArrowStream.Result arrowStream, String queryId, ZoneId sessionZone)
+            throws SQLException {
+        try {
+            return create(arrowStream.getReader(), arrowStream.getAllocator(), queryId, sessionZone);
+        } catch (SQLException | RuntimeException ex) {
+            try {
+                arrowStream.getReader().close();
+            } catch (Exception suppressed) {
+                ex.addSuppressed(suppressed);
+            }
+            arrowStream.getAllocator().close();
+            throw ex;
+        }
+    }
+
+    private static StreamingResultSet create(
             ArrowStreamReader reader, BufferAllocator allocator, String queryId, ZoneId sessionZone)
             throws SQLException {
         try {
@@ -110,28 +123,6 @@ public class StreamingResultSet
         } catch (IllegalArgumentException ex) {
             // Thrown by ArrowToHyperTypeMapper for Arrow types the driver does not model.
             throw new SQLException("Unsupported column type in query result: " + ex.getMessage(), "0A000", ex);
-        }
-    }
-
-    /**
-     * Hand the reader + allocator pair from {@link QueryResultArrowStream.Result} to {@link
-     * #of(ArrowStreamReader, BufferAllocator, String, ZoneId)} and close both on construction
-     * failure. Without this, an {@code of} call that throws (for example {@code SQLException}
-     * wrapping an unsupported Arrow type) would leak the 100 MB
-     * {@link org.apache.arrow.memory.RootAllocator} held by {@code Result}.
-     */
-    public static StreamingResultSet ofClosingOnFailure(
-            QueryResultArrowStream.Result arrowStream, String queryId, ZoneId sessionZone) throws SQLException {
-        try {
-            return of(arrowStream.getReader(), arrowStream.getAllocator(), queryId, sessionZone);
-        } catch (SQLException | RuntimeException ex) {
-            try {
-                arrowStream.getReader().close();
-            } catch (Exception suppressed) {
-                ex.addSuppressed(suppressed);
-            }
-            arrowStream.getAllocator().close();
-            throw ex;
         }
     }
 

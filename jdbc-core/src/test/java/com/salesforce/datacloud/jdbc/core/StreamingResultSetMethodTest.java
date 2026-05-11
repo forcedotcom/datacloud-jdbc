@@ -84,7 +84,8 @@ class StreamingResultSetMethodTest {
 
         RootAllocator readerAllocator = new RootAllocator(Long.MAX_VALUE);
         ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), readerAllocator);
-        return StreamingResultSet.of(reader, readerAllocator, QUERY_ID);
+        return StreamingResultSet.of(
+                new QueryResultArrowStream.Result(reader, readerAllocator), QUERY_ID, ZoneId.systemDefault());
     }
 
     // --- Unsupported methods ---
@@ -167,7 +168,7 @@ class StreamingResultSetMethodTest {
         val reader = spy(new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), readerAllocator));
         val arrowStream = new QueryResultArrowStream.Result(reader, readerAllocator);
 
-        assertThatThrownBy(() -> StreamingResultSet.ofClosingOnFailure(arrowStream, QUERY_ID, ZoneId.systemDefault()))
+        assertThatThrownBy(() -> StreamingResultSet.of(arrowStream, QUERY_ID, ZoneId.systemDefault()))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Unsupported column type");
 
