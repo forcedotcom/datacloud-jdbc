@@ -360,32 +360,10 @@ public class StreamingResultSet
 
     @Override
     public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
-        if (type == null) {
-            throw new SQLException("Target type must not be null");
-        }
-        // Default implementation: get the raw Object and check if it matches the requested type.
-        // Accessors that need richer conversion (e.g. Arrow Decimal → BigInteger) can still
-        // override the accessor-level getObject(Class) — in that case we dispatch to them first.
         val accessor = getAccessor(columnIndex);
-        try {
-            val typed = accessor.getObject(type);
-            updateWasNull(accessor);
-            return typed;
-        } catch (SQLException ex) {
-            // Accessor does not implement typed getObject — fall back to raw + isInstance check.
-            val raw = accessor.getObject();
-            updateWasNull(accessor);
-            if (raw == null) {
-                return null;
-            }
-            if (type.isInstance(raw)) {
-                return type.cast(raw);
-            }
-            throw new SQLException(
-                    "Cannot convert column value to " + type.getName() + "; actual type is "
-                            + raw.getClass().getName(),
-                    ex);
-        }
+        val result = accessor.getObject(type);
+        updateWasNull(accessor);
+        return result;
     }
 
     @Override
