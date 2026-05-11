@@ -6,20 +6,32 @@ package com.salesforce.datacloud.jdbc.core.metadata;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.salesforce.datacloud.jdbc.core.MetadataSchemas;
 import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import lombok.SneakyThrows;
 import lombok.val;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Pin the {@link MetadataResultSets#of(List, List)} arity contract: rows must match the schema
- * column count, otherwise a short row would silently produce trailing Arrow-null cells (almost
- * always a caller bug). A {@code null} row is allowed and is interpreted as an all-nulls row,
- * matching the legacy {@code coerceRows} convention.
+ * Tests for {@link MetadataResultSets}. Two slices:
+ * <ul>
+ *   <li><b>Arity contract</b> — rows must match the schema column count; null rows are allowed
+ *       as the all-nulls shape (matching the legacy {@code coerceRows} convention).
+ *   <li><b>JDBC ResultSet shape</b> — empty metadata result sets expose the standard JDBC shape
+ *       (row=0, closeable, forward-only, holdability, etc.).
+ * </ul>
  */
 class MetadataResultSetsTest {
 
@@ -27,6 +39,8 @@ class MetadataResultSetsTest {
             new ColumnMetadata("a", HyperType.varcharUnlimited(true)),
             new ColumnMetadata("b", HyperType.int32(true)),
             new ColumnMetadata("c", HyperType.bool(true)));
+
+    // --- Arity contract ---
 
     @Test
     void shortRowRejected() {
@@ -73,5 +87,90 @@ class MetadataResultSetsTest {
         try (val rs = MetadataResultSets.of(THREE_COLUMNS, Collections.emptyList())) {
             assertThat(rs.next()).isFalse();
         }
+    }
+
+    // --- JDBC ResultSet shape on an empty metadata result set ---
+
+    private ResultSet emptyMetadataResultSet;
+
+    @BeforeEach
+    public void initEmptyMetadataResultSet() throws SQLException {
+        emptyMetadataResultSet = MetadataResultSets.empty(MetadataSchemas.COLUMNS);
+    }
+
+    @Test
+    void getRow() throws SQLException {
+        assertThat(emptyMetadataResultSet.getRow()).isEqualTo(0);
+
+        emptyMetadataResultSet.close();
+        assertThrows(SQLException.class, () -> emptyMetadataResultSet.next());
+    }
+
+    @Test
+    void next() throws SQLException {
+        emptyMetadataResultSet.close();
+        assertThrows(SQLException.class, () -> emptyMetadataResultSet.next());
+    }
+
+    @Test
+    void isClosed() throws SQLException {
+        assertFalse(emptyMetadataResultSet.isClosed());
+        emptyMetadataResultSet.close();
+        assertTrue(emptyMetadataResultSet.isClosed());
+    }
+
+    @Test
+    void getStatement() throws SQLException {
+        assertThat(emptyMetadataResultSet.getStatement()).isNull();
+    }
+
+    @Test
+    void unwrap() {
+        assertThrows(SQLException.class, () -> emptyMetadataResultSet.unwrap(ResultSetMetaData.class));
+    }
+
+    @Test
+    void isWrapperFor() throws SQLException {
+        // StreamingResultSet implements DataCloudResultSet / ResultSet; it is not a wrapper for
+        // arbitrary unrelated types.
+        assertThat(emptyMetadataResultSet.isWrapperFor(ResultSetMetaData.class)).isFalse();
+    }
+
+    @Test
+    void getHoldability() throws SQLException {
+        assertThat(emptyMetadataResultSet.getHoldability()).isEqualTo(ResultSet.HOLD_CURSORS_OVER_COMMIT);
+    }
+
+    @Test
+    void getFetchSize() throws SQLException {
+        assertThat(emptyMetadataResultSet.getFetchSize()).isEqualTo(0);
+    }
+
+    @Test
+    void setFetchSize() throws SQLException {
+        // StreamingResultSet controls its own fetch size and ignores caller-supplied hints.
+        emptyMetadataResultSet.setFetchSize(0);
+    }
+
+    @SneakyThrows
+    @Test
+    void getWarnings() {
+        assertThat((Iterable<? extends Throwable>) emptyMetadataResultSet.getWarnings())
+                .isNull();
+    }
+
+    @Test
+    void getConcurrency() throws SQLException {
+        assertThat(emptyMetadataResultSet.getConcurrency()).isEqualTo(ResultSet.CONCUR_READ_ONLY);
+    }
+
+    @Test
+    void getType() throws SQLException {
+        assertThat(emptyMetadataResultSet.getType()).isEqualTo(ResultSet.TYPE_FORWARD_ONLY);
+    }
+
+    @Test
+    void getFetchDirection() throws SQLException {
+        assertThat(emptyMetadataResultSet.getFetchDirection()).isEqualTo(ResultSet.FETCH_FORWARD);
     }
 }
