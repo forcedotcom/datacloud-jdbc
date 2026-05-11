@@ -87,10 +87,6 @@ public class StreamingResultSet
      * buffer accounting clears before the allocator's budget check. Callers must not close
      * either separately.
      *
-     * <p>The column metadata (including any {@link ColumnMetadata#getTypeName()} override
-     * stamped under {@link com.salesforce.datacloud.jdbc.protocol.data.HyperTypeToArrow#JDBC_TYPE_NAME_METADATA_KEY})
-     * is derived from the Arrow schema via {@link ArrowToHyperTypeMapper#toColumnMetadata(org.apache.arrow.vector.types.pojo.Field)}.
-     *
      * @param reader The Arrow stream, owned by the result set.
      * @param allocator The allocator backing the reader, owned by the result set.
      * @param queryId The query identifier.
