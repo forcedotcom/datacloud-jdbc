@@ -64,6 +64,10 @@ class ArrowStreamReaderCursorTest {
         val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         IntStream.range(0, times + 1).forEach(i -> sut.next());
 
+        // Each next() inspects rowCount once on the per-batch index check. loadNextNonEmptyBatch
+        // is reached on the (times+1)-th call but only inspects rowCount inside its loop body if
+        // loadNextBatch returns true; here it returns false, so getRowCount is observed times+1
+        // times in total.
         verify(root, times(times + 1)).getRowCount();
         verify(reader, times(1)).loadNextBatch();
     }

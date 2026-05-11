@@ -96,12 +96,7 @@ public final class MetadataResultSets {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             try (ArrowStreamWriter writer = new ArrowStreamWriter(root, null, out)) {
                 writer.start();
-                // Skip writeBatch() for empty results — writing a zero-row batch confuses the
-                // cursor (see ArrowStreamReaderCursor.next), which interprets a successfully
-                // loaded batch as "at least one row available".
-                if (root.getRowCount() > 0) {
-                    writer.writeBatch();
-                }
+                writer.writeBatch();
                 writer.end();
             }
             return out.toByteArray();
