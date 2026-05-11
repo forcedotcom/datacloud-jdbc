@@ -264,6 +264,18 @@ class StreamingResultSetMethodTest {
     }
 
     @Test
+    void getObjectWithNullTypeMapBehavesLikeGetObject() throws Exception {
+        // JDBC: getObject(int, Map) with a null/empty type map should behave like getObject(int).
+        try (val rs = createResultSet()) {
+            rs.next();
+            val plain = rs.getObject(1);
+            assertThat(rs.getObject(1, (java.util.Map<String, Class<?>>) null)).isEqualTo(plain);
+            assertThat(rs.getObject(1, java.util.Collections.<String, Class<?>>emptyMap()))
+                    .isEqualTo(plain);
+        }
+    }
+
+    @Test
     void queryId() throws Exception {
         try (val rs = createResultSet()) {
             assertThat(rs.getQueryId()).isEqualTo(QUERY_ID);
