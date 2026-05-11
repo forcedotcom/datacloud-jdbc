@@ -197,7 +197,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     iterator, includeCustomerDetail, iterator.getQueryStatus().getQueryId(), sql);
             resultSet =
-                    StreamingResultSet.of(arrowStream, iterator.getQueryStatus().getQueryId(), sessionZone);
+                    DataCloudResultSet.of(arrowStream, iterator.getQueryStatus().getQueryId(), sessionZone);
             log.info(
                     "executeAdaptiveQuery completed. queryId={}, sessionZone={}",
                     queryHandle.getQueryStatus().getQueryId(),
@@ -436,7 +436,7 @@ public class DataCloudStatement implements Statement, AutoCloseable {
                                     includeCustomerDetail,
                                     adaptiveIterator.getQueryStatus().getQueryId(),
                                     null);
-                            resultSet = StreamingResultSet.of(
+                            resultSet = DataCloudResultSet.of(
                                     arrowStream,
                                     adaptiveIterator.getQueryStatus().getQueryId(),
                                     sessionZone);

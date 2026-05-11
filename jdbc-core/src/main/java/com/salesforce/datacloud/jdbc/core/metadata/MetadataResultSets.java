@@ -4,7 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.metadata;
 
-import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
+import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
 import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperTypeToArrow;
@@ -27,7 +27,7 @@ import org.apache.arrow.vector.types.pojo.Schema;
 /**
  * Factory for Arrow-backed metadata result sets. Materialises a row-oriented list of metadata
  * values into the Arrow IPC format used by every other driver result set, so streaming query
- * results and materialised metadata results both flow through {@link StreamingResultSet}.
+ * results and materialised metadata results both flow through {@link DataCloudResultSet}.
  *
  * <p>Each call builds a fresh single-batch Arrow stream: a writer-side {@link VectorSchemaRoot}
  * is populated via {@link VectorPopulator} (the same code path the JDBC parameter encoder uses),
@@ -40,12 +40,12 @@ public final class MetadataResultSets {
     }
 
     /** Empty result set with the given column schema. */
-    public static StreamingResultSet empty(List<ColumnMetadata> columns) throws SQLException {
+    public static DataCloudResultSet empty(List<ColumnMetadata> columns) throws SQLException {
         return of(columns, Collections.emptyList());
     }
 
     /** Empty result set with no columns — used as a placeholder by unsupported metadata methods. */
-    public static StreamingResultSet emptyNoColumns() throws SQLException {
+    public static DataCloudResultSet emptyNoColumns() throws SQLException {
         return of(Collections.emptyList(), Collections.emptyList());
     }
 
@@ -57,14 +57,14 @@ public final class MetadataResultSets {
      * goes through {@link MetadataSchemas} so the sizes match by construction; the precondition
      * here makes a future caller bug surface at the boundary instead of in vector population.
      */
-    public static StreamingResultSet of(List<ColumnMetadata> columns, List<List<Object>> rows) throws SQLException {
+    public static DataCloudResultSet of(List<ColumnMetadata> columns, List<List<Object>> rows) throws SQLException {
         validateRowArity(columns, rows);
         byte[] ipcBytes = writeArrowStream(columns, rows);
-        // Allocator is handed to StreamingResultSet along with the reader; the result set owns
+        // Allocator is handed to DataCloudResultSet along with the reader; the result set owns
         // its lifecycle and closes it when close() is called.
         RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
         ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(ipcBytes), allocator);
-        return StreamingResultSet.of(
+        return DataCloudResultSet.of(
                 new QueryResultArrowStream.Result(reader, allocator), /*queryId=*/ null, ZoneId.systemDefault());
     }
 
@@ -73,7 +73,7 @@ public final class MetadataResultSets {
      * each element is itself a {@code List<Object>} row. Mirrors the old
      * {@code DataCloudMetadataResultSet.of(..., List<Object> data)} signature.
      */
-    public static StreamingResultSet ofRawRows(List<ColumnMetadata> columns, List<Object> rawRows) throws SQLException {
+    public static DataCloudResultSet ofRawRows(List<ColumnMetadata> columns, List<Object> rawRows) throws SQLException {
         return of(columns, coerceRows(rawRows));
     }
 

@@ -25,7 +25,7 @@ public class QueryResultArrowStream {
     /**
      * Pair of the {@link ArrowStreamReader} that decodes gRPC chunks and the {@link RootAllocator}
      * that backs it. Callers hand ownership to {@link
-     * com.salesforce.datacloud.jdbc.core.StreamingResultSet#of} which closes both; the pair is
+     * com.salesforce.datacloud.jdbc.core.DataCloudResultSet#of} which closes both; the pair is
      * never closed directly.
      */
     @Value

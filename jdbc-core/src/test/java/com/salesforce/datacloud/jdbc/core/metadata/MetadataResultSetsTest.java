@@ -19,8 +19,8 @@ import org.junit.jupiter.api.Test;
  * Tests the {@link MetadataResultSets#of} arity contract: rows must match the schema column
  * count; null rows are allowed as the all-nulls shape (matching the legacy {@code coerceRows}
  * convention). Generic JDBC {@link java.sql.ResultSet} shape (closeable, forward-only,
- * holdability, etc.) is exercised by {@code StreamingResultSetMethodTest} since metadata
- * result sets share the {@link com.salesforce.datacloud.jdbc.core.StreamingResultSet} plumbing.
+ * holdability, etc.) is exercised by {@code DataCloudResultSetMethodTest} since metadata
+ * result sets share the {@link com.salesforce.datacloud.jdbc.core.DataCloudResultSet} plumbing.
  */
 class MetadataResultSetsTest {
 

@@ -10,7 +10,6 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
 import com.salesforce.datacloud.jdbc.core.DataCloudResultSet;
 import com.salesforce.datacloud.jdbc.core.DataCloudStatement;
-import com.salesforce.datacloud.jdbc.core.StreamingResultSet;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerManager.ConfigFile;
 import com.salesforce.datacloud.jdbc.hyper.HyperServerProcess;
@@ -55,7 +54,7 @@ public class RowBasedPaginationTest {
                 final DataCloudStatement stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
             // Set the initial page size
             stmt.setResultSetConstraints(pageSize);
-            final StreamingResultSet rs = stmt.executeQuery(sql).unwrap(StreamingResultSet.class);
+            final DataCloudResultSet rs = stmt.executeQuery(sql).unwrap(DataCloudResultSet.class);
 
             // Save the queryId for retrieving subsequent pages
             queryId = stmt.getQueryId();

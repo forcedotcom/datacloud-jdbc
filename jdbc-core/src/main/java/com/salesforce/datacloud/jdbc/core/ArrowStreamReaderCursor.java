@@ -23,12 +23,12 @@ import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
 
 /**
- * Row cursor over an {@link ArrowStreamReader} that drives the {@link StreamingResultSet}.
+ * Row cursor over an {@link ArrowStreamReader} that drives the {@link DataCloudResultSet}.
  *
  * <p>The cursor owns the supplied {@link BufferAllocator} alongside the reader: closing the
  * cursor closes the reader (which releases ArrowBuf accounting) and then the allocator (which
  * returns its budget). This is the single place that guarantees root-allocator hygiene for the
- * driver; callers of {@link StreamingResultSet#of} hand ownership over and do not close the
+ * driver; callers of {@link DataCloudResultSet#of} hand ownership over and do not close the
  * allocator themselves.
  */
 @Slf4j

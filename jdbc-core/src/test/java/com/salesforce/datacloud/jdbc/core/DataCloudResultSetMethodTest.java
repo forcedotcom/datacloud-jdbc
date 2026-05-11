@@ -40,7 +40,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-class StreamingResultSetMethodTest {
+class DataCloudResultSetMethodTest {
 
     @RegisterExtension
     static RootAllocatorTestExtension ext = new RootAllocatorTestExtension();
@@ -48,17 +48,17 @@ class StreamingResultSetMethodTest {
     private static final String QUERY_ID = "test-query-id";
 
     @SneakyThrows
-    private StreamingResultSet createResultSet() {
+    private DataCloudResultSet createResultSet() {
         return createSingleVarCharResultSet(false);
     }
 
     @SneakyThrows
-    private StreamingResultSet createResultSetWithNullValue() {
+    private DataCloudResultSet createResultSetWithNullValue() {
         return createSingleVarCharResultSet(true);
     }
 
     @SneakyThrows
-    private StreamingResultSet createSingleVarCharResultSet(boolean nullValue) {
+    private DataCloudResultSet createSingleVarCharResultSet(boolean nullValue) {
         // Build a single-row VARCHAR batch, serialise to IPC bytes, and wrap in an
         // ArrowStreamReader. Using a fresh RootAllocator so the result set owns its own
         // allocator lifecycle (independent of the shared test extension allocator).
@@ -84,7 +84,7 @@ class StreamingResultSetMethodTest {
 
         RootAllocator readerAllocator = new RootAllocator(Long.MAX_VALUE);
         ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), readerAllocator);
-        return StreamingResultSet.of(
+        return DataCloudResultSet.of(
                 new QueryResultArrowStream.Result(reader, readerAllocator), QUERY_ID, ZoneId.systemDefault());
     }
 
@@ -92,7 +92,7 @@ class StreamingResultSetMethodTest {
 
     @FunctionalInterface
     interface ResultSetMethod {
-        void invoke(StreamingResultSet rs) throws SQLException;
+        void invoke(DataCloudResultSet rs) throws SQLException;
     }
 
     static Stream<Arguments> unsupportedMethods() {
@@ -110,7 +110,7 @@ class StreamingResultSetMethodTest {
                 Arguments.of(Named.of("getSQLXML", (ResultSetMethod) rs -> rs.getSQLXML(1))),
                 Arguments.of(Named.of("getNString", (ResultSetMethod) rs -> rs.getNString(1))),
                 Arguments.of(Named.of("getNCharacterStream", (ResultSetMethod) rs -> rs.getNCharacterStream(1))),
-                Arguments.of(Named.of("getCursorName", (ResultSetMethod) StreamingResultSet::getCursorName)));
+                Arguments.of(Named.of("getCursorName", (ResultSetMethod) DataCloudResultSet::getCursorName)));
     }
 
     @ParameterizedTest
@@ -150,7 +150,7 @@ class StreamingResultSetMethodTest {
     @SneakyThrows
     void ofClosingOnFailureClosesAllocatorWhenSchemaIsUnsupported() {
         // Build an Arrow IPC stream containing one column of LargeUtf8, which
-        // ArrowToHyperTypeMapper does not model — StreamingResultSet.of will throw SQLException.
+        // ArrowToHyperTypeMapper does not model — DataCloudResultSet.of will throw SQLException.
         // Without the leak fix, the RootAllocator passed in would never be closed.
         val unsupportedField = new Field("col", new FieldType(true, new ArrowType.LargeUtf8(), null), null);
         val schema = new Schema(Collections.singletonList(unsupportedField));
@@ -168,7 +168,7 @@ class StreamingResultSetMethodTest {
         val reader = spy(new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), readerAllocator));
         val arrowStream = new QueryResultArrowStream.Result(reader, readerAllocator);
 
-        assertThatThrownBy(() -> StreamingResultSet.of(arrowStream, QUERY_ID, ZoneId.systemDefault()))
+        assertThatThrownBy(() -> DataCloudResultSet.of(arrowStream, QUERY_ID, ZoneId.systemDefault()))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Unsupported column type");
 
@@ -394,11 +394,11 @@ class StreamingResultSetMethodTest {
     @Test
     void unwrapAndIsWrapperFor() throws Exception {
         try (val rs = createResultSet()) {
-            assertThat(rs.isWrapperFor(StreamingResultSet.class)).isTrue();
+            assertThat(rs.isWrapperFor(DataCloudResultSet.class)).isTrue();
             assertThat(rs.isWrapperFor(DataCloudResultSet.class)).isTrue();
             assertThat(rs.isWrapperFor(String.class)).isFalse();
 
-            assertThat(rs.unwrap(StreamingResultSet.class)).isSameAs(rs);
+            assertThat(rs.unwrap(DataCloudResultSet.class)).isSameAs(rs);
             assertThatThrownBy(() -> rs.unwrap(String.class))
                     .isInstanceOf(SQLException.class)
                     .hasMessageContaining("Cannot unwrap");

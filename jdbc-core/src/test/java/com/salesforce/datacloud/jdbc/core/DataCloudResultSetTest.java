@@ -23,7 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @Slf4j
 @ExtendWith(LocalHyperTestBase.class)
-public class StreamingResultSetTest {
+public class DataCloudResultSetTest {
     public static String query(String arg) {
         return String.format(
                 "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, %s) as s(a) order by a asc",
@@ -95,7 +95,7 @@ public class StreamingResultSetTest {
     private void assertThatResultSetIsCorrect(DataCloudConnection conn, DataCloudResultSet rs) {
         val witnessed = new AtomicInteger(0);
 
-        assertThat(rs).isInstanceOf(StreamingResultSet.class);
+        assertThat(rs).isInstanceOf(DataCloudResultSet.class);
 
         val status = conn.waitFor(rs.getQueryId(), QueryStatus::allResultsProduced);
 
