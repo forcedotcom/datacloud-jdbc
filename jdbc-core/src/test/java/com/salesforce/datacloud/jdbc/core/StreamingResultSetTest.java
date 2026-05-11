@@ -116,6 +116,30 @@ public class StreamingResultSetTest {
                 .isEqualTo(rows);
     }
 
+    /**
+     * Real-Hyper Arrow streams do not stamp the {@code datacloud-jdbc:type_name} field-metadata
+     * key, so {@code ArrowToHyperTypeMapper.toColumnMetadata} must fall back to the type-derived
+     * default (e.g. {@code "INTEGER"} for an INT32 column). The fallback is implicit in every
+     * functional test that hits local Hyper, but no assertion pinned it on the streaming-result
+     * path. This test does — paired with the unit-level
+     * {@code ArrowToHyperTypeMapperTest.typeNameOverrideIsNullWhenAbsent} which pins the same
+     * contract at the mapper boundary.
+     */
+    @SneakyThrows
+    @Test
+    public void getColumnTypeNameFallsBackToDerivedNameOnRealHyperStream() {
+        try (val conn = getHyperQueryConnection().unwrap(DataCloudConnection.class);
+                val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
+            try (val rs = stmt.executeQuery("select 1 as id, 'x' as name, cast(3.14 as numeric(10,2)) as value")
+                    .unwrap(DataCloudResultSet.class)) {
+                val md = rs.getMetaData();
+                assertThat(md.getColumnTypeName(1)).isEqualTo("INTEGER");
+                assertThat(md.getColumnTypeName(2)).isEqualTo("VARCHAR");
+                assertThat(md.getColumnTypeName(3)).isEqualTo("DECIMAL");
+            }
+        }
+    }
+
     @SneakyThrows
     @Test
     public void testGetSchemaForQueryIdWithZeroResults() {
