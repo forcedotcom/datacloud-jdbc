@@ -223,7 +223,11 @@ class Float8VectorSetter extends BaseVectorSetter<Float8Vector, Double> {
     }
 }
 
-/** Setter implementation for IntVector. Accepts any Number to support metadata rows using long/int. */
+/**
+ * Setter implementation for IntVector. Accepts any Number so metadata rows can pass long/short
+ * values, but range-checks before narrowing to int — silent truncation of an out-of-range Long
+ * (e.g. binding {@code Long.MAX_VALUE} to an INT32 parameter) is never the right answer.
+ */
 class IntVectorSetter extends BaseVectorSetter<IntVector, Number> {
     IntVectorSetter() {
         super(Number.class);
@@ -231,6 +235,10 @@ class IntVectorSetter extends BaseVectorSetter<IntVector, Number> {
 
     @Override
     protected void setValueInternal(IntVector vector, int index, Number value) {
+        long lv = value.longValue();
+        if (lv < Integer.MIN_VALUE || lv > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Value " + lv + " is out of range for INT32");
+        }
         vector.setSafe(index, value.intValue());
     }
 
@@ -240,7 +248,7 @@ class IntVectorSetter extends BaseVectorSetter<IntVector, Number> {
     }
 }
 
-/** Setter implementation for SmallIntVector. */
+/** Setter implementation for SmallIntVector. Range-checks before narrowing to short. */
 class SmallIntVectorSetter extends BaseVectorSetter<SmallIntVector, Number> {
     SmallIntVectorSetter() {
         super(Number.class);
@@ -248,6 +256,10 @@ class SmallIntVectorSetter extends BaseVectorSetter<SmallIntVector, Number> {
 
     @Override
     protected void setValueInternal(SmallIntVector vector, int index, Number value) {
+        long lv = value.longValue();
+        if (lv < Short.MIN_VALUE || lv > Short.MAX_VALUE) {
+            throw new IllegalArgumentException("Value " + lv + " is out of range for INT16");
+        }
         vector.setSafe(index, value.shortValue());
     }
 
@@ -257,7 +269,12 @@ class SmallIntVectorSetter extends BaseVectorSetter<SmallIntVector, Number> {
     }
 }
 
-/** Setter implementation for BigIntVector. */
+/**
+ * Setter implementation for BigIntVector. Accepts any Number; the natural range of long is the
+ * widest integer type the vector encodes, so no range narrowing happens here. Non-integral
+ * Numbers (e.g. Double) are normalized via Number.longValue, mirroring the rest of the integer
+ * setters in this file.
+ */
 class BigIntVectorSetter extends BaseVectorSetter<BigIntVector, Number> {
     BigIntVectorSetter() {
         super(Number.class);
@@ -403,7 +420,7 @@ class TimeStampMicroTZVectorSetter extends BaseVectorSetter<TimeStampMicroTZVect
     }
 }
 
-/** Setter implementation for TinyIntVectorSetter. */
+/** Setter implementation for TinyIntVector. Range-checks before narrowing to byte. */
 class TinyIntVectorSetter extends BaseVectorSetter<TinyIntVector, Number> {
     TinyIntVectorSetter() {
         super(Number.class);
@@ -411,6 +428,10 @@ class TinyIntVectorSetter extends BaseVectorSetter<TinyIntVector, Number> {
 
     @Override
     protected void setValueInternal(TinyIntVector vector, int index, Number value) {
+        long lv = value.longValue();
+        if (lv < Byte.MIN_VALUE || lv > Byte.MAX_VALUE) {
+            throw new IllegalArgumentException("Value " + lv + " is out of range for INT8");
+        }
         vector.setSafe(index, value.byteValue());
     }
 
