@@ -54,10 +54,15 @@ class ArrowStreamReaderCursor implements AutoCloseable {
         return QueryJDBCAccessorFactory.createAccessor(vector, currentIndex::get, sessionZone);
     }
 
-    private boolean loadNextBatch() throws IOException {
-        if (reader.loadNextBatch()) {
-            currentIndex.set(0);
-            return true;
+    /**
+     * Load the next batch that has at least one row, skipping any zero-row batches in between.
+     */
+    private boolean loadNextNonEmptyBatch() throws IOException {
+        while (reader.loadNextBatch()) {
+            if (getSchemaRoot().getRowCount() > 0) {
+                currentIndex.set(0);
+                return true;
+            }
         }
         return false;
     }
@@ -68,7 +73,7 @@ class ArrowStreamReaderCursor implements AutoCloseable {
         val total = getSchemaRoot().getRowCount();
 
         try {
-            val next = current < total || loadNextBatch();
+            val next = current < total || loadNextNonEmptyBatch();
             if (next) {
                 rowsSeen++;
             }
