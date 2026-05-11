@@ -50,9 +50,14 @@ public final class MetadataResultSets {
 
     /**
      * Build a result set whose schema is {@code columns} and whose rows are {@code rows}. Each
-     * inner list in {@code rows} supplies values in column order.
+     * inner list in {@code rows} supplies values in column order, and must have exactly
+     * {@code columns.size()} elements — a short row would silently leave the trailing columns
+     * unset (interpreted as Arrow null), which is almost always a caller bug. Today every caller
+     * goes through {@link MetadataSchemas} so the sizes match by construction; the precondition
+     * here makes a future caller bug surface at the boundary instead of in vector population.
      */
     public static StreamingResultSet of(List<ColumnMetadata> columns, List<List<Object>> rows) throws SQLException {
+        validateRowArity(columns, rows);
         byte[] ipcBytes = writeArrowStream(columns, rows);
         // Allocator is handed to StreamingResultSet along with the reader; the result set owns
         // its lifecycle and closes it when close() is called.
@@ -102,6 +107,31 @@ public final class MetadataResultSets {
             return out.toByteArray();
         } catch (IOException ex) {
             throw new SQLException("Failed to build metadata result set", "XX000", ex);
+        }
+    }
+
+    /**
+     * Verify that every supplied row has exactly {@code columns.size()} elements. A {@code null}
+     * row is allowed and is interpreted as a row of all-nulls (matching the old
+     * {@code coerceRows} convention of converting null rows to empty lists, which is the only
+     * shape with no positional values to populate). Anything else is a caller bug.
+     */
+    private static void validateRowArity(List<ColumnMetadata> columns, List<List<Object>> rows) throws SQLException {
+        int expected = columns.size();
+        for (int i = 0; i < rows.size(); i++) {
+            List<Object> row = rows.get(i);
+            if (row == null) {
+                continue;
+            }
+            // The legacy coerceRows path turns a null-row into Collections.emptyList(); accept
+            // empty as the "all nulls" shape here too.
+            if (row.isEmpty() && expected > 0) {
+                continue;
+            }
+            if (row.size() != expected) {
+                throw new SQLException("Metadata row " + i + " has " + row.size() + " elements but schema has "
+                        + expected + " columns");
+            }
         }
     }
 
