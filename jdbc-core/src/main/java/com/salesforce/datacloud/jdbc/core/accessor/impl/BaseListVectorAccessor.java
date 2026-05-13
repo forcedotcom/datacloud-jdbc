@@ -32,6 +32,8 @@ public abstract class BaseListVectorAccessor extends QueryJDBCAccessor {
     }
 
     protected List<?> getListObject(VectorProvider vectorProvider) throws SQLException {
+        // ListVector/LargeListVector.getObject is validity-correct (not gated by
+        // arrow.enable_null_check_for_get), so a null return reliably indicates a null row.
         List<?> object = vectorProvider.getObject(getCurrentRow());
         this.wasNull = object == null;
         return object;
