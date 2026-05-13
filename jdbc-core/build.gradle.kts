@@ -44,3 +44,11 @@ dependencies {
 tasks.named("compileJava") {
     dependsOn(":jdbc-grpc:compileJava")
 }
+
+// Iceberg sets -Darrow.enable_null_check_for_get=false on the JVM. With that flag off, Arrow's
+// VarCharVector/VarBinaryVector/FixedSizeBinaryVector .get(int) skip the validity check and return
+// stale buffer bytes for null rows instead of null. Run the test suite under that condition so
+// the existing null-handling assertions cover the Iceberg scenario.
+tasks.test {
+    systemProperty("arrow.enable_null_check_for_get", "false")
+}

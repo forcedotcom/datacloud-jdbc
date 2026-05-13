@@ -6,6 +6,7 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import java.nio.charset.StandardCharsets;
+import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import org.apache.arrow.vector.FixedSizeBinaryVector;
 import org.apache.arrow.vector.LargeVarBinaryVector;
@@ -18,30 +19,37 @@ public class BinaryVectorAccessor extends QueryJDBCAccessor {
     }
 
     private final ByteArrayGetter getter;
+    private final IntPredicate nullChecker;
 
     public BinaryVectorAccessor(FixedSizeBinaryVector vector, IntSupplier currentRowSupplier) {
-        this(vector::get, currentRowSupplier);
+        this(vector::get, vector::isNull, currentRowSupplier);
     }
 
     public BinaryVectorAccessor(VarBinaryVector vector, IntSupplier currentRowSupplier) {
-        this(vector::get, currentRowSupplier);
+        this(vector::get, vector::isNull, currentRowSupplier);
     }
 
     public BinaryVectorAccessor(LargeVarBinaryVector vector, IntSupplier currentRowSupplier) {
-        this(vector::get, currentRowSupplier);
+        this(vector::get, vector::isNull, currentRowSupplier);
     }
 
-    private BinaryVectorAccessor(ByteArrayGetter getter, IntSupplier currentRowSupplier) {
+    private BinaryVectorAccessor(ByteArrayGetter getter, IntPredicate nullChecker, IntSupplier currentRowSupplier) {
         super(currentRowSupplier);
         this.getter = getter;
+        this.nullChecker = nullChecker;
     }
 
     @Override
     public byte[] getBytes() {
-        byte[] bytes = getter.get(getCurrentRow());
-        this.wasNull = bytes == null;
-
-        return bytes;
+        // Arrow's vector.get(int) skips the isSet check when arrow.enable_null_check_for_get=false
+        // (e.g. set by Iceberg on the JVM), so a null entry returns garbage rather than null.
+        // Check the validity buffer explicitly via isNull(int).
+        final int row = getCurrentRow();
+        this.wasNull = nullChecker.test(row);
+        if (this.wasNull) {
+            return null;
+        }
+        return getter.get(row);
     }
 
     @Override
