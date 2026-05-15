@@ -99,7 +99,11 @@ public class DataCloudResultSet implements ReadOnlyResultSet, ForwardOnlyResultS
             } catch (Exception suppressed) {
                 ex.addSuppressed(suppressed);
             }
-            arrowStream.getAllocator().close();
+            try {
+                arrowStream.getAllocator().close();
+            } catch (Exception suppressed) {
+                ex.addSuppressed(suppressed);
+            }
             throw ex;
         }
     }

@@ -5,12 +5,15 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.ZoneId;
 import java.util.Collections;
 import java.util.stream.IntStream;
@@ -46,6 +49,29 @@ class ArrowStreamReaderCursorTest {
     void closesReaderAndAllocator() {
         val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         sut.close();
+        verify(reader, times(1)).close();
+        verify(allocator, times(1)).close();
+    }
+
+    /**
+     * When both reader.close() and allocator.close() throw, the cursor must close the allocator
+     * even after the reader's close raised, and surface the reader's exception as primary with
+     * the allocator's exception attached as suppressed. The reader exception is the
+     * diagnostically interesting one (the leak detector firing on allocator.close is usually a
+     * symptom of the reader's failure to release buffers); plain try/finally would silently
+     * replace it with the allocator exception.
+     */
+    @Test
+    @SneakyThrows
+    void closeAttachesAllocatorErrorAsSuppressedWhenReaderCloseAlsoThrows() {
+        val readerError = new IOException("reader close failed");
+        val allocatorError = new IllegalStateException("allocator leak detected");
+        doThrow(readerError).when(reader).close();
+        doThrow(allocatorError).when(allocator).close();
+
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
+
+        assertThatThrownBy(sut::close).isSameAs(readerError).hasSuppressedException(allocatorError);
         verify(reader, times(1)).close();
         verify(allocator, times(1)).close();
     }

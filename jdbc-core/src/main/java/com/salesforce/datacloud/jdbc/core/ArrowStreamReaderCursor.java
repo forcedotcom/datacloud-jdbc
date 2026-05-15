@@ -103,12 +103,13 @@ class ArrowStreamReaderCursor implements AutoCloseable {
     @SneakyThrows
     @Override
     public void close() {
-        // Close the reader first: it releases the buffers accounted against the allocator, so the
-        // allocator's closing budget check passes. Reversing the order trips a leak detector.
-        try {
-            reader.close();
-        } finally {
-            allocator.close();
+        // try-with-resources closes in reverse declaration order: reader first (releases the
+        // buffers accounted against the allocator so its closing budget check passes), then
+        // allocator. If both throw, Java attaches the second as suppressed onto the first
+        // instead of dropping the reader exception via the standard try/finally semantics.
+        try (BufferAllocator a = allocator;
+                ArrowStreamReader r = reader) {
+            // resource cleanup happens at exit
         }
     }
 }
