@@ -1087,10 +1087,13 @@ public class DataCloudDatabaseMetadataTest {
             // JDBC name ("VARCHAR" for varchar columns).
             assertThat(columnResultSet.getString("TYPE_NAME")).isEqualTo("VARCHAR");
             assertThat(columnResultSet.getInt("DATA_TYPE")).isEqualTo(12);
-            // NULLABLE is an INTEGER column. Arrow-backed getInt reports the nullability enum;
-            // 0 (columnNoNulls) for NOT NULL rows, which coerces to false via long→boolean.
+            // NULLABLE is an INTEGER column. Arrow-backed getInt reports the nullability enum:
+            // 0 (columnNoNulls) for NOT NULL rows, which coerces to false via the JDBC-spec
+            // INTEGER → boolean recommendation (BaseIntVectorAccessor.getBoolean).
             assertThat(columnResultSet.getInt("NULLABLE")).isEqualTo(0);
+            assertThat(columnResultSet.getBoolean("NULLABLE")).isFalse();
             assertThat(columnResultSet.getInt("ORDINAL_POSITION")).isEqualTo(ordinalValue);
+            assertThat(columnResultSet.getBoolean("ORDINAL_POSITION")).isTrue();
             assertThat(columnResultSet.getByte("ORDINAL_POSITION")).isEqualTo(ordinalValue.byteValue());
         }
     }

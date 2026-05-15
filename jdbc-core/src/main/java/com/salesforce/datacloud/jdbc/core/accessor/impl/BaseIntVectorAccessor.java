@@ -87,6 +87,14 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
     }
 
     @Override
+    public boolean getBoolean() {
+        // JDBC 4.2 Table B-6 recommends INTEGER → boolean: 0 → false, non-zero → true.
+        // pgjdbc and other major drivers do this; clients reading metadata int columns like
+        // NULLABLE / IS_AUTOINCREMENT as boolean rely on the coercion.
+        return getLong() != 0;
+    }
+
+    @Override
     public byte getByte() {
         return (byte) getLong();
     }
