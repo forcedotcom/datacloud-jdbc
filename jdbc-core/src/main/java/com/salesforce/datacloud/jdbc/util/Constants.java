@@ -9,6 +9,7 @@ public final class Constants {
     public static final String INTEGER = "INTEGER";
     public static final String TEXT = "TEXT";
     public static final String SHORT = "SHORT";
+    public static final String BOOL = "BOOL";
 
     // Date Time constants
     public static final String ISO_TIME_FORMAT = "HH:mm:ss";

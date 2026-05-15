@@ -171,16 +171,14 @@ abstract class BaseVectorSetter<T extends ValueVector, V> implements VectorValue
 }
 
 /** Setter implementation for VarCharVector. */
-class VarCharVectorSetter extends BaseVectorSetter<VarCharVector, Object> {
+class VarCharVectorSetter extends BaseVectorSetter<VarCharVector, String> {
     VarCharVectorSetter() {
-        super(Object.class); // accept String, Number, Boolean, byte[] — coerce to UTF-8 bytes
+        super(String.class);
     }
 
     @Override
-    protected void setValueInternal(VarCharVector vector, int index, Object value) {
-        byte[] bytes =
-                value instanceof byte[] ? (byte[]) value : value.toString().getBytes(StandardCharsets.UTF_8);
-        vector.setSafe(index, bytes);
+    protected void setValueInternal(VarCharVector vector, int index, String value) {
+        vector.setSafe(index, value.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override

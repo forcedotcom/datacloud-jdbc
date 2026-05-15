@@ -1251,6 +1251,12 @@ public class DataCloudDatabaseMetadataTest {
             int dataType = resultSet.getInt("DATA_TYPE");
             assertThat(dataType).isNotEqualTo(0);
             assertThat(resultSet.getShort("NULLABLE")).isEqualTo((short) java.sql.DatabaseMetaData.typeNullable);
+            // The four boolean columns are now declared as BIT/BOOLEAN per JDBC spec, so
+            // getBoolean returns the actual flag instead of throwing on the old VARCHAR path.
+            resultSet.getBoolean("CASE_SENSITIVE");
+            resultSet.getBoolean("UNSIGNED_ATTRIBUTE");
+            resultSet.getBoolean("FIXED_PREC_SCALE");
+            resultSet.getBoolean("AUTO_INCREMENT");
         }
         assertThat(rowCount)
                 .as("getTypeInfo should return one row per HyperTypeKind")

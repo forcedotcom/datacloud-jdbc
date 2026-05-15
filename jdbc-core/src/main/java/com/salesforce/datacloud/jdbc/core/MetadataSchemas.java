@@ -4,6 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import static com.salesforce.datacloud.jdbc.util.Constants.BOOL;
 import static com.salesforce.datacloud.jdbc.util.Constants.INTEGER;
 import static com.salesforce.datacloud.jdbc.util.Constants.SHORT;
 import static com.salesforce.datacloud.jdbc.util.Constants.TEXT;
@@ -46,11 +47,11 @@ public final class MetadataSchemas {
             text("LITERAL_SUFFIX"),
             text("CREATE_PARAMS"),
             shortColumn("NULLABLE"),
-            text("CASE_SENSITIVE"),
+            bool("CASE_SENSITIVE"),
             shortColumn("SEARCHABLE"),
-            text("UNSIGNED_ATTRIBUTE"),
-            text("FIXED_PREC_SCALE"),
-            text("AUTO_INCREMENT"),
+            bool("UNSIGNED_ATTRIBUTE"),
+            bool("FIXED_PREC_SCALE"),
+            bool("AUTO_INCREMENT"),
             text("LOCAL_TYPE_NAME"),
             shortColumn("MINIMUM_SCALE"),
             shortColumn("MAXIMUM_SCALE"),
@@ -94,6 +95,10 @@ public final class MetadataSchemas {
 
     private static ColumnMetadata shortColumn(String name) {
         return new ColumnMetadata(name, HyperType.int16(true), SHORT);
+    }
+
+    private static ColumnMetadata bool(String name) {
+        return new ColumnMetadata(name, HyperType.bool(true), BOOL);
     }
 
     private MetadataSchemas() {
