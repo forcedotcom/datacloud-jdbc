@@ -14,13 +14,24 @@ import com.salesforce.datacloud.jdbc.auth.errors.AuthorizationException;
 import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
 import com.salesforce.datacloud.jdbc.auth.model.OAuthTokenResponse;
 import com.salesforce.datacloud.jdbc.http.HttpClientProperties;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import lombok.val;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import okhttp3.mockwebserver.SocketPolicy;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.assertj.core.api.SoftAssertions;
@@ -56,6 +67,13 @@ class DataCloudTokenProviderTest {
         properties.setProperty(SalesforceAuthProperties.AUTH_CLIENT_ID, "clientId");
         properties.setProperty(SalesforceAuthProperties.AUTH_CLIENT_SECRET, "clientSecret");
         properties.setProperty(SalesforceAuthProperties.AUTH_REFRESH_TOKEN, refreshToken);
+        return properties;
+    }
+
+    static Properties propertiesForPkce() {
+        val properties = new Properties();
+        properties.setProperty(SalesforceAuthProperties.AUTH_CLIENT_ID, "clientId");
+        properties.setProperty(SalesforceAuthProperties.AUTH_MODE, "AUTH_CODE_PKCE");
         return properties;
     }
 
@@ -523,6 +541,170 @@ class DataCloudTokenProviderTest {
             assertThat(ex.getMessage()).isNotEmpty();
             server.shutdown();
         }
+    }
+
+    @SneakyThrows
+    @Test
+    void authCodePkceFlowExchangesCodeForToken() {
+        val mapper = new ObjectMapper();
+        val properties = propertiesForPkce();
+        val accessToken = UUID.randomUUID().toString();
+
+        try (val server = new MockWebServer()) {
+            server.start();
+            val oAuthTokenResponse = new OAuthTokenResponse();
+            oAuthTokenResponse.setToken(accessToken);
+            oAuthTokenResponse.setInstanceUrl(server.url("").toString());
+            server.enqueue(new MockResponse().setBody(mapper.writeValueAsString(oAuthTokenResponse)));
+
+            val loginUrl = server.url("").uri();
+            val clientProperties = HttpClientProperties.ofDestructive(properties);
+            val authProperties = SalesforceAuthProperties.ofDestructive(loginUrl, properties);
+
+            val provider = DataCloudTokenProvider.ofForTest(
+                    clientProperties, authProperties, new ScriptedBrowserLauncher("auth-code-from-test"));
+            val token = provider.getOAuthToken();
+
+            assertThat(token.getToken()).as("access token").isEqualTo(accessToken);
+
+            // Inspect the request body sent to /services/oauth2/token
+            RecordedRequest tokenRequest = server.takeRequest();
+            assertThat(tokenRequest.getPath()).isEqualTo("/services/oauth2/token");
+            Map<String, String> body = parseFormBody(tokenRequest.getBody().readUtf8());
+            softly.assertThat(body).containsEntry("grant_type", "authorization_code");
+            softly.assertThat(body).containsEntry("code", "auth-code-from-test");
+            softly.assertThat(body).containsEntry("client_id", "clientId");
+            softly.assertThat(body).containsKey("code_verifier");
+            softly.assertThat(body).containsKey("redirect_uri");
+            softly.assertThat(body.get("redirect_uri")).startsWith("http://127.0.0.1:");
+            // No client_secret was supplied; the public-client request must NOT include one.
+            softly.assertThat(body).doesNotContainKey("client_secret");
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void authCodePkceFlowIncludesClientSecretWhenConfigured() {
+        val mapper = new ObjectMapper();
+        val properties = propertiesForPkce();
+        properties.setProperty(SalesforceAuthProperties.AUTH_CLIENT_SECRET, "confidential-secret");
+
+        try (val server = new MockWebServer()) {
+            server.start();
+            val oAuthTokenResponse = new OAuthTokenResponse();
+            oAuthTokenResponse.setToken(UUID.randomUUID().toString());
+            oAuthTokenResponse.setInstanceUrl(server.url("").toString());
+            server.enqueue(new MockResponse().setBody(mapper.writeValueAsString(oAuthTokenResponse)));
+
+            val loginUrl = server.url("").uri();
+            val clientProperties = HttpClientProperties.ofDestructive(properties);
+            val authProperties = SalesforceAuthProperties.ofDestructive(loginUrl, properties);
+
+            val provider = DataCloudTokenProvider.ofForTest(
+                    clientProperties, authProperties, new ScriptedBrowserLauncher("any-code"));
+            provider.getOAuthToken();
+
+            Map<String, String> body =
+                    parseFormBody(server.takeRequest().getBody().readUtf8());
+            assertThat(body).containsEntry("client_secret", "confidential-secret");
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void authCodePkceFlowRejectsMismatchedState() {
+        val properties = propertiesForPkce();
+        properties.setProperty(SalesforceAuthProperties.AUTH_BROWSER_TIMEOUT_SECONDS, "5");
+
+        try (val server = new MockWebServer()) {
+            server.start();
+            val loginUrl = server.url("").uri();
+            val clientProperties = HttpClientProperties.ofDestructive(properties);
+            val authProperties = SalesforceAuthProperties.ofDestructive(loginUrl, properties);
+
+            // Hand the browser a launcher that replies with a totally different state
+            BrowserLauncher tampered = uri -> {
+                Map<String, String> params = parseQueryParams(uri.getRawQuery());
+                String redirect = params.get("redirect_uri");
+                String tamperedState = "tampered-" + UUID.randomUUID();
+                callLoopback(redirect + "?code=irrelevant&state=" + tamperedState);
+            };
+
+            val provider = DataCloudTokenProvider.ofForTest(clientProperties, authProperties, tampered);
+            val ex = assertThrows(SQLException.class, provider::getOAuthToken);
+            assertThat(ex.getMessage()).contains("state parameter did not match");
+        }
+    }
+
+    /** Fake browser that, given the authorize URL, immediately POSTs back to the loopback server. */
+    private static final class ScriptedBrowserLauncher implements BrowserLauncher {
+        private final String authorizationCode;
+
+        ScriptedBrowserLauncher(String authorizationCode) {
+            this.authorizationCode = authorizationCode;
+        }
+
+        @Override
+        public void open(URI authorizationUrl) {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Map<String, String> params = parseQueryParams(authorizationUrl.getRawQuery());
+                    String redirect = params.get("redirect_uri");
+                    String state = params.get("state");
+                    callLoopback(redirect + "?code=" + authorizationCode + "&state=" + state);
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            });
+        }
+    }
+
+    private static void callLoopback(String url) {
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            conn.setConnectTimeout(2_000);
+            conn.setReadTimeout(2_000);
+            try {
+                conn.getResponseCode();
+                try (InputStream is =
+                        conn.getResponseCode() >= 400 ? conn.getErrorStream() : conn.getInputStream()) {
+                    if (is != null) {
+                        byte[] buf = new byte[1024];
+                        while (is.read(buf) >= 0) {
+                            // discard
+                        }
+                    }
+                }
+            } finally {
+                conn.disconnect();
+            }
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private static Map<String, String> parseQueryParams(String rawQuery) {
+        Map<String, String> result = new HashMap<>();
+        if (rawQuery == null || rawQuery.isEmpty()) {
+            return result;
+        }
+        for (String pair : rawQuery.split("&")) {
+            int eq = pair.indexOf('=');
+            String key = eq >= 0 ? pair.substring(0, eq) : pair;
+            String value = eq >= 0 ? pair.substring(eq + 1) : "";
+            try {
+                result.put(
+                        URLDecoder.decode(key, StandardCharsets.UTF_8.name()),
+                        URLDecoder.decode(value, StandardCharsets.UTF_8.name()));
+            } catch (Exception ignored) {
+                // skip malformed pair
+            }
+        }
+        return result;
+    }
+
+    private static Map<String, String> parseFormBody(String body) {
+        return parseQueryParams(body);
     }
 
     private static void assertAuthorizationException(Throwable actual, CharSequence... messages) {
