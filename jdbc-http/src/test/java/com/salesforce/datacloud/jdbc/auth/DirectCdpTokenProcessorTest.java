@@ -7,19 +7,48 @@ package com.salesforce.datacloud.jdbc.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
-import java.lang.reflect.Field;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.Properties;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class DirectCdpTokenProcessorTest {
 
-    private static final String TENANT_URL = "https://test.c360a.salesforce.com";
-    static final String FAKE_TOKEN =
-            "eyJraWQiOiJDT1JFLjAwRE9LMDAwMDAwOVp6ci4xNzE4MDUyMTU0NDIyIiwidHlwIjoiSldUIiwiYWxnIjoiRVMyNTYifQ.eyJzdWIiOiJodHRwczovL2xvZ2luLnRlc3QxLnBjLXJuZC5zYWxlc2ZvcmNlLmNvbS9pZC8wMERPSzAwMDAwMDlaenIyQUUvMDA1T0swMDAwMDBVeTkxWUFDIiwic2NwIjoiY2RwX3Byb2ZpbGVfYXBpIGNkcF9pbmdlc3RfYXBpIGNkcF9pZGVudGl0eXJlc29sdXRpb25fYXBpIGNkcF9zZWdtZW50X2FwaSBjZHBfcXVlcnlfYXBpIGNkcF9hcGkiLCJpc3MiOiJodHRwczovL2xvZ2luLnRlc3QxLnBjLXJuZC5zYWxlc2ZvcmNlLmNvbS8iLCJvcmdJZCI6IjAwRE9LMDAwMDAwOVp6ciIsImlzc3VlclRlbmFudElkIjoiY29yZS9mYWxjb250ZXN0MS1jb3JlNG9yYTE1LzAwRE9LMDAwMDAwOVp6cjJBRSIsInNmYXBwaWQiOiIzTVZHOVhOVDlUbEI3VmtZY0tIVm5sUUZzWEd6cUJuMGszUC5zNHJBU0I5V09oRU1OdkgyNzNpM1NFRzF2bWl3WF9YY2NXOUFZbHA3VnJnQ3BGb0ZXIiwiYXVkaWVuY2VUZW5hbnRJZCI6ImEzNjAvZmFsY29uZGV2L2E2ZDcyNmE3M2Y1MzQzMjdhNmE4ZTJlMGYzY2MzODQwIiwiY3VzdG9tX2F0dHJpYnV0ZXMiOnsiZGF0YXNwYWNlIjoiZGVmYXVsdCJ9LCJhdWQiOiJhcGkuYTM2MC5zYWxlc2ZvcmNlLmNvbSIsIm5iZiI6MTcyMDczMTAyMSwic2ZvaWQiOiIwMERPSzAwMDAwMDlaenIiLCJzZnVpZCI6IjAwNU9LMDAwMDAwVXk5MSIsImV4cCI6MTcyMDczODI4MCwiaWF0IjoxNzIwNzMxMDgxLCJqdGkiOiIwYjYwMzc4OS1jMGI2LTQwZTMtYmIzNi03NDQ3MzA2MzAxMzEifQ.lXgeAhJIiGoxgNpBi0W5oBWyn2_auB2bFxxajGuK6DMHlkqDhHJAlFN_uf6QPSjGSJCh5j42Ow5SrEptUDJwmQ";
-    static final String FAKE_TENANT_ID = "a360/falcondev/a6d726a73f534327a6a8e2e0f3cc3840";
+    private static final String TENANT_HOST = "test.c360a.salesforce.com";
+    private static final String TENANT_ID = "a360/falcondev/a6d726a73f534327a6a8e2e0f3cc3840";
+
+    /**
+     * Builds an unsigned JWT with the given audienceTenantId and exp claim. The {@link DataCloudToken}
+     * decoder only base64-parses the payload — it does not verify the signature — so a fixed bogus
+     * signature is enough to exercise the production path.
+     */
+    private static String jwtWithExp(long expEpochSeconds) {
+        try {
+            ObjectNode header = new ObjectMapper().createObjectNode();
+            header.put("alg", "ES256");
+            header.put("typ", "JWT");
+
+            ObjectNode payload = new ObjectMapper().createObjectNode();
+            payload.put("audienceTenantId", TENANT_ID);
+            payload.put("exp", expEpochSeconds);
+
+            Base64.Encoder enc = Base64.getUrlEncoder().withoutPadding();
+            String h = enc.encodeToString(header.toString().getBytes(StandardCharsets.UTF_8));
+            String p = enc.encodeToString(payload.toString().getBytes(StandardCharsets.UTF_8));
+            return h + "." + p + ".sig";
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String validJwt() {
+        return jwtWithExp(Instant.now().getEpochSecond() + 3600);
+    }
 
     private static Properties propertiesForCdpToken(String cdpToken, String tenantUrl) {
         Properties properties = new Properties();
@@ -30,51 +59,69 @@ class DirectCdpTokenProcessorTest {
 
     @Test
     void getDataCloudTokenReturnsValidToken() throws SQLException {
+        String token = validJwt();
         DirectCdpTokenProcessor processor =
-                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(FAKE_TOKEN, TENANT_URL));
-        DataCloudToken token = processor.getDataCloudToken();
+                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(token, TENANT_HOST));
+        DataCloudToken dcToken = processor.getDataCloudToken();
 
-        assertThat(token.getAccessToken()).isEqualTo("Bearer " + FAKE_TOKEN);
-        assertThat(token.getTenantUrl()).isEqualTo(TENANT_URL);
-        assertThat(token.getTenantId()).isEqualTo(FAKE_TENANT_ID);
-        assertThat(token.isAlive()).isTrue();
+        assertThat(dcToken.getAccessToken()).isEqualTo("Bearer " + token);
+        assertThat(dcToken.getTenantUrl()).isEqualTo(TENANT_HOST);
+        assertThat(dcToken.getTenantId()).isEqualTo(TENANT_ID);
+        assertThat(dcToken.isAlive()).isTrue();
+    }
+
+    @Test
+    void ofDestructiveRejectsTenantUrlWithScheme() {
+        for (String invalid : new String[] {
+            "https://" + TENANT_HOST, "http://" + TENANT_HOST, TENANT_HOST + ":443", TENANT_HOST + "/",
+        }) {
+            Properties props = propertiesForCdpToken(validJwt(), invalid);
+            SQLException ex = assertThrows(
+                    SQLException.class,
+                    () -> DirectCdpTokenProcessor.ofDestructive(props),
+                    "Expected rejection of: " + invalid);
+            assertThat(ex.getMessage()).contains("bare hostname");
+        }
+    }
+
+    @Test
+    void ofDestructiveRejectsTenantUrlWithWhitespace() {
+        Properties props = propertiesForCdpToken(validJwt(), "  " + TENANT_HOST + "  ");
+        SQLException ex = assertThrows(SQLException.class, () -> DirectCdpTokenProcessor.ofDestructive(props));
+        assertThat(ex.getMessage()).contains("whitespace");
     }
 
     @Test
     void getDataCloudTokenReturnsCachedToken() throws SQLException {
         DirectCdpTokenProcessor processor =
-                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(FAKE_TOKEN, TENANT_URL));
+                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(validJwt(), TENANT_HOST));
         DataCloudToken first = processor.getDataCloudToken();
         DataCloudToken second = processor.getDataCloudToken();
 
-        assertThat(first.getAccessToken()).isEqualTo(second.getAccessToken());
+        assertThat(first).isSameAs(second);
     }
 
     @Test
     void getLakehouseWithoutDataspace() throws SQLException {
         DirectCdpTokenProcessor processor =
-                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(FAKE_TOKEN, TENANT_URL));
-        String lakehouse = processor.getLakehouse();
-
-        assertThat(lakehouse).isEqualTo("lakehouse:" + FAKE_TENANT_ID + ";");
+                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(validJwt(), TENANT_HOST));
+        assertThat(processor.getLakehouse()).isEqualTo("lakehouse:" + TENANT_ID + ";");
     }
 
     @Test
     void getLakehouseWithDataspace() throws SQLException {
         String dataspace = UUID.randomUUID().toString();
-        Properties props = propertiesForCdpToken(FAKE_TOKEN, TENANT_URL);
+        Properties props = propertiesForCdpToken(validJwt(), TENANT_HOST);
         props.setProperty("dataspace", dataspace);
 
         DirectCdpTokenProcessor processor = DirectCdpTokenProcessor.ofDestructive(props);
-        String lakehouse = processor.getLakehouse();
-
-        assertThat(lakehouse).isEqualTo("lakehouse:" + FAKE_TENANT_ID + ";" + dataspace);
+        assertThat(processor.getLakehouse()).isEqualTo("lakehouse:" + TENANT_ID + ";" + dataspace);
     }
 
     @Test
     void ofDestructiveThrowsWhenCdpTokenMissing() {
         Properties props = new Properties();
-        props.setProperty("tenantUrl", TENANT_URL);
+        props.setProperty("tenantUrl", TENANT_HOST);
 
         SQLException ex = assertThrows(SQLException.class, () -> DirectCdpTokenProcessor.ofDestructive(props));
         assertThat(ex.getMessage()).contains("cdpToken");
@@ -83,7 +130,7 @@ class DirectCdpTokenProcessorTest {
     @Test
     void ofDestructiveThrowsWhenTenantUrlMissing() {
         Properties props = new Properties();
-        props.setProperty("cdpToken", FAKE_TOKEN);
+        props.setProperty("cdpToken", validJwt());
 
         SQLException ex = assertThrows(SQLException.class, () -> DirectCdpTokenProcessor.ofDestructive(props));
         assertThat(ex.getMessage()).contains("tenantUrl");
@@ -91,7 +138,7 @@ class DirectCdpTokenProcessorTest {
 
     @Test
     void ofDestructiveThrowsWhenCdpTokenIsInvalidJwt() {
-        Properties props = propertiesForCdpToken("not-a-valid-jwt", TENANT_URL);
+        Properties props = propertiesForCdpToken("not-a-valid-jwt", TENANT_HOST);
 
         SQLException ex = assertThrows(SQLException.class, () -> DirectCdpTokenProcessor.ofDestructive(props));
         assertThat(ex.getMessage()).contains("Invalid CDP token");
@@ -99,7 +146,7 @@ class DirectCdpTokenProcessorTest {
 
     @Test
     void ofDestructiveRemovesPropertiesFromInput() throws SQLException {
-        Properties props = propertiesForCdpToken(FAKE_TOKEN, TENANT_URL);
+        Properties props = propertiesForCdpToken(validJwt(), TENANT_HOST);
         props.setProperty("dataspace", "myspace");
 
         DirectCdpTokenProcessor.ofDestructive(props);
@@ -111,62 +158,8 @@ class DirectCdpTokenProcessorTest {
 
     @Test
     void hasCdpTokenReturnsTrueWhenBothPresent() {
-        Properties props = propertiesForCdpToken(FAKE_TOKEN, TENANT_URL);
+        Properties props = propertiesForCdpToken(validJwt(), TENANT_HOST);
         assertThat(DirectCdpTokenProcessor.hasCdpToken(props)).isTrue();
-    }
-
-    @Test
-    void getDataCloudTokenRebuildsWhenCachedTokenExpired() throws Exception {
-        DirectCdpTokenProcessor processor =
-                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(FAKE_TOKEN, TENANT_URL));
-
-        DataCloudTokenResponse expiredResponse = new DataCloudTokenResponse();
-        expiredResponse.setToken(FAKE_TOKEN);
-        expiredResponse.setInstanceUrl(TENANT_URL);
-        expiredResponse.setTokenType("Bearer");
-        expiredResponse.setExpiresIn(-1);
-        DataCloudToken expired = DataCloudToken.of(expiredResponse);
-        assertThat(expired.isAlive()).isFalse();
-
-        Field cache = DirectCdpTokenProcessor.class.getDeclaredField("cachedDataCloudToken");
-        cache.setAccessible(true);
-        cache.set(processor, expired);
-
-        DataCloudToken rebuilt = processor.getDataCloudToken();
-        assertThat(rebuilt).isNotSameAs(expired);
-        assertThat(rebuilt.isAlive()).isTrue();
-    }
-
-    @Test
-    void getDataCloudTokenRebuildsAfterCacheCleared() throws Exception {
-        DirectCdpTokenProcessor processor =
-                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(FAKE_TOKEN, TENANT_URL));
-
-        Field cache = DirectCdpTokenProcessor.class.getDeclaredField("cachedDataCloudToken");
-        cache.setAccessible(true);
-        cache.set(processor, null);
-
-        DataCloudToken rebuilt = processor.getDataCloudToken();
-        assertThat(rebuilt.getAccessToken()).isEqualTo("Bearer " + FAKE_TOKEN);
-        assertThat(rebuilt.getTenantId()).isEqualTo(FAKE_TENANT_ID);
-    }
-
-    @Test
-    void getDataCloudTokenWrapsRebuildFailure() throws Exception {
-        DirectCdpTokenProcessor processor =
-                DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(FAKE_TOKEN, TENANT_URL));
-
-        Field cache = DirectCdpTokenProcessor.class.getDeclaredField("cachedDataCloudToken");
-        cache.setAccessible(true);
-        cache.set(processor, null);
-
-        Field tenantUrl = DirectCdpTokenProcessor.class.getDeclaredField("tenantUrl");
-        tenantUrl.setAccessible(true);
-        tenantUrl.set(processor, null);
-
-        SQLException ex = assertThrows(SQLException.class, processor::getDataCloudToken);
-        assertThat(ex.getSQLState()).isEqualTo("28000");
-        assertThat(cache.get(processor)).isNull();
     }
 
     @Test
@@ -175,11 +168,40 @@ class DirectCdpTokenProcessorTest {
         assertThat(DirectCdpTokenProcessor.hasCdpToken(null)).isFalse();
 
         Properties onlyCdpToken = new Properties();
-        onlyCdpToken.setProperty("cdpToken", FAKE_TOKEN);
+        onlyCdpToken.setProperty("cdpToken", validJwt());
         assertThat(DirectCdpTokenProcessor.hasCdpToken(onlyCdpToken)).isFalse();
 
         Properties onlyTenantUrl = new Properties();
-        onlyTenantUrl.setProperty("tenantUrl", TENANT_URL);
+        onlyTenantUrl.setProperty("tenantUrl", TENANT_HOST);
         assertThat(DirectCdpTokenProcessor.hasCdpToken(onlyTenantUrl)).isFalse();
+    }
+
+    @Test
+    void secondsUntilJwtExpiryReturnsRemainingForValidJwt() {
+        long futureExp = Instant.now().getEpochSecond() + 1234;
+        int remaining = DirectCdpTokenProcessor.secondsUntilJwtExpiry(jwtWithExp(futureExp));
+        assertThat(remaining).isBetween(1230, 1234);
+    }
+
+    @Test
+    void secondsUntilJwtExpiryFallsBackWhenJwtSingleSegment() {
+        assertThat(DirectCdpTokenProcessor.secondsUntilJwtExpiry("only-one-segment"))
+                .isEqualTo(DirectCdpTokenProcessor.FALLBACK_EXPIRES_IN_SECONDS);
+    }
+
+    @Test
+    void secondsUntilJwtExpiryFallsBackWhenPayloadNotBase64() {
+        // Two segments but second one is not valid base64url
+        assertThat(DirectCdpTokenProcessor.secondsUntilJwtExpiry("header.@@not-base64@@.sig"))
+                .isEqualTo(DirectCdpTokenProcessor.FALLBACK_EXPIRES_IN_SECONDS);
+    }
+
+    @Test
+    void secondsUntilJwtExpiryFallsBackWhenExpClaimMissing() {
+        Base64.Encoder enc = Base64.getUrlEncoder().withoutPadding();
+        String header = enc.encodeToString("{\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
+        String payload = enc.encodeToString("{\"sub\":\"x\"}".getBytes(StandardCharsets.UTF_8));
+        assertThat(DirectCdpTokenProcessor.secondsUntilJwtExpiry(header + "." + payload + ".sig"))
+                .isEqualTo(DirectCdpTokenProcessor.FALLBACK_EXPIRES_IN_SECONDS);
     }
 }

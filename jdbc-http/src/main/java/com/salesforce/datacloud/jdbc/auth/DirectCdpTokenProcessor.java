@@ -7,8 +7,12 @@ package com.salesforce.datacloud.jdbc.auth;
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptional;
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeRequired;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.salesforce.datacloud.jdbc.auth.model.DataCloudTokenResponse;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +22,8 @@ public class DirectCdpTokenProcessor {
     static final String CDP_TOKEN_KEY = "cdpToken";
     static final String TENANT_URL_KEY = "tenantUrl";
     static final String DATASPACE_KEY = "dataspace";
-    static final int DEFAULT_EXPIRES_IN = 3600;
+    static final int FALLBACK_EXPIRES_IN_SECONDS = 3600;
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final String cdpToken;
     private final String tenantUrl;
@@ -38,7 +43,7 @@ public class DirectCdpTokenProcessor {
     public static DirectCdpTokenProcessor ofDestructive(Properties properties) throws SQLException {
         try {
             String cdpToken = takeRequired(properties, CDP_TOKEN_KEY);
-            String tenantUrl = takeRequired(properties, TENANT_URL_KEY);
+            String tenantUrl = validateTenantHost(takeRequired(properties, TENANT_URL_KEY));
             String dataspace = takeOptional(properties, DATASPACE_KEY).orElse(null);
             DirectCdpTokenProcessor processor = new DirectCdpTokenProcessor(cdpToken, tenantUrl, dataspace);
             processor.validateToken();
@@ -46,6 +51,24 @@ public class DirectCdpTokenProcessor {
         } catch (IllegalArgumentException ex) {
             throw new SQLException(ex.getMessage(), "28000", ex);
         }
+    }
+
+    /**
+     * tenantUrl must be a bare hostname — gRPC's {@code ManagedChannelBuilder.forAddress} requires it.
+     * Reject schemes, ports, paths, and whitespace so users get a clear error rather than a confusing
+     * connection failure later.
+     */
+    static String validateTenantHost(String tenantUrl) {
+        if (tenantUrl.contains("://") || tenantUrl.contains("/") || tenantUrl.contains(":")) {
+            throw new IllegalArgumentException(
+                    "tenantUrl must be a bare hostname (e.g. 'tenant.c360a.salesforce.com'), got: '" + tenantUrl + "'");
+        }
+        String trimmed = tenantUrl.trim();
+        if (trimmed.isEmpty() || trimmed.length() != tenantUrl.length()) {
+            throw new IllegalArgumentException(
+                    "tenantUrl must be a non-empty hostname with no whitespace, got: '" + tenantUrl + "'");
+        }
+        return trimmed;
     }
 
     private void validateToken() throws SQLException {
@@ -60,18 +83,10 @@ public class DirectCdpTokenProcessor {
     }
 
     public DataCloudToken getDataCloudToken() throws SQLException {
-        if (cachedDataCloudToken != null && cachedDataCloudToken.isAlive()) {
-            return cachedDataCloudToken;
+        if (cachedDataCloudToken == null || !cachedDataCloudToken.isAlive()) {
+            cachedDataCloudToken = buildDataCloudToken();
         }
-
-        try {
-            DataCloudToken token = buildDataCloudToken();
-            cachedDataCloudToken = token;
-            return token;
-        } catch (Exception ex) {
-            cachedDataCloudToken = null;
-            throw new SQLException(ex.getMessage(), "28000", ex);
-        }
+        return cachedDataCloudToken;
     }
 
     public String getLakehouse() throws SQLException {
@@ -87,7 +102,32 @@ public class DirectCdpTokenProcessor {
         response.setToken(cdpToken);
         response.setInstanceUrl(tenantUrl);
         response.setTokenType("Bearer");
-        response.setExpiresIn(DEFAULT_EXPIRES_IN);
+        response.setExpiresIn(secondsUntilJwtExpiry(cdpToken));
         return DataCloudToken.of(response);
+    }
+
+    /**
+     * Returns seconds remaining until the JWT's `exp` claim, clamped to a minimum of 0.
+     * If the JWT cannot be parsed or has no `exp` claim, falls back to {@link #FALLBACK_EXPIRES_IN_SECONDS}
+     * so callers behave identically to the previous fixed-TTL behavior.
+     */
+    static int secondsUntilJwtExpiry(String jwt) {
+        try {
+            String[] chunks = jwt.split("\\.", -1);
+            if (chunks.length < 2) {
+                return FALLBACK_EXPIRES_IN_SECONDS;
+            }
+            byte[] decoded = Base64.getUrlDecoder().decode(chunks[1]);
+            JsonNode payload = JSON.readTree(decoded);
+            JsonNode exp = payload.get("exp");
+            if (exp == null || !exp.canConvertToLong()) {
+                return FALLBACK_EXPIRES_IN_SECONDS;
+            }
+            long remaining = exp.asLong() - Instant.now().getEpochSecond();
+            return remaining > 0 ? (int) Math.min(remaining, Integer.MAX_VALUE) : 0;
+        } catch (Exception ex) {
+            log.debug("Could not derive exp from CDP token, using default TTL", ex);
+            return FALLBACK_EXPIRES_IN_SECONDS;
+        }
     }
 }
