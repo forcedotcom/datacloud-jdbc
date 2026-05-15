@@ -7,9 +7,12 @@ package com.salesforce.datacloud.jdbc.protocol.data;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import lombok.val;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
+import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.SmallIntVector;
 import org.apache.arrow.vector.TinyIntVector;
@@ -109,6 +112,44 @@ class IntegerVectorSetterRangeCheckTest {
             vector.setValueCount(2);
             assertThat(vector.get(0)).isEqualTo(Long.MAX_VALUE);
             assertThat(vector.get(1)).isEqualTo(Long.MIN_VALUE);
+        }
+    }
+
+    @Test
+    void decimalVectorSetterAcceptsValuesWithinLongRange() {
+        try (val vector = new DecimalVector("col", allocator, 18, 0)) {
+            vector.allocateNew(2);
+            val setter = new DecimalVectorSetter();
+            setter.setValueInternal(vector, 0, BigDecimal.valueOf(Long.MAX_VALUE));
+            setter.setValueInternal(vector, 1, BigDecimal.valueOf(Long.MIN_VALUE));
+            vector.setValueCount(2);
+            assertThat(vector.getObject(0)).isEqualTo(BigDecimal.valueOf(Long.MAX_VALUE));
+            assertThat(vector.getObject(1)).isEqualTo(BigDecimal.valueOf(Long.MIN_VALUE));
+        }
+    }
+
+    @Test
+    void decimalVectorSetterRejectsUnscaledValueAboveLongRange() {
+        try (val vector = new DecimalVector("col", allocator, 38, 0)) {
+            vector.allocateNew(1);
+            val setter = new DecimalVectorSetter();
+            // unscaled value exceeds 64 bits — longValue() would silently truncate.
+            val oversized = new BigDecimal(BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE));
+            assertThatThrownBy(() -> setter.setValueInternal(vector, 0, oversized))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("exceeds 64 bits");
+        }
+    }
+
+    @Test
+    void decimalVectorSetterRejectsUnscaledValueBelowLongRange() {
+        try (val vector = new DecimalVector("col", allocator, 38, 0)) {
+            vector.allocateNew(1);
+            val setter = new DecimalVectorSetter();
+            val oversized = new BigDecimal(BigInteger.valueOf(Long.MIN_VALUE).subtract(BigInteger.ONE));
+            assertThatThrownBy(() -> setter.setValueInternal(vector, 0, oversized))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("exceeds 64 bits");
         }
     }
 }

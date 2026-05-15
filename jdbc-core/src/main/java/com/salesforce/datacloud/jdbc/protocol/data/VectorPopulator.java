@@ -314,6 +314,13 @@ class DecimalVectorSetter extends BaseVectorSetter<DecimalVector, BigDecimal> {
 
     @Override
     protected void setValueInternal(DecimalVector vector, int index, BigDecimal value) {
+        // longValue() on a BigInteger silently truncates to the low 64 bits — refuse oversized
+        // values up front rather than write garbage. Matches the IllegalArgumentException pattern
+        // the integer setters use for analogous narrowing.
+        if (value.unscaledValue().bitLength() > 63) {
+            throw new IllegalArgumentException("BigDecimal unscaled value " + value.unscaledValue()
+                    + " exceeds 64 bits — DECIMAL supports up to 18-digit unscaled longs");
+        }
         vector.setSafe(index, value.unscaledValue().longValue());
     }
 
