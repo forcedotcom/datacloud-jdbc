@@ -38,10 +38,24 @@ class StreamingResultSetMethodTest {
 
     @SneakyThrows
     private StreamingResultSet createResultSet() {
+        return createSingleVarCharResultSet(false);
+    }
+
+    @SneakyThrows
+    private StreamingResultSet createResultSetWithNullValue() {
+        return createSingleVarCharResultSet(true);
+    }
+
+    @SneakyThrows
+    private StreamingResultSet createSingleVarCharResultSet(boolean nullValue) {
         val allocator = ext.getRootAllocator();
         val vector = new VarCharVector("col1", allocator);
         vector.allocateNew();
-        vector.set(0, "hello".getBytes(StandardCharsets.UTF_8));
+        if (nullValue) {
+            vector.setNull(0);
+        } else {
+            vector.set(0, "hello".getBytes(StandardCharsets.UTF_8));
+        }
         vector.setValueCount(1);
 
         val root = new VectorSchemaRoot(Arrays.asList(vector.getField()), Arrays.asList(vector));
@@ -141,6 +155,65 @@ class StreamingResultSetMethodTest {
         assertThatThrownBy(() -> rs.findColumn("col1"))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("closed");
+    }
+
+    @Test
+    void getObjectWithClassUsesAccessorBaseFallback() throws Exception {
+        // VarCharVectorAccessor does not override getObject(Class); it inherits the default in
+        // QueryJDBCAccessor that does raw + isInstance. Pin that this delivers a String for a
+        // VARCHAR column — regressing the base-class fallback breaks every accessor that does
+        // not implement typed conversion of its own.
+        try (val rs = createResultSet()) {
+            rs.next();
+            assertThat(rs.getObject(1, String.class)).isEqualTo("hello");
+        }
+    }
+
+    @Test
+    void getObjectWithNullClassThrows() throws Exception {
+        try (val rs = createResultSet()) {
+            rs.next();
+            assertThatThrownBy(() -> rs.getObject(1, (Class<?>) null))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("must not be null");
+        }
+    }
+
+    @Test
+    void getObjectWithIncompatibleClassThrows() throws Exception {
+        // VarCharVectorAccessor returns a String. Asking for an unrelated type (StringBuilder
+        // here) cannot be satisfied by isInstance, so the fallback should surface a typed
+        // conversion error rather than silently returning null or the raw string.
+        try (val rs = createResultSet()) {
+            rs.next();
+            assertThatThrownBy(() -> rs.getObject(1, StringBuilder.class))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("Cannot convert");
+        }
+    }
+
+    @Test
+    void getObjectWithClassReturnsNullForNullValue() throws Exception {
+        // A null column value should round-trip as null regardless of the requested type — the
+        // fallback short-circuits before the isInstance check.
+        try (val rs = createResultSetWithNullValue()) {
+            rs.next();
+            assertThat(rs.getObject(1, String.class)).isNull();
+            assertThat(rs.wasNull()).isTrue();
+        }
+    }
+
+    @Test
+    void getObjectWithSupertypeOrInterfaceReturnsValue() throws Exception {
+        // The isInstance check accepts any supertype or interface the raw object implements,
+        // not just the exact runtime class. Polymorphic callers (e.g. Object.class for
+        // generic introspection, CharSequence.class for tools that don't care about
+        // String-vs-StringBuffer) need this to work.
+        try (val rs = createResultSet()) {
+            rs.next();
+            assertThat((String) rs.getObject(1, Object.class)).isEqualTo("hello");
+            assertThat(rs.getObject(1, CharSequence.class).toString()).isEqualTo("hello");
+        }
     }
 
     @Test
