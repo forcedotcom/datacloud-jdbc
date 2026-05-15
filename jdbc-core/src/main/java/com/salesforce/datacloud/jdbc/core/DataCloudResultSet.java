@@ -139,10 +139,15 @@ public class DataCloudResultSet implements ReadOnlyResultSet, ForwardOnlyResultS
 
     @Override
     public void close() throws SQLException {
-        if (!closed) {
-            cursor.close();
-            closed = true;
+        if (closed) {
+            return;
         }
+        // Mark closed before delegating: if cursor.close throws (e.g. allocator leak detector
+        // trips an IllegalStateException), the caller still gets the cleanup exception but a
+        // retried close becomes a no-op instead of double-closing the allocator. Standard
+        // AutoCloseable idempotence pattern.
+        closed = true;
+        cursor.close();
     }
 
     @Override

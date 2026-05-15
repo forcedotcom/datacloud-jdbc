@@ -7,7 +7,9 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
@@ -186,6 +188,42 @@ class DataCloudResultSetMethodTest {
         // double close is a no-op
         rs.close();
         assertThat(rs.isClosed()).isTrue();
+    }
+
+    /**
+     * Pin AutoCloseable idempotence: if cursor.close throws (e.g. allocator leak detector trips
+     * an IllegalStateException), the result set must still be marked closed so a defensive
+     * caller's retry of close() becomes a no-op rather than re-entering cursor.close and
+     * double-closing the allocator. {@code closed} is flipped before delegating.
+     */
+    @Test
+    @SneakyThrows
+    void closeIsIdempotentEvenIfFirstCloseThrows() {
+        // Build a real result set whose allocator will throw on close (simulating the leak
+        // detector firing). The first close should rethrow; the second close should be a no-op.
+        val readerAllocator = spy(new RootAllocator(Long.MAX_VALUE));
+        val out = new ByteArrayOutputStream();
+        val schema = new Schema(
+                Collections.singletonList(new Field("col1", new FieldType(true, new ArrowType.Utf8(), null), null)));
+        try (VectorSchemaRoot writeRoot = VectorSchemaRoot.create(schema, ext.getRootAllocator())) {
+            writeRoot.setRowCount(0);
+            try (ArrowStreamWriter writer = new ArrowStreamWriter(writeRoot, null, out)) {
+                writer.start();
+                writer.end();
+            }
+        }
+        val reader = new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), readerAllocator);
+        val rs = DataCloudResultSet.of(
+                new QueryResultArrowStream.Result(reader, readerAllocator), QUERY_ID, ZoneId.systemDefault());
+        doThrow(new IllegalStateException("simulated leak detector"))
+                .when(readerAllocator)
+                .close();
+
+        assertThatThrownBy(rs::close).isInstanceOf(IllegalStateException.class);
+        assertThat(rs.isClosed()).isTrue();
+        // Retry: should be a no-op, not re-enter cursor.close and double-close the allocator.
+        rs.close();
+        verify(readerAllocator, times(1)).close();
     }
 
     @Test
