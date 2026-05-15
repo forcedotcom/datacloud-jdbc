@@ -60,10 +60,24 @@ public final class MetadataResultSets {
     public static DataCloudResultSet of(List<ColumnMetadata> columns, List<List<Object>> rows) throws SQLException {
         validateRowArity(columns, rows);
         byte[] ipcBytes = writeArrowStream(columns, rows);
-        // Allocator is handed to DataCloudResultSet along with the reader; the result set owns
-        // its lifecycle and closes it when close() is called.
-        RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
-        ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(ipcBytes), allocator);
+        // Reuse the query-path allocator budget so a future caller materialising a multi-MB
+        // metadata response trips the cap cleanly instead of letting the JVM OOM.
+        RootAllocator allocator = new RootAllocator(QueryResultArrowStream.ROOT_ALLOCATOR_BUDGET_BYTES);
+        ArrowStreamReader reader;
+        try {
+            reader = new ArrowStreamReader(new ByteArrayInputStream(ipcBytes), allocator);
+        } catch (Throwable t) {
+            // Constructor-time leak guard: if ArrowStreamReader fails before DataCloudResultSet.of
+            // can take ownership, close the allocator on the way out.
+            try {
+                allocator.close();
+            } catch (Throwable s) {
+                t.addSuppressed(s);
+            }
+            throw t;
+        }
+        // Allocator and reader are now handed to DataCloudResultSet, which owns their lifecycle
+        // and closes both on close() — including the construction-failure path inside of(...).
         return DataCloudResultSet.of(
                 new QueryResultArrowStream.Result(reader, allocator), /*queryId=*/ null, ZoneId.systemDefault());
     }

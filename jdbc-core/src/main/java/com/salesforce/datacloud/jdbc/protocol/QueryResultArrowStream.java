@@ -20,7 +20,13 @@ public class QueryResultArrowStream {
      */
     public static final OutputFormat OUTPUT_FORMAT = OutputFormat.ARROW_IPC;
 
-    private static final int ROOT_ALLOCATOR_MB_FROM_V2 = 100 * 1024 * 1024;
+    /**
+     * Per-result-set allocator budget. Hitting this threshold trips a clean
+     * {@link org.apache.arrow.memory.OutOfMemoryException} from the allocator instead of letting
+     * the JVM OOM. Reused for the metadata-side allocator in
+     * {@link com.salesforce.datacloud.jdbc.core.metadata.MetadataResultSets}.
+     */
+    public static final int ROOT_ALLOCATOR_BUDGET_BYTES = 100 * 1024 * 1024;
 
     /**
      * Pair of the {@link ArrowStreamReader} that decodes gRPC chunks and the {@link RootAllocator}
@@ -60,7 +66,19 @@ public class QueryResultArrowStream {
                     }
                 };
         val channel = new ByteStringReadableByteChannel(closeable);
-        RootAllocator allocator = new RootAllocator(ROOT_ALLOCATOR_MB_FROM_V2);
-        return new Result(new ArrowStreamReader(channel, allocator), allocator);
+        RootAllocator allocator = new RootAllocator(ROOT_ALLOCATOR_BUDGET_BYTES);
+        try {
+            return new Result(new ArrowStreamReader(channel, allocator), allocator);
+        } catch (Throwable t) {
+            // ArrowStreamReader's constructor is benign today, but a future Arrow upgrade could
+            // add constructor-side validation. Close the allocator on the way out so the budget
+            // is reclaimed.
+            try {
+                allocator.close();
+            } catch (Throwable s) {
+                t.addSuppressed(s);
+            }
+            throw t;
+        }
     }
 }
