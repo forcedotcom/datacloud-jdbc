@@ -132,7 +132,8 @@ public class SalesforceAuthProperties {
 
         // The caller can request the AUTH_CODE_PKCE flow explicitly, in case the connection
         // properties are otherwise empty (no userName/password/privateKey/refreshToken).
-        boolean explicitPkce = "AUTH_CODE_PKCE".equals(takeOptional(props, AUTH_MODE).orElse(null));
+        boolean explicitPkce =
+                "AUTH_CODE_PKCE".equals(takeOptional(props, AUTH_MODE).orElse(null));
 
         // Determine authentication mode and set credentials
         if (props.containsKey(AUTH_USER_NAME) && props.containsKey(AUTH_PASSWORD)) {
@@ -164,8 +165,8 @@ public class SalesforceAuthProperties {
             builder.clientSecret(takeOptional(props, AUTH_CLIENT_SECRET).orElse(null));
             builder.oauthScope(takeOptional(props, AUTH_OAUTH_SCOPE).orElse(DEFAULT_OAUTH_SCOPE));
             builder.redirectPort(takeOptionalInteger(props, AUTH_REDIRECT_PORT).orElse(0));
-            int timeout = takeOptionalInteger(props, AUTH_BROWSER_TIMEOUT_SECONDS)
-                    .orElse(DEFAULT_BROWSER_TIMEOUT_SECONDS);
+            int timeout =
+                    takeOptionalInteger(props, AUTH_BROWSER_TIMEOUT_SECONDS).orElse(DEFAULT_BROWSER_TIMEOUT_SECONDS);
             if (timeout <= 0) {
                 throw new SQLException(AUTH_BROWSER_TIMEOUT_SECONDS + " must be a positive number of seconds", "28000");
             }

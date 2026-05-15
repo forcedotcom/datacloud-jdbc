@@ -111,8 +111,7 @@ public class DataCloudTokenProvider {
         PkceCodes pkce = PkceCodes.generate();
         String state = randomState();
 
-        try (LoopbackCallbackServer callback =
-                LoopbackCallbackServer.start(settings.getRedirectPort())) {
+        try (LoopbackCallbackServer callback = LoopbackCallbackServer.start(settings.getRedirectPort())) {
             URI redirectUri = callback.getRedirectUri();
             URI authorizeUrl = buildAuthorizeUrl(pkce.getChallenge(), state, redirectUri);
             log.info("Opening browser for OAuth authorization at {}", authorizeUrl);
@@ -126,11 +125,11 @@ public class DataCloudTokenProvider {
                 throw new SQLException(
                         "OAuth state parameter did not match — possible CSRF, aborting authentication", "28000");
             }
-            this.pendingAuthCodeExchange = new PendingAuthCodeExchange(result.getCode(), pkce.getVerifier(),
-                    redirectUri.toString());
+            this.pendingAuthCodeExchange =
+                    new PendingAuthCodeExchange(result.getCode(), pkce.getVerifier(), redirectUri.toString());
         } catch (IOException ex) {
-            throw new SQLException("Failed to complete browser-based OAuth authorization: " + ex.getMessage(),
-                    "28000", ex);
+            throw new SQLException(
+                    "Failed to complete browser-based OAuth authorization: " + ex.getMessage(), "28000", ex);
         }
     }
 

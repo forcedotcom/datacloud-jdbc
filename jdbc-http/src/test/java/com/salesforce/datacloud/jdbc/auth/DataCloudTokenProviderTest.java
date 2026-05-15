@@ -666,8 +666,7 @@ class DataCloudTokenProviderTest {
             conn.setReadTimeout(2_000);
             try {
                 conn.getResponseCode();
-                try (InputStream is =
-                        conn.getResponseCode() >= 400 ? conn.getErrorStream() : conn.getInputStream()) {
+                try (InputStream is = conn.getResponseCode() >= 400 ? conn.getErrorStream() : conn.getInputStream()) {
                     if (is != null) {
                         byte[] buf = new byte[1024];
                         while (is.read(buf) >= 0) {
