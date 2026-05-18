@@ -87,11 +87,22 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
     }
 
     @Override
-    public boolean getBoolean() {
-        // JDBC 4.2 Table B-6 recommends INTEGER → boolean: 0 → false, non-zero → true.
-        // pgjdbc and other major drivers do this; clients reading metadata int columns like
-        // NULLABLE / IS_AUTOINCREMENT as boolean rely on the coercion.
-        return getLong() != 0;
+    public boolean getBoolean() throws SQLException {
+        // ResultSet.getBoolean's Javadoc spells out the INTEGER → boolean conversion only for
+        // exactly 0 and 1; the spec is silent on other values. pgjdbc throws CANNOT_COERCE on
+        // anything else (BooleanTypeUtil.fromNumber). Match that strict behaviour rather than
+        // silently returning true for any non-zero — clients reading e.g. NULLABLE from
+        // getColumns() pass through the legitimate 0/1 path; anyone bouncing a real integer
+        // column off getBoolean would otherwise lose the original value silently.
+        long value = getLong();
+        if (value == 0L) {
+            return false;
+        }
+        if (value == 1L) {
+            return true;
+        }
+        throw new SQLException(
+                "Cannot coerce integer value " + value + " to boolean (spec defines only 0 and 1)", "22018");
     }
 
     @Override

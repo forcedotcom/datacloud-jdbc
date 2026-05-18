@@ -1085,13 +1085,15 @@ public class DataCloudDatabaseMetadataTest {
             // TYPE_NAME row value is the JDBC-derived type name for the column's HyperType.
             assertThat(columnResultSet.getString("TYPE_NAME")).isEqualTo("VARCHAR");
             assertThat(columnResultSet.getInt("DATA_TYPE")).isEqualTo(12);
-            // NULLABLE is an INTEGER column. Arrow-backed getInt reports the nullability enum:
-            // 0 (columnNoNulls) for NOT NULL rows, which coerces to false via the JDBC-spec
-            // INTEGER → boolean recommendation (BaseIntVectorAccessor.getBoolean).
+            // NULLABLE is an INTEGER column. Arrow-backed getInt reports the nullability enum
+            // (0 = columnNoNulls). BaseIntVectorAccessor.getBoolean follows ResultSet.getBoolean's
+            // spec text strictly — only 0 and 1 coerce; any other integer throws.
             assertThat(columnResultSet.getInt("NULLABLE")).isEqualTo(0);
             assertThat(columnResultSet.getBoolean("NULLABLE")).isFalse();
             assertThat(columnResultSet.getInt("ORDINAL_POSITION")).isEqualTo(ordinalValue);
-            assertThat(columnResultSet.getBoolean("ORDINAL_POSITION")).isTrue();
+            assertThatThrownBy(() -> columnResultSet.getBoolean("ORDINAL_POSITION"))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("Cannot coerce integer value");
             assertThat(columnResultSet.getByte("ORDINAL_POSITION")).isEqualTo(ordinalValue.byteValue());
         }
     }
