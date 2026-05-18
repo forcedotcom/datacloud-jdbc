@@ -28,7 +28,7 @@ org-grpcmock-grpcmock-junit5 = "1.0.0"
 # JUnit BOM version — manages both Jupiter (5.x) and Platform (1.x) library versions.
 # This is soft pinned to 5.* (as 6 is not Java 8 compatible) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 org-junit-bom = "5.14.3"
-org-postgresql-pgjdbc = "42.7.10"
+org-postgresql-pgjdbc = "42.7.11"
 org-scalatest = "3.2.20"
 org-scalatestplus-junit5 = "3.2.19.0"
 plugin-build-buf = "0.11.0"
