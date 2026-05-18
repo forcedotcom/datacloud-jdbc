@@ -30,34 +30,13 @@ public final class HyperTypeToArrow {
 
     /** Build an Arrow {@link Field} with the given name and the mapped {@link FieldType}. */
     public static Field toField(String name, HyperType type) {
-        return toField(name, type, null);
-    }
-
-    /**
-     * Build an Arrow {@link Field} and stamp an optional JDBC type-name override into the field
-     * metadata under {@link #JDBC_TYPE_NAME_METADATA_KEY}. The override is how {@link
-     * ColumnMetadata#getTypeName()} round-trips through Arrow — it lets JDBC-spec labels (e.g.
-     * {@code "TEXT"} for metadata columns) survive serialisation, which is the only way to
-     * carry them through an {@link org.apache.arrow.vector.ipc.ArrowStreamReader}-backed code
-     * path.
-     */
-    public static Field toField(String name, HyperType type, String jdbcTypeName) {
-        FieldType fieldType = toFieldType(type, jdbcTypeName);
+        FieldType fieldType = toFieldType(type);
         if (type.getKind() == HyperTypeKind.ARRAY) {
             Field childField = toField("$element", type.getElement());
             return new Field(name, fieldType, Collections.singletonList(childField));
         }
         return new Field(name, fieldType, null);
     }
-
-    /**
-     * Arrow field-metadata key under which the JDBC-spec {@link ColumnMetadata#getTypeName()
-     * typeName} override is round-tripped. The {@code datacloud-jdbc:} prefix namespaces the
-     * key so it cannot collide with anything Hyper, query-federator, or another Arrow producer
-     * might stamp on its own field metadata; the unprefixed {@code jdbc:} namespace is not
-     * reserved by the Arrow spec.
-     */
-    public static final String JDBC_TYPE_NAME_METADATA_KEY = "datacloud-jdbc:type_name";
 
     /**
      * Map a {@link HyperType} to an Arrow {@link FieldType}.
@@ -69,26 +48,7 @@ public final class HyperTypeToArrow {
      * without loss.
      */
     public static FieldType toFieldType(HyperType type) {
-        return toFieldType(type, null);
-    }
-
-    /**
-     * Overload that stamps an optional JDBC type-name override into the field metadata under
-     * {@link #JDBC_TYPE_NAME_METADATA_KEY} so {@link ColumnMetadata#getTypeName()} round-trips
-     * through Arrow without needing a parallel metadata channel.
-     */
-    public static FieldType toFieldType(HyperType type, String jdbcTypeName) {
-        ArrowType arrowType = toArrowType(type);
-        Map<String, String> metadata = metadataFor(type);
-        if (jdbcTypeName != null) {
-            if (metadata == null) {
-                metadata = new HashMap<>();
-            } else {
-                metadata = new HashMap<>(metadata);
-            }
-            metadata.put(JDBC_TYPE_NAME_METADATA_KEY, jdbcTypeName);
-        }
-        return new FieldType(type.isNullable(), arrowType, null, metadata);
+        return new FieldType(type.isNullable(), toArrowType(type), null, metadataFor(type));
     }
 
     /** Hyper-compatible field metadata for types whose length is not carried in the ArrowType. */

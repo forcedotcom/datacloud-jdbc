@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 public class ColumnNameResolverTest {
 
     private ColumnMetadata createColumn(String name) {
-        return new ColumnMetadata(name, HyperType.varcharUnlimited(true), "VARCHAR");
+        return new ColumnMetadata(name, HyperType.varcharUnlimited(true));
     }
 
     @Test
@@ -75,7 +75,7 @@ public class ColumnNameResolverTest {
     @Test
     public void testFindColumnWithNullLabels() throws SQLException {
         List<ColumnMetadata> columns = new ArrayList<>();
-        columns.add(new ColumnMetadata(null, HyperType.varcharUnlimited(true), "VARCHAR"));
+        columns.add(new ColumnMetadata(null, HyperType.varcharUnlimited(true)));
         columns.add(createColumn("Col2"));
 
         ColumnNameResolver resolver = new ColumnNameResolver(columns);
@@ -123,7 +123,7 @@ public class ColumnNameResolverTest {
     public void testDuplicateColumnNames() throws SQLException {
         List<ColumnMetadata> columns = new ArrayList<>();
         columns.add(createColumn("Duplicate"));
-        columns.add(new ColumnMetadata("Other", HyperType.int32(true), "INTEGER"));
+        columns.add(new ColumnMetadata("Other", HyperType.int32(true)));
         columns.add(createColumn("Duplicate"));
 
         ColumnNameResolver resolver = new ColumnNameResolver(columns);

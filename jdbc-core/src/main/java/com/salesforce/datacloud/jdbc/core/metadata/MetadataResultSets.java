@@ -97,7 +97,7 @@ public final class MetadataResultSets {
      */
     private static byte[] writeArrowStream(List<ColumnMetadata> columns, List<List<Object>> rows) throws SQLException {
         Schema schema = new Schema(columns.stream()
-                .map(c -> HyperTypeToArrow.toField(c.getName(), c.getType(), c.getTypeName()))
+                .map(c -> HyperTypeToArrow.toField(c.getName(), c.getType()))
                 .collect(Collectors.toList()));
         try (RootAllocator writeAllocator = new RootAllocator(Long.MAX_VALUE);
                 VectorSchemaRoot root = VectorSchemaRoot.create(schema, writeAllocator)) {

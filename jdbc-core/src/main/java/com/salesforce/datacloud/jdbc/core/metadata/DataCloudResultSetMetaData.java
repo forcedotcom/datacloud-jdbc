@@ -65,9 +65,7 @@ public class DataCloudResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnTypeName(int column) throws SQLException {
-        ColumnMetadata col = getColumn(column);
-        String override = col.getTypeName();
-        return override != null ? override : HyperTypes.toJdbcTypeName(col.getType());
+        return HyperTypes.toJdbcTypeName(getColumn(column).getType());
     }
 
     @Override

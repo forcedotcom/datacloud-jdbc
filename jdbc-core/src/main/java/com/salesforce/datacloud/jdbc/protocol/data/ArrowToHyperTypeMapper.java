@@ -30,17 +30,9 @@ public final class ArrowToHyperTypeMapper {
         return field.getType().accept(new ArrowTypeVisitor(field));
     }
 
-    /**
-     * Translate an Arrow {@link Field} to a full {@link ColumnMetadata}, picking up the optional
-     * JDBC type-name override stamped under
-     * {@link HyperTypeToArrow#JDBC_TYPE_NAME_METADATA_KEY} when present.
-     */
+    /** Translate an Arrow {@link Field} to a {@link ColumnMetadata}. */
     public static ColumnMetadata toColumnMetadata(Field field) {
-        HyperType type = toHyperType(field);
-        String override = field.getMetadata() == null
-                ? null
-                : field.getMetadata().get(HyperTypeToArrow.JDBC_TYPE_NAME_METADATA_KEY);
-        return new ColumnMetadata(field.getName(), type, override);
+        return new ColumnMetadata(field.getName(), toHyperType(field));
     }
 
     /** Arrow visitor that produces a {@link HyperType} for each supported Arrow type. */

@@ -53,9 +53,6 @@ class ArrowUtilsTest {
         val actual = actualColumnMetadata.get(0);
 
         softly.assertThat(actual.getName()).isEqualTo("id");
-        // toColumnMetaData leaves the JDBC type-name override unset; the JDBC layer derives the
-        // default from the HyperType at query time.
-        softly.assertThat(actual.getTypeName()).isNull();
         softly.assertThat(HyperTypes.toJdbcTypeName(actual.getType()))
                 .isEqualTo(JDBCType.valueOf(Types.VARCHAR).getName());
     }

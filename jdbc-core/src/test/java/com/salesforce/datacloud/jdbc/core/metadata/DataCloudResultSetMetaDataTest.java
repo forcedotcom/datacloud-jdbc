@@ -7,6 +7,7 @@ package com.salesforce.datacloud.jdbc.core.metadata;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.salesforce.datacloud.jdbc.core.MetadataSchemas;
+import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
 import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import java.sql.ResultSetMetaData;
@@ -79,7 +80,7 @@ class DataCloudResultSetMetaDataTest {
 
     @Test
     public void testGetColumnLabelWithNullColumnNameReturnsDefaultValue() throws SQLException {
-        ColumnMetadata columnMetadata = new ColumnMetadata(null, HyperType.varcharUnlimited(true), "TEXT");
+        ColumnMetadata columnMetadata = new ColumnMetadata(null, HyperType.varcharUnlimited(true));
         resultSetMetaData = new DataCloudResultSetMetaData(new ColumnMetadata[] {columnMetadata});
         assertThat(resultSetMetaData.getColumnLabel(1)).isEqualTo("C0");
     }
@@ -125,7 +126,8 @@ class DataCloudResultSetMetaDataTest {
     public void getColumnTypeName() throws SQLException {
         for (int i = 1; i <= COLUMNS_SCHEMA.size(); i++) {
             assertThat(resultSetMetaData.getColumnTypeName(i))
-                    .isEqualTo(COLUMNS_SCHEMA.get(i - 1).getTypeName());
+                    .isEqualTo(
+                            HyperTypes.toJdbcTypeName(COLUMNS_SCHEMA.get(i - 1).getType()));
         }
     }
 
@@ -182,16 +184,16 @@ class DataCloudResultSetMetaDataTest {
         HyperType nonNullable = HyperType.varcharUnlimited(false);
         HyperType nullable = HyperType.int32(true);
         DataCloudResultSetMetaData metaNonNullable =
-                new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nonNullable, "TEXT")});
+                new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nonNullable)});
         DataCloudResultSetMetaData metaNullable =
-                new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nullable, "INTEGER")});
+                new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", nullable)});
 
         assertThat(metaNonNullable.isNullable(1)).isEqualTo(ResultSetMetaData.columnNoNulls);
         assertThat(metaNullable.isNullable(1)).isEqualTo(ResultSetMetaData.columnNullable);
     }
 
     private static DataCloudResultSetMetaData metaDataWithType(HyperType type) {
-        return new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", type, "TEXT")});
+        return new DataCloudResultSetMetaData(new ColumnMetadata[] {new ColumnMetadata("col", type)});
     }
 
     @Test

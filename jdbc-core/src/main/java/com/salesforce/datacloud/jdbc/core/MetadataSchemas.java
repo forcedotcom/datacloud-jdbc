@@ -4,11 +4,6 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
-import static com.salesforce.datacloud.jdbc.util.Constants.BOOL;
-import static com.salesforce.datacloud.jdbc.util.Constants.INTEGER;
-import static com.salesforce.datacloud.jdbc.util.Constants.SHORT;
-import static com.salesforce.datacloud.jdbc.util.Constants.TEXT;
-
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
@@ -86,19 +81,19 @@ public final class MetadataSchemas {
             text("IS_GENERATEDCOLUMN"));
 
     private static ColumnMetadata text(String name) {
-        return new ColumnMetadata(name, HyperType.varcharUnlimited(true), TEXT);
+        return new ColumnMetadata(name, HyperType.varcharUnlimited(true));
     }
 
     private static ColumnMetadata integer(String name) {
-        return new ColumnMetadata(name, HyperType.int32(true), INTEGER);
+        return new ColumnMetadata(name, HyperType.int32(true));
     }
 
     private static ColumnMetadata shortColumn(String name) {
-        return new ColumnMetadata(name, HyperType.int16(true), SHORT);
+        return new ColumnMetadata(name, HyperType.int16(true));
     }
 
     private static ColumnMetadata bool(String name) {
-        return new ColumnMetadata(name, HyperType.bool(true), BOOL);
+        return new ColumnMetadata(name, HyperType.bool(true));
     }
 
     private MetadataSchemas() {
