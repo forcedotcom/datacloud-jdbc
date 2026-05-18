@@ -7,6 +7,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,8 +50,12 @@ class ArrowStreamReaderCursorTest {
     void closesReaderAndAllocator() {
         val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         sut.close();
-        verify(reader, times(1)).close();
-        verify(allocator, times(1)).close();
+        // Reader-before-allocator ordering is load-bearing: reader.close releases the buffers
+        // accounted against the allocator so the allocator's closing budget check passes.
+        // Reversing the order would trip the leak detector at runtime.
+        val order = inOrder(reader, allocator);
+        order.verify(reader).close();
+        order.verify(allocator).close();
     }
 
     /**
