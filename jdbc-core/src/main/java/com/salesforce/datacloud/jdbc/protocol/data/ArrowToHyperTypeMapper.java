@@ -30,6 +30,11 @@ public final class ArrowToHyperTypeMapper {
         return field.getType().accept(new ArrowTypeVisitor(field));
     }
 
+    /** Translate an Arrow {@link Field} to a {@link ColumnMetadata}. */
+    public static ColumnMetadata toColumnMetadata(Field field) {
+        return new ColumnMetadata(field.getName(), toHyperType(field));
+    }
+
     /** Arrow visitor that produces a {@link HyperType} for each supported Arrow type. */
     private static class ArrowTypeVisitor implements ArrowType.ArrowTypeVisitor<HyperType> {
         private final Field field;

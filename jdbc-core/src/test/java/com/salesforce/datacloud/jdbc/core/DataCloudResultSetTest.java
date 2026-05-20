@@ -23,7 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @Slf4j
 @ExtendWith(LocalHyperTestBase.class)
-public class StreamingResultSetTest {
+public class DataCloudResultSetTest {
     public static String query(String arg) {
         return String.format(
                 "select cast(a as numeric(38,18)) a, cast(a as numeric(38,18)) b, cast(a as numeric(38,18)) c from generate_series(1, %s) as s(a) order by a asc",
@@ -95,7 +95,7 @@ public class StreamingResultSetTest {
     private void assertThatResultSetIsCorrect(DataCloudConnection conn, DataCloudResultSet rs) {
         val witnessed = new AtomicInteger(0);
 
-        assertThat(rs).isInstanceOf(StreamingResultSet.class);
+        assertThat(rs).isInstanceOf(DataCloudResultSet.class);
 
         val status = conn.waitFor(rs.getQueryId(), QueryStatus::allResultsProduced);
 
@@ -114,6 +114,30 @@ public class StreamingResultSetTest {
         assertThat(witnessed.get())
                 .as("last value seen from query: " + status.getQueryId())
                 .isEqualTo(rows);
+    }
+
+    /**
+     * Real-Hyper Arrow streams do not stamp the {@code datacloud-jdbc:type_name} field-metadata
+     * key, so {@code ArrowToHyperTypeMapper.toColumnMetadata} must fall back to the type-derived
+     * default (e.g. {@code "INTEGER"} for an INT32 column). The fallback is implicit in every
+     * functional test that hits local Hyper, but no assertion pinned it on the streaming-result
+     * path. This test does — paired with the unit-level
+     * {@code ArrowToHyperTypeMapperTest.typeNameOverrideIsNullWhenAbsent} which pins the same
+     * contract at the mapper boundary.
+     */
+    @SneakyThrows
+    @Test
+    public void getColumnTypeNameFallsBackToDerivedNameOnRealHyperStream() {
+        try (val conn = getHyperQueryConnection().unwrap(DataCloudConnection.class);
+                val stmt = conn.createStatement().unwrap(DataCloudStatement.class)) {
+            try (val rs = stmt.executeQuery("select 1 as id, 'x' as name, cast(3.14 as numeric(10,2)) as value")
+                    .unwrap(DataCloudResultSet.class)) {
+                val md = rs.getMetaData();
+                assertThat(md.getColumnTypeName(1)).isEqualTo("INTEGER");
+                assertThat(md.getColumnTypeName(2)).isEqualTo("VARCHAR");
+                assertThat(md.getColumnTypeName(3)).isEqualTo("DECIMAL");
+            }
+        }
     }
 
     @SneakyThrows

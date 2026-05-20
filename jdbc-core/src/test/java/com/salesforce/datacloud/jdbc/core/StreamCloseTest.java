@@ -38,16 +38,16 @@ import salesforce.cdp.hyperdb.v1.QueryParam;
 public class StreamCloseTest {
 
     /**
-     * Verifies that closing a StreamingResultSet triggers close on the underlying gRPC iterator
+     * Verifies that closing a DataCloudResultSet triggers close on the underlying gRPC iterator
      * through the full Arrow close chain:
-     * StreamingResultSet.close() → ArrowStreamReaderCursor.close() → ArrowStreamReader.close()
+     * DataCloudResultSet.close() → ArrowStreamReaderCursor.close() → ArrowStreamReader.close()
      * → ArrowReader.closeReadSource() → MessageChannelReader → ReadChannel
      * → ByteStringReadableByteChannel.close() → SQLExceptionQueryResultIterator.close()
      * → QueryResultIterator.close() → AsyncStreamObserver.close() → gRPC stream cancel.
      *
      * <p>The test wraps a QueryResultIterator in a close-tracking decorator, passes it through the
      * standard driver path (SQLExceptionQueryResultIterator → QueryResultArrowStream →
-     * ByteStringReadableByteChannel → ArrowStreamReader → StreamingResultSet), then verifies that
+     * ByteStringReadableByteChannel → ArrowStreamReader → DataCloudResultSet), then verifies that
      * closing the ResultSet propagates all the way down to the iterator.</p>
      */
     @Test
@@ -81,7 +81,7 @@ public class StreamCloseTest {
             // ByteStringReadableByteChannel(iterator, resource) → ArrowStreamReader
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     tracked, false, "test-query", null);
-            val resultSet = StreamingResultSet.of(arrowStream, "test-query");
+            val resultSet = DataCloudResultSet.of(arrowStream, "test-query", java.time.ZoneId.systemDefault());
 
             // Read one row — stream is still open with remaining rows
             assertThat(resultSet.next()).isTrue();

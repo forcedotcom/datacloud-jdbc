@@ -48,6 +48,7 @@ import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Struct;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -220,7 +221,7 @@ public class DataCloudConnection implements Connection {
                     QueryResultArrowStream.OUTPUT_FORMAT);
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     iterator, connectionProperties.isIncludeCustomerDetailInReason(), queryId, null);
-            return StreamingResultSet.of(arrowStream, queryId);
+            return DataCloudResultSet.of(arrowStream, queryId, ZoneId.systemDefault());
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createException(
                     connectionProperties.isIncludeCustomerDetailInReason(), null, queryId, ex);
@@ -263,7 +264,7 @@ public class DataCloudConnection implements Connection {
                     QueryResultArrowStream.OUTPUT_FORMAT);
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
                     iterator, connectionProperties.isIncludeCustomerDetailInReason(), queryId, null);
-            return StreamingResultSet.of(arrowStream, queryId);
+            return DataCloudResultSet.of(arrowStream, queryId, ZoneId.systemDefault());
         } catch (StatusRuntimeException ex) {
             throw QueryExceptionHandler.createException(
                     connectionProperties.isIncludeCustomerDetailInReason(), null, queryId, ex);

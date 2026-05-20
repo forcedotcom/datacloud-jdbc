@@ -5,11 +5,6 @@
 package com.salesforce.datacloud.jdbc.util;
 
 public final class Constants {
-    // Column Types
-    public static final String INTEGER = "INTEGER";
-    public static final String TEXT = "TEXT";
-    public static final String SHORT = "SHORT";
-
     // Date Time constants
     public static final String ISO_TIME_FORMAT = "HH:mm:ss";
 

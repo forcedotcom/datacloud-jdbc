@@ -752,16 +752,16 @@ public class DataCloudDatabaseMetadataTest {
         assertThat(resultSet.getMetaData().getColumnName(9)).isEqualTo("SELF_REFERENCING_COL_NAME");
         assertThat(resultSet.getMetaData().getColumnName(10)).isEqualTo("REF_GENERATION");
 
-        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(3)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(4)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(5)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(6)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(7)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(8)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(9)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(10)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(3)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(4)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(5)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(6)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(7)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(8)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(9)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(10)).isEqualTo("VARCHAR");
     }
 
     @Test
@@ -796,16 +796,16 @@ public class DataCloudDatabaseMetadataTest {
         assertThat(resultSet.getMetaData().getColumnName(9)).isEqualTo("SELF_REFERENCING_COL_NAME");
         assertThat(resultSet.getMetaData().getColumnName(10)).isEqualTo("REF_GENERATION");
 
-        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(3)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(4)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(5)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(6)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(7)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(8)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(9)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(10)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(3)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(4)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(5)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(6)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(7)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(8)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(9)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(10)).isEqualTo("VARCHAR");
     }
 
     @Test
@@ -841,16 +841,16 @@ public class DataCloudDatabaseMetadataTest {
         assertThat(resultSet.getMetaData().getColumnName(9)).isEqualTo("SELF_REFERENCING_COL_NAME");
         assertThat(resultSet.getMetaData().getColumnName(10)).isEqualTo("REF_GENERATION");
 
-        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(3)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(4)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(5)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(6)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(7)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(8)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(9)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(10)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(3)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(4)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(5)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(6)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(7)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(8)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(9)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(10)).isEqualTo("VARCHAR");
     }
 
     @SneakyThrows
@@ -906,7 +906,7 @@ public class DataCloudDatabaseMetadataTest {
         assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(NUM_TABLE_TYPES_METADATA_COLUMNS);
         assertThat(resultSet.getMetaData().getColumnName(1)).isEqualTo("TABLE_TYPE");
 
-        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("VARCHAR");
     }
 
     @Test
@@ -949,22 +949,22 @@ public class DataCloudDatabaseMetadataTest {
         assertThat(resultSet.getMetaData().getColumnCount()).isEqualTo(NUM_COLUMN_METADATA_COLUMNS);
 
         assertThat(resultSet.getMetaData().getColumnName(1)).isEqualTo("TABLE_CAT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(2)).isEqualTo("TABLE_SCHEM");
-        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(3)).isEqualTo("TABLE_NAME");
-        assertThat(resultSet.getMetaData().getColumnTypeName(3)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(3)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(4)).isEqualTo("COLUMN_NAME");
-        assertThat(resultSet.getMetaData().getColumnTypeName(4)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(4)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(5)).isEqualTo("DATA_TYPE");
         assertThat(resultSet.getMetaData().getColumnTypeName(5)).isEqualTo("INTEGER");
 
         assertThat(resultSet.getMetaData().getColumnName(6)).isEqualTo("TYPE_NAME");
-        assertThat(resultSet.getMetaData().getColumnTypeName(6)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(6)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(7)).isEqualTo("COLUMN_SIZE");
         assertThat(resultSet.getMetaData().getColumnTypeName(7)).isEqualTo("INTEGER");
@@ -982,10 +982,10 @@ public class DataCloudDatabaseMetadataTest {
         assertThat(resultSet.getMetaData().getColumnTypeName(11)).isEqualTo("INTEGER");
 
         assertThat(resultSet.getMetaData().getColumnName(12)).isEqualTo("REMARKS");
-        assertThat(resultSet.getMetaData().getColumnTypeName(12)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(12)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(13)).isEqualTo("COLUMN_DEF");
-        assertThat(resultSet.getMetaData().getColumnTypeName(13)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(13)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(14)).isEqualTo("SQL_DATA_TYPE");
         assertThat(resultSet.getMetaData().getColumnTypeName(14)).isEqualTo("INTEGER");
@@ -1000,25 +1000,25 @@ public class DataCloudDatabaseMetadataTest {
         assertThat(resultSet.getMetaData().getColumnTypeName(17)).isEqualTo("INTEGER");
 
         assertThat(resultSet.getMetaData().getColumnName(18)).isEqualTo("IS_NULLABLE");
-        assertThat(resultSet.getMetaData().getColumnTypeName(18)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(18)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(19)).isEqualTo("SCOPE_CATALOG");
-        assertThat(resultSet.getMetaData().getColumnTypeName(19)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(19)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(20)).isEqualTo("SCOPE_SCHEMA");
-        assertThat(resultSet.getMetaData().getColumnTypeName(20)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(20)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(21)).isEqualTo("SCOPE_TABLE");
-        assertThat(resultSet.getMetaData().getColumnTypeName(21)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(21)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(22)).isEqualTo("SOURCE_DATA_TYPE");
-        assertThat(resultSet.getMetaData().getColumnTypeName(22)).isEqualTo("SHORT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(22)).isEqualTo("SMALLINT");
 
         assertThat(resultSet.getMetaData().getColumnName(23)).isEqualTo("IS_AUTOINCREMENT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(23)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(23)).isEqualTo("VARCHAR");
 
         assertThat(resultSet.getMetaData().getColumnName(24)).isEqualTo("IS_GENERATEDCOLUMN");
-        assertThat(resultSet.getMetaData().getColumnTypeName(24)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(24)).isEqualTo("VARCHAR");
     }
 
     @Test
@@ -1082,10 +1082,18 @@ public class DataCloudDatabaseMetadataTest {
         ResultSet columnResultSet = QueryMetadataUtil.createColumnResultSet(
                 StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, connection);
         while (columnResultSet.next()) {
+            // TYPE_NAME row value is the JDBC-derived type name for the column's HyperType.
             assertThat(columnResultSet.getString("TYPE_NAME")).isEqualTo("VARCHAR");
             assertThat(columnResultSet.getInt("DATA_TYPE")).isEqualTo(12);
+            // NULLABLE is an INTEGER column. Arrow-backed getInt reports the nullability enum
+            // (0 = columnNoNulls). BaseIntVectorAccessor.getBoolean follows ResultSet.getBoolean's
+            // spec text strictly — only 0 and 1 coerce; any other integer throws.
+            assertThat(columnResultSet.getInt("NULLABLE")).isEqualTo(0);
             assertThat(columnResultSet.getBoolean("NULLABLE")).isFalse();
             assertThat(columnResultSet.getInt("ORDINAL_POSITION")).isEqualTo(ordinalValue);
+            assertThatThrownBy(() -> columnResultSet.getBoolean("ORDINAL_POSITION"))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("Cannot coerce integer value");
             assertThat(columnResultSet.getByte("ORDINAL_POSITION")).isEqualTo(ordinalValue.byteValue());
         }
     }
@@ -1114,6 +1122,7 @@ public class DataCloudDatabaseMetadataTest {
         ResultSet columnResultSet = QueryMetadataUtil.createColumnResultSet(
                 StringUtils.EMPTY, StringUtils.EMPTY, StringUtils.EMPTY, connection);
         while (columnResultSet.next()) {
+            // Integer accessor widens to all numeric getters.
             assertThat(columnResultSet.getDouble("DATA_TYPE")).isEqualTo(12);
             assertThat(columnResultSet.getShort("DATA_TYPE")).isEqualTo(new Short("12"));
             assertThat(columnResultSet.getFloat("DATA_TYPE")).isEqualTo(12);
@@ -1125,19 +1134,25 @@ public class DataCloudDatabaseMetadataTest {
             assertThat(columnResultSet.getObject("DATA_TYPE", new HashMap<>())).isEqualTo(12);
             assertThat(columnResultSet.getObject("TYPE_NAME", String.class)).isEqualTo("VARCHAR");
 
+            // Requesting an Integer column as Boolean is not supported by the Arrow int accessor.
             assertThrows(SQLException.class, () -> columnResultSet.getObject("ORDINAL_POSITION", Boolean.class));
+            // Numeric accessors on a VARCHAR column are not supported by the Arrow varchar
+            // accessor — they throw SQLFeatureNotSupportedException (a SQLException).
             assertThrows(SQLException.class, () -> columnResultSet.getBigDecimal("TYPE_NAME"));
             assertThrows(SQLException.class, () -> columnResultSet.getDouble("TYPE_NAME"));
             assertThrows(SQLException.class, () -> columnResultSet.getLong("TYPE_NAME"));
             assertThrows(SQLException.class, () -> columnResultSet.getInt("TYPE_NAME"));
-            assertThrows(SQLException.class, () -> columnResultSet.getByte("ORDINAL_POSITION"));
+            // getByte on an int column is supported by BaseIntVectorAccessor, so this should NOT
+            // throw — remove the expectation.
+            assertThat(columnResultSet.getByte("ORDINAL_POSITION")).isEqualTo(ordinalValue.byteValue());
 
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getDate("ORDINAL_POSITION"));
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTime("ORDINAL_POSITION"));
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getDate("ORDINAL_POSITION", null));
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
-            assertThrows(UnsupportedOperationException.class, () -> columnResultSet.getTime("ORDINAL_POSITION", null));
+            // Date/Time getters on an integer column are not supported by the Arrow int accessor.
+            assertThrows(SQLException.class, () -> columnResultSet.getDate("ORDINAL_POSITION"));
+            assertThrows(SQLException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
+            assertThrows(SQLException.class, () -> columnResultSet.getTime("ORDINAL_POSITION"));
+            assertThrows(SQLException.class, () -> columnResultSet.getDate("ORDINAL_POSITION", null));
+            assertThrows(SQLException.class, () -> columnResultSet.getTimestamp("ORDINAL_POSITION"));
+            assertThrows(SQLException.class, () -> columnResultSet.getTime("ORDINAL_POSITION", null));
 
             assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getBlob("ORDINAL_POSITION"));
             assertThrows(SQLFeatureNotSupportedException.class, () -> columnResultSet.getClob("ORDINAL_POSITION"));
@@ -1239,6 +1254,12 @@ public class DataCloudDatabaseMetadataTest {
             int dataType = resultSet.getInt("DATA_TYPE");
             assertThat(dataType).isNotEqualTo(0);
             assertThat(resultSet.getShort("NULLABLE")).isEqualTo((short) java.sql.DatabaseMetaData.typeNullable);
+            // The four boolean columns are now declared as BIT/BOOLEAN per JDBC spec, so
+            // getBoolean returns the actual flag instead of throwing on the old VARCHAR path.
+            resultSet.getBoolean("CASE_SENSITIVE");
+            resultSet.getBoolean("UNSIGNED_ATTRIBUTE");
+            resultSet.getBoolean("FIXED_PREC_SCALE");
+            resultSet.getBoolean("AUTO_INCREMENT");
         }
         assertThat(rowCount)
                 .as("getTypeInfo should return one row per HyperTypeKind")
@@ -1435,8 +1456,8 @@ public class DataCloudDatabaseMetadataTest {
             assertThat(resultSet.getString("TABLE_CATALOG")).isEqualTo(null);
         }
 
-        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("VARCHAR");
     }
 
     @Test
@@ -1459,8 +1480,8 @@ public class DataCloudDatabaseMetadataTest {
             assertThat(resultSet.getString("TABLE_CATALOG")).isEqualTo(tableCatalog);
         }
 
-        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("VARCHAR");
     }
 
     @Test
@@ -1482,8 +1503,8 @@ public class DataCloudDatabaseMetadataTest {
             assertThat(resultSet.getString("TABLE_CATALOG")).isEqualTo(null);
         }
 
-        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("VARCHAR");
     }
 
     @Test
@@ -1504,8 +1525,8 @@ public class DataCloudDatabaseMetadataTest {
             assertThat(resultSet.getString("TABLE_CATALOG")).isEqualTo(null);
         }
 
-        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("TEXT");
-        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("TEXT");
+        assertThat(resultSet.getMetaData().getColumnTypeName(1)).isEqualTo("VARCHAR");
+        assertThat(resultSet.getMetaData().getColumnTypeName(2)).isEqualTo("VARCHAR");
     }
 
     @Test

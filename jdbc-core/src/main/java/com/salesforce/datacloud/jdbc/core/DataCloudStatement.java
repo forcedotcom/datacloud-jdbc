@@ -194,10 +194,12 @@ public class DataCloudStatement implements Statement, AutoCloseable {
         try {
             val sessionZone = resolveSessionTimeZone();
             val iterator = executeAdaptiveQuery(sql);
+            // Resolve queryId once before allocator construction so a throw between arrowStream
+            // creation and DataCloudResultSet.of can't strand the allocator outside its try/catch.
+            val queryId = iterator.getQueryStatus().getQueryId();
             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
-                    iterator, includeCustomerDetail, iterator.getQueryStatus().getQueryId(), sql);
-            resultSet =
-                    StreamingResultSet.of(arrowStream, iterator.getQueryStatus().getQueryId(), sessionZone);
+                    iterator, includeCustomerDetail, queryId, sql);
+            resultSet = DataCloudResultSet.of(arrowStream, queryId, sessionZone);
             log.info(
                     "executeAdaptiveQuery completed. queryId={}, sessionZone={}",
                     queryHandle.getQueryStatus().getQueryId(),
@@ -431,15 +433,12 @@ public class DataCloudStatement implements Statement, AutoCloseable {
             return logTimedValue(
                     () -> {
                         if (resultSet == null && adaptiveIterator != null) {
+                            // Resolve queryId once before allocator construction; see executeQuery
+                            // above for the same hoist.
+                            val queryId = adaptiveIterator.getQueryStatus().getQueryId();
                             val arrowStream = SQLExceptionQueryResultIterator.createSqlExceptionArrowStreamReader(
-                                    adaptiveIterator,
-                                    includeCustomerDetail,
-                                    adaptiveIterator.getQueryStatus().getQueryId(),
-                                    null);
-                            resultSet = StreamingResultSet.of(
-                                    arrowStream,
-                                    adaptiveIterator.getQueryStatus().getQueryId(),
-                                    sessionZone);
+                                    adaptiveIterator, includeCustomerDetail, queryId, null);
+                            resultSet = DataCloudResultSet.of(arrowStream, queryId, sessionZone);
                         } else if (resultSet == null) {
                             log.warn(
                                     "Prefer acquiring async result sets from helper methods DataCloudConnection::getChunkBasedResultSet and DataCloudConnection::getRowBasedResultSet. We will wait for the query's results to be produced in their entirety before returning a result set.");

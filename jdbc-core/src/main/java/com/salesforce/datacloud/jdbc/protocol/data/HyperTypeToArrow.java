@@ -30,11 +30,12 @@ public final class HyperTypeToArrow {
 
     /** Build an Arrow {@link Field} with the given name and the mapped {@link FieldType}. */
     public static Field toField(String name, HyperType type) {
+        FieldType fieldType = toFieldType(type);
         if (type.getKind() == HyperTypeKind.ARRAY) {
             Field childField = toField("$element", type.getElement());
-            return new Field(name, toFieldType(type), Collections.singletonList(childField));
+            return new Field(name, fieldType, Collections.singletonList(childField));
         }
-        return new Field(name, toFieldType(type), null);
+        return new Field(name, fieldType, null);
     }
 
     /**
@@ -47,12 +48,7 @@ public final class HyperTypeToArrow {
      * without loss.
      */
     public static FieldType toFieldType(HyperType type) {
-        ArrowType arrowType = toArrowType(type);
-        Map<String, String> metadata = metadataFor(type);
-        if (type.isNullable()) {
-            return new FieldType(true, arrowType, null, metadata);
-        }
-        return new FieldType(false, arrowType, null, metadata);
+        return new FieldType(type.isNullable(), toArrowType(type), null, metadataFor(type));
     }
 
     /** Hyper-compatible field metadata for types whose length is not carried in the ArrowType. */

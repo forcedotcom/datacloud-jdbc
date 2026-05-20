@@ -12,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.val;
-import org.apache.arrow.vector.ipc.ArrowStreamReader;
 import salesforce.cdp.hyperdb.v1.QueryResult;
 
 /**
@@ -38,20 +37,22 @@ class SQLExceptionQueryResultIterator implements CloseableIterator<QueryResult> 
     }
 
     /**
-     * Creates an {@link ArrowStreamReader} that wraps the given iterator with SQL exception handling.
+     * Creates an Arrow stream result that wraps the given iterator with SQL exception handling.
      * <p>
      * This factory method creates a {@link SQLExceptionQueryResultIterator} that wraps the provided
-     * iterator and converts it to an {@link ArrowStreamReader}. Any gRPC exceptions thrown during
-     * iteration will be converted to SQL exceptions with appropriate context information.
+     * iterator and converts it to a {@link QueryResultArrowStream.Result}. Any gRPC exceptions
+     * thrown during iteration will be converted to SQL exceptions with appropriate context
+     * information. The returned {@link QueryResultArrowStream.Result} owns the reader and its
+     * backing allocator — the caller must close it to release both.
      * </p>
      *
      * @param resultIterator the source iterator of {@link QueryResult} objects
      * @param includeCustomerDetail whether to include customer-specific details in exceptions
      * @param queryId the unique identifier of the query being executed
      * @param sql the SQL statement being executed
-     * @return an {@link ArrowStreamReader} that converts gRPC exceptions to SQL exceptions
+     * @return a {@link QueryResultArrowStream.Result} that converts gRPC exceptions to SQL exceptions
      */
-    public static ArrowStreamReader createSqlExceptionArrowStreamReader(
+    public static QueryResultArrowStream.Result createSqlExceptionArrowStreamReader(
             CloseableIterator<QueryResult> resultIterator, boolean includeCustomerDetail, String queryId, String sql) {
         val throwingSqlExceptionIterator =
                 new SQLExceptionQueryResultIterator(resultIterator, includeCustomerDetail, queryId, sql);

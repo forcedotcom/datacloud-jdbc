@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(LocalHyperTestBase.class)
-public class AsyncStreamingResultSetTest {
+public class AsyncDataCloudResultSetTest {
     private static final int size = 64;
 
     private static final String sql = String.format(
@@ -55,7 +55,7 @@ public class AsyncStreamingResultSetTest {
 
             val rs = statement.getResultSet();
             assertThat(status.allResultsProduced()).isTrue();
-            assertThat(rs).isInstanceOf(StreamingResultSet.class);
+            assertThat(rs).isInstanceOf(DataCloudResultSet.class);
 
             val expected = new AtomicInteger(0);
 

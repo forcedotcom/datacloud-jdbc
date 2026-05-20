@@ -42,9 +42,30 @@ class MetadataSchemasTest {
             "IS_GENERATEDCOLUMN");
 
     private static final List<String> COLUMN_TYPES = Arrays.asList(
-            "TEXT", "TEXT", "TEXT", "TEXT", "INTEGER", "TEXT", "INTEGER", "INTEGER", "INTEGER", "INTEGER", "INTEGER",
-            "TEXT", "TEXT", "INTEGER", "INTEGER", "INTEGER", "INTEGER", "TEXT", "TEXT", "TEXT", "TEXT", "SHORT", "TEXT",
-            "TEXT");
+            "VARCHAR",
+            "VARCHAR",
+            "VARCHAR",
+            "VARCHAR",
+            "INTEGER",
+            "VARCHAR",
+            "INTEGER",
+            "INTEGER",
+            "INTEGER",
+            "INTEGER",
+            "INTEGER",
+            "VARCHAR",
+            "VARCHAR",
+            "INTEGER",
+            "INTEGER",
+            "INTEGER",
+            "INTEGER",
+            "VARCHAR",
+            "VARCHAR",
+            "VARCHAR",
+            "VARCHAR",
+            "SMALLINT",
+            "VARCHAR",
+            "VARCHAR");
 
     private static final List<Integer> COLUMN_TYPE_IDS = Arrays.asList(
             Types.VARCHAR,
@@ -72,6 +93,66 @@ class MetadataSchemasTest {
             Types.VARCHAR,
             Types.VARCHAR);
 
+    private static final List<String> TYPE_INFO_NAMES = Arrays.asList(
+            "TYPE_NAME",
+            "DATA_TYPE",
+            "PRECISION",
+            "LITERAL_PREFIX",
+            "LITERAL_SUFFIX",
+            "CREATE_PARAMS",
+            "NULLABLE",
+            "CASE_SENSITIVE",
+            "SEARCHABLE",
+            "UNSIGNED_ATTRIBUTE",
+            "FIXED_PREC_SCALE",
+            "AUTO_INCREMENT",
+            "LOCAL_TYPE_NAME",
+            "MINIMUM_SCALE",
+            "MAXIMUM_SCALE",
+            "SQL_DATA_TYPE",
+            "SQL_DATETIME_SUB",
+            "NUM_PREC_RADIX");
+
+    private static final List<String> TYPE_INFO_TYPES = Arrays.asList(
+            "VARCHAR",
+            "INTEGER",
+            "INTEGER",
+            "VARCHAR",
+            "VARCHAR",
+            "VARCHAR",
+            "SMALLINT",
+            "BOOLEAN",
+            "SMALLINT",
+            "BOOLEAN",
+            "BOOLEAN",
+            "BOOLEAN",
+            "VARCHAR",
+            "SMALLINT",
+            "SMALLINT",
+            "INTEGER",
+            "INTEGER",
+            "INTEGER");
+
+    private static final List<Integer> TYPE_INFO_TYPE_IDS = Arrays.asList(
+            Types.VARCHAR,
+            Types.INTEGER,
+            Types.INTEGER,
+            Types.VARCHAR,
+            Types.VARCHAR,
+            Types.VARCHAR,
+            Types.SMALLINT,
+            Types.BOOLEAN,
+            Types.SMALLINT,
+            Types.BOOLEAN,
+            Types.BOOLEAN,
+            Types.BOOLEAN,
+            Types.VARCHAR,
+            Types.SMALLINT,
+            Types.SMALLINT,
+            Types.INTEGER,
+            Types.INTEGER,
+            Types.INTEGER);
+
     @Test
     void columnsSchemaHasExpectedNames() {
         List<String> names =
@@ -84,11 +165,11 @@ class MetadataSchemasTest {
     @Test
     void columnsSchemaHasExpectedTypeNames() {
         List<String> typeNames = MetadataSchemas.COLUMNS.stream()
-                .map(ColumnMetadata::getTypeName)
+                .map(c -> HyperTypes.toJdbcTypeName(c.getType()))
                 .collect(Collectors.toList());
         assertThat(typeNames).isEqualTo(COLUMN_TYPES);
         assertThat(typeNames).hasSize(24);
-        assertThat(typeNames.get(0)).isEqualTo("TEXT");
+        assertThat(typeNames.get(0)).isEqualTo("VARCHAR");
     }
 
     @Test
@@ -99,5 +180,34 @@ class MetadataSchemasTest {
         assertThat(typeIds).isEqualTo(COLUMN_TYPE_IDS);
         assertThat(typeIds).hasSize(24);
         assertThat(typeIds.get(0)).isEqualTo(Types.VARCHAR);
+    }
+
+    @Test
+    void typeInfoSchemaHasExpectedNames() {
+        List<String> names =
+                MetadataSchemas.TYPE_INFO.stream().map(ColumnMetadata::getName).collect(Collectors.toList());
+        assertThat(names).isEqualTo(TYPE_INFO_NAMES);
+        assertThat(names).hasSize(18);
+        assertThat(names.get(0)).isEqualTo("TYPE_NAME");
+    }
+
+    @Test
+    void typeInfoSchemaHasExpectedTypeNames() {
+        List<String> typeNames = MetadataSchemas.TYPE_INFO.stream()
+                .map(c -> HyperTypes.toJdbcTypeName(c.getType()))
+                .collect(Collectors.toList());
+        assertThat(typeNames).isEqualTo(TYPE_INFO_TYPES);
+        assertThat(typeNames).hasSize(18);
+        assertThat(typeNames.get(7)).isEqualTo("BOOLEAN");
+    }
+
+    @Test
+    void typeInfoSchemaHasExpectedJdbcTypeIds() {
+        List<Integer> typeIds = MetadataSchemas.TYPE_INFO.stream()
+                .map(c -> HyperTypes.toJdbcTypeCode(c.getType()))
+                .collect(Collectors.toList());
+        assertThat(typeIds).isEqualTo(TYPE_INFO_TYPE_IDS);
+        assertThat(typeIds).hasSize(18);
+        assertThat(typeIds.get(7)).isEqualTo(Types.BOOLEAN);
     }
 }

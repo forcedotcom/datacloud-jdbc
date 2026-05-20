@@ -5,17 +5,22 @@
 package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.ZoneId;
 import java.util.Collections;
 import java.util.stream.IntStream;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
@@ -37,12 +42,43 @@ class ArrowStreamReaderCursorTest {
     @Mock
     protected VectorSchemaRoot root;
 
+    @Mock
+    protected BufferAllocator allocator;
+
     @Test
     @SneakyThrows
-    void closesTheReader() {
-        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
+    void closesReaderAndAllocator() {
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         sut.close();
+        // Reader-before-allocator ordering is load-bearing: reader.close releases the buffers
+        // accounted against the allocator so the allocator's closing budget check passes.
+        // Reversing the order would trip the leak detector at runtime.
+        val order = inOrder(reader, allocator);
+        order.verify(reader).close();
+        order.verify(allocator).close();
+    }
+
+    /**
+     * When both reader.close() and allocator.close() throw, the cursor must close the allocator
+     * even after the reader's close raised, and surface the reader's exception as primary with
+     * the allocator's exception attached as suppressed. The reader exception is the
+     * diagnostically interesting one (the leak detector firing on allocator.close is usually a
+     * symptom of the reader's failure to release buffers); plain try/finally would silently
+     * replace it with the allocator exception.
+     */
+    @Test
+    @SneakyThrows
+    void closeAttachesAllocatorErrorAsSuppressedWhenReaderCloseAlsoThrows() {
+        val readerError = new IOException("reader close failed");
+        val allocatorError = new IllegalStateException("allocator leak detected");
+        doThrow(readerError).when(reader).close();
+        doThrow(allocatorError).when(allocator).close();
+
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
+
+        assertThatThrownBy(sut::close).isSameAs(readerError).hasSuppressedException(allocatorError);
         verify(reader, times(1)).close();
+        verify(allocator, times(1)).close();
     }
 
     @Test
@@ -56,9 +92,13 @@ class ArrowStreamReaderCursorTest {
         when(reader.loadNextBatch()).thenReturn(false);
         when(root.getRowCount()).thenReturn(times);
 
-        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         IntStream.range(0, times + 1).forEach(i -> sut.next());
 
+        // Each next() inspects rowCount once on the per-batch index check. loadNextNonEmptyBatch
+        // is reached on the (times+1)-th call but only inspects rowCount inside its loop body if
+        // loadNextBatch returns true; here it returns false, so getRowCount is observed times+1
+        // times in total.
         verify(root, times(times + 1)).getRowCount();
         verify(reader, times(1)).loadNextBatch();
     }
@@ -69,7 +109,7 @@ class ArrowStreamReaderCursorTest {
         when(root.getRowCount()).thenReturn(1);
         when(reader.getVectorSchemaRoot()).thenReturn(root);
 
-        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
 
         assertThat(sut.next()).isTrue();
     }
@@ -81,7 +121,7 @@ class ArrowStreamReaderCursorTest {
         when(reader.getVectorSchemaRoot()).thenReturn(root);
         when(reader.loadNextBatch()).thenReturn(false);
 
-        val sut = new ArrowStreamReaderCursor(reader, ZoneId.systemDefault());
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
 
         assertThat(sut.next()).isFalse();
     }
@@ -118,7 +158,7 @@ class ArrowStreamReaderCursorTest {
 
         try (RootAllocator readAlloc = new RootAllocator(Long.MAX_VALUE);
                 ArrowStreamReader streamReader = new ArrowStreamReader(new ByteArrayInputStream(ipc), readAlloc)) {
-            val sut = new ArrowStreamReaderCursor(streamReader, ZoneId.systemDefault());
+            val sut = new ArrowStreamReaderCursor(streamReader, readAlloc, ZoneId.systemDefault());
 
             assertThat(sut.next())
                     .as("skips zero-row batch, advances to row in second batch")
@@ -157,7 +197,7 @@ class ArrowStreamReaderCursorTest {
 
         try (RootAllocator readAlloc = new RootAllocator(Long.MAX_VALUE);
                 ArrowStreamReader streamReader = new ArrowStreamReader(new ByteArrayInputStream(ipc), readAlloc)) {
-            val sut = new ArrowStreamReaderCursor(streamReader, ZoneId.systemDefault());
+            val sut = new ArrowStreamReaderCursor(streamReader, readAlloc, ZoneId.systemDefault());
             assertThat(sut.next()).isFalse();
         }
     }

@@ -6,7 +6,13 @@ package com.salesforce.datacloud.jdbc.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
+import com.salesforce.datacloud.jdbc.protocol.QueryResultArrowStream;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -14,14 +20,21 @@ import java.nio.charset.StandardCharsets;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.ipc.ArrowStreamReader;
 import org.apache.arrow.vector.ipc.ArrowStreamWriter;
+import org.apache.arrow.vector.types.pojo.ArrowType;
+import org.apache.arrow.vector.types.pojo.Field;
+import org.apache.arrow.vector.types.pojo.FieldType;
+import org.apache.arrow.vector.types.pojo.Schema;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -29,7 +42,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-class StreamingResultSetMethodTest {
+class DataCloudResultSetMethodTest {
 
     @RegisterExtension
     static RootAllocatorTestExtension ext = new RootAllocatorTestExtension();
@@ -37,19 +50,22 @@ class StreamingResultSetMethodTest {
     private static final String QUERY_ID = "test-query-id";
 
     @SneakyThrows
-    private StreamingResultSet createResultSet() {
+    private DataCloudResultSet createResultSet() {
         return createSingleVarCharResultSet(false);
     }
 
     @SneakyThrows
-    private StreamingResultSet createResultSetWithNullValue() {
+    private DataCloudResultSet createResultSetWithNullValue() {
         return createSingleVarCharResultSet(true);
     }
 
     @SneakyThrows
-    private StreamingResultSet createSingleVarCharResultSet(boolean nullValue) {
-        val allocator = ext.getRootAllocator();
-        val vector = new VarCharVector("col1", allocator);
+    private DataCloudResultSet createSingleVarCharResultSet(boolean nullValue) {
+        // Build a single-row VARCHAR batch, serialise to IPC bytes, and wrap in an
+        // ArrowStreamReader. Using a fresh RootAllocator so the result set owns its own
+        // allocator lifecycle (independent of the shared test extension allocator).
+        val writeAllocator = ext.getRootAllocator();
+        val vector = new VarCharVector("col1", writeAllocator);
         vector.allocateNew();
         if (nullValue) {
             vector.setNull(0);
@@ -58,24 +74,27 @@ class StreamingResultSetMethodTest {
         }
         vector.setValueCount(1);
 
-        val root = new VectorSchemaRoot(Arrays.asList(vector.getField()), Arrays.asList(vector));
-        root.setRowCount(1);
-
         val out = new ByteArrayOutputStream();
-        try (val writer = new ArrowStreamWriter(root, null, out)) {
-            writer.writeBatch();
+        try (VectorSchemaRoot root = new VectorSchemaRoot(Arrays.asList(vector.getField()), Arrays.asList(vector))) {
+            root.setRowCount(1);
+            try (ArrowStreamWriter writer = new ArrowStreamWriter(root, null, out)) {
+                writer.start();
+                writer.writeBatch();
+                writer.end();
+            }
         }
-        root.close();
 
-        val reader = new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), allocator);
-        return StreamingResultSet.of(reader, QUERY_ID);
+        RootAllocator readerAllocator = new RootAllocator(Long.MAX_VALUE);
+        ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), readerAllocator);
+        return DataCloudResultSet.of(
+                new QueryResultArrowStream.Result(reader, readerAllocator), QUERY_ID, ZoneId.systemDefault());
     }
 
     // --- Unsupported methods ---
 
     @FunctionalInterface
     interface ResultSetMethod {
-        void invoke(StreamingResultSet rs) throws SQLException;
+        void invoke(DataCloudResultSet rs) throws SQLException;
     }
 
     static Stream<Arguments> unsupportedMethods() {
@@ -93,7 +112,7 @@ class StreamingResultSetMethodTest {
                 Arguments.of(Named.of("getSQLXML", (ResultSetMethod) rs -> rs.getSQLXML(1))),
                 Arguments.of(Named.of("getNString", (ResultSetMethod) rs -> rs.getNString(1))),
                 Arguments.of(Named.of("getNCharacterStream", (ResultSetMethod) rs -> rs.getNCharacterStream(1))),
-                Arguments.of(Named.of("getCursorName", (ResultSetMethod) StreamingResultSet::getCursorName)));
+                Arguments.of(Named.of("getCursorName", (ResultSetMethod) DataCloudResultSet::getCursorName)));
     }
 
     @ParameterizedTest
@@ -130,6 +149,37 @@ class StreamingResultSetMethodTest {
     // --- Lifecycle and navigation ---
 
     @Test
+    @SneakyThrows
+    void ofClosingOnFailureClosesAllocatorWhenSchemaIsUnsupported() {
+        // Build an Arrow IPC stream containing one column of LargeUtf8, which
+        // ArrowToHyperTypeMapper does not model — DataCloudResultSet.of will throw SQLException.
+        // Without the leak fix, the RootAllocator passed in would never be closed.
+        val unsupportedField = new Field("col", new FieldType(true, new ArrowType.LargeUtf8(), null), null);
+        val schema = new Schema(Collections.singletonList(unsupportedField));
+        val out = new ByteArrayOutputStream();
+        try (RootAllocator writeAllocator = new RootAllocator(Long.MAX_VALUE);
+                VectorSchemaRoot root = VectorSchemaRoot.create(schema, writeAllocator)) {
+            root.setRowCount(0);
+            try (ArrowStreamWriter writer = new ArrowStreamWriter(root, null, out)) {
+                writer.start();
+                writer.end();
+            }
+        }
+
+        val readerAllocator = spy(new RootAllocator(Long.MAX_VALUE));
+        val reader = spy(new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), readerAllocator));
+        val arrowStream = new QueryResultArrowStream.Result(reader, readerAllocator);
+
+        assertThatThrownBy(() -> DataCloudResultSet.of(arrowStream, QUERY_ID, ZoneId.systemDefault()))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("Unsupported column type");
+
+        // The leak fix must close both the reader and the allocator before re-throwing.
+        verify(reader, atLeastOnce()).close();
+        verify(readerAllocator, atLeastOnce()).close();
+    }
+
+    @Test
     void closeAndIsClosed() throws Exception {
         val rs = createResultSet();
         assertThat(rs.isClosed()).isFalse();
@@ -138,6 +188,42 @@ class StreamingResultSetMethodTest {
         // double close is a no-op
         rs.close();
         assertThat(rs.isClosed()).isTrue();
+    }
+
+    /**
+     * Pin AutoCloseable idempotence: if cursor.close throws (e.g. allocator leak detector trips
+     * an IllegalStateException), the result set must still be marked closed so a defensive
+     * caller's retry of close() becomes a no-op rather than re-entering cursor.close and
+     * double-closing the allocator. {@code closed} is flipped before delegating.
+     */
+    @Test
+    @SneakyThrows
+    void closeIsIdempotentEvenIfFirstCloseThrows() {
+        // Build a real result set whose allocator will throw on close (simulating the leak
+        // detector firing). The first close should rethrow; the second close should be a no-op.
+        val readerAllocator = spy(new RootAllocator(Long.MAX_VALUE));
+        val out = new ByteArrayOutputStream();
+        val schema = new Schema(
+                Collections.singletonList(new Field("col1", new FieldType(true, new ArrowType.Utf8(), null), null)));
+        try (VectorSchemaRoot writeRoot = VectorSchemaRoot.create(schema, ext.getRootAllocator())) {
+            writeRoot.setRowCount(0);
+            try (ArrowStreamWriter writer = new ArrowStreamWriter(writeRoot, null, out)) {
+                writer.start();
+                writer.end();
+            }
+        }
+        val reader = new ArrowStreamReader(new ByteArrayInputStream(out.toByteArray()), readerAllocator);
+        val rs = DataCloudResultSet.of(
+                new QueryResultArrowStream.Result(reader, readerAllocator), QUERY_ID, ZoneId.systemDefault());
+        doThrow(new IllegalStateException("simulated leak detector"))
+                .when(readerAllocator)
+                .close();
+
+        assertThatThrownBy(rs::close).isInstanceOf(IllegalStateException.class);
+        assertThat(rs.isClosed()).isTrue();
+        // Retry: should be a no-op, not re-enter cursor.close and double-close the allocator.
+        rs.close();
+        verify(readerAllocator, times(1)).close();
     }
 
     @Test
@@ -213,6 +299,18 @@ class StreamingResultSetMethodTest {
             rs.next();
             assertThat((String) rs.getObject(1, Object.class)).isEqualTo("hello");
             assertThat(rs.getObject(1, CharSequence.class).toString()).isEqualTo("hello");
+        }
+    }
+
+    @Test
+    void getObjectWithNullTypeMapBehavesLikeGetObject() throws Exception {
+        // JDBC: getObject(int, Map) with a null/empty type map should behave like getObject(int).
+        try (val rs = createResultSet()) {
+            rs.next();
+            val plain = rs.getObject(1);
+            assertThat(rs.getObject(1, (java.util.Map<String, Class<?>>) null)).isEqualTo(plain);
+            assertThat(rs.getObject(1, java.util.Collections.<String, Class<?>>emptyMap()))
+                    .isEqualTo(plain);
         }
     }
 
@@ -334,11 +432,11 @@ class StreamingResultSetMethodTest {
     @Test
     void unwrapAndIsWrapperFor() throws Exception {
         try (val rs = createResultSet()) {
-            assertThat(rs.isWrapperFor(StreamingResultSet.class)).isTrue();
+            assertThat(rs.isWrapperFor(DataCloudResultSet.class)).isTrue();
             assertThat(rs.isWrapperFor(DataCloudResultSet.class)).isTrue();
             assertThat(rs.isWrapperFor(String.class)).isFalse();
 
-            assertThat(rs.unwrap(StreamingResultSet.class)).isSameAs(rs);
+            assertThat(rs.unwrap(DataCloudResultSet.class)).isSameAs(rs);
             assertThatThrownBy(() -> rs.unwrap(String.class))
                     .isInstanceOf(SQLException.class)
                     .hasMessageContaining("Cannot unwrap");
