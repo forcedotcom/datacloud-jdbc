@@ -125,7 +125,7 @@ public class DataCloudDatasource implements DataSource {
                         new TokenProcessorSupplier(cdpTokenProcessor),
                         cdpTokenProcessor.getDataCloudToken().getTenantUrl(),
                         "",
-                        cdpTokenProcessor::getLakehouse,
+                        cdpTokenProcessor::getLakehouseName,
                         Collections::emptyList,
                         jdbcUrl);
             }

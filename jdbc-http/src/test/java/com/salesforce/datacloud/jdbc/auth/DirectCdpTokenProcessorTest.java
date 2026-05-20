@@ -102,20 +102,27 @@ class DirectCdpTokenProcessorTest {
     }
 
     @Test
-    void getLakehouseWithoutDataspace() throws SQLException {
+    void getLakehouseNameWithoutDataspace() throws SQLException {
         DirectCdpTokenProcessor processor =
                 DirectCdpTokenProcessor.ofDestructive(propertiesForCdpToken(validJwt(), TENANT_HOST));
-        assertThat(processor.getLakehouse()).isEqualTo("lakehouse:" + TENANT_ID + ";");
+        assertThat(processor.getLakehouseName()).isEqualTo("lakehouse:" + TENANT_ID + ";");
     }
 
     @Test
-    void getLakehouseWithDataspace() throws SQLException {
+    void getLakehouseNameWithDataspace() throws SQLException {
         String dataspace = UUID.randomUUID().toString();
         Properties props = propertiesForCdpToken(validJwt(), TENANT_HOST);
         props.setProperty("dataspace", dataspace);
 
         DirectCdpTokenProcessor processor = DirectCdpTokenProcessor.ofDestructive(props);
-        assertThat(processor.getLakehouse()).isEqualTo("lakehouse:" + TENANT_ID + ";" + dataspace);
+        assertThat(processor.getLakehouseName()).isEqualTo("lakehouse:" + TENANT_ID + ";" + dataspace);
+    }
+
+    @Test
+    void ofDestructiveThrowsWhenCdpTokenAlreadyExpired() {
+        Properties props = propertiesForCdpToken(jwtWithExp(Instant.now().getEpochSecond() - 1), TENANT_HOST);
+        SQLException ex = assertThrows(SQLException.class, () -> DirectCdpTokenProcessor.ofDestructive(props));
+        assertThat(ex.getMessage()).contains("expired");
     }
 
     @Test
@@ -141,7 +148,7 @@ class DirectCdpTokenProcessorTest {
         Properties props = propertiesForCdpToken("not-a-valid-jwt", TENANT_HOST);
 
         SQLException ex = assertThrows(SQLException.class, () -> DirectCdpTokenProcessor.ofDestructive(props));
-        assertThat(ex.getMessage()).contains("Invalid CDP token");
+        assertThat(ex.getMessage()).contains("not a valid JWT");
     }
 
     @Test
@@ -177,31 +184,33 @@ class DirectCdpTokenProcessorTest {
     }
 
     @Test
-    void secondsUntilJwtExpiryReturnsRemainingForValidJwt() {
+    void expFromJwtReturnsExpFromValidJwt() throws SQLException {
         long futureExp = Instant.now().getEpochSecond() + 1234;
-        int remaining = DirectCdpTokenProcessor.secondsUntilJwtExpiry(jwtWithExp(futureExp));
-        assertThat(remaining).isBetween(1230, 1234);
+        assertThat(DirectCdpTokenProcessor.expFromJwt(jwtWithExp(futureExp))).isEqualTo(futureExp);
     }
 
     @Test
-    void secondsUntilJwtExpiryFallsBackWhenJwtSingleSegment() {
-        assertThat(DirectCdpTokenProcessor.secondsUntilJwtExpiry("only-one-segment"))
-                .isEqualTo(DirectCdpTokenProcessor.FALLBACK_EXPIRES_IN_SECONDS);
+    void expFromJwtThrowsWhenJwtSingleSegment() {
+        SQLException ex =
+                assertThrows(SQLException.class, () -> DirectCdpTokenProcessor.expFromJwt("only-one-segment"));
+        assertThat(ex.getMessage()).contains("at least 2 segments");
     }
 
     @Test
-    void secondsUntilJwtExpiryFallsBackWhenPayloadNotBase64() {
+    void expFromJwtThrowsWhenPayloadNotBase64() {
         // Two segments but second one is not valid base64url
-        assertThat(DirectCdpTokenProcessor.secondsUntilJwtExpiry("header.@@not-base64@@.sig"))
-                .isEqualTo(DirectCdpTokenProcessor.FALLBACK_EXPIRES_IN_SECONDS);
+        SQLException ex =
+                assertThrows(SQLException.class, () -> DirectCdpTokenProcessor.expFromJwt("header.@@not-base64@@.sig"));
+        assertThat(ex.getMessage()).contains("Failed to parse CDP token JWT");
     }
 
     @Test
-    void secondsUntilJwtExpiryFallsBackWhenExpClaimMissing() {
+    void expFromJwtThrowsWhenExpClaimMissing() {
         Base64.Encoder enc = Base64.getUrlEncoder().withoutPadding();
         String header = enc.encodeToString("{\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
         String payload = enc.encodeToString("{\"sub\":\"x\"}".getBytes(StandardCharsets.UTF_8));
-        assertThat(DirectCdpTokenProcessor.secondsUntilJwtExpiry(header + "." + payload + ".sig"))
-                .isEqualTo(DirectCdpTokenProcessor.FALLBACK_EXPIRES_IN_SECONDS);
+        String jwt = header + "." + payload + ".sig";
+        SQLException ex = assertThrows(SQLException.class, () -> DirectCdpTokenProcessor.expFromJwt(jwt));
+        assertThat(ex.getMessage()).contains("missing a numeric 'exp' claim");
     }
 }

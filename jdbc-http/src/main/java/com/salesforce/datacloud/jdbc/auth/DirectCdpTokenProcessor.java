@@ -22,7 +22,6 @@ public class DirectCdpTokenProcessor {
     static final String CDP_TOKEN_KEY = "cdpToken";
     static final String TENANT_URL_KEY = "tenantUrl";
     static final String DATASPACE_KEY = "dataspace";
-    static final int FALLBACK_EXPIRES_IN_SECONDS = 3600;
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final String cdpToken;
@@ -46,7 +45,7 @@ public class DirectCdpTokenProcessor {
             String tenantUrl = validateTenantHost(takeRequired(properties, TENANT_URL_KEY));
             String dataspace = takeOptional(properties, DATASPACE_KEY).orElse(null);
             DirectCdpTokenProcessor processor = new DirectCdpTokenProcessor(cdpToken, tenantUrl, dataspace);
-            processor.validateToken();
+            processor.cachedDataCloudToken = processor.buildDataCloudToken();
             return processor;
         } catch (IllegalArgumentException ex) {
             throw new SQLException(ex.getMessage(), "28000", ex);
@@ -71,17 +70,6 @@ public class DirectCdpTokenProcessor {
         return trimmed;
     }
 
-    private void validateToken() throws SQLException {
-        try {
-            DataCloudToken token = buildDataCloudToken();
-            token.getTenantId();
-            cachedDataCloudToken = token;
-        } catch (Exception ex) {
-            throw new SQLException(
-                    "Invalid CDP token: unable to parse JWT or extract tenant ID. " + ex.getMessage(), "28000", ex);
-        }
-    }
-
     public DataCloudToken getDataCloudToken() throws SQLException {
         if (cachedDataCloudToken == null || !cachedDataCloudToken.isAlive()) {
             cachedDataCloudToken = buildDataCloudToken();
@@ -89,7 +77,7 @@ public class DirectCdpTokenProcessor {
         return cachedDataCloudToken;
     }
 
-    public String getLakehouse() throws SQLException {
+    public String getLakehouseName() throws SQLException {
         String tenantId = getDataCloudToken().getTenantId();
         String response =
                 "lakehouse:" + tenantId + ";" + Optional.ofNullable(dataspace).orElse("");
@@ -98,36 +86,43 @@ public class DirectCdpTokenProcessor {
     }
 
     private DataCloudToken buildDataCloudToken() throws SQLException {
+        long exp = expFromJwt(cdpToken);
+        long remaining = exp - Instant.now().getEpochSecond();
+        if (remaining <= 0) {
+            throw new SQLException("CDP token has already expired", "28000");
+        }
         DataCloudTokenResponse response = new DataCloudTokenResponse();
         response.setToken(cdpToken);
         response.setInstanceUrl(tenantUrl);
         response.setTokenType("Bearer");
-        response.setExpiresIn(secondsUntilJwtExpiry(cdpToken));
-        return DataCloudToken.of(response);
+        response.setExpiresIn((int) Math.min(remaining, Integer.MAX_VALUE));
+        DataCloudToken token = DataCloudToken.of(response);
+        // Force tenantId extraction so a malformed JWT payload fails here rather than at first use.
+        token.getTenantId();
+        return token;
     }
 
     /**
-     * Returns seconds remaining until the JWT's `exp` claim, clamped to a minimum of 0.
-     * If the JWT cannot be parsed or has no `exp` claim, falls back to {@link #FALLBACK_EXPIRES_IN_SECONDS}
-     * so callers behave identically to the previous fixed-TTL behavior.
+     * Reads the JWT's {@code exp} claim (epoch seconds). Bearer JWTs are required to carry an exp
+     * claim; throws SQLException if the JWT is malformed or has no numeric {@code exp}.
      */
-    static int secondsUntilJwtExpiry(String jwt) {
+    static long expFromJwt(String jwt) throws SQLException {
+        String[] chunks = jwt.split("\\.", -1);
+        if (chunks.length < 2) {
+            throw new SQLException("CDP token is not a valid JWT (expected at least 2 segments)", "28000");
+        }
         try {
-            String[] chunks = jwt.split("\\.", -1);
-            if (chunks.length < 2) {
-                return FALLBACK_EXPIRES_IN_SECONDS;
-            }
             byte[] decoded = Base64.getUrlDecoder().decode(chunks[1]);
             JsonNode payload = JSON.readTree(decoded);
             JsonNode exp = payload.get("exp");
             if (exp == null || !exp.canConvertToLong()) {
-                return FALLBACK_EXPIRES_IN_SECONDS;
+                throw new SQLException("CDP token JWT is missing a numeric 'exp' claim", "28000");
             }
-            long remaining = exp.asLong() - Instant.now().getEpochSecond();
-            return remaining > 0 ? (int) Math.min(remaining, Integer.MAX_VALUE) : 0;
+            return exp.asLong();
+        } catch (SQLException e) {
+            throw e;
         } catch (Exception ex) {
-            log.debug("Could not derive exp from CDP token, using default TTL", ex);
-            return FALLBACK_EXPIRES_IN_SECONDS;
+            throw new SQLException("Failed to parse CDP token JWT: " + ex.getMessage(), "28000", ex);
         }
     }
 }

@@ -134,7 +134,7 @@ public class DataCloudJDBCDriverTest {
 
         assertThatThrownBy(() -> DriverManager.getConnection(VALID_URL, properties))
                 .isInstanceOf(SQLException.class)
-                .hasMessageContaining("Invalid CDP token");
+                .hasMessageContaining("not a valid JWT");
     }
 
     private static String buildCdpJwt() {
