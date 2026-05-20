@@ -9,9 +9,12 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOf
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
+import java.nio.charset.StandardCharsets;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -109,5 +112,38 @@ public class DataCloudJDBCDriverTest {
         assertThatThrownBy(() -> DriverManager.getConnection(url, properties))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining("Failed to connect to");
+    }
+
+    @Test
+    public void testConnectUsingDirectCdpToken() throws Exception {
+        Properties properties = new Properties();
+        properties.setProperty("cdpToken", buildCdpJwt());
+        properties.setProperty("tenantUrl", "test.c360a.salesforce.com");
+
+        try (java.sql.Connection conn = DriverManager.getConnection(VALID_URL, properties)) {
+            assertThat(conn).isNotNull();
+            assertThat(conn.getMetaData().getUserName()).isEqualTo("");
+        }
+    }
+
+    @Test
+    public void testConnectUsingDirectCdpTokenRejectsInvalidJwt() {
+        Properties properties = new Properties();
+        properties.setProperty("cdpToken", "not-a-valid-jwt");
+        properties.setProperty("tenantUrl", "test.c360a.salesforce.com");
+
+        assertThatThrownBy(() -> DriverManager.getConnection(VALID_URL, properties))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("not a valid JWT");
+    }
+
+    private static String buildCdpJwt() {
+        Base64.Encoder enc = Base64.getUrlEncoder().withoutPadding();
+        String header = "{\"alg\":\"ES256\",\"typ\":\"JWT\"}";
+        String payload = "{\"audienceTenantId\":\"a360/falcondev/a6d726a73f534327a6a8e2e0f3cc3840\",\"exp\":"
+                + (Instant.now().getEpochSecond() + 3600) + "}";
+        String h = enc.encodeToString(header.getBytes(StandardCharsets.UTF_8));
+        String p = enc.encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+        return h + "." + p + ".sig";
     }
 }
