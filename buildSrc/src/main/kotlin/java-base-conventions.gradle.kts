@@ -66,6 +66,8 @@ tasks.withType<Test>().configureEach {
     // VarCharVector/VarBinaryVector/FixedSizeBinaryVector/TimeStamp* getters skip the validity check
     // and return stale buffer bytes for null rows instead of null. Run every test task across the
     // build under that condition so the existing null-handling assertions cover the Iceberg scenario.
+    // The true case we don't need to test explicitly as everything that works with false will also
+    // work with true given the semantics of the setting.
     systemProperty("arrow.enable_null_check_for_get", "false")
 }
 
