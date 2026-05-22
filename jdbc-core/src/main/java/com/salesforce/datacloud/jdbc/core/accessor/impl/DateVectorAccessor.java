@@ -15,7 +15,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
-import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import lombok.val;
 import org.apache.arrow.vector.DateDayVector;
@@ -24,27 +23,27 @@ import org.apache.arrow.vector.ValueVector;
 
 public class DateVectorAccessor extends QueryJDBCAccessor {
 
+    private final ValueVector vector;
     private final Getter getter;
     private final TimeUnit timeUnit;
     private final Holder holder;
-    private final IntPredicate nullChecker;
 
     private static final String INVALID_VECTOR_ERROR_RESPONSE = "Invalid Arrow vector provided";
 
     public DateVectorAccessor(DateDayVector vector, IntSupplier currentRowSupplier) throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
-        this.nullChecker = vector::isNull;
     }
 
     public DateVectorAccessor(DateMilliVector vector, IntSupplier currentRowSupplier) throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
-        this.nullChecker = vector::isNull;
     }
 
     @Override
@@ -103,7 +102,7 @@ public class DateVectorAccessor extends QueryJDBCAccessor {
         // vector types (e.g. TimeStamp*) gate that path on arrow.enable_null_check_for_get;
         // sourcing from isNull keeps null detection independent of any future flag extension.
         final int row = getCurrentRow();
-        this.wasNull = nullChecker.test(row);
+        this.wasNull = vector.isNull(row);
         if (this.wasNull) {
             return;
         }

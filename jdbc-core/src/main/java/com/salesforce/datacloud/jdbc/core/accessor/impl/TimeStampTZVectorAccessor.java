@@ -22,7 +22,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
-import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import org.apache.arrow.vector.TimeStampVector;
 import org.apache.arrow.vector.types.pojo.ArrowType;
@@ -49,19 +48,19 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
     private static final String TIMESTAMP_WITH_OFFSET_FORMAT = "yyyy-MM-dd HH:mm:ss.SSSSSS xxx";
 
+    private final TimeStampVector vector;
     private final ZoneId arrowMetadataZone;
     private final TimeUnit timeUnit;
     private final TimeStampVectorGetter.Holder holder;
     private final TimeStampVectorGetter.Getter getter;
-    private final IntPredicate nullChecker;
 
     public TimeStampTZVectorAccessor(TimeStampVector vector, IntSupplier currentRowSupplier) throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.arrowMetadataZone = extractArrowMetadataZone(vector);
         this.timeUnit = getTimeUnitForVector(vector);
         this.holder = new TimeStampVectorGetter.Holder();
         this.getter = createGetter(vector);
-        this.nullChecker = vector::isNull;
     }
 
     private ZoneId resolveEffectiveZoneId(Calendar calendar) {
@@ -80,7 +79,7 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
         // entry leaves holder.isSet at its initial value (1). Check the validity buffer
         // explicitly via isNull(int), which is not gated by the flag.
         final int row = getCurrentRow();
-        this.wasNull = nullChecker.test(row);
+        this.wasNull = vector.isNull(row);
         if (this.wasNull) {
             return null;
         }

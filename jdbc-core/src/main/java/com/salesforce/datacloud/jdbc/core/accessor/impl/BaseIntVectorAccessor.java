@@ -10,7 +10,6 @@ import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
-import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import lombok.val;
 import org.apache.arrow.vector.BaseIntVector;
@@ -23,11 +22,11 @@ import org.apache.arrow.vector.types.Types.MinorType;
 
 public class BaseIntVectorAccessor extends QueryJDBCAccessor {
 
+    private final BaseIntVector vector;
     private final MinorType type;
     private final boolean isUnsigned;
     private final NumericGetter.Getter getter;
     private final NumericGetter.NumericHolder holder;
-    private final IntPredicate nullChecker;
 
     private static final String INVALID_TYPE_ERROR_RESPONSE = "Invalid Minor Type provided";
 
@@ -50,11 +49,11 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
     private BaseIntVectorAccessor(BaseIntVector vector, IntSupplier currentRowSupplier, boolean isUnsigned)
             throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.type = vector.getMinorType();
         this.holder = new NumericGetter.NumericHolder();
         this.getter = createGetter(vector);
         this.isUnsigned = isUnsigned;
-        this.nullChecker = vector::isNull;
     }
 
     public BaseIntVectorAccessor(UInt4Vector vector, IntSupplier currentRowSupplier) throws SQLException {
@@ -68,7 +67,7 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
         // (e.g. TimeStamp* in 17.0); even where current versions are validity-correct, the
         // contract is not documented, so don't rely on it.
         final int row = getCurrentRow();
-        this.wasNull = nullChecker.test(row);
+        this.wasNull = vector.isNull(row);
         if (this.wasNull) {
             return 0;
         }

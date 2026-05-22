@@ -20,7 +20,6 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
-import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import lombok.val;
 import org.apache.arrow.vector.TimeStampVector;
@@ -51,17 +50,17 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
     private static final ZoneId UTC = ZoneId.of("UTC");
     static final String INVALID_UNIT_ERROR_RESPONSE = "Invalid Arrow time unit";
 
+    private final TimeStampVector vector;
     private final TimeUnit timeUnit;
     private final TimeStampVectorGetter.Holder holder;
     private final TimeStampVectorGetter.Getter getter;
-    private final IntPredicate nullChecker;
 
     public TimeStampVectorAccessor(TimeStampVector vector, IntSupplier currentRowSupplier) throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.timeUnit = getTimeUnitForVector(vector);
         this.holder = new TimeStampVectorGetter.Holder();
         this.getter = createGetter(vector);
-        this.nullChecker = vector::isNull;
     }
 
     /**
@@ -74,7 +73,7 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
         // entry leaves holder.isSet at its initial value (1). Check the validity buffer
         // explicitly via isNull(int), which is not gated by the flag.
         final int row = getCurrentRow();
-        this.wasNull = nullChecker.test(row);
+        this.wasNull = vector.isNull(row);
         if (this.wasNull) {
             return null;
         }

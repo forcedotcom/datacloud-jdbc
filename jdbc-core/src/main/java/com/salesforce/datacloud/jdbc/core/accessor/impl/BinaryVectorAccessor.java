@@ -6,10 +6,10 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import java.nio.charset.StandardCharsets;
-import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import org.apache.arrow.vector.FixedSizeBinaryVector;
 import org.apache.arrow.vector.LargeVarBinaryVector;
+import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarBinaryVector;
 
 public class BinaryVectorAccessor extends QueryJDBCAccessor {
@@ -18,25 +18,25 @@ public class BinaryVectorAccessor extends QueryJDBCAccessor {
         byte[] get(int index);
     }
 
+    private final ValueVector vector;
     private final ByteArrayGetter getter;
-    private final IntPredicate nullChecker;
 
     public BinaryVectorAccessor(FixedSizeBinaryVector vector, IntSupplier currentRowSupplier) {
-        this(vector::get, vector::isNull, currentRowSupplier);
+        this(vector, vector::get, currentRowSupplier);
     }
 
     public BinaryVectorAccessor(VarBinaryVector vector, IntSupplier currentRowSupplier) {
-        this(vector::get, vector::isNull, currentRowSupplier);
+        this(vector, vector::get, currentRowSupplier);
     }
 
     public BinaryVectorAccessor(LargeVarBinaryVector vector, IntSupplier currentRowSupplier) {
-        this(vector::get, vector::isNull, currentRowSupplier);
+        this(vector, vector::get, currentRowSupplier);
     }
 
-    private BinaryVectorAccessor(ByteArrayGetter getter, IntPredicate nullChecker, IntSupplier currentRowSupplier) {
+    private BinaryVectorAccessor(ValueVector vector, ByteArrayGetter getter, IntSupplier currentRowSupplier) {
         super(currentRowSupplier);
+        this.vector = vector;
         this.getter = getter;
-        this.nullChecker = nullChecker;
     }
 
     @Override
@@ -45,7 +45,7 @@ public class BinaryVectorAccessor extends QueryJDBCAccessor {
         // (e.g. set by Iceberg on the JVM), so a null entry returns garbage rather than null.
         // Check the validity buffer explicitly via isNull(int).
         final int row = getCurrentRow();
-        this.wasNull = nullChecker.test(row);
+        this.wasNull = vector.isNull(row);
         if (this.wasNull) {
             return null;
         }
