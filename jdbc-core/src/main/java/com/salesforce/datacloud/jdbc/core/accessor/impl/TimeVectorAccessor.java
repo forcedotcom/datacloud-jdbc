@@ -26,6 +26,7 @@ import org.apache.arrow.vector.ValueVector;
 
 public class TimeVectorAccessor extends QueryJDBCAccessor {
 
+    private final ValueVector vector;
     private final Getter getter;
     private final TimeUnit timeUnit;
     private final Holder holder;
@@ -34,6 +35,7 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
 
     public TimeVectorAccessor(TimeNanoVector vector, IntSupplier currentRowSupplier) throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.holder = new TimeVectorGetter.Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
@@ -41,6 +43,7 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
 
     public TimeVectorAccessor(TimeMicroVector vector, IntSupplier currentRowSupplier) throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
@@ -48,6 +51,7 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
 
     public TimeVectorAccessor(TimeMilliVector vector, IntSupplier currentRowSupplier) throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
@@ -55,6 +59,7 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
 
     public TimeVectorAccessor(TimeSecVector vector, IntSupplier currentRowSupplier) throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
@@ -88,8 +93,16 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
     }
 
     private void fillHolder() {
-        getter.get(getCurrentRow(), holder);
-        this.wasNull = holder.isSet == 0;
+        // Source wasNull from vector.isNull(int) rather than holder.isSet. Arrow's
+        // Time*Vector.get(int, holder) currently honors validity unconditionally, but other
+        // vector types (e.g. TimeStamp*) gate that path on arrow.enable_null_check_for_get;
+        // sourcing from isNull keeps null detection independent of any future flag extension.
+        final int row = getCurrentRow();
+        this.wasNull = vector.isNull(row);
+        if (this.wasNull) {
+            return;
+        }
+        getter.get(row, holder);
     }
 
     /**

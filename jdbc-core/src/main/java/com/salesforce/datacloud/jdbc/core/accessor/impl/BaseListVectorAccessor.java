@@ -32,9 +32,16 @@ public abstract class BaseListVectorAccessor extends QueryJDBCAccessor {
     }
 
     protected List<?> getListObject(VectorProvider vectorProvider) throws SQLException {
-        List<?> object = vectorProvider.getObject(getCurrentRow());
-        this.wasNull = object == null;
-        return object;
+        // Source wasNull from isNull(int) rather than the getObject return value.
+        // ListVector/LargeListVector.getObject is currently validity-correct, but other
+        // vector types (e.g. TimeStamp*) gate similar paths on arrow.enable_null_check_for_get;
+        // sourcing from isNull keeps null detection independent of any future flag extension.
+        final int row = getCurrentRow();
+        this.wasNull = isNull(row);
+        if (this.wasNull) {
+            return null;
+        }
+        return vectorProvider.getObject(row);
     }
 
     protected interface VectorProvider {

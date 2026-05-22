@@ -48,6 +48,7 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
     private static final String TIMESTAMP_WITH_OFFSET_FORMAT = "yyyy-MM-dd HH:mm:ss.SSSSSS xxx";
 
+    private final TimeStampVector vector;
     private final ZoneId arrowMetadataZone;
     private final TimeUnit timeUnit;
     private final TimeStampVectorGetter.Holder holder;
@@ -55,6 +56,7 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
 
     public TimeStampTZVectorAccessor(TimeStampVector vector, IntSupplier currentRowSupplier) throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.arrowMetadataZone = extractArrowMetadataZone(vector);
         this.timeUnit = getTimeUnitForVector(vector);
         this.holder = new TimeStampVectorGetter.Holder();
@@ -72,12 +74,16 @@ public class TimeStampTZVectorAccessor extends QueryJDBCAccessor {
     }
 
     private Instant getInstant() {
-        getter.get(getCurrentRow(), holder);
-        this.wasNull = holder.isSet == 0;
-
+        // Arrow's TimeStampVector.get(int, holder) skips populating holder.isSet when
+        // arrow.enable_null_check_for_get=false (e.g. set by Iceberg on the JVM), so a null
+        // entry leaves holder.isSet at its initial value (1). Check the validity buffer
+        // explicitly via isNull(int), which is not gated by the flag.
+        final int row = getCurrentRow();
+        this.wasNull = vector.isNull(row);
         if (this.wasNull) {
             return null;
         }
+        getter.get(row, holder);
 
         long value = holder.value;
 

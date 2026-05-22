@@ -8,6 +8,7 @@ import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import java.nio.charset.StandardCharsets;
 import java.util.function.IntSupplier;
 import org.apache.arrow.vector.LargeVarCharVector;
+import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarCharVector;
 
 public class VarCharVectorAccessor extends QueryJDBCAccessor {
@@ -17,18 +18,20 @@ public class VarCharVectorAccessor extends QueryJDBCAccessor {
         byte[] get(int index);
     }
 
+    private final ValueVector vector;
     private final Getter getter;
 
     public VarCharVectorAccessor(VarCharVector vector, IntSupplier currenRowSupplier) {
-        this(vector::get, currenRowSupplier);
+        this(vector, vector::get, currenRowSupplier);
     }
 
     public VarCharVectorAccessor(LargeVarCharVector vector, IntSupplier currenRowSupplier) {
-        this(vector::get, currenRowSupplier);
+        this(vector, vector::get, currenRowSupplier);
     }
 
-    VarCharVectorAccessor(Getter getter, IntSupplier currentRowSupplier) {
+    VarCharVectorAccessor(ValueVector vector, Getter getter, IntSupplier currentRowSupplier) {
         super(currentRowSupplier);
+        this.vector = vector;
         this.getter = getter;
     }
 
@@ -39,9 +42,15 @@ public class VarCharVectorAccessor extends QueryJDBCAccessor {
 
     @Override
     public byte[] getBytes() {
-        final byte[] bytes = this.getter.get(getCurrentRow());
-        this.wasNull = bytes == null;
-        return this.getter.get(getCurrentRow());
+        // Arrow's vector.get(int) skips the isSet check when arrow.enable_null_check_for_get=false
+        // (e.g. set by Iceberg on the JVM), so a null entry returns stale buffer bytes (often empty,
+        // but not guaranteed) rather than null. Check the validity buffer explicitly via isNull(int).
+        final int row = getCurrentRow();
+        this.wasNull = vector.isNull(row);
+        if (this.wasNull) {
+            return null;
+        }
+        return getter.get(row);
     }
 
     @Override

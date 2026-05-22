@@ -22,6 +22,7 @@ import org.apache.arrow.vector.types.Types.MinorType;
 
 public class BaseIntVectorAccessor extends QueryJDBCAccessor {
 
+    private final BaseIntVector vector;
     private final MinorType type;
     private final boolean isUnsigned;
     private final NumericGetter.Getter getter;
@@ -48,6 +49,7 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
     private BaseIntVectorAccessor(BaseIntVector vector, IntSupplier currentRowSupplier, boolean isUnsigned)
             throws SQLException {
         super(currentRowSupplier);
+        this.vector = vector;
         this.type = vector.getMinorType();
         this.holder = new NumericGetter.NumericHolder();
         this.getter = createGetter(vector);
@@ -60,13 +62,16 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
 
     @Override
     public long getLong() {
-        getter.get(getCurrentRow(), holder);
-
-        this.wasNull = holder.isSet == 0;
+        // Source wasNull from vector.isNull(int) rather than the holder field. Arrow's
+        // get(int, holder) is gated on arrow.enable_null_check_for_get for some vector types
+        // (e.g. TimeStamp* in 17.0); even where current versions are validity-correct, the
+        // contract is not documented, so don't rely on it.
+        final int row = getCurrentRow();
+        this.wasNull = vector.isNull(row);
         if (this.wasNull) {
             return 0;
         }
-
+        getter.get(row, holder);
         return holder.value;
     }
 
