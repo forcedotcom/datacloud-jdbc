@@ -61,6 +61,12 @@ tasks.withType<Test>().configureEach {
     }
 
     jvmArgs("-Xmx1g", "-Xms512m")
+
+    // Iceberg sets -Darrow.enable_null_check_for_get=false on the JVM. With that flag off, Arrow's
+    // VarCharVector/VarBinaryVector/FixedSizeBinaryVector/TimeStamp* getters skip the validity check
+    // and return stale buffer bytes for null rows instead of null. Run every test task across the
+    // build under that condition so the existing null-handling assertions cover the Iceberg scenario.
+    systemProperty("arrow.enable_null_check_for_get", "false")
 }
 
 fun JacocoReportBase.excludeGrpc() {

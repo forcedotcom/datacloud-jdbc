@@ -43,8 +43,8 @@ public class VarCharVectorAccessor extends QueryJDBCAccessor {
     @Override
     public byte[] getBytes() {
         // Arrow's vector.get(int) skips the isSet check when arrow.enable_null_check_for_get=false
-        // (e.g. set by Iceberg on the JVM), so a null entry returns an empty byte[] rather than null.
-        // Check the validity buffer explicitly via isNull(int).
+        // (e.g. set by Iceberg on the JVM), so a null entry returns stale buffer bytes (often empty,
+        // but not guaranteed) rather than null. Check the validity buffer explicitly via isNull(int).
         final int row = getCurrentRow();
         this.wasNull = vector.isNull(row);
         if (this.wasNull) {
