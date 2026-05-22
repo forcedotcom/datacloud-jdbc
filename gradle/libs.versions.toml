@@ -29,13 +29,8 @@ org-grpcmock-grpcmock-junit5 = "1.1.1"
 # This is soft pinned to 5.* (as 6 is not Java 8 compatible) in `buildSrc/src/main/kotlin/version-updates.gradle.kts`
 org-junit-bom = "5.14.4"
 # Soft-pinned to 42.7.10. Bumping to 42.7.11 (which closes CVE-2026-42198, a server-side
-# DoS in SCRAM-SHA-256 auth) breaks :jdbc-core test execution under the Java 8 toolchain:
-# ByteBuddy's annotation reader hits a JDK-8 reflection NPE in Executable.getAnnotatedReturnType0
-# when the new pgjdbc AuthMethod class is on the test classpath, causing Mockito's inline
-# mock-maker to fail to mock org.apache.arrow.memory.BufferAllocator. pgjdbc is only consumed by
-# jdbc-reference (an internal Postgres-reference test fixture, not the published driver), so the
-# CVE blast radius for this repo is limited to that test harness against an untrusted PG server.
-# Revisit when we drop the Java 8 test toolchain or move jdbc-reference off Mockito-inline mocks.
+# DoS in SCRAM-SHA-256 auth) breaks :jdbc-core test execution with a NPE.
+# TODO: We need to fix this (but not in the PR that introduced this comment)
 org-postgresql-pgjdbc = "42.7.10"
 org-scalatest = "3.2.20"
 org-scalatestplus-junit5 = "3.2.19.0"
