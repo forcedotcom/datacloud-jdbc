@@ -25,11 +25,16 @@ public class DecimalVectorAccessor extends QueryJDBCAccessor {
 
     @Override
     public BigDecimal getBigDecimal() {
-        // DecimalVector.getObject is validity-correct (not gated by arrow.enable_null_check_for_get),
-        // so a null return reliably indicates a null row even when Iceberg disables that flag.
-        final BigDecimal value = vector.getObject(getCurrentRow());
-        this.wasNull = value == null;
-        return value;
+        // Source wasNull from vector.isNull(int) rather than the getObject return value.
+        // DecimalVector.getObject is currently validity-correct, but other vector types
+        // (e.g. TimeStamp*) gate similar paths on arrow.enable_null_check_for_get; sourcing
+        // from isNull keeps null detection independent of any future flag extension.
+        final int row = getCurrentRow();
+        this.wasNull = vector.isNull(row);
+        if (this.wasNull) {
+            return null;
+        }
+        return vector.getObject(row);
     }
 
     @Override

@@ -16,6 +16,7 @@ import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import lombok.val;
 import org.apache.arrow.vector.TimeMicroVector;
@@ -29,6 +30,7 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
     private final Getter getter;
     private final TimeUnit timeUnit;
     private final Holder holder;
+    private final IntPredicate nullChecker;
 
     private static final String INVALID_VECTOR_ERROR_RESPONSE = "Unsupported Timestamp vector type provided";
 
@@ -37,6 +39,7 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
         this.holder = new TimeVectorGetter.Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.nullChecker = vector::isNull;
     }
 
     public TimeVectorAccessor(TimeMicroVector vector, IntSupplier currentRowSupplier) throws SQLException {
@@ -44,6 +47,7 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.nullChecker = vector::isNull;
     }
 
     public TimeVectorAccessor(TimeMilliVector vector, IntSupplier currentRowSupplier) throws SQLException {
@@ -51,6 +55,7 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.nullChecker = vector::isNull;
     }
 
     public TimeVectorAccessor(TimeSecVector vector, IntSupplier currentRowSupplier) throws SQLException {
@@ -58,6 +63,7 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.nullChecker = vector::isNull;
     }
 
     @Override
@@ -88,8 +94,16 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
     }
 
     private void fillHolder() {
-        getter.get(getCurrentRow(), holder);
-        this.wasNull = holder.isSet == 0;
+        // Source wasNull from vector.isNull(int) rather than holder.isSet. Arrow's
+        // Time*Vector.get(int, holder) currently honors validity unconditionally, but other
+        // vector types (e.g. TimeStamp*) gate that path on arrow.enable_null_check_for_get;
+        // sourcing from isNull keeps null detection independent of any future flag extension.
+        final int row = getCurrentRow();
+        this.wasNull = nullChecker.test(row);
+        if (this.wasNull) {
+            return;
+        }
+        getter.get(row, holder);
     }
 
     /**

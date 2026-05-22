@@ -33,13 +33,16 @@ public class FloatVectorAccessor extends QueryJDBCAccessor {
 
     @Override
     public float getFloat() {
-        vector.get(getCurrentRow(), holder);
-
-        this.wasNull = holder.isSet == 0;
+        // Source wasNull from vector.isNull(int) rather than holder.isSet. Arrow's
+        // Float4Vector.get(int, holder) currently honors validity unconditionally, but other
+        // vector types (e.g. TimeStamp*) gate that path on arrow.enable_null_check_for_get;
+        // sourcing from isNull keeps null detection independent of any future flag extension.
+        final int row = getCurrentRow();
+        this.wasNull = vector.isNull(row);
         if (this.wasNull) {
             return 0;
         }
-
+        vector.get(row, holder);
         return holder.value;
     }
 

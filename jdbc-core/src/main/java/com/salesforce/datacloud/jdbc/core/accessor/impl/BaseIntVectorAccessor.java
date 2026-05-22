@@ -10,6 +10,7 @@ import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.SQLException;
+import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import lombok.val;
 import org.apache.arrow.vector.BaseIntVector;
@@ -26,6 +27,7 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
     private final boolean isUnsigned;
     private final NumericGetter.Getter getter;
     private final NumericGetter.NumericHolder holder;
+    private final IntPredicate nullChecker;
 
     private static final String INVALID_TYPE_ERROR_RESPONSE = "Invalid Minor Type provided";
 
@@ -52,6 +54,7 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
         this.holder = new NumericGetter.NumericHolder();
         this.getter = createGetter(vector);
         this.isUnsigned = isUnsigned;
+        this.nullChecker = vector::isNull;
     }
 
     public BaseIntVectorAccessor(UInt4Vector vector, IntSupplier currentRowSupplier) throws SQLException {
@@ -60,13 +63,16 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
 
     @Override
     public long getLong() {
-        getter.get(getCurrentRow(), holder);
-
-        this.wasNull = holder.isSet == 0;
+        // Source wasNull from vector.isNull(int) rather than the holder field. Arrow's
+        // get(int, holder) is gated on arrow.enable_null_check_for_get for some vector types
+        // (e.g. TimeStamp* in 17.0); even where current versions are validity-correct, the
+        // contract is not documented, so don't rely on it.
+        final int row = getCurrentRow();
+        this.wasNull = nullChecker.test(row);
         if (this.wasNull) {
             return 0;
         }
-
+        getter.get(row, holder);
         return holder.value;
     }
 

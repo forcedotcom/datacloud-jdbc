@@ -20,6 +20,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import lombok.val;
 import org.apache.arrow.vector.TimeStampVector;
@@ -53,12 +54,14 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
     private final TimeUnit timeUnit;
     private final TimeStampVectorGetter.Holder holder;
     private final TimeStampVectorGetter.Getter getter;
+    private final IntPredicate nullChecker;
 
     public TimeStampVectorAccessor(TimeStampVector vector, IntSupplier currentRowSupplier) throws SQLException {
         super(currentRowSupplier);
         this.timeUnit = getTimeUnitForVector(vector);
         this.holder = new TimeStampVectorGetter.Holder();
         this.getter = createGetter(vector);
+        this.nullChecker = vector::isNull;
     }
 
     /**
@@ -66,12 +69,16 @@ public class TimeStampVectorAccessor extends QueryJDBCAccessor {
      * so this instant represents the literal treated as UTC.
      */
     Instant getInstant() {
-        getter.get(getCurrentRow(), holder);
-        this.wasNull = holder.isSet == 0;
-
+        // Arrow's TimeStampVector.get(int, holder) skips populating holder.isSet when
+        // arrow.enable_null_check_for_get=false (e.g. set by Iceberg on the JVM), so a null
+        // entry leaves holder.isSet at its initial value (1). Check the validity buffer
+        // explicitly via isNull(int), which is not gated by the flag.
+        final int row = getCurrentRow();
+        this.wasNull = nullChecker.test(row);
         if (this.wasNull) {
             return null;
         }
+        getter.get(row, holder);
 
         long value = holder.value;
 

@@ -15,6 +15,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import lombok.val;
 import org.apache.arrow.vector.DateDayVector;
@@ -26,6 +27,7 @@ public class DateVectorAccessor extends QueryJDBCAccessor {
     private final Getter getter;
     private final TimeUnit timeUnit;
     private final Holder holder;
+    private final IntPredicate nullChecker;
 
     private static final String INVALID_VECTOR_ERROR_RESPONSE = "Invalid Arrow vector provided";
 
@@ -34,6 +36,7 @@ public class DateVectorAccessor extends QueryJDBCAccessor {
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.nullChecker = vector::isNull;
     }
 
     public DateVectorAccessor(DateMilliVector vector, IntSupplier currentRowSupplier) throws SQLException {
@@ -41,6 +44,7 @@ public class DateVectorAccessor extends QueryJDBCAccessor {
         this.holder = new Holder();
         this.getter = createGetter(vector);
         this.timeUnit = getTimeUnitForVector(vector);
+        this.nullChecker = vector::isNull;
     }
 
     @Override
@@ -94,8 +98,16 @@ public class DateVectorAccessor extends QueryJDBCAccessor {
     }
 
     private void fillHolder() {
-        getter.get(getCurrentRow(), holder);
-        this.wasNull = holder.isSet == 0;
+        // Source wasNull from vector.isNull(int) rather than holder.isSet. Arrow's
+        // Date*Vector.get(int, holder) currently honors validity unconditionally, but other
+        // vector types (e.g. TimeStamp*) gate that path on arrow.enable_null_check_for_get;
+        // sourcing from isNull keeps null detection independent of any future flag extension.
+        final int row = getCurrentRow();
+        this.wasNull = nullChecker.test(row);
+        if (this.wasNull) {
+            return;
+        }
+        getter.get(row, holder);
     }
 
     protected static TimeUnit getTimeUnitForVector(ValueVector vector) throws SQLException {

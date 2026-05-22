@@ -54,11 +54,14 @@ public class DataCloudArray implements Array {
                     "End offset " + endOffset + " exceeds vector size " + dataVector.getValueCount());
         }
 
-        // Extract data into a new array
+        // Extract data into a new array. For VarChar/VarBinary/FixedSizeBinary/TimeStamp inner
+        // types, FieldVector.getObject(int) is gated by arrow.enable_null_check_for_get and
+        // returns stale buffer bytes for null rows when the flag is off (set by Iceberg). Check
+        // validity explicitly via isNull(int), which is not flag-gated.
         Object[] result = new Object[LargeMemoryUtil.checkedCastToInt(valuesCount)];
         for (int i = 0; i < valuesCount; i++) {
-            long index = startOffset + i;
-            result[i] = dataVector.getObject(LargeMemoryUtil.checkedCastToInt(index));
+            int absIndex = LargeMemoryUtil.checkedCastToInt(startOffset + i);
+            result[i] = dataVector.isNull(absIndex) ? null : dataVector.getObject(absIndex);
         }
         return result;
     }
