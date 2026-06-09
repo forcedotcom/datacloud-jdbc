@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/forcedotcom/datacloud-jdbc/compare/v1.0.0...v1.0.1) (2026-06-09)
+
+
+### Bug Fixes
+
+* **ci:** bump codecov-action v5 -&gt; v6 for keybase GPG migration ([#192](https://github.com/forcedotcom/datacloud-jdbc/issues/192)) ([3169997](https://github.com/forcedotcom/datacloud-jdbc/commit/3169997994efedeea1997a8bf79964cc40e43f90))
+
 ## [1.0.0](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.2...v1.0.0) (2026-05-22)
 
 
