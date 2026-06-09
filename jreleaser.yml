@@ -23,8 +23,9 @@ project:
 
 signing:
   active: ALWAYS
-  armored: true
-  verify: false
+  pgp:
+    armored: true
+    verify: false
 
 deploy:
   maven:
