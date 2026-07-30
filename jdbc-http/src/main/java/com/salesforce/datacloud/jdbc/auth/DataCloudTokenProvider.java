@@ -146,6 +146,11 @@ public class DataCloudTokenProvider {
                 builder.bodyEntry("refresh_token", settings.getRefreshToken());
                 builder.bodyEntry("client_secret", settings.getClientSecret());
                 break;
+            case CLIENT_CREDENTIALS:
+                // https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_client_credentials_flow.htm&type=5
+                builder.bodyEntry("grant_type", "client_credentials");
+                builder.bodyEntry("client_secret", settings.getClientSecret());
+                break;
         }
 
         return builder.build();

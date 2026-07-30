@@ -30,14 +30,14 @@ import lombok.extern.slf4j.Slf4j;
  *
  * Configures authentication mode, credentials, and connection settings.
  *
- * To create a SalesforceAuthProperties instance, in a type-safe way, use
- * the `builderUsingPassword`, `builderUsingPrivateKey`, or `builderUsingRefreshToken`.
+ * The authentication mode is auto-detected from the properties that are present
+ * (see {@link #ofDestructive(URI, Properties)}).
  *
  * Accepts the following properties:
  * - userName: Username for password/private key authentication
  * - password: Password for password authentication
  * - privateKey: Private key for JWT authentication
- * - clientSecret: OAuth client secret (required for PASSWORD and REFRESH_TOKEN modes, not allowed for PRIVATE_KEY/JWT mode)
+ * - clientSecret: OAuth client secret (required for PASSWORD, REFRESH_TOKEN, and CLIENT_CREDENTIALS modes, not allowed for PRIVATE_KEY/JWT mode)
  * - clientId: OAuth client ID (required)
  * - dataspace: Data space identifier, default is null
  * - refreshToken: Refresh token for token-based authentication
@@ -49,7 +49,8 @@ public class SalesforceAuthProperties {
     public enum AuthenticationMode {
         PASSWORD,
         PRIVATE_KEY,
-        REFRESH_TOKEN
+        REFRESH_TOKEN,
+        CLIENT_CREDENTIALS
     }
 
     static final String AUTH_USER_NAME = "userName";
@@ -130,9 +131,14 @@ public class SalesforceAuthProperties {
             // We still accept an optional userName. This might show up
             // in the `DatabaseMetadata.getUserName` call.
             builder.userName(takeOptional(props, AUTH_USER_NAME).orElse(null));
+        } else if (props.containsKey(AUTH_CLIENT_SECRET)) {
+            // https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_client_credentials_flow.htm&type=5
+            // Client credentials flow uses only clientId + clientSecret; there is no user identity.
+            builder.authenticationMode(AuthenticationMode.CLIENT_CREDENTIALS);
+            builder.clientSecret(takeRequired(props, AUTH_CLIENT_SECRET));
         } else {
             throw new SQLException(
-                    "Properties must contain either (userName + password), (userName + privateKey), or refreshToken",
+                    "Properties must contain either (userName + password), (userName + privateKey), refreshToken, or clientSecret",
                     "28000");
         }
 
@@ -172,6 +178,9 @@ public class SalesforceAuthProperties {
                 break;
             case REFRESH_TOKEN:
                 props.setProperty(AUTH_REFRESH_TOKEN, refreshToken);
+                props.setProperty(AUTH_CLIENT_SECRET, clientSecret);
+                break;
+            case CLIENT_CREDENTIALS:
                 props.setProperty(AUTH_CLIENT_SECRET, clientSecret);
                 break;
         }

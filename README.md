@@ -64,7 +64,7 @@ Use `com.salesforce.datacloud.jdbc.DataCloudJDBCDriver` as the driver class name
 
 ### Authentication
 
-We support three of the [OAuth authorization flows][oauth authorization flows] provided by Salesforce.
+We support four of the [OAuth authorization flows][oauth authorization flows] provided by Salesforce.
 All of these flows require a connected app be configured for the driver to authenticate as, see the documentation here: [connected app overview][connected app overview].
 Set the following properties appropriately to establish a connection with your chosen OAuth authorization flow:
 
@@ -112,6 +112,18 @@ The documentation for refresh token authentication can be found [here][refresh t
 ```java
 Properties properties = new Properties();
 properties.put("refreshToken", "${refreshToken}");
+properties.put("clientId", "${clientId}");
+properties.put("clientSecret", "${clientSecret}");
+```
+
+#### client credentials authentication:
+
+The documentation for client credentials authentication can be found [here][client credentials flow].
+
+This flow authenticates as the connected app's run-as user with no interactive user context, so set only `clientId` and `clientSecret`:
+
+```java
+Properties properties = new Properties();
 properties.put("clientId", "${clientId}");
 properties.put("clientSecret", "${clientSecret}");
 ```
@@ -219,5 +231,6 @@ public static void executeQuery() throws ClassNotFoundException, SQLException {
 [username flow]: https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_username_password_flow.htm&type=5
 [jwt flow]: https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_jwt_flow.htm&type=5
 [refresh token flow]: https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_refresh_token_flow.htm&type=5
+[client credentials flow]: https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_client_credentials_flow.htm&type=5
 [connection settings]: https://tableau.github.io/hyper-db/docs/hyper-api/connection#connection-settings
 [connected app overview]: https://help.salesforce.com/s/articleView?id=sf.connected_app_overview.htm&type=5
