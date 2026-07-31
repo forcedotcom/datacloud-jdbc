@@ -209,7 +209,70 @@ class SalesforceAuthPropertiesTest {
         assertThatThrownBy(() -> SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining(
-                        "Properties must contain either (userName + password), (userName + privateKey), or refreshToken");
+                        "Properties must contain either (userName + password), (userName + privateKey), refreshToken");
+    }
+
+    @Test
+    void parsesAuthCodePkceMode() throws SQLException {
+        Properties props = new Properties();
+        props.setProperty("clientId", TEST_CLIENT_ID);
+        props.setProperty("authMode", "AUTH_CODE_PKCE");
+
+        SalesforceAuthProperties authProps = SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props);
+
+        assertThat(authProps.getAuthenticationMode())
+                .isEqualTo(SalesforceAuthProperties.AuthenticationMode.AUTH_CODE_PKCE);
+        assertThat(authProps.getClientId()).isEqualTo(TEST_CLIENT_ID);
+        assertThat(authProps.getClientSecret()).isNull();
+        assertThat(authProps.getOauthScope()).isEqualTo("cdp_query_api api refresh_token");
+        assertThat(authProps.getRedirectPort()).isZero();
+        assertThat(authProps.getBrowserAuthTimeoutSeconds()).isEqualTo(120);
+    }
+
+    @Test
+    void parsesAuthCodePkceWithOptionalFields() throws SQLException {
+        Properties props = new Properties();
+        props.setProperty("clientId", TEST_CLIENT_ID);
+        props.setProperty("clientSecret", TEST_CLIENT_SECRET);
+        props.setProperty("authMode", "AUTH_CODE_PKCE");
+        props.setProperty("oauthScope", "cdp_query_api");
+        props.setProperty("redirectPort", "8765");
+        props.setProperty("browserAuthTimeoutSeconds", "30");
+
+        SalesforceAuthProperties authProps = SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props);
+
+        assertThat(authProps.getAuthenticationMode())
+                .isEqualTo(SalesforceAuthProperties.AuthenticationMode.AUTH_CODE_PKCE);
+        assertThat(authProps.getClientSecret()).isEqualTo(TEST_CLIENT_SECRET);
+        assertThat(authProps.getOauthScope()).isEqualTo("cdp_query_api");
+        assertThat(authProps.getRedirectPort()).isEqualTo(8765);
+        assertThat(authProps.getBrowserAuthTimeoutSeconds()).isEqualTo(30);
+    }
+
+    @Test
+    void rejectsNonPositiveBrowserTimeout() {
+        Properties props = new Properties();
+        props.setProperty("clientId", TEST_CLIENT_ID);
+        props.setProperty("authMode", "AUTH_CODE_PKCE");
+        props.setProperty("browserAuthTimeoutSeconds", "0");
+
+        assertThatThrownBy(() -> SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("browserAuthTimeoutSeconds");
+    }
+
+    @Test
+    void toPropertiesRoundtripAuthCodePkce() throws SQLException {
+        Properties props = new Properties();
+        props.setProperty("clientId", TEST_CLIENT_ID);
+        props.setProperty("authMode", "AUTH_CODE_PKCE");
+        props.setProperty("redirectPort", "8765");
+
+        Properties originalProps = (Properties) props.clone();
+        SalesforceAuthProperties authProps = SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props);
+        Properties roundtripProps = authProps.toProperties();
+
+        assertThat(roundtripProps).isEqualTo(originalProps);
     }
 
     @Test

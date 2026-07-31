@@ -18,11 +18,18 @@ import dev.failsafe.FailsafeException;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.function.CheckedSupplier;
 import io.jsonwebtoken.Jwts;
+import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -36,6 +43,7 @@ import org.apache.commons.lang3.StringUtils;
 @Builder(access = AccessLevel.PRIVATE)
 public class DataCloudTokenProvider {
     private static final URI AUTHENTICATE_URL = URI.create("services/oauth2/token");
+    private static final URI AUTHORIZE_URL = URI.create("services/oauth2/authorize");
     private static final URI EXCHANGE_TOKEN_URL = URI.create("services/a360/token");
 
     @Getter
@@ -44,6 +52,16 @@ public class DataCloudTokenProvider {
     private OkHttpClient client;
     private DataCloudToken cachedDataCloudToken;
     private RetryPolicy<AuthenticationResponseWithError> exponentialBackOffPolicy;
+
+    @Builder.Default
+    private BrowserLauncher browserLauncher = BrowserLauncher.defaultLauncher();
+
+    /**
+     * Once we capture an authorization code via the browser, the resulting
+     * verifier needs to flow into {@link #buildAuthenticate()} on the very next
+     * call. The pair lives only for the duration of one OAuth dance.
+     */
+    private PendingAuthCodeExchange pendingAuthCodeExchange;
 
     public static DataCloudTokenProvider of(
             HttpClientProperties clientProperties, SalesforceAuthProperties authProperties) throws SQLException {
@@ -58,13 +76,108 @@ public class DataCloudTokenProvider {
                 .build();
     }
 
+    /** Visible-for-test entry point that lets unit tests inject a fake browser. */
+    static DataCloudTokenProvider ofForTest(
+            HttpClientProperties clientProperties,
+            SalesforceAuthProperties authProperties,
+            BrowserLauncher browserLauncher)
+            throws SQLException {
+        val client = clientProperties.buildOkHttpClient();
+        val exponentialBackOffPolicy = buildExponentialBackoffRetryPolicy(clientProperties.getMaxRetries());
+        return DataCloudTokenProvider.builder()
+                .client(client)
+                .exponentialBackOffPolicy(exponentialBackOffPolicy)
+                .settings(authProperties)
+                .browserLauncher(browserLauncher)
+                .build();
+    }
+
     private OAuthToken fetchOAuthToken() throws SQLException {
+        if (settings.getAuthenticationMode() == SalesforceAuthProperties.AuthenticationMode.AUTH_CODE_PKCE) {
+            // Drive the user through the browser-based authorization-code+PKCE dance, which
+            // populates `pendingAuthCodeExchange` so that buildAuthenticate() below can read it.
+            runAuthorizationCodeDance();
+        }
         val command = buildAuthenticate();
         val model = getWithRetry(() -> {
             val response = FormCommand.post(this.client, command, OAuthTokenResponse.class);
             return throwExceptionOnError(response, "Received an error when acquiring oauth access token");
         });
         return OAuthToken.of(model);
+    }
+
+    private void runAuthorizationCodeDance() throws SQLException {
+        // PKCE verifier+challenge are generated fresh per dance; never reused across logins.
+        PkceCodes pkce = PkceCodes.generate();
+        String state = randomState();
+
+        try (LoopbackCallbackServer callback = LoopbackCallbackServer.start(settings.getRedirectPort())) {
+            URI redirectUri = callback.getRedirectUri();
+            URI authorizeUrl = buildAuthorizeUrl(pkce.getChallenge(), state, redirectUri);
+            log.info("Opening browser for OAuth authorization at {}", authorizeUrl);
+            browserLauncher.open(authorizeUrl);
+
+            long timeoutMs = (long) settings.getBrowserAuthTimeoutSeconds() * 1000L;
+            LoopbackCallbackServer.Result result = callback.awaitCallback(timeoutMs);
+
+            if (!state.equals(result.getState())) {
+                // State mismatch is a CSRF indicator; reject before doing anything with the code.
+                throw new SQLException(
+                        "OAuth state parameter did not match — possible CSRF, aborting authentication", "28000");
+            }
+            this.pendingAuthCodeExchange =
+                    new PendingAuthCodeExchange(result.getCode(), pkce.getVerifier(), redirectUri.toString());
+        } catch (IOException ex) {
+            throw new SQLException(
+                    "Failed to complete browser-based OAuth authorization: " + ex.getMessage(), "28000", ex);
+        }
+    }
+
+    private URI buildAuthorizeUrl(String codeChallenge, String state, URI redirectUri) {
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("response_type", "code");
+        params.put("client_id", settings.getClientId());
+        params.put("redirect_uri", redirectUri.toString());
+        params.put("code_challenge", codeChallenge);
+        params.put("code_challenge_method", PkceCodes.CHALLENGE_METHOD_S256);
+        params.put("state", state);
+        params.put("scope", settings.getOauthScope());
+        StringBuilder url = new StringBuilder()
+                .append(settings.getLoginUrl().toString())
+                .append(settings.getLoginUrl().toString().endsWith("/") ? "" : "/")
+                .append(AUTHORIZE_URL.toString())
+                .append('?');
+        boolean first = true;
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            if (!first) {
+                url.append('&');
+            }
+            first = false;
+            url.append(urlEncode(entry.getKey())).append('=').append(urlEncode(entry.getValue()));
+        }
+        return URI.create(url.toString());
+    }
+
+    private static String urlEncode(String value) {
+        try {
+            return URLEncoder.encode(value, StandardCharsets.UTF_8.name());
+        } catch (java.io.UnsupportedEncodingException ex) {
+            // UTF-8 is required by every JRE — this branch is unreachable in practice.
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private static String randomState() {
+        byte[] buf = new byte[24];
+        new SecureRandom().nextBytes(buf);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(buf);
+    }
+
+    @lombok.Value
+    private static class PendingAuthCodeExchange {
+        String authorizationCode;
+        String codeVerifier;
+        String redirectUri;
     }
 
     private DataCloudToken exchangeOauthForDataCloudToken() throws SQLException {
@@ -145,6 +258,23 @@ public class DataCloudTokenProvider {
                 builder.bodyEntry("grant_type", "refresh_token");
                 builder.bodyEntry("refresh_token", settings.getRefreshToken());
                 builder.bodyEntry("client_secret", settings.getClientSecret());
+                break;
+            case AUTH_CODE_PKCE:
+                // https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_web_server_flow.htm
+                if (pendingAuthCodeExchange == null) {
+                    throw new SQLException(
+                            "Authorization-code flow requested but no code was captured. "
+                                    + "Did the browser dance fail?",
+                            "28000");
+                }
+                builder.bodyEntry("grant_type", "authorization_code");
+                builder.bodyEntry("code", pendingAuthCodeExchange.getAuthorizationCode());
+                builder.bodyEntry("redirect_uri", pendingAuthCodeExchange.getRedirectUri());
+                builder.bodyEntry("code_verifier", pendingAuthCodeExchange.getCodeVerifier());
+                if (StringUtils.isNotEmpty(settings.getClientSecret())) {
+                    // Confidential ECAs still expect a client_secret alongside the verifier.
+                    builder.bodyEntry("client_secret", settings.getClientSecret());
+                }
                 break;
         }
 

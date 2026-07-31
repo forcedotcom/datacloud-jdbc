@@ -5,6 +5,7 @@
 package com.salesforce.datacloud.jdbc.auth;
 
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptional;
+import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptionalInteger;
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeRequired;
 
 import com.google.common.collect.ImmutableList;
@@ -37,10 +38,15 @@ import lombok.extern.slf4j.Slf4j;
  * - userName: Username for password/private key authentication
  * - password: Password for password authentication
  * - privateKey: Private key for JWT authentication
- * - clientSecret: OAuth client secret (required for PASSWORD and REFRESH_TOKEN modes, not allowed for PRIVATE_KEY/JWT mode)
+ * - clientSecret: OAuth client secret (required for PASSWORD and REFRESH_TOKEN modes, not allowed for PRIVATE_KEY/JWT mode,
+ *                 optional for AUTH_CODE_PKCE mode for confidential clients)
  * - clientId: OAuth client ID (required)
  * - dataspace: Data space identifier, default is null
  * - refreshToken: Refresh token for token-based authentication
+ * - authMode: Selects AUTH_CODE_PKCE explicitly when no other credentials are present
+ * - oauthScope: OAuth scope to request during the authorization-code flow (default: cdp_query_api api refresh_token)
+ * - redirectPort: Port for the loopback OAuth callback (default 0 = pick a free ephemeral port)
+ * - browserAuthTimeoutSeconds: How long to wait for the user to complete the browser flow (default 120)
  */
 @Slf4j
 @Getter
@@ -49,7 +55,8 @@ public class SalesforceAuthProperties {
     public enum AuthenticationMode {
         PASSWORD,
         PRIVATE_KEY,
-        REFRESH_TOKEN
+        REFRESH_TOKEN,
+        AUTH_CODE_PKCE
     }
 
     static final String AUTH_USER_NAME = "userName";
@@ -59,6 +66,13 @@ public class SalesforceAuthProperties {
     static final String AUTH_CLIENT_SECRET = "clientSecret";
     static final String AUTH_REFRESH_TOKEN = "refreshToken";
     static final String AUTH_DATASPACE = "dataspace";
+    static final String AUTH_MODE = "authMode";
+    static final String AUTH_OAUTH_SCOPE = "oauthScope";
+    static final String AUTH_REDIRECT_PORT = "redirectPort";
+    static final String AUTH_BROWSER_TIMEOUT_SECONDS = "browserAuthTimeoutSeconds";
+
+    static final String DEFAULT_OAUTH_SCOPE = "cdp_query_api api refresh_token";
+    static final int DEFAULT_BROWSER_TIMEOUT_SECONDS = 120;
 
     // Required fields
     private final URI loginUrl;
@@ -80,6 +94,16 @@ public class SalesforceAuthProperties {
 
     // For `AuthenticationMode.REFRESH_TOKEN`
     private final String refreshToken;
+
+    // For `AuthenticationMode.AUTH_CODE_PKCE`
+    @Builder.Default
+    private final String oauthScope = DEFAULT_OAUTH_SCOPE;
+
+    @Builder.Default
+    private final int redirectPort = 0;
+
+    @Builder.Default
+    private final int browserAuthTimeoutSeconds = DEFAULT_BROWSER_TIMEOUT_SECONDS;
 
     // Optional fields
     @Builder.Default
@@ -106,6 +130,11 @@ public class SalesforceAuthProperties {
         // Optional fields
         builder.dataspace(takeOptional(props, AUTH_DATASPACE).orElse(null));
 
+        // The caller can request the AUTH_CODE_PKCE flow explicitly, in case the connection
+        // properties are otherwise empty (no userName/password/privateKey/refreshToken).
+        boolean explicitPkce =
+                "AUTH_CODE_PKCE".equals(takeOptional(props, AUTH_MODE).orElse(null));
+
         // Determine authentication mode and set credentials
         if (props.containsKey(AUTH_USER_NAME) && props.containsKey(AUTH_PASSWORD)) {
             builder.authenticationMode(AuthenticationMode.PASSWORD);
@@ -130,9 +159,22 @@ public class SalesforceAuthProperties {
             // We still accept an optional userName. This might show up
             // in the `DatabaseMetadata.getUserName` call.
             builder.userName(takeOptional(props, AUTH_USER_NAME).orElse(null));
+        } else if (explicitPkce) {
+            builder.authenticationMode(AuthenticationMode.AUTH_CODE_PKCE);
+            // clientSecret is optional: ECAs may be configured as confidential or public clients.
+            builder.clientSecret(takeOptional(props, AUTH_CLIENT_SECRET).orElse(null));
+            builder.oauthScope(takeOptional(props, AUTH_OAUTH_SCOPE).orElse(DEFAULT_OAUTH_SCOPE));
+            builder.redirectPort(takeOptionalInteger(props, AUTH_REDIRECT_PORT).orElse(0));
+            int timeout =
+                    takeOptionalInteger(props, AUTH_BROWSER_TIMEOUT_SECONDS).orElse(DEFAULT_BROWSER_TIMEOUT_SECONDS);
+            if (timeout <= 0) {
+                throw new SQLException(AUTH_BROWSER_TIMEOUT_SECONDS + " must be a positive number of seconds", "28000");
+            }
+            builder.browserAuthTimeoutSeconds(timeout);
         } else {
             throw new SQLException(
-                    "Properties must contain either (userName + password), (userName + privateKey), or refreshToken",
+                    "Properties must contain either (userName + password), (userName + privateKey), refreshToken, "
+                            + "or authMode=AUTH_CODE_PKCE",
                     "28000");
         }
 
@@ -173,6 +215,21 @@ public class SalesforceAuthProperties {
             case REFRESH_TOKEN:
                 props.setProperty(AUTH_REFRESH_TOKEN, refreshToken);
                 props.setProperty(AUTH_CLIENT_SECRET, clientSecret);
+                break;
+            case AUTH_CODE_PKCE:
+                props.setProperty(AUTH_MODE, AuthenticationMode.AUTH_CODE_PKCE.name());
+                if (clientSecret != null) {
+                    props.setProperty(AUTH_CLIENT_SECRET, clientSecret);
+                }
+                if (!DEFAULT_OAUTH_SCOPE.equals(oauthScope)) {
+                    props.setProperty(AUTH_OAUTH_SCOPE, oauthScope);
+                }
+                if (redirectPort != 0) {
+                    props.setProperty(AUTH_REDIRECT_PORT, Integer.toString(redirectPort));
+                }
+                if (browserAuthTimeoutSeconds != DEFAULT_BROWSER_TIMEOUT_SECONDS) {
+                    props.setProperty(AUTH_BROWSER_TIMEOUT_SECONDS, Integer.toString(browserAuthTimeoutSeconds));
+                }
                 break;
         }
 

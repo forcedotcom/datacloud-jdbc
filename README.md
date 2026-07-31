@@ -64,18 +64,22 @@ Use `com.salesforce.datacloud.jdbc.DataCloudJDBCDriver` as the driver class name
 
 ### Authentication
 
-We support three of the [OAuth authorization flows][oauth authorization flows] provided by Salesforce.
-All of these flows require a connected app be configured for the driver to authenticate as, see the documentation here: [connected app overview][connected app overview].
+We support four of the [OAuth authorization flows][oauth authorization flows] provided by Salesforce.
+All of these flows require a connected app or external client app be configured for the driver to authenticate as, see the documentation here: [connected app overview][connected app overview].
 Set the following properties appropriately to establish a connection with your chosen OAuth authorization flow:
 
-| Parameter    | Description                                                                                                          |
-|--------------|----------------------------------------------------------------------------------------------------------------------|
-| user         | The login name of the user.                                                                                          |
-| password     | The password of the user.                                                                                            |
-| clientId     | The consumer key of the connected app.                                                                               |
-| clientSecret | The consumer secret of the connected app.                                                                            |
-| privateKey   | The private key of the connected app.                                                                                |
-| refreshToken | Token obtained from the web server, user-agent, or hybrid app token flow.                                            |
+| Parameter                  | Description                                                                                                          |
+|----------------------------|----------------------------------------------------------------------------------------------------------------------|
+| user                       | The login name of the user.                                                                                          |
+| password                   | The password of the user.                                                                                            |
+| clientId                   | The consumer key of the connected app.                                                                               |
+| clientSecret               | The consumer secret of the connected app.                                                                            |
+| privateKey                 | The private key of the connected app.                                                                                |
+| refreshToken               | Token obtained from the web server, user-agent, or hybrid app token flow.                                            |
+| authMode                   | Set to `AUTH_CODE_PKCE` to trigger the interactive browser-based authorization-code flow with PKCE.                  |
+| oauthScope                 | (Optional, AUTH_CODE_PKCE only) Space-separated OAuth scopes; defaults to `cdp_query_api api refresh_token`.         |
+| redirectPort               | (Optional, AUTH_CODE_PKCE only) Loopback port for the OAuth callback; default `0` (pick a free ephemeral port).      |
+| browserAuthTimeoutSeconds  | (Optional, AUTH_CODE_PKCE only) How long to wait for the browser dance to complete; default `120`.                   |
 
 
 #### username and password authentication:
@@ -115,6 +119,103 @@ properties.put("refreshToken", "${refreshToken}");
 properties.put("clientId", "${clientId}");
 properties.put("clientSecret", "${clientSecret}");
 ```
+
+#### interactive browser authentication (authorization code with PKCE):
+
+The driver can drive the [OAuth web server flow][web server flow] for you: it
+opens the user's default browser at the Salesforce login screen, listens on a
+loopback HTTP port for the redirect callback, and exchanges the resulting
+authorization code for an access token using
+[Proof Key for Code Exchange (RFC 7636)][rfc7636]. No long-lived secret needs
+to be present in the configuration — the per-login PKCE verifier replaces a
+`client_secret` for public clients.
+
+```java
+Properties properties = new Properties();
+properties.put("authMode", "AUTH_CODE_PKCE");
+properties.put("clientId", "${clientId}");
+properties.put("redirectPort", "7171"); // must match the ECA's registered Callback URL
+// Optional: properties.put("clientSecret", "${clientSecret}"); // for confidential ECAs
+```
+
+**Pin the port.** Salesforce External Client Apps match the redirect URI as an
+exact string — wildcard ports are *not* supported. Pick a fixed `redirectPort`
+(e.g. `7171`) and register `http://127.0.0.1:7171/callback` in the ECA's
+Callback URL field. If you don't pin the port, the driver picks a free
+ephemeral one, which won't match anything the ECA has registered and
+authentication will fail with `redirect_uri_mismatch`.
+
+Headless environments (servers without a display) are supported as a
+fallback: the driver prints the authorization URL to stderr so a human can
+paste it into a browser manually.
+
+##### Setting up the External Client App for this flow
+
+The ECA needs the following settings. The fastest path is the **Setup UI**;
+an automated path using anonymous Apex is described further below.
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| **Enable OAuth** | checked | gates everything below |
+| **Callback URL** | `http://127.0.0.1:7171/callback` (one line per port if multiple) | matched as an exact string by Salesforce |
+| **OAuth Scopes** | `cdp_query_api`, `api`, `refresh_token` | Data Cloud Query API plus token refresh |
+| **Require Proof Key for Code Exchange (PKCE) Extension for Supported Authorization Flows** | checked | rejects code-exchange requests that don't carry a verifier |
+| **Require Secret for Web Server Flow** | unchecked | makes the ECA a *public client* — the driver doesn't ship a `client_secret` |
+| **Require Secret for Refresh Token Flow** | unchecked | same reason as above |
+
+In the Setup UI: **Setup → External Client Apps → New External Client App**,
+fill in Name / Contact Email / Distribution State, check **Enable OAuth**,
+then set the fields above. Save and copy the generated **Consumer Key** —
+that's the value you pass as `clientId` to the driver.
+
+##### Headless / scripted ECA creation
+
+There is no `sf eca create` CLI command. The realistic automated path is:
+
+1. Author SFDX-source XML for the three metadata types
+   ([`ExternalClientApplication`][eca-meta], [`ExtlClntAppOauthSettings`][eca-oauth-meta],
+   [`ExtlClntAppGlobalOauthSettings`][eca-global-oauth-meta]).
+2. Deploy the `ExternalClientApplication` header with `sf project deploy start`.
+3. Run anonymous Apex that calls `Metadata.Operations.enqueueDeployment` to
+   create the OAuth and Global-OAuth records — these two types cannot be
+   round-tripped by `sf project deploy` alone today. The
+   [flxbl-io ECA guide][flxbl-eca-guide] is the canonical reference and
+   includes a working `bootstrap-eca-oauth.apex` script you can adapt.
+
+Minimal `force-app/main/default/externalClientApps/DataCloudJDBC.eca-meta.xml`:
+
+```xml
+<ExternalClientApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <contactEmail>admin@example.com</contactEmail>
+    <distributionState>Local</distributionState>
+    <isProtected>false</isProtected>
+    <label>DataCloudJDBC</label>
+</ExternalClientApplication>
+```
+
+The OAuth/global-OAuth records the bootstrap Apex creates correspond to:
+
+```xml
+<!-- DataCloudJDBC_oauth.ecaOauth-meta.xml -->
+<ExtlClntAppOauthSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <commaSeparatedOauthScopes>CdpQueryApi, Api, RefreshToken</commaSeparatedOauthScopes>
+    <externalClientApplication>DataCloudJDBC</externalClientApplication>
+    <label>DataCloudJDBC_oauth</label>
+</ExtlClntAppOauthSettings>
+
+<!-- DataCloudJDBC_glbloauth.ecaGlblOauth-meta.xml -->
+<ExtlClntAppGlobalOauthSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <callbackUrl>http://127.0.0.1:7171/callback</callbackUrl>
+    <externalClientApplication>DataCloudJDBC</externalClientApplication>
+    <isConsumerSecretOptional>true</isConsumerSecretOptional>
+    <isPkceRequired>true</isPkceRequired>
+    <isSecretRequiredForRefreshToken>false</isSecretRequiredForRefreshToken>
+    <label>DataCloudJDBC_glbloauth</label>
+</ExtlClntAppGlobalOauthSettings>
+```
+
+`isConsumerSecretOptional=true` is the public-client toggle and
+`isPkceRequired=true` is the matching server-side enforcement.
 
 ### Connection settings
 
@@ -219,5 +320,11 @@ public static void executeQuery() throws ClassNotFoundException, SQLException {
 [username flow]: https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_username_password_flow.htm&type=5
 [jwt flow]: https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_jwt_flow.htm&type=5
 [refresh token flow]: https://help.salesforce.com/s/articleView?id=sf.remoteaccess_oauth_refresh_token_flow.htm&type=5
+[web server flow]: https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_web_server_flow.htm&type=5
+[rfc7636]: https://datatracker.ietf.org/doc/html/rfc7636
+[eca-meta]: https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_externalclientapplication.htm
+[eca-oauth-meta]: https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_extlclntappoauthsettings.htm
+[eca-global-oauth-meta]: https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_extlclntappglobaloauthsettings.htm
+[flxbl-eca-guide]: https://github.com/flxbl-io/external-client-apps-guide
 [connection settings]: https://tableau.github.io/hyper-db/docs/hyper-api/connection#connection-settings
 [connected app overview]: https://help.salesforce.com/s/articleView?id=sf.connected_app_overview.htm&type=5
