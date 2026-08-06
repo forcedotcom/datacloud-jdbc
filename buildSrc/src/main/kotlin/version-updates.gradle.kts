@@ -31,8 +31,8 @@ versionCatalogUpdate {
         } else if ("org.mockito" in it.candidate.group && !candidateVersion.startsWith("4.")) {
             //This is soft pinned to 4.* (as 5 is not Java 8 compatible)
             false
-        } else if ("io.netty" in it.candidate.group && !candidateVersion.startsWith("4.1.")) {
-            // Netty is soft pinned to 4.1.* as gRPC requires the 4.1.x line
+        } else if ("io.netty" in it.candidate.group && !candidateVersion.startsWith("4.2.")) {
+            // Netty is soft pinned to the 4.2.* line used by gRPC
             false
         } else {
             stableKeyword || regex.matches(candidateVersion)
