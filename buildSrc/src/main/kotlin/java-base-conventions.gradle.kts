@@ -37,7 +37,9 @@ dependencies {
             "io.netty:netty-codec-http2",
             "io.netty:netty-common",
             "io.netty:netty-handler",
+            "io.netty:netty-handler-proxy",
             "io.netty:netty-resolver",
+            "io.netty:netty-codec-socks",
             "io.netty:netty-transport",
             "io.netty:netty-transport-native-unix-common",
         ).forEach { module ->
