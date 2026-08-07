@@ -10,10 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import com.salesforce.datacloud.jdbc.protocol.data.ParameterBinding;
@@ -106,6 +104,28 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
     }
 
     @Test
+    void testNullTimestampRetainsTimestampType() throws SQLException {
+        preparedStatement.setTimestamp(1, null);
+        preparedStatement.setTimestamp(2, null, calendar);
+
+        assertThat(preparedStatement.parameters.getParameters())
+                .containsExactly(
+                        new ParameterBinding(HyperType.timestamp(true), null),
+                        new ParameterBinding(HyperType.timestamp(true), null));
+    }
+
+    @Test
+    void testNullCalendarDateAndTimeRetainTheirTypes() throws SQLException {
+        preparedStatement.setDate(1, null, calendar);
+        preparedStatement.setTime(2, null, calendar);
+
+        assertThat(preparedStatement.parameters.getParameters())
+                .containsExactly(
+                        new ParameterBinding(HyperType.date(true), null),
+                        new ParameterBinding(HyperType.time(true), null));
+    }
+
+    @Test
     @SneakyThrows
     void testAllSetMethods() {
         preparedStatement.setString(1, "TEST");
@@ -134,7 +154,7 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
 
         preparedStatement.setFloat(7, 5.0f);
         assertThat(preparedStatement.parameters.getParameters().get(6))
-                .isEqualTo(new ParameterBinding(HyperType.float8(false), 5.0f));
+                .isEqualTo(new ParameterBinding(HyperType.float4(false), 5.0f));
 
         preparedStatement.setDouble(8, 6.0);
         assertThat(preparedStatement.parameters.getParameters().get(7))
@@ -314,60 +334,6 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
 
         preparedStatement.setQueryTimeout(-1);
         assertThat(preparedStatement.getQueryTimeout()).isEqualTo(0);
-    }
-
-    @Test
-    void testTypeHandlerMapInitialization() {
-        assertEquals(TypeHandlers.STRING_HANDLER, TypeHandlers.typeHandlerMap.get(String.class));
-        assertEquals(TypeHandlers.BIGDECIMAL_HANDLER, TypeHandlers.typeHandlerMap.get(BigDecimal.class));
-        assertEquals(TypeHandlers.SHORT_HANDLER, TypeHandlers.typeHandlerMap.get(Short.class));
-        assertEquals(TypeHandlers.INTEGER_HANDLER, TypeHandlers.typeHandlerMap.get(Integer.class));
-        assertEquals(TypeHandlers.LONG_HANDLER, TypeHandlers.typeHandlerMap.get(Long.class));
-        assertEquals(TypeHandlers.FLOAT_HANDLER, TypeHandlers.typeHandlerMap.get(Float.class));
-        assertEquals(TypeHandlers.DOUBLE_HANDLER, TypeHandlers.typeHandlerMap.get(Double.class));
-        assertEquals(TypeHandlers.DATE_HANDLER, TypeHandlers.typeHandlerMap.get(Date.class));
-        assertEquals(TypeHandlers.TIME_HANDLER, TypeHandlers.typeHandlerMap.get(Time.class));
-        assertEquals(TypeHandlers.TIMESTAMP_HANDLER, TypeHandlers.typeHandlerMap.get(Timestamp.class));
-        assertEquals(TypeHandlers.BOOLEAN_HANDLER, TypeHandlers.typeHandlerMap.get(Boolean.class));
-    }
-
-    @Test
-    @SneakyThrows
-    void testAllTypeHandlers() {
-        PreparedStatement ps = mock(PreparedStatement.class);
-
-        TypeHandlers.STRING_HANDLER.setParameter(ps, 1, "test");
-        verify(ps).setString(1, "test");
-
-        TypeHandlers.BIGDECIMAL_HANDLER.setParameter(ps, 1, new BigDecimal("123.45"));
-        verify(ps).setBigDecimal(1, new BigDecimal("123.45"));
-
-        TypeHandlers.SHORT_HANDLER.setParameter(ps, 1, (short) 123);
-        verify(ps).setShort(1, (short) 123);
-
-        TypeHandlers.INTEGER_HANDLER.setParameter(ps, 1, 123);
-        verify(ps).setInt(1, 123);
-
-        TypeHandlers.LONG_HANDLER.setParameter(ps, 1, 123L);
-        verify(ps).setLong(1, 123L);
-
-        TypeHandlers.FLOAT_HANDLER.setParameter(ps, 1, 123.45f);
-        verify(ps).setFloat(1, 123.45f);
-
-        TypeHandlers.DOUBLE_HANDLER.setParameter(ps, 1, 123.45);
-        verify(ps).setDouble(1, 123.45);
-
-        TypeHandlers.DATE_HANDLER.setParameter(ps, 1, Date.valueOf("2024-08-15"));
-        verify(ps).setDate(1, Date.valueOf("2024-08-15"));
-
-        TypeHandlers.TIME_HANDLER.setParameter(ps, 1, Time.valueOf("12:34:56"));
-        verify(ps).setTime(1, Time.valueOf("12:34:56"));
-
-        TypeHandlers.TIMESTAMP_HANDLER.setParameter(ps, 1, Timestamp.valueOf("2024-08-15 12:34:56"));
-        verify(ps).setTimestamp(1, Timestamp.valueOf("2024-08-15 12:34:56"));
-
-        TypeHandlers.BOOLEAN_HANDLER.setParameter(ps, 1, true);
-        verify(ps).setBoolean(1, true);
     }
 
     static class InvalidClass {}

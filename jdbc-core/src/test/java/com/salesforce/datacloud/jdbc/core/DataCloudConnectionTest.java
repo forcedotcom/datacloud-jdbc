@@ -35,6 +35,14 @@ class DataCloudConnectionTest extends InterceptedHyperTestBase {
     }
 
     @Test
+    void testPrepareNamedStatement() {
+        try (val connection = getInterceptedClientConnection()) {
+            val statement = connection.prepareNamedStatement("SELECT :value");
+            assertThat(statement).isInstanceOf(DataCloudNamedPreparedStatement.class);
+        }
+    }
+
+    @Test
     void testClose() {
         try (val connection = getInterceptedClientConnection()) {
             assertThat(connection.isClosed()).isFalse();

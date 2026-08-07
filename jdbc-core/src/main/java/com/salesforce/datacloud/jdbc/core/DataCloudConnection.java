@@ -187,6 +187,14 @@ public class DataCloudConnection implements Connection {
     }
 
     /**
+     * Creates a prepared statement for SQL containing named parameters such as
+     * {@code SELECT :accountId}.
+     */
+    public DataCloudNamedPreparedStatement prepareNamedStatement(String sql) {
+        return new DataCloudNamedPreparedStatement(this, sql);
+    }
+
+    /**
      * Retrieves a collection of rows for the specified query within the specified range.
      * <b>Important:</b> Before calling this method, you must ensure that the requested row range is available on the server.
      * Use {@link #waitFor(String, Duration, Predicate)} with an appropriate predicate to wait until the desired number of rows
