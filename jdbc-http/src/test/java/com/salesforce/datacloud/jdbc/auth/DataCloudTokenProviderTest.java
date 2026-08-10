@@ -59,6 +59,13 @@ class DataCloudTokenProviderTest {
         return properties;
     }
 
+    static Properties propertiesForClientCredentials(String clientId, String clientSecret) {
+        val properties = new Properties();
+        properties.setProperty(SalesforceAuthProperties.AUTH_CLIENT_ID, clientId);
+        properties.setProperty(SalesforceAuthProperties.AUTH_CLIENT_SECRET, clientSecret);
+        return properties;
+    }
+
     // Valid RSA private key in PEM format for testing
     private static final String FAKE_PRIVATE_KEY = SalesforceAuthPropertiesTest.FAKE_PRIVATE_KEY;
 
@@ -462,6 +469,82 @@ class DataCloudTokenProviderTest {
             assertThat(actual.getAccessToken()).as("access token").isEqualTo(expected.getAccessToken());
             assertThat(actual.getTenantUrl()).as("tenant url").isEqualTo(expected.getTenantUrl());
             assertThat(actual.getTenantId()).as("tenant id").isEqualTo(FAKE_TENANT_ID);
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void testClientCredentialsAuthenticationSuccess() {
+        val mapper = new ObjectMapper();
+        val clientId = UUID.randomUUID().toString();
+        val clientSecret = UUID.randomUUID().toString();
+        val properties = propertiesForClientCredentials(clientId, clientSecret);
+        val oAuthTokenResponse = new OAuthTokenResponse();
+        val accessToken = UUID.randomUUID().toString();
+        oAuthTokenResponse.setToken(accessToken);
+
+        try (val server = new MockWebServer()) {
+            server.start();
+            oAuthTokenResponse.setInstanceUrl(server.url("").toString());
+            server.enqueue(new MockResponse().setBody(mapper.writeValueAsString(oAuthTokenResponse)));
+
+            val loginUrl = server.url("").uri();
+            HttpClientProperties clientProperties = HttpClientProperties.ofDestructive(properties);
+            SalesforceAuthProperties authProperties = SalesforceAuthProperties.ofDestructive(loginUrl, properties);
+            val actual =
+                    DataCloudTokenProvider.of(clientProperties, authProperties).getOAuthToken();
+
+            assertThat(actual.getToken()).as("access token").isEqualTo(accessToken);
+
+            val request = server.takeRequest();
+            val body = request.getBody().readUtf8();
+            softly.assertThat(body).as("grant_type").contains("grant_type=client_credentials");
+            softly.assertThat(body).as("client_id").contains("client_id=" + clientId);
+            softly.assertThat(body).as("client_secret").contains("client_secret=" + clientSecret);
+            // Client credentials carries no user identity - guard against accidentally leaking one.
+            softly.assertThat(body).as("no username").doesNotContain("username=");
+            softly.assertThat(body).as("no password").doesNotContain("password=");
+            softly.assertThat(body).as("no refresh_token").doesNotContain("refresh_token=");
+        }
+    }
+
+    // Also includes the token exchange flow, with a dataspace to confirm the shared exchange leg is reached.
+    @SneakyThrows
+    @Test
+    void testClientCredentialsBasedDataCloudTokenFlow() {
+        val mapper = new ObjectMapper();
+        val dataspace = UUID.randomUUID().toString();
+        val properties = propertiesForClientCredentials("clientId", "clientSecret");
+        properties.put(SalesforceAuthProperties.AUTH_DATASPACE, dataspace);
+        val oAuthTokenResponse = new OAuthTokenResponse();
+        oAuthTokenResponse.setToken(UUID.randomUUID().toString());
+
+        try (val server = new MockWebServer()) {
+            server.start();
+            oAuthTokenResponse.setInstanceUrl(server.url("").toString());
+            val dataCloudTokenResponse = new DataCloudTokenResponse();
+            dataCloudTokenResponse.setTokenType(UUID.randomUUID().toString());
+            dataCloudTokenResponse.setExpiresIn(60000);
+            dataCloudTokenResponse.setToken(FAKE_TOKEN);
+            dataCloudTokenResponse.setInstanceUrl(server.url("").toString());
+            val expected = DataCloudToken.of(dataCloudTokenResponse);
+
+            server.enqueue(new MockResponse().setBody(mapper.writeValueAsString(oAuthTokenResponse)));
+            server.enqueue(new MockResponse().setBody(mapper.writeValueAsString(dataCloudTokenResponse)));
+
+            val loginUrl = server.url("").uri();
+            HttpClientProperties clientProperties = HttpClientProperties.ofDestructive(properties);
+            SalesforceAuthProperties authProperties = SalesforceAuthProperties.ofDestructive(loginUrl, properties);
+
+            val processor = DataCloudTokenProvider.of(clientProperties, authProperties);
+            val actual = processor.getDataCloudToken();
+
+            assertThat(actual.getAccessToken()).as("access token").isEqualTo(expected.getAccessToken());
+            assertThat(actual.getTenantUrl()).as("tenant url").isEqualTo(expected.getTenantUrl());
+            assertThat(actual.getTenantId()).as("tenant id").isEqualTo(FAKE_TENANT_ID);
+            assertThat(processor.getLakehouseName())
+                    .as("lakehouse")
+                    .isEqualTo("lakehouse:" + FAKE_TENANT_ID + ";" + dataspace);
         }
     }
 

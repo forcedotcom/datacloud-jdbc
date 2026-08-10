@@ -141,6 +141,50 @@ class SalesforceAuthPropertiesTest {
     }
 
     @Test
+    void parsesClientCredentialsAuthenticationProperties() throws SQLException {
+        Properties props = new Properties();
+        props.setProperty("clientId", TEST_CLIENT_ID);
+        props.setProperty("clientSecret", TEST_CLIENT_SECRET);
+        props.setProperty("dataspace", TEST_DATASPACE);
+
+        SalesforceAuthProperties authProps = SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props);
+
+        assertThat(authProps.getLoginUrl()).isEqualTo(TEST_LOGIN_URL);
+        assertThat(authProps.getAuthenticationMode())
+                .isEqualTo(SalesforceAuthProperties.AuthenticationMode.CLIENT_CREDENTIALS);
+        assertThat(authProps.getClientId()).isEqualTo(TEST_CLIENT_ID);
+        assertThat(authProps.getClientSecret()).isEqualTo(TEST_CLIENT_SECRET);
+        assertThat(authProps.getDataspace()).isEqualTo(TEST_DATASPACE);
+        assertThat(authProps.getUserName()).isNull();
+    }
+
+    @Test
+    void toPropertiesRoundtripClientCredentialsAuthentication() throws SQLException {
+        Properties props = new Properties();
+        props.setProperty("clientId", TEST_CLIENT_ID);
+        props.setProperty("clientSecret", TEST_CLIENT_SECRET);
+        props.setProperty("dataspace", TEST_DATASPACE);
+
+        Properties originalProps = (Properties) props.clone();
+        SalesforceAuthProperties authProps = SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props);
+        Properties roundtripProps = authProps.toProperties();
+
+        assertThat(roundtripProps).isEqualTo(originalProps);
+    }
+
+    @Test
+    void rejectsUserNameMixedWithClientCredentials() {
+        Properties props = new Properties();
+        props.setProperty("clientId", TEST_CLIENT_ID);
+        props.setProperty("clientSecret", TEST_CLIENT_SECRET);
+        props.setProperty("userName", TEST_USER_NAME); // no password -> not PASSWORD mode
+
+        assertThatThrownBy(() -> SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("Properties from different authentication modes cannot be mixed");
+    }
+
+    @Test
     void parsesPropertiesWithoutDataspace() throws SQLException {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
@@ -203,13 +247,12 @@ class SalesforceAuthPropertiesTest {
     void rejectsInvalidAuthenticationMode() {
         Properties props = new Properties();
         props.setProperty("clientId", TEST_CLIENT_ID);
-        props.setProperty("clientSecret", TEST_CLIENT_SECRET);
-        // Missing all authentication credentials
+        // Missing all authentication credentials (no clientSecret, password, privateKey, or refreshToken)
 
         assertThatThrownBy(() -> SalesforceAuthProperties.ofDestructive(TEST_LOGIN_URL, props))
                 .isInstanceOf(SQLException.class)
                 .hasMessageContaining(
-                        "Properties must contain either (userName + password), (userName + privateKey), or refreshToken");
+                        "Properties must contain either (userName + password), (userName + privateKey), refreshToken, or clientSecret");
     }
 
     @Test
