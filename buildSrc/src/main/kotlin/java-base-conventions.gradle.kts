@@ -1,3 +1,5 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+
 plugins {
     id("base-conventions")
     `java-library`
@@ -19,6 +21,8 @@ val nettyVersion = extensions.getByType<VersionCatalogsExtension>()
     .get()
     .requiredVersion
 
+val nettyConstraintProjects = setOf("jdbc", "jdbc-core", "jdbc-grpc")
+
 // Exclude grpc-netty-shaded (pulled in transitively by grpcmock) to prevent it from winning
 // gRPC provider discovery over our grpc-netty. The shaded variant has higher priority, and
 // mixing its older transport with our grpc-core version causes channels to never terminate.
@@ -26,18 +30,22 @@ configurations.all {
     exclude(group = "io.grpc", module = "grpc-netty-shaded")
 }
 
-dependencies {
+if (project.name in nettyConstraintProjects) dependencies {
     constraints {
-        // gRPC and Arrow pull in Netty 4.1.x transitively. These constraints enforce a minimum
-        // version to fix security vulnerabilities. Keep the version in gradle/libs.versions.toml.
+        // gRPC pulls in Netty 4.2.x while Arrow 17 pulls in 4.1.x. Align every module on the
+        // catalog version to avoid mixing incompatible Netty lines and to fix vulnerabilities.
         listOf(
             "io.netty:netty-buffer",
             "io.netty:netty-codec",
+            "io.netty:netty-codec-base",
+            "io.netty:netty-codec-compression",
             "io.netty:netty-codec-http",
             "io.netty:netty-codec-http2",
             "io.netty:netty-common",
             "io.netty:netty-handler",
+            "io.netty:netty-handler-proxy",
             "io.netty:netty-resolver",
+            "io.netty:netty-codec-socks",
             "io.netty:netty-transport",
             "io.netty:netty-transport-native-unix-common",
         ).forEach { module ->
@@ -47,6 +55,11 @@ dependencies {
 }
 
 tasks.withType<Test>().configureEach {
+    extensions.configure<JacocoTaskExtension> {
+        // Netty's JFR allocation events may be retransformed after JaCoCo instruments them.
+        excludes = listOf("io.netty.buffer.*Event")
+    }
+
     javaLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(8)
     }
