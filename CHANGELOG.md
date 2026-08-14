@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/forcedotcom/datacloud-jdbc/compare/v1.0.0...v1.1.0) (2026-08-14)
+
+
+### Features
+
+* **auth:** support OAuth 2.0 client credentials flow ([#195](https://github.com/forcedotcom/datacloud-jdbc/issues/195)) ([223c85a](https://github.com/forcedotcom/datacloud-jdbc/commit/223c85ad58b385bc8a87bfdaaef7804280417423))
+
+
+### Bug Fixes
+
+* **ci:** bump codecov-action v5 -&gt; v6 for keybase GPG migration ([#192](https://github.com/forcedotcom/datacloud-jdbc/issues/192)) ([3169997](https://github.com/forcedotcom/datacloud-jdbc/commit/3169997994efedeea1997a8bf79964cc40e43f90))
+
 ## [1.0.0](https://github.com/forcedotcom/datacloud-jdbc/compare/v0.42.2...v1.0.0) (2026-05-22)
 
 
