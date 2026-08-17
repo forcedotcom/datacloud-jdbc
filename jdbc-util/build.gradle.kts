@@ -5,8 +5,8 @@ plugins {
 }
 
 description = "Utilities for Java's Stream, Properties, String, etc. for Salesforce Data Cloud JDBC driver"
-val mavenName: String by extra("Salesforce Data Cloud JDBC Utilities")
-val mavenDescription: String by extra("${project.description}")
+extra.set("mavenName", "Salesforce Data Cloud JDBC Utilities")
+extra.set("mavenDescription", project.description.toString())
 
 dependencies {
     implementation(libs.slf4j.api)

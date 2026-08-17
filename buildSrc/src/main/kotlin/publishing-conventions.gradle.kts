@@ -6,8 +6,8 @@ plugins {
     id("dev.adamko.dev-publish")
 }
 
-val mavenName: String by project.extra
-val mavenDescription: String by project.extra
+val mavenName = providers.provider { project.extra["mavenName"].toString() }
+val mavenDescription = providers.provider { project.extra["mavenDescription"].toString() }
 
 // workaround for https://github.com/gradle/gradle/issues/16543
 inline fun <reified T : Task> TaskContainer.provider(taskName: String): Provider<T> =
@@ -47,17 +47,15 @@ fun MavenPublication.configurePom(nameProvider: Provider<String>, descProvider: 
 
 publishing {
     publications {
-        val nameProvider = provider { mavenName }
-        val descProvider = provider { mavenDescription }
         if (components.findByName("java") != null) {
             create<MavenPublication>("mavenJava") {
                 from(components["java"])
-                configurePom(nameProvider, descProvider)
+                configurePom(mavenName, mavenDescription)
             }
         } else {
             afterEvaluate {
                 findByName("mavenProto")?.let { publication ->
-                    (publication as MavenPublication).configurePom(nameProvider, descProvider)
+                    (publication as MavenPublication).configurePom(mavenName, mavenDescription)
                 }
             }
         }

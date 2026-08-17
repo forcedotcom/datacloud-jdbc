@@ -3,7 +3,7 @@ plugins {
     id("com.google.osdetector")
 }
 
-val hyperApiVersion: String by project
+val hyperApiVersion = project.property("hyperApiVersion").toString()
 val hyperZipPath = ".hyper/hyper-$hyperApiVersion.zip"
 val hyperDir = ".hyperd"
 
