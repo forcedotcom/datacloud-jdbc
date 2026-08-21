@@ -8,8 +8,8 @@ plugins {
 }
 
 description = "Salesforce Data Cloud Query v3 API gRPC stubs"
-val mavenName: String by extra("Salesforce Data Cloud JDBC gRPC")
-val mavenDescription: String by extra("${project.description}")
+extra.set("mavenName", "Salesforce Data Cloud JDBC gRPC")
+extra.set("mavenDescription", project.description.toString())
 
 dependencies {
     api(platform(libs.protobuf.bom))

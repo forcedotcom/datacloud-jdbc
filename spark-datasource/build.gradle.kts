@@ -6,8 +6,8 @@ plugins {
 }
 
 description = "Spark Datasource for Salesforce Data Cloud JDBC"
-val mavenName: String by extra("Spark Datasource for Salesforce Data Cloud JDBC")
-val mavenDescription: String by extra("${project.description}")
+extra.set("mavenName", "Spark Datasource for Salesforce Data Cloud JDBC")
+extra.set("mavenDescription", project.description.toString())
 
 dependencies {
     implementation(project(":spark-datasource-core"))
