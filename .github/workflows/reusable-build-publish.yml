@@ -161,8 +161,36 @@ jobs:
             integration-test/build/reports/
             jdbc/build/libs/*-shaded.jar
 
+  verify-signing-credentials:
+    # Only the mavenCentral (release) deployer signs artifacts; the snapshot deployer
+    # runs with sign: false, so skip this check unless a release version is set.
+    if: ${{ inputs.publish && inputs.version != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify GPG secret key unlocks with passphrase
+        env:
+          JRELEASER_GPG_SECRET_KEY: ${{ secrets.signing_key }}
+          JRELEASER_GPG_PASSPHRASE: ${{ secrets.signing_pass }}
+        run: |
+          set -euo pipefail
+          GNUPGHOME="$(mktemp -d)"
+          export GNUPGHOME
+          echo "$JRELEASER_GPG_SECRET_KEY" | gpg --batch --import
+          KEY_ID=$(gpg --batch --list-secret-keys --with-colons | awk -F: '$1=="sec"{print $5; exit}')
+          if [ -z "$KEY_ID" ]; then
+            echo "::error::No secret key found after importing signing_key; the secret may be malformed"
+            exit 1
+          fi
+          if ! echo "signing credential check" | gpg --batch --yes --pinentry-mode loopback \
+              --passphrase "$JRELEASER_GPG_PASSPHRASE" --local-user "$KEY_ID" \
+              --detach-sign --output /dev/null; then
+            echo "::error::GPG secret key $KEY_ID could not be unlocked with signing_pass (checksum/passphrase mismatch). The Maven Central publish step will fail on this until signing_key/signing_pass are re-synced."
+            exit 1
+          fi
+          echo "GPG secret key $KEY_ID verified: signing_pass unlocks it correctly."
+
   publish-jreleaser:
-    needs: [ prepare, build, integration-test ]
+    needs: [ prepare, build, integration-test, verify-signing-credentials ]
     if: ${{ inputs.publish }}
     runs-on: ubuntu-latest
     env:
