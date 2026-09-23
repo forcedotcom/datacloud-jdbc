@@ -57,7 +57,7 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
     }
 
     public BaseIntVectorAccessor(UInt4Vector vector, IntSupplier currentRowSupplier) throws SQLException {
-        this(vector, currentRowSupplier, false);
+        this(vector, currentRowSupplier, true);
     }
 
     @Override
@@ -160,10 +160,12 @@ public class BaseIntVectorAccessor extends QueryJDBCAccessor {
                 number = getInt();
                 break;
             case INT:
-            case UINT4:
                 number = getInt();
                 break;
             case BIGINT:
+            case UINT4:
+                // UINT4 (Hyper's oid) can exceed Integer.MAX_VALUE; getInt() would truncate it back
+                // to a signed 32-bit value, so it must go through the long path like BIGINT.
                 number = getLong();
                 break;
             default:
