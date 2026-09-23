@@ -8,7 +8,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collections;
 import java.util.stream.Stream;
+import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
+import org.apache.arrow.vector.types.pojo.FieldType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -119,5 +121,26 @@ class HyperTypeArrowRoundtripTest {
         HyperType original = HyperType.timeTz(true);
         Field field = new Field("col", HyperTypeToArrow.toFieldType(original), null);
         assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.time(true));
+    }
+
+    @Test
+    void oidAsymmetry_preservedOnInputButWidensOnOutput() {
+        // Not a bug — intended behavior (see HyperTypeToArrow's OID comment). Outbound, OID is
+        // encoded as a signed 64-bit Arrow int (large enough to hold the full unsigned 32-bit
+        // range without ambiguity) rather than the unsigned 32-bit Arrow int Hyper's server
+        // actually sends for a real oid column, so it decodes back as plain INT64, not OID.
+        HyperType original = HyperType.oid(true);
+        Field field = new Field("col", HyperTypeToArrow.toFieldType(original), null);
+        assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.int64(true));
+    }
+
+    @Test
+    void unsignedInt32ArrowFieldMapsToOid() {
+        // Regression test for W-24140477: Hyper's wire representation of `oid` is an unsigned
+        // 32-bit Arrow int (Int(32, signed=false)). Before this was handled explicitly, the visit
+        // for ArrowType.Int switched only on bit width and silently treated it as signed INT32,
+        // so values >= 2^31 (e.g. 4294967295) came back through JDBC as negative ints.
+        Field field = new Field("col", new FieldType(true, new ArrowType.Int(32, false), null), null);
+        assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.oid(true));
     }
 }
