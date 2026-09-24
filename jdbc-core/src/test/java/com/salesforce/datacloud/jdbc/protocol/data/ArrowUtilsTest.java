@@ -265,6 +265,7 @@ class ArrowUtilsTest {
 
             DecimalVector vector = (DecimalVector) reader.getVectorSchemaRoot().getVector(0);
             assertEquals(0, vector.getObject(0).compareTo(negativeScaleValue));
+            assertEquals(new BigDecimal("12345670"), vector.getObject(0));
         }
     }
 
