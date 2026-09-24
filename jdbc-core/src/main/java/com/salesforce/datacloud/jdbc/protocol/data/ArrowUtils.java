@@ -78,12 +78,13 @@ public final class ArrowUtils {
     }
 
     public static byte[] toArrowByteArray(List<ParameterBinding> parameters, Calendar calendar) throws IOException {
-        Schema schema = ArrowUtils.createSchemaFromParameters(parameters);
+        List<ParameterBinding> normalizedParameters = normalizeDecimalScales(parameters);
+        Schema schema = ArrowUtils.createSchemaFromParameters(normalizedParameters);
 
         try (RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
                 VectorSchemaRoot root = VectorSchemaRoot.create(schema, allocator)) {
             root.allocateNew();
-            VectorPopulator.populateVectors(root, parameters, calendar);
+            VectorPopulator.populateVectors(root, normalizedParameters, calendar);
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             try (ArrowStreamWriter writer = new ArrowStreamWriter(root, null, outputStream)) {
@@ -94,5 +95,38 @@ public final class ArrowUtils {
 
             return outputStream.toByteArray();
         }
+    }
+
+    /**
+     * Arrow/Hyper {@code DECIMAL} requires a scale between {@code 0} and the precision, but
+     * {@link BigDecimal} permits a negative scale (e.g. {@code new BigDecimal("12345670").stripTrailingZeros()}
+     * yields {@code unscaledValue=1234567, scale=-1}). Left alone, that negative scale gets carried
+     * straight into the Arrow {@code Decimal} field we advertise for the parameter, which Hyper
+     * rejects at query time ("Invalid scale -1, scale must be between 0 and the precision (7)").
+     *
+     * <p>Rescale any such value to its canonical {@code scale >= 0} form up front, so the type we
+     * advertise for the parameter and the value we encode for it stay consistent.
+     */
+    private static List<ParameterBinding> normalizeDecimalScales(List<ParameterBinding> parameters) {
+        return parameters.stream().map(ArrowUtils::normalizeDecimalScale).collect(Collectors.toList());
+    }
+
+    private static ParameterBinding normalizeDecimalScale(ParameterBinding binding) {
+        if (binding == null || !(binding.getValue() instanceof BigDecimal)) {
+            return binding;
+        }
+        BigDecimal value = (BigDecimal) binding.getValue();
+        if (value.scale() >= 0) {
+            return binding;
+        }
+        // Widening to scale 0 only ever multiplies the unscaled value by a positive power of
+        // ten, so this is always exact -- no RoundingMode is needed.
+        BigDecimal normalized = value.setScale(0);
+        return new ParameterBinding(
+                HyperType.decimal(
+                        normalized.precision(),
+                        normalized.scale(),
+                        binding.getType().isNullable()),
+                normalized);
     }
 }
