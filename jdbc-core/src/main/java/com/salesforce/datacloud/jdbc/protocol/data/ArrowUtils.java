@@ -112,6 +112,10 @@ public final class ArrowUtils {
     }
 
     private static ParameterBinding normalizeDecimalScale(ParameterBinding binding) {
+        // binding is null when a lower-indexed parameter hasn't been bound yet --
+        // ParameterAccumulator.setParameter() pads the list with null placeholders for any
+        // skipped positions (e.g. setBigDecimal(3, ...) before 1/2 are set). createField() already
+        // handles this same null for the type side; mirror it here on the value side.
         if (binding == null || !(binding.getValue() instanceof BigDecimal)) {
             return binding;
         }
