@@ -601,6 +601,24 @@
 		"interestingness": "Null"
 	},
 	{
+		"type": [
+			"Oid",
+			"nullable"
+		],
+		"sql": "select oid '0'",
+		"expectation": "0",
+		"interestingness": "Default"
+	},
+	{
+		"type": [
+			"Oid",
+			"nullable"
+		],
+		"sql": "select oid '4294967295'",
+		"expectation": "4294967295",
+		"interestingness": "Default"
+	},
+	{
 		"type": {
 			"type": "Array",
 			"nullable": true,
