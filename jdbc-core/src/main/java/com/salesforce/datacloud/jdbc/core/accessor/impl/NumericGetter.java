@@ -98,7 +98,10 @@ final class NumericGetter {
             vector.get(index, nullableUInt4Holder);
 
             holder.isSet = nullableUInt4Holder.isSet;
-            holder.value = nullableUInt4Holder.value;
+            // nullableUInt4Holder.value is a raw 32-bit pattern in a Java int; a plain assignment
+            // to the long holder field sign-extends it (0xFFFFFFFF -> -1L). Zero-extend instead so
+            // the full unsigned 32-bit range round-trips correctly.
+            holder.value = Integer.toUnsignedLong(nullableUInt4Holder.value);
         };
     }
 }

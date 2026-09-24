@@ -539,6 +539,60 @@
     "javaClassName" : null
   } ] ]
 }, {
+  "query" : "select oid '0'",
+  "columnMetadata" : [ {
+    "columnName" : "oid",
+    "columnLabel" : "oid",
+    "columnType" : -5,
+    "columnTypeName" : "oid",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : true,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "0",
+    "javaClassName" : "java.lang.Long"
+  } ] ]
+}, {
+  "query" : "select oid '4294967295'",
+  "columnMetadata" : [ {
+    "columnName" : "oid",
+    "columnLabel" : "oid",
+    "columnType" : -5,
+    "columnTypeName" : "oid",
+    "columnDisplaySize" : 10,
+    "precision" : 10,
+    "scale" : 0,
+    "isNullable" : 2,
+    "catalogName" : "",
+    "schemaName" : "",
+    "tableName" : "",
+    "autoIncrement" : false,
+    "caseSensitive" : false,
+    "currency" : false,
+    "definitelyWritable" : false,
+    "readOnly" : true,
+    "searchable" : true,
+    "signed" : false,
+    "writable" : true
+  } ],
+  "returnedValues" : [ [ {
+    "stringValue" : "4294967295",
+    "javaClassName" : "java.lang.Long"
+  } ] ]
+}, {
   "query" : "select NULL::json[]",
   "columnMetadata" : [ {
     "columnName" : "json",

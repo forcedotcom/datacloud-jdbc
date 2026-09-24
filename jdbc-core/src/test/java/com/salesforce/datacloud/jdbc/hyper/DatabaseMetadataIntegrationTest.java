@@ -421,15 +421,15 @@ class DatabaseMetadataIntegrationTest {
         Map<String, String> mismatches = collectMismatches(
                 "DATA_TYPE", info -> jdbcTypeName((int) info.get("DATA_TYPE")) + "(" + info.get("DATA_TYPE") + ")");
 
-        // After the HyperType refactor, the two paths agree for almost every type. The only
-        // remaining mismatches are cases where Arrow and pg_catalog genuinely see different
-        // types — not driver bugs:
-        //   col_oid : Arrow sees the raw 32-bit unsigned and emits INTEGER; pg surfaces OID as
-        //             BIGINT (per HyperType.OID → JDBCType.BIGINT).
+        // After the HyperType refactor, the two paths agree for almost every type. col_oid used
+        // to disagree here (Arrow read the raw 32-bit unsigned int as plain INTEGER instead of
+        // recognizing it as oid) until W-24140477 fixed ArrowToHyperTypeMapper to classify it
+        // correctly, so both paths now report BIGINT for oid and that entry was removed. The one
+        // remaining mismatch is not a driver bug — Arrow and pg_catalog genuinely see json
+        // differently:
         //   col_json: Arrow receives the value as Utf8 metadata and emits VARCHAR; pg surfaces
         //             json as OTHER per the JDBC spec for non-standard types.
         Map<String, String> expected = new LinkedHashMap<>();
-        expected.put("col_oid", "arrow=INTEGER(4), pg=BIGINT(-5)");
         expected.put("col_json", "arrow=VARCHAR(12), pg=OTHER(1111)");
 
         assertThat(mismatches)
@@ -442,9 +442,8 @@ class DatabaseMetadataIntegrationTest {
     void getColumns_consistentWith_resultSetMetaData_forTypeName() {
         Map<String, String> mismatches = collectMismatches("TYPE_NAME", info -> String.valueOf(info.get("TYPE_NAME")));
 
-        // Same remaining mismatches as forDataType — see that test for the rationale.
+        // Same remaining mismatch as forDataType — see that test for the rationale.
         Map<String, String> expected = new LinkedHashMap<>();
-        expected.put("col_oid", "arrow=INTEGER, pg=BIGINT");
         expected.put("col_json", "arrow=VARCHAR, pg=JSON");
 
         assertThat(mismatches)

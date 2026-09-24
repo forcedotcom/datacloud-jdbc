@@ -5,10 +5,13 @@
 package com.salesforce.datacloud.jdbc.protocol.data;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Collections;
 import java.util.stream.Stream;
+import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
+import org.apache.arrow.vector.types.pojo.FieldType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -55,7 +58,9 @@ class HyperTypeArrowRoundtripTest {
                 Arguments.of(HyperType.timestamp(false)),
                 Arguments.of(HyperType.timestampTz(true)),
                 Arguments.of(HyperType.array(HyperType.int32(true), false)),
-                Arguments.of(HyperType.array(HyperType.varcharUnlimited(true), true)));
+                Arguments.of(HyperType.array(HyperType.varcharUnlimited(true), true)),
+                Arguments.of(HyperType.oid(true)),
+                Arguments.of(HyperType.oid(false)));
     }
 
     @ParameterizedTest
@@ -119,5 +124,26 @@ class HyperTypeArrowRoundtripTest {
         HyperType original = HyperType.timeTz(true);
         Field field = new Field("col", HyperTypeToArrow.toFieldType(original), null);
         assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.time(true));
+    }
+
+    @Test
+    void unsignedInt32ArrowFieldMapsToOid() {
+        // Regression test for W-24140477: Hyper's wire representation of `oid` is an unsigned
+        // 32-bit Arrow int (Int(32, signed=false)). Before this was handled explicitly, the visit
+        // for ArrowType.Int switched only on bit width and silently treated it as signed INT32,
+        // so values >= 2^31 (e.g. 4294967295) came back through JDBC as negative ints.
+        Field field = new Field("col", new FieldType(true, new ArrowType.Int(32, false), null), null);
+        assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.oid(true));
+    }
+
+    @Test
+    void unsignedNonOidBitWidthIsRejected() {
+        // Hyper's only unsigned integer wire type is oid (unsigned 32-bit). Any other unsigned
+        // bit width has no Hyper equivalent, so it must be rejected rather than silently
+        // misinterpreted as a signed integer of the same width.
+        Field field = new Field("col", new FieldType(true, new ArrowType.Int(16, false), null), null);
+        assertThatThrownBy(() -> ArrowToHyperTypeMapper.toHyperType(field))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported Arrow type");
     }
 }
