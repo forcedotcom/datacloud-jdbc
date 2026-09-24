@@ -57,7 +57,9 @@ class HyperTypeArrowRoundtripTest {
                 Arguments.of(HyperType.timestamp(false)),
                 Arguments.of(HyperType.timestampTz(true)),
                 Arguments.of(HyperType.array(HyperType.int32(true), false)),
-                Arguments.of(HyperType.array(HyperType.varcharUnlimited(true), true)));
+                Arguments.of(HyperType.array(HyperType.varcharUnlimited(true), true)),
+                Arguments.of(HyperType.oid(true)),
+                Arguments.of(HyperType.oid(false)));
     }
 
     @ParameterizedTest
@@ -121,17 +123,6 @@ class HyperTypeArrowRoundtripTest {
         HyperType original = HyperType.timeTz(true);
         Field field = new Field("col", HyperTypeToArrow.toFieldType(original), null);
         assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.time(true));
-    }
-
-    @Test
-    void oidAsymmetry_preservedOnInputButWidensOnOutput() {
-        // Not a bug — intended behavior (see HyperTypeToArrow's OID comment). Outbound, OID is
-        // encoded as a signed 64-bit Arrow int (large enough to hold the full unsigned 32-bit
-        // range without ambiguity) rather than the unsigned 32-bit Arrow int Hyper's server
-        // actually sends for a real oid column, so it decodes back as plain INT64, not OID.
-        HyperType original = HyperType.oid(true);
-        Field field = new Field("col", HyperTypeToArrow.toFieldType(original), null);
-        assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.int64(true));
     }
 
     @Test
