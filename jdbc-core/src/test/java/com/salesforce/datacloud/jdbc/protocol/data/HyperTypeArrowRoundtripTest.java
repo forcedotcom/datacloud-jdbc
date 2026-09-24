@@ -5,6 +5,7 @@
 package com.salesforce.datacloud.jdbc.protocol.data;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Collections;
 import java.util.stream.Stream;
@@ -133,5 +134,16 @@ class HyperTypeArrowRoundtripTest {
         // so values >= 2^31 (e.g. 4294967295) came back through JDBC as negative ints.
         Field field = new Field("col", new FieldType(true, new ArrowType.Int(32, false), null), null);
         assertThat(ArrowToHyperTypeMapper.toHyperType(field)).isEqualTo(HyperType.oid(true));
+    }
+
+    @Test
+    void unsignedNonOidBitWidthIsRejected() {
+        // Hyper's only unsigned integer wire type is oid (unsigned 32-bit). Any other unsigned
+        // bit width has no Hyper equivalent, so it must be rejected rather than silently
+        // misinterpreted as a signed integer of the same width.
+        Field field = new Field("col", new FieldType(true, new ArrowType.Int(16, false), null), null);
+        assertThatThrownBy(() -> ArrowToHyperTypeMapper.toHyperType(field))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unsupported Arrow type");
     }
 }
