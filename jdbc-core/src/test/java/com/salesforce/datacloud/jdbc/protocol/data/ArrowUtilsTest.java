@@ -267,4 +267,40 @@ class ArrowUtilsTest {
             assertEquals(0, vector.getObject(0).compareTo(negativeScaleValue));
         }
     }
+
+    // Covers the normalizeDecimalScale() branches the negative-scale test above doesn't reach: a
+    // null binding, a non-BigDecimal-valued binding, and an already-non-negative-scale BigDecimal --
+    // all of which must pass through toArrowByteArray unchanged.
+    @Test
+    void testToArrowByteArrayPassesThroughNullNonDecimalAndNonNegativeScaleBindings() throws Exception {
+        BigDecimal normalScaleValue = new BigDecimal("123.45");
+        assertEquals(2, normalScaleValue.scale());
+
+        List<ParameterBinding> parameterBindings = Arrays.asList(
+                null,
+                new ParameterBinding(HyperType.int32(true), 42),
+                new ParameterBinding(HyperType.decimal(5, 2, true), normalScaleValue));
+
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        byte[] encoded = ArrowUtils.toArrowByteArray(parameterBindings, calendar);
+
+        try (RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+                ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(encoded), allocator)) {
+            reader.loadNextBatch();
+            List<Field> fields = reader.getVectorSchemaRoot().getSchema().getFields();
+
+            assertInstanceOf(ArrowType.Utf8.class, fields.get(0).getType());
+
+            assertInstanceOf(ArrowType.Int.class, fields.get(1).getType());
+            assertEquals(32, ((ArrowType.Int) fields.get(1).getType()).getBitWidth());
+
+            assertInstanceOf(ArrowType.Decimal.class, fields.get(2).getType());
+            ArrowType.Decimal decimalType = (ArrowType.Decimal) fields.get(2).getType();
+            assertEquals(5, decimalType.getPrecision());
+            assertEquals(2, decimalType.getScale());
+
+            DecimalVector vector = (DecimalVector) reader.getVectorSchemaRoot().getVector(2);
+            assertEquals(0, vector.getObject(0).compareTo(normalScaleValue));
+        }
+    }
 }
