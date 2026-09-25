@@ -42,10 +42,12 @@ tasks.register("runIntegrationTest", Test::class) {
     // Pass system properties for test configuration
     systemProperty("test.connection.url", System.getProperty("test.connection.url", ""))
     systemProperty("test.connection.userName", System.getProperty("test.connection.userName", ""))
-    systemProperty("test.connection.password", System.getProperty("test.connection.password", ""))
     systemProperty("test.connection.clientId", System.getProperty("test.connection.clientId", ""))
     systemProperty("test.connection.clientSecret", System.getProperty("test.connection.clientSecret", ""))
-    
+    systemProperty("test.connection.orgDomainUrl", System.getProperty("test.connection.orgDomainUrl", ""))
+    systemProperty("test.connection.refreshToken", System.getProperty("test.connection.refreshToken", ""))
+    systemProperty("test.connection.privateKey", System.getProperty("test.connection.privateKey", ""))
+
     
     // Only run integration-tagged tests
     useJUnitPlatform {
