@@ -78,12 +78,13 @@ public final class ArrowUtils {
     }
 
     public static byte[] toArrowByteArray(List<ParameterBinding> parameters, Calendar calendar) throws IOException {
-        Schema schema = ArrowUtils.createSchemaFromParameters(parameters);
+        List<ParameterBinding> normalizedParameters = normalizeDecimalScales(parameters);
+        Schema schema = ArrowUtils.createSchemaFromParameters(normalizedParameters);
 
         try (RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
                 VectorSchemaRoot root = VectorSchemaRoot.create(schema, allocator)) {
             root.allocateNew();
-            VectorPopulator.populateVectors(root, parameters, calendar);
+            VectorPopulator.populateVectors(root, normalizedParameters, calendar);
 
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             try (ArrowStreamWriter writer = new ArrowStreamWriter(root, null, outputStream)) {
@@ -94,5 +95,49 @@ public final class ArrowUtils {
 
             return outputStream.toByteArray();
         }
+    }
+
+    /**
+     * Arrow/Hyper {@code DECIMAL} requires {@code 0 <= scale <= precision}, but {@link BigDecimal}
+     * can violate that relationship in both directions:
+     *
+     * <ul>
+     *   <li>negative scale, from a "round" value (e.g. {@code new BigDecimal("12345670").stripTrailingZeros()}
+     *       yields {@code unscaledValue=1234567, scale=-1});
+     *   <li>{@code scale > precision}, from a small-magnitude value with leading zeros after the
+     *       decimal point (e.g. {@code new BigDecimal("0.001")} yields {@code precision=1, scale=3}).
+     * </ul>
+     *
+     * Left alone, either carries straight into the Arrow {@code Decimal} field we advertise for the
+     * parameter, which Hyper rejects at query time ("Invalid scale N, scale must be between 0 and the
+     * precision").
+     *
+     * <p>Rescale/re-derive any such value to a form satisfying both invariants up front, so the type
+     * we advertise for the parameter and the value we encode for it stay consistent.
+     */
+    private static List<ParameterBinding> normalizeDecimalScales(List<ParameterBinding> parameters) {
+        return parameters.stream().map(ArrowUtils::normalizeDecimalScale).collect(Collectors.toList());
+    }
+
+    private static ParameterBinding normalizeDecimalScale(ParameterBinding binding) {
+        // binding is null when a lower-indexed parameter hasn't been bound yet --
+        // ParameterAccumulator.setParameter() pads the list with null placeholders for any
+        // skipped positions (e.g. setBigDecimal(3, ...) before 1/2 are set). createField() already
+        // handles this same null for the type side; mirror it here on the value side.
+        if (binding == null || !(binding.getValue() instanceof BigDecimal)) {
+            return binding;
+        }
+        BigDecimal value = (BigDecimal) binding.getValue();
+        // Widening a negative scale to 0 only ever multiplies the unscaled value by a positive
+        // power of ten, so this is always exact -- no RoundingMode is needed.
+        BigDecimal normalized = value.scale() < 0 ? value.setScale(0) : value;
+        int precision = Math.max(normalized.precision(), normalized.scale());
+        if (normalized.equals(value) && precision == value.precision()) {
+            return binding;
+        }
+        return new ParameterBinding(
+                HyperType.decimal(
+                        precision, normalized.scale(), binding.getType().isNullable()),
+                normalized);
     }
 }
