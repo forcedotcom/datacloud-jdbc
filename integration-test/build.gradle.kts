@@ -1,3 +1,5 @@
+import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
+
 plugins {
     id("java-conventions")
     alias(libs.plugins.lombok)
@@ -38,7 +40,13 @@ tasks.register("runIntegrationTest", Test::class) {
     classpath += files(
         project(":jdbc").tasks.named("shadowJar").map { it.outputs.files.singleFile }
     )
-    
+
+    // Netty is relocated under the shaded package here, so the base convention's
+    // unrelocated "io.netty.buffer.*Event" exclude doesn't match; add the shaded path too.
+    extensions.configure<JacocoTaskExtension> {
+        excludes = listOf("io.netty.buffer.*Event", "com.salesforce.datacloud.shaded.io.netty.buffer.*Event")
+    }
+
     // Pass system properties for test configuration
     systemProperty("test.connection.url", System.getProperty("test.connection.url", ""))
     systemProperty("test.connection.userName", System.getProperty("test.connection.userName", ""))
