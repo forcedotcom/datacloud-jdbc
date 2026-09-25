@@ -98,14 +98,22 @@ public final class ArrowUtils {
     }
 
     /**
-     * Arrow/Hyper {@code DECIMAL} requires a scale between {@code 0} and the precision, but
-     * {@link BigDecimal} permits a negative scale (e.g. {@code new BigDecimal("12345670").stripTrailingZeros()}
-     * yields {@code unscaledValue=1234567, scale=-1}). Left alone, that negative scale gets carried
-     * straight into the Arrow {@code Decimal} field we advertise for the parameter, which Hyper
-     * rejects at query time ("Invalid scale -1, scale must be between 0 and the precision (7)").
+     * Arrow/Hyper {@code DECIMAL} requires {@code 0 <= scale <= precision}, but {@link BigDecimal}
+     * can violate that relationship in both directions:
      *
-     * <p>Rescale any such value to its canonical {@code scale >= 0} form up front, so the type we
-     * advertise for the parameter and the value we encode for it stay consistent.
+     * <ul>
+     *   <li>negative scale, from a "round" value (e.g. {@code new BigDecimal("12345670").stripTrailingZeros()}
+     *       yields {@code unscaledValue=1234567, scale=-1});
+     *   <li>{@code scale > precision}, from a small-magnitude value with leading zeros after the
+     *       decimal point (e.g. {@code new BigDecimal("0.001")} yields {@code precision=1, scale=3}).
+     * </ul>
+     *
+     * Left alone, either carries straight into the Arrow {@code Decimal} field we advertise for the
+     * parameter, which Hyper rejects at query time ("Invalid scale N, scale must be between 0 and the
+     * precision").
+     *
+     * <p>Rescale/re-derive any such value to a form satisfying both invariants up front, so the type
+     * we advertise for the parameter and the value we encode for it stay consistent.
      */
     private static List<ParameterBinding> normalizeDecimalScales(List<ParameterBinding> parameters) {
         return parameters.stream().map(ArrowUtils::normalizeDecimalScale).collect(Collectors.toList());
@@ -120,17 +128,16 @@ public final class ArrowUtils {
             return binding;
         }
         BigDecimal value = (BigDecimal) binding.getValue();
-        if (value.scale() >= 0) {
+        // Widening a negative scale to 0 only ever multiplies the unscaled value by a positive
+        // power of ten, so this is always exact -- no RoundingMode is needed.
+        BigDecimal normalized = value.scale() < 0 ? value.setScale(0) : value;
+        int precision = Math.max(normalized.precision(), normalized.scale());
+        if (normalized.equals(value) && precision == value.precision()) {
             return binding;
         }
-        // Widening to scale 0 only ever multiplies the unscaled value by a positive power of
-        // ten, so this is always exact -- no RoundingMode is needed.
-        BigDecimal normalized = value.setScale(0);
         return new ParameterBinding(
                 HyperType.decimal(
-                        normalized.precision(),
-                        normalized.scale(),
-                        binding.getType().isNullable()),
+                        precision, normalized.scale(), binding.getType().isNullable()),
                 normalized);
     }
 }
