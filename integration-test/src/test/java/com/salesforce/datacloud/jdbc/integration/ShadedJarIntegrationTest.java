@@ -84,9 +84,13 @@ public class ShadedJarIntegrationTest {
      * across every supported (non-deprecated) authentication flow. This is the critical test that
      * would have caught the service file regression.
      *
-     * Each flow only runs if its required system properties are supplied; otherwise it is skipped
-     * (not failed) via JUnit assumptions:
-     * - CLIENT_CREDENTIALS: test.connection.orgDomainUrl, clientId, clientSecret
+     * CLIENT_CREDENTIALS is the only flow CI supplies secrets for, so it fails outright (rather than
+     * skipping) if test.connection.orgDomainUrl, clientId, or clientSecret are missing — that keeps a
+     * broken secrets pipeline loud instead of silently reporting a skip as green.
+     *
+     * PRIVATE_KEY and REFRESH_TOKEN are not currently wired into CI; they only run when explicitly
+     * supplied (locally or in a future CI setup) and are otherwise skipped (not failed) via JUnit
+     * assumptions:
      * - PRIVATE_KEY: test.connection.userName, privateKey, clientId
      * - REFRESH_TOKEN: test.connection.refreshToken, clientId, clientSecret
      *
@@ -135,8 +139,9 @@ public class ShadedJarIntegrationTest {
 
     /**
      * Populates {@code props} with the credentials required for {@code flow} and returns the JDBC
-     * URL to connect with. Skips the test (via {@link Assumptions}) if the required system
-     * properties for that flow are not present.
+     * URL to connect with. CLIENT_CREDENTIALS fails outright if its required system properties are
+     * missing, since CI always supplies them; the other flows skip the test (via {@link Assumptions})
+     * since CI does not currently configure them.
      */
     private static String buildPropsForFlow(AuthFlow flow, Properties props) {
         String clientId = System.getProperty("test.connection.clientId", "");
@@ -145,9 +150,10 @@ public class ShadedJarIntegrationTest {
             case CLIENT_CREDENTIALS: {
                 String url = System.getProperty("test.connection.orgDomainUrl", "");
                 String clientSecret = System.getProperty("test.connection.clientSecret", "");
-                Assumptions.assumeTrue(
-                        isNotEmpty(url) && isNotEmpty(clientId) && isNotEmpty(clientSecret),
-                        "Skipping CLIENT_CREDENTIALS: requires test.connection.orgDomainUrl, clientId, clientSecret");
+                if (!isNotEmpty(url) || !isNotEmpty(clientId) || !isNotEmpty(clientSecret)) {
+                    throw new AssertionError(
+                            "CLIENT_CREDENTIALS requires test.connection.orgDomainUrl, clientId, clientSecret");
+                }
                 props.setProperty("clientId", clientId);
                 props.setProperty("clientSecret", clientSecret);
                 return toJdbcUrl(url);
