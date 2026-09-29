@@ -12,7 +12,6 @@ jobs:
       publish: false
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      DATACLOUD_USERNAME: ${{ secrets.DATACLOUD_USERNAME }}
-      DATACLOUD_PASSWORD: ${{ secrets.DATACLOUD_PASSWORD }}
+      DATACLOUD_ORG_DOMAIN_URL: ${{ secrets.DATACLOUD_ORG_DOMAIN_URL }}
       DATACLOUD_CLIENT_ID: ${{ secrets.DATACLOUD_CLIENT_ID }}
       DATACLOUD_CLIENT_SECRET: ${{ secrets.DATACLOUD_CLIENT_SECRET }}

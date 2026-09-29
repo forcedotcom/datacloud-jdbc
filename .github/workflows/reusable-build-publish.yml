@@ -25,9 +25,7 @@ on:
         required: false
       signing_pub:
         required: false
-      DATACLOUD_USERNAME:
-        required: false
-      DATACLOUD_PASSWORD:
+      DATACLOUD_ORG_DOMAIN_URL:
         required: false
       DATACLOUD_CLIENT_ID:
         required: false
@@ -147,8 +145,7 @@ jobs:
         run: |
           ./gradlew :integration-test:runIntegrationTest \
             -Dtest.connection.url="jdbc:salesforce-datacloud://login.test2.pc-rnd.salesforce.com" \
-            -Dtest.connection.userName="${{ secrets.DATACLOUD_USERNAME }}" \
-            -Dtest.connection.password="${{ secrets.DATACLOUD_PASSWORD }}" \
+            -Dtest.connection.orgDomainUrl="${{ secrets.DATACLOUD_ORG_DOMAIN_URL }}" \
             -Dtest.connection.clientId="${{ secrets.DATACLOUD_CLIENT_ID }}" \
             -Dtest.connection.clientSecret="${{ secrets.DATACLOUD_CLIENT_SECRET }}" \
             --info
