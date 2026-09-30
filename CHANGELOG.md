@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/forcedotcom/datacloud-jdbc/compare/v1.1.0...v1.1.1) (2026-09-30)
+
+
+### Bug Fixes
+
+* normalize negative-scale BigDecimal parameters before Arrow encoding ([#202](https://github.com/forcedotcom/datacloud-jdbc/issues/202)) ([e257047](https://github.com/forcedotcom/datacloud-jdbc/commit/e257047df0e082645ddd1afdcdca86a42b0e3fa9))
+
 ## [1.1.0](https://github.com/forcedotcom/datacloud-jdbc/compare/v1.0.0...v1.1.0) (2026-08-14)
 
 
