@@ -8,9 +8,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
+import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.JDBCType;
@@ -18,11 +20,17 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.stream.Stream;
 import lombok.val;
+import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.DecimalVector;
+import org.apache.arrow.vector.ipc.ArrowStreamReader;
 import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.TimeUnit;
@@ -219,5 +227,116 @@ class ArrowUtilsTest {
 
         field = schema.getFields().get(10);
         assertInstanceOf(ArrowType.List.class, field.getType());
+    }
+
+    // Regression test for the Hyper-side "Invalid scale -1, scale must be between 0 and the
+    // precision (7)" rejection reported against a `cast(? as numeric(38,18))` parameter.
+    // BigDecimal.stripTrailingZeros() on a round number yields a negative scale (verified:
+    // new BigDecimal("12345670").stripTrailingZeros() -> unscaledValue=1234567, scale=-1,
+    // precision=7 -- matching the reported error digit-for-digit). Before the fix,
+    // HyperType.decimal(x.precision(), x.scale(), true) carried that negative scale straight
+    // into the Arrow Decimal field advertised for the parameter, which Hyper rejects.
+    @Test
+    void testToArrowByteArrayNormalizesNegativeScaleBigDecimal() throws Exception {
+        BigDecimal negativeScaleValue = new BigDecimal("12345670").stripTrailingZeros();
+        assertEquals(-1, negativeScaleValue.scale());
+        assertEquals(7, negativeScaleValue.precision());
+
+        List<ParameterBinding> parameterBindings = Collections.singletonList(new ParameterBinding(
+                HyperType.decimal(negativeScaleValue.precision(), negativeScaleValue.scale(), true),
+                negativeScaleValue));
+
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        byte[] encoded = ArrowUtils.toArrowByteArray(parameterBindings, calendar);
+
+        try (RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+                ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(encoded), allocator)) {
+            reader.loadNextBatch();
+
+            Field field = reader.getVectorSchemaRoot().getSchema().getFields().get(0);
+            assertInstanceOf(ArrowType.Decimal.class, field.getType());
+            ArrowType.Decimal decimalType = (ArrowType.Decimal) field.getType();
+            assertTrue(
+                    decimalType.getScale() >= 0,
+                    "Arrow/Hyper DECIMAL scale must be non-negative, got " + decimalType.getScale());
+            assertTrue(
+                    decimalType.getScale() <= decimalType.getPrecision(),
+                    "Arrow/Hyper DECIMAL scale must not exceed precision");
+
+            DecimalVector vector = (DecimalVector) reader.getVectorSchemaRoot().getVector(0);
+            assertEquals(0, vector.getObject(0).compareTo(negativeScaleValue));
+            assertEquals(new BigDecimal("12345670"), vector.getObject(0));
+        }
+    }
+
+    // Sibling of the negative-scale case above: BigDecimal.precision() can be *smaller* than
+    // scale() for small-magnitude values with leading zeros after the decimal point (e.g.
+    // new BigDecimal("0.001") -> precision=1, scale=3), which violates Hyper's "0 <= scale <=
+    // precision" invariant in the opposite direction. Unlike the negative-scale case, the value
+    // itself is already correctly represented -- only the advertised precision needs widening.
+    @Test
+    void testToArrowByteArrayWidensPrecisionWhenScaleExceedsIt() throws Exception {
+        BigDecimal smallMagnitudeValue = new BigDecimal("0.001");
+        assertEquals(1, smallMagnitudeValue.precision());
+        assertEquals(3, smallMagnitudeValue.scale());
+
+        List<ParameterBinding> parameterBindings = Collections.singletonList(new ParameterBinding(
+                HyperType.decimal(smallMagnitudeValue.precision(), smallMagnitudeValue.scale(), true),
+                smallMagnitudeValue));
+
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        byte[] encoded = ArrowUtils.toArrowByteArray(parameterBindings, calendar);
+
+        try (RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+                ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(encoded), allocator)) {
+            reader.loadNextBatch();
+
+            Field field = reader.getVectorSchemaRoot().getSchema().getFields().get(0);
+            assertInstanceOf(ArrowType.Decimal.class, field.getType());
+            ArrowType.Decimal decimalType = (ArrowType.Decimal) field.getType();
+            assertTrue(
+                    decimalType.getScale() <= decimalType.getPrecision(),
+                    "Arrow/Hyper DECIMAL scale must not exceed precision");
+            assertEquals(3, decimalType.getScale());
+
+            DecimalVector vector = (DecimalVector) reader.getVectorSchemaRoot().getVector(0);
+            assertEquals(0, vector.getObject(0).compareTo(smallMagnitudeValue));
+        }
+    }
+
+    // Covers the normalizeDecimalScale() branches the negative-scale test above doesn't reach: a
+    // null binding, a non-BigDecimal-valued binding, and an already-valid-scale BigDecimal -- all
+    // of which must pass through toArrowByteArray unchanged.
+    @Test
+    void testToArrowByteArrayPassesThroughNullNonDecimalAndAlreadyValidScaleBindings() throws Exception {
+        BigDecimal normalScaleValue = new BigDecimal("123.45");
+        assertEquals(2, normalScaleValue.scale());
+
+        List<ParameterBinding> parameterBindings = Arrays.asList(
+                null,
+                new ParameterBinding(HyperType.int32(true), 42),
+                new ParameterBinding(HyperType.decimal(5, 2, true), normalScaleValue));
+
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        byte[] encoded = ArrowUtils.toArrowByteArray(parameterBindings, calendar);
+
+        try (RootAllocator allocator = new RootAllocator(Long.MAX_VALUE);
+                ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(encoded), allocator)) {
+            reader.loadNextBatch();
+            List<Field> fields = reader.getVectorSchemaRoot().getSchema().getFields();
+
+            assertInstanceOf(ArrowType.Utf8.class, fields.get(0).getType());
+
+            assertInstanceOf(ArrowType.Int.class, fields.get(1).getType());
+            assertEquals(32, ((ArrowType.Int) fields.get(1).getType()).getBitWidth());
+
+            assertInstanceOf(ArrowType.Decimal.class, fields.get(2).getType());
+            ArrowType.Decimal decimalType = (ArrowType.Decimal) fields.get(2).getType();
+            assertEquals(5, decimalType.getPrecision());
+            assertEquals(2, decimalType.getScale());
+
+            DecimalVector vector = (DecimalVector) reader.getVectorSchemaRoot().getVector(2);
+            assertEquals(0, vector.getObject(0).compareTo(normalScaleValue));
+        }
     }
 }
