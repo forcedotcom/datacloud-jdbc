@@ -421,12 +421,7 @@ class DatabaseMetadataIntegrationTest {
         Map<String, String> mismatches = collectMismatches(
                 "DATA_TYPE", info -> jdbcTypeName((int) info.get("DATA_TYPE")) + "(" + info.get("DATA_TYPE") + ")");
 
-        // After the HyperType refactor, the two paths agree for almost every type. col_oid used
-        // to disagree here (Arrow read the raw 32-bit unsigned int as plain INTEGER instead of
-        // recognizing it as oid) until W-24140477 fixed ArrowToHyperTypeMapper to classify it
-        // correctly, so both paths now report BIGINT for oid and that entry was removed. The one
-        // remaining mismatch is not a driver bug — Arrow and pg_catalog genuinely see json
-        // differently:
+        // Arrow and pg_catalog genuinely see JSON differently:
         //   col_json: Arrow receives the value as Utf8 metadata and emits VARCHAR; pg surfaces
         //             json as OTHER per the JDBC spec for non-standard types.
         Map<String, String> expected = new LinkedHashMap<>();
