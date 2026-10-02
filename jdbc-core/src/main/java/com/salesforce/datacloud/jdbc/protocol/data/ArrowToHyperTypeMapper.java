@@ -88,6 +88,15 @@ public final class ArrowToHyperTypeMapper {
 
         @Override
         public HyperType visit(ArrowType.Int anInt) {
+            if (!anInt.getIsSigned()) {
+                // Hyper's only unsigned integer wire type is `oid` (unsigned 32-bit). Without this
+                // check an oid column's Arrow field (Int(32, signed=false)) would silently fall
+                // through to the signed INT32 case below, losing the sign bit's true magnitude.
+                if (anInt.getBitWidth() == 32) {
+                    return HyperType.oid(nullable);
+                }
+                throw unsupportedTypeException();
+            }
             switch (anInt.getBitWidth()) {
                 case 8:
                     return HyperType.int8(nullable);

@@ -87,8 +87,12 @@ public final class HyperTypeToArrow {
             case INT32:
                 return new ArrowType.Int(32, true);
             case INT64:
-            case OID:
                 return new ArrowType.Int(64, true);
+            case OID:
+                // Hyper's wire representation of oid is an unsigned 32-bit int (see
+                // ArrowToHyperTypeMapper). Mirror that outbound so oid round-trips through Arrow
+                // symmetrically instead of widening to a signed 64-bit int.
+                return new ArrowType.Int(32, false);
             case FLOAT4:
                 return new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE);
             case FLOAT8:

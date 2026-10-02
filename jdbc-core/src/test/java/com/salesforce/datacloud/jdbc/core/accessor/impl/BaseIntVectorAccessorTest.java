@@ -126,7 +126,7 @@ public class BaseIntVectorAccessorTest {
     @SneakyThrows
     @Test
     public void testShouldConvertToUInt4MethodFromBaseIntVector() {
-        val values = getIntValues();
+        val values = getUInt4Values();
 
         try (val vector = extension.createUInt4Vector(values)) {
             val i = new AtomicInteger(0);
@@ -134,13 +134,15 @@ public class BaseIntVectorAccessorTest {
 
             for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
                 val expected = values.get(i.get());
+                val expectedUnsigned = Integer.toUnsignedLong(expected);
                 collector
                         .assertThat(sut)
-                        .hasInt(expected)
-                        .hasFloat(expected)
-                        .hasDouble(expected)
-                        .hasBigDecimal(new BigDecimal(expected))
-                        .hasObject(expected)
+                        .hasLong(expectedUnsigned)
+                        .hasFloat(expectedUnsigned)
+                        .hasDouble(expectedUnsigned)
+                        .hasBigDecimal(BigDecimal.valueOf(expectedUnsigned))
+                        .hasObject(expectedUnsigned)
+                        .hasString(Long.toString(expectedUnsigned))
                         .hasObjectClass(Long.class);
             }
         }
@@ -187,6 +189,13 @@ public class BaseIntVectorAccessorTest {
                 (int) Short.MAX_VALUE,
                 Integer.MIN_VALUE,
                 Integer.MAX_VALUE);
+    }
+
+    private List<Integer> getUInt4Values() {
+        // UInt4 (Hyper's oid) stores the full unsigned 32-bit range in a Java int's 32 raw bits.
+        // Values at or above 2^31 only round-trip correctly as an *unsigned* int, i.e. as a
+        // negative Java int (e.g. -1 is the raw bit pattern for the unsigned max 4294967295).
+        return ImmutableList.of(0, 1, Integer.MAX_VALUE, Integer.MIN_VALUE, -1);
     }
 
     private List<Long> getBigIntValues() {
