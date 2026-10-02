@@ -5,32 +5,30 @@ plugins {
 }
 
 description = "Salesforce Data Cloud Query v3 API Protocol Buffer Definitions"
-val mavenName: String by extra("Salesforce Data Cloud JDBC Proto")
-val mavenDescription: String by extra("${project.description}")
+extra.set("mavenName", "Salesforce Data Cloud JDBC Proto")
+extra.set("mavenDescription", project.description.toString())
 
-val protoJar by tasks.registering(Jar::class) {
+val protoJar = tasks.register<Jar>("protoJar") {
     group = LifecycleBasePlugin.BUILD_GROUP
     archiveBaseName.set("jdbc-proto")
     from(project.projectDir.resolve("src/main/proto"))
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-val sourcesJar by tasks.registering(Jar::class) {
+val sourcesJar = tasks.register<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
     archiveBaseName.set("jdbc-proto")
     from(project.projectDir.resolve("src/main/proto"))
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-val emptyJavadocJar by tasks.registering(Jar::class) {
+val emptyJavadocJar = tasks.register<Jar>("emptyJavadocJar") {
     archiveClassifier.set("javadoc")
     archiveBaseName.set("jdbc-proto")
 }
 
-artifacts {
-    archives(protoJar)
-    archives(sourcesJar)
-    archives(emptyJavadocJar)
+tasks.named("assemble") {
+    dependsOn(protoJar, sourcesJar, emptyJavadocJar)
 }
 
 publishing {

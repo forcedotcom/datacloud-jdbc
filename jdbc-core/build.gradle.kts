@@ -6,8 +6,8 @@ plugins {
 }
 
 description = "Salesforce Data Cloud JDBC core implementation"
-val mavenName: String by extra("Salesforce Data Cloud JDBC Core")
-val mavenDescription: String by extra("${project.description}")
+extra.set("mavenName", "Salesforce Data Cloud JDBC Core")
+extra.set("mavenDescription", project.description.toString())
 
 dependencies {
     compileOnly(project(":jdbc-grpc"))

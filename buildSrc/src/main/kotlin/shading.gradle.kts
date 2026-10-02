@@ -54,8 +54,8 @@ abstract class ShadingExtension @Inject constructor(
             isPreserveFileTimestamps = false
             duplicatesStrategy = DuplicatesStrategy.INCLUDE
             
-            // Exclude duplicates for non-service files to avoid bloat
-            filesNotMatching("META-INF/services/**") {
+            // Preserve inputs consumed by Shadow's service and Kotlin metadata transformers.
+            filesNotMatching(listOf("META-INF/services/**", "META-INF/*.kotlin_module")) {
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             }
             
@@ -78,9 +78,7 @@ abstract class ShadingExtension @Inject constructor(
 
             // Use built-in service file merging with package relocation support
             // This automatically handles relocated class names in service files!
-            mergeServiceFiles {
-                exclude("META-INF/services/java.sql.Driver")
-            }
+            mergeServiceFiles()
             
             exclusions.forEach { exclude(it) }
         }
