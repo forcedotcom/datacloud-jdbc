@@ -7,12 +7,14 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeVectorGetter.Getter;
 import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeVectorGetter.Holder;
 import static com.salesforce.datacloud.jdbc.core.accessor.impl.TimeVectorGetter.createGetter;
+import static com.salesforce.datacloud.jdbc.util.Constants.ISO_TIME_FORMAT_MICROS;
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimeFromMilliseconds;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
@@ -106,6 +108,20 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
     }
 
     /**
+     * Lossless retrieval path: converts the raw Arrow value directly to a {@link LocalTime}
+     * without routing through {@code java.sql.Time}, which only has millisecond resolution.
+     */
+    private LocalTime getLocalTime() {
+        fillHolder();
+        if (this.wasNull) {
+            return null;
+        }
+
+        long nanoOfDay = this.timeUnit.toNanos(holder.value);
+        return LocalTime.ofNanoOfDay(nanoOfDay);
+    }
+
+    /**
      * @param calendar Calendar passed in. Ignores the calendar
      * @return the Timestamp relative to 00:00:00 assuming timezone is UTC
      */
@@ -118,14 +134,33 @@ public class TimeVectorAccessor extends QueryJDBCAccessor {
         return new Timestamp(time.getTime());
     }
 
+    /**
+     * @return the TIME value formatted with microsecond precision, matching the scale advertised
+     *     by result set metadata. Unlike {@link #getTime(Calendar)}, this does not route through
+     *     {@code java.sql.Time} and therefore does not lose fractional precision below a
+     *     millisecond.
+     */
     @Override
     public String getString() {
-        Time time = getTime(null);
-        if (time == null) {
+        LocalTime localTime = getLocalTime();
+        if (localTime == null) {
             return null;
         }
 
-        return time.toLocalTime().format(DateTimeFormatter.ISO_TIME);
+        return localTime.format(DateTimeFormatter.ofPattern(ISO_TIME_FORMAT_MICROS));
+    }
+
+    /**
+     * @return the TIME value as a {@link LocalTime} when {@code type} is {@code LocalTime.class},
+     *     the one lossless accessor for this column type. Falls back to the inherited behavior
+     *     (raw {@link Time} object or {@link #getString()}) for every other requested type.
+     */
+    @Override
+    public <T> T getObject(Class<T> type) throws SQLException {
+        if (type == LocalTime.class) {
+            return type.cast(getLocalTime());
+        }
+        return super.getObject(type);
     }
 
     protected static TimeUnit getTimeUnitForVector(ValueVector vector) throws SQLException {
