@@ -312,6 +312,8 @@ class DatabaseMetadataIntegrationTest {
         // Hyper returns the short name "time" from format_type(), which matches the map entry.
         assertThat(info.get("TYPE_NAME")).isEqualTo("TIME");
         assertThat(info.get("DATA_TYPE")).isEqualTo(Types.TIME);
+        // Microsecond fractional-seconds precision — see W-24140488.
+        assertThat(info.get("DECIMAL_DIGITS")).isEqualTo(6);
     }
 
     @Test
@@ -321,6 +323,8 @@ class DatabaseMetadataIntegrationTest {
         // Hyper returns the short name "timestamp" from format_type(), which matches the map.
         assertThat(info.get("TYPE_NAME")).isEqualTo("TIMESTAMP");
         assertThat(info.get("DATA_TYPE")).isEqualTo(Types.TIMESTAMP);
+        // Microsecond fractional-seconds precision — see W-24140488.
+        assertThat(info.get("DECIMAL_DIGITS")).isEqualTo(6);
     }
 
     @Test
@@ -330,6 +334,8 @@ class DatabaseMetadataIntegrationTest {
         // Hyper returns the short name "timestamptz" from format_type(), which matches the map.
         assertThat(info.get("TYPE_NAME")).isEqualTo("TIMESTAMP_WITH_TIMEZONE");
         assertThat(info.get("DATA_TYPE")).isEqualTo(Types.TIMESTAMP_WITH_TIMEZONE);
+        // Microsecond fractional-seconds precision — see W-24140488.
+        assertThat(info.get("DECIMAL_DIGITS")).isEqualTo(6);
     }
 
     @Test
@@ -465,22 +471,17 @@ class DatabaseMetadataIntegrationTest {
     @SneakyThrows
     void getColumns_consistentWith_resultSetMetaData_forScale() {
         // Arrow side: ResultSetMetaData.getScale() — derived from HyperTypes.getScale.
-        // pg_catalog side: DECIMAL_DIGITS — forwards the HyperType.getScale for DECIMAL, 0 else.
+        // pg_catalog side: DECIMAL_DIGITS — now also derived via HyperTypes.getScale for
+        // DECIMAL and the fractional-seconds time/timestamp kinds, 0 else.
         Map<String, String> mismatches = collectMismatches(
                 "DECIMAL_DIGITS", info -> info.get("DECIMAL_DIGITS").toString());
 
-        // Remaining mismatches reflect known simplifications, not type-mapping bugs:
+        // Remaining mismatch reflects a known simplification, not a type-mapping bug:
         //   - col_double: Arrow returns 17 (HyperTypes.getScale returns precision for
         //     FLOAT4/FLOAT8 by Postgres JDBC convention). pg_catalog returns 0 because binary
         //     floats have no decimal scale. pg is more defensible per the JDBC spec.
-        //   - col_time / col_timestamp / col_timestamptz: Arrow reports 6 (microseconds);
-        //     pg_catalog reports 0 because fractional-second scale is not populated from
-        //     atttypmod (covered by a follow-up).
         Map<String, String> expected = new LinkedHashMap<>();
         expected.put("col_double", "arrow=17, pg=0");
-        expected.put("col_time", "arrow=6, pg=0");
-        expected.put("col_timestamp", "arrow=6, pg=0");
-        expected.put("col_timestamptz", "arrow=6, pg=0");
 
         assertThat(mismatches)
                 .as(

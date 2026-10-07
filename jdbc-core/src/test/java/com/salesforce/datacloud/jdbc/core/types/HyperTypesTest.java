@@ -180,6 +180,11 @@ class HyperTypesTest {
     void needsDecimalDigits() {
         assertThat(HyperTypes.needsDecimalDigits(HyperType.decimal(10, 2, true)))
                 .isTrue();
+        // Time-of-day/timestamp kinds carry a fractional-seconds component.
+        assertThat(HyperTypes.needsDecimalDigits(HyperType.time(true))).isTrue();
+        assertThat(HyperTypes.needsDecimalDigits(HyperType.timeTz(true))).isTrue();
+        assertThat(HyperTypes.needsDecimalDigits(HyperType.timestamp(true))).isTrue();
+        assertThat(HyperTypes.needsDecimalDigits(HyperType.timestampTz(true))).isTrue();
         // Binary floating-point types have no meaningful decimal scale.
         assertThat(HyperTypes.needsDecimalDigits(HyperType.float4(true))).isFalse();
         assertThat(HyperTypes.needsDecimalDigits(HyperType.float8(true))).isFalse();
