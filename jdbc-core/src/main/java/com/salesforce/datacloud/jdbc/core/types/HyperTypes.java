@@ -402,12 +402,23 @@ public final class HyperTypes {
     /**
      * {@code true} when {@code DECIMAL_DIGITS} should be populated for this type.
      *
-     * <p>Only fixed-scale decimals qualify. Binary floating-point types ({@code REAL}, {@code
-     * DOUBLE}) have no meaningful decimal scale — their precision is an exponent-driven property,
-     * not a digit count — so we leave {@code DECIMAL_DIGITS} at {@code 0}.
+     * <p>Fixed-scale decimals qualify, as do the time-of-day/timestamp kinds that carry a
+     * fractional-seconds component ({@link #getScale} reports 6 — microseconds — for these).
+     * Binary floating-point types ({@code REAL}, {@code DOUBLE}) have no meaningful decimal
+     * scale — their precision is an exponent-driven property, not a digit count — so we leave
+     * {@code DECIMAL_DIGITS} at {@code 0}.
      */
     public static boolean needsDecimalDigits(HyperType t) {
-        return t.getKind() == HyperTypeKind.DECIMAL;
+        switch (t.getKind()) {
+            case DECIMAL:
+            case TIME:
+            case TIME_TZ:
+            case TIMESTAMP:
+            case TIMESTAMP_TZ:
+                return true;
+            default:
+                return false;
+        }
     }
 
     /** {@code true} when {@code CHAR_OCTET_LENGTH} should be populated for this type. */

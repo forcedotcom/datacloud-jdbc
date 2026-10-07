@@ -192,10 +192,12 @@ final class QueryMetadataUtil {
             int columnSize = HyperTypes.getPrecision(hyperType);
             rowData[COLUMN_SIZE_INDEX] = columnSize;
 
-            // DECIMAL_DIGITS: only meaningful for fixed-scale decimals; for those the scale
-            // comes from the HyperType that PgCatalogTypeParser extracted from
-            // format_type(atttypmod) (e.g. "numeric(10,5)" → scale=5).
-            rowData[DECIMAL_DIGITS_INDEX] = HyperTypes.needsDecimalDigits(hyperType) ? hyperType.getScale() : 0;
+            // DECIMAL_DIGITS: meaningful for fixed-scale decimals and for the time/timestamp
+            // kinds that carry a fractional-seconds component. Use the same semantic scale
+            // HyperTypes.getScale backs ResultSetMetaData.getScale() with, so discovery
+            // (pg_catalog) and query-result (Arrow) metadata agree.
+            rowData[DECIMAL_DIGITS_INDEX] =
+                    HyperTypes.needsDecimalDigits(hyperType) ? HyperTypes.getScale(hyperType) : 0;
             rowData[NUM_PREC_RADIX_INDEX] = 10;
             rowData[NULLABLE_INDEX] = notNull ? DatabaseMetaData.columnNoNulls : DatabaseMetaData.columnNullable;
             rowData[DESCRIPTION_INDEX] = resultSet.getString("description");
