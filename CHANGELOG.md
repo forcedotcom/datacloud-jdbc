@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.2](https://github.com/forcedotcom/datacloud-jdbc/compare/v1.1.1...v1.1.2) (2026-10-07)
+
+
+### Bug Fixes
+
+* **jdbc-core:** decode oid columns as unsigned 32-bit integers ([#201](https://github.com/forcedotcom/datacloud-jdbc/issues/201)) ([ae73129](https://github.com/forcedotcom/datacloud-jdbc/commit/ae7312951c66d69cfaa437f452c76f20cd45c87d))
+* **jdbc-core:** preserve microsecond precision for TIME retrieval ([#209](https://github.com/forcedotcom/datacloud-jdbc/issues/209)) ([19e9f75](https://github.com/forcedotcom/datacloud-jdbc/commit/19e9f751642de7a25e6941c56167217146b853de))
+* **jdbc-core:** report correct DECIMAL_DIGITS for time/timestamp columns in getColumns ([#208](https://github.com/forcedotcom/datacloud-jdbc/issues/208)) ([bb8c266](https://github.com/forcedotcom/datacloud-jdbc/commit/bb8c266d06c4fec97022a94d4a8496fe41970c8c))
+
 ## [1.1.1](https://github.com/forcedotcom/datacloud-jdbc/compare/v1.1.0...v1.1.1) (2026-09-30)
 
 
