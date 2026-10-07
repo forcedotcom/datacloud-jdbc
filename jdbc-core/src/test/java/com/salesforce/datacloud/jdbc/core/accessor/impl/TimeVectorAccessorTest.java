@@ -4,9 +4,11 @@
  */
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
-import static com.salesforce.datacloud.jdbc.util.Constants.ISO_TIME_FORMAT;
+import static com.salesforce.datacloud.jdbc.util.Constants.ISO_TIME_FORMAT_MICROS;
 import static com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension.nulledOutVector;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
@@ -574,6 +576,44 @@ public class TimeVectorAccessorTest {
         }
     }
 
+    /**
+     * Regression coverage for W-24140481: TIME columns are advertised with scale 6
+     * (microseconds), so retrieval must offer at least one lossless accessor. {@code getString()}
+     * must preserve all six fractional digits and {@code getObject(LocalTime.class)} must round
+     * trip exactly. The legacy {@code getObject()}/{@code getTime()} path is documented as
+     * lossy (java.sql.Time has only millisecond resolution) and is asserted here to pin that
+     * known, accepted behavior rather than to endorse it.
+     */
+    @SneakyThrows
+    @Test
+    void testTimeMicroVectorPreservesMicrosecondPrecision() {
+
+        // midnight + 1 microsecond, an arbitrary mid-day value, and one microsecond before midnight
+        List<Long> values = ImmutableList.of(1L, 45_296_123_456L, 86_399_999_999L);
+        List<String> expectedStrings = ImmutableList.of("00:00:00.000001", "12:34:56.123456", "23:59:59.999999");
+        List<Integer> expectedLegacyMillis = ImmutableList.of(0, 123, 999);
+
+        try (val vector = extension.createTimeMicroVector(values)) {
+            val i = new AtomicInteger(0);
+            val sut = new TimeVectorAccessor(vector, i::get);
+
+            for (; i.get() < vector.getValueCount(); i.incrementAndGet()) {
+                val row = i.get();
+                val expectedLocalTime = LocalTime.ofNanoOfDay(values.get(row) * 1_000L);
+
+                collector.assertThat(sut.getString()).isEqualTo(expectedStrings.get(row));
+                assertThat(sut.getObject(LocalTime.class)).isEqualTo(expectedLocalTime);
+
+                // Documented legacy behavior: java.sql.Time truncates below millisecond precision.
+                collector.assertThat(sut.getTime(null)).hasMillisecond(expectedLegacyMillis.get(row));
+
+                // getObject(Class<T>) for any non-LocalTime type falls back to the inherited
+                // default dispatch rather than the lossless path.
+                collector.assertThat(sut.getObject(Time.class)).isEqualTo(sut.getTime(null));
+            }
+        }
+    }
+
     @SneakyThrows
     @Test
     void testNulledOutTimeNanoVectorReturnsNull() {
@@ -592,6 +632,7 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(sut.getTimestamp(calendar)).isNull();
                 collector.assertThat(sut.getObject()).isNull();
                 collector.assertThat(sut.getString()).isNull();
+                assertThat(sut.getObject(LocalTime.class)).isNull();
             }
         }
     }
@@ -614,6 +655,7 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(sut.getTimestamp(calendar)).isNull();
                 collector.assertThat(sut.getObject()).isNull();
                 collector.assertThat(sut.getString()).isNull();
+                assertThat(sut.getObject(LocalTime.class)).isNull();
             }
         }
     }
@@ -636,6 +678,7 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(sut.getTimestamp(calendar)).isNull();
                 collector.assertThat(sut.getObject()).isNull();
                 collector.assertThat(sut.getString()).isNull();
+                assertThat(sut.getObject(LocalTime.class)).isNull();
             }
         }
     }
@@ -658,6 +701,7 @@ public class TimeVectorAccessorTest {
                 collector.assertThat(sut.getTimestamp(calendar)).isNull();
                 collector.assertThat(sut.getObject()).isNull();
                 collector.assertThat(sut.getString()).isNull();
+                assertThat(sut.getObject(LocalTime.class)).isNull();
             }
         }
     }
@@ -722,38 +766,14 @@ public class TimeVectorAccessorTest {
     }
 
     private String getISOString(Long value, TimeUnit unit) {
-        Long adjustedNanos;
-        switch (unit) {
-            case NANOSECONDS:
-                adjustedNanos = value;
-                break;
-            case MICROSECONDS:
-                adjustedNanos = value * 1_000;
-                break;
-            default:
-                adjustedNanos = value;
-        }
-
-        val localTime = LocalTime.ofNanoOfDay(adjustedNanos);
-        val result = localTime.format(DateTimeFormatter.ofPattern(ISO_TIME_FORMAT));
+        val localTime = LocalTime.ofNanoOfDay(unit.toNanos(value));
+        val result = localTime.format(DateTimeFormatter.ofPattern(ISO_TIME_FORMAT_MICROS));
         return result;
     }
 
     private String getISOString(Integer value, TimeUnit unit) {
-        Integer adjustedSeconds;
-        switch (unit) {
-            case MILLISECONDS:
-                adjustedSeconds = value / 1_000;
-                break;
-            case SECONDS:
-                adjustedSeconds = value;
-                break;
-            default:
-                adjustedSeconds = value;
-        }
-
-        val localTime = LocalTime.ofSecondOfDay(adjustedSeconds);
-        val result = localTime.format(DateTimeFormatter.ofPattern(ISO_TIME_FORMAT));
+        val localTime = LocalTime.ofNanoOfDay(unit.toNanos(value));
+        val result = localTime.format(DateTimeFormatter.ofPattern(ISO_TIME_FORMAT_MICROS));
         return result;
     }
 }

@@ -7,6 +7,7 @@ package com.salesforce.datacloud.jdbc.util;
 public final class Constants {
     // Date Time constants
     public static final String ISO_TIME_FORMAT = "HH:mm:ss";
+    public static final String ISO_TIME_FORMAT_MICROS = "HH:mm:ss.SSSSSS";
 
     private Constants() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
