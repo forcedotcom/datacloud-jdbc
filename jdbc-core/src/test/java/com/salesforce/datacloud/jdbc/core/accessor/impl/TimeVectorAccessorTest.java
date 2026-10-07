@@ -606,6 +606,10 @@ public class TimeVectorAccessorTest {
 
                 // Documented legacy behavior: java.sql.Time truncates below millisecond precision.
                 collector.assertThat(sut.getTime(null)).hasMillisecond(expectedLegacyMillis.get(row));
+
+                // getObject(Class<T>) for any non-LocalTime type falls back to the inherited
+                // default dispatch rather than the lossless path.
+                collector.assertThat(sut.getObject(Time.class)).isEqualTo(sut.getTime(null));
             }
         }
     }
