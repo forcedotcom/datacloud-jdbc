@@ -31,7 +31,7 @@ tasks.withType<Javadoc> {
 spotless {
     java {
         target("src/main/java/**/*.java", "src/test/java/**/*.java")
-        palantirJavaFormat("2.62.0")
+        palantirJavaFormat("2.80.0")
         formatAnnotations()
         importOrder()
         removeUnusedImports()

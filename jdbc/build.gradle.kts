@@ -6,8 +6,8 @@ plugins {
 }
 
 description = "Salesforce Data Cloud JDBC driver"
-val mavenName: String by extra("Salesforce Data Cloud JDBC Driver")
-val mavenDescription: String by extra("${project.description}")
+extra.set("mavenName", "Salesforce Data Cloud JDBC Driver")
+extra.set("mavenDescription", project.description.toString())
 
 dependencies {
     implementation(project(":jdbc-core"))

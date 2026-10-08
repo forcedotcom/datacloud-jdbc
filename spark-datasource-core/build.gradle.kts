@@ -5,8 +5,8 @@ plugins {
 }
 
 description = "Salesforce Data Cloud Spark DataSource core implementation"
-val mavenName: String by extra("Salesforce Data Cloud Spark DataSource Core")
-val mavenDescription: String by extra("${project.description}")
+extra.set("mavenName", "Salesforce Data Cloud Spark DataSource Core")
+extra.set("mavenDescription", project.description.toString())
 
 dependencies {
     // gRPC dependencies: compileOnly to avoid forcing users to provide gRPC.
