@@ -45,6 +45,18 @@ class ArrowStreamReaderCursor implements AutoCloseable {
 
     private final AtomicInteger currentIndex = new AtomicInteger(INIT_ROW_NUMBER);
 
+    /**
+     * Whether the first non-empty batch has been requested from the stream, either by
+     * {@link #isBeforeFirst()} peeking at it or by the first {@link #next()}.
+     */
+    private boolean firstBatchLoaded = false;
+
+    /**
+     * Whether the stream has no further rows: the first batch was found empty, or {@link #next()}
+     * ran past the last row.
+     */
+    private boolean endOfStream = false;
+
     ArrowStreamReaderCursor(ArrowStreamReader reader, BufferAllocator allocator, ZoneId sessionZone) {
         this.reader = reader;
         this.allocator = allocator;
@@ -81,13 +93,19 @@ class ArrowStreamReaderCursor implements AutoCloseable {
 
     @SneakyThrows
     public boolean next() {
+        if (endOfStream) {
+            return false;
+        }
         val current = currentIndex.incrementAndGet();
         val total = getSchemaRoot().getRowCount();
 
         try {
+            firstBatchLoaded = true;
             val next = current < total || loadNextNonEmptyBatch();
             if (next) {
                 rowsSeen++;
+            } else {
+                endOfStream = true;
             }
             return next;
         } catch (Exception e) {
@@ -98,6 +116,50 @@ class ArrowStreamReaderCursor implements AutoCloseable {
                 throw new SQLException("Failed to load next batch: " + e.getMessage(), e);
             }
         }
+    }
+
+    /**
+     * True if no row has been returned yet and the stream has at least one row to return.
+     *
+     * <p>Answering this for an empty result requires reading the first non-empty batch, so the
+     * first call peeks at it, blocking on the stream just as the first {@link #next()} would. The
+     * batch stays loaded and the cursor stays before row 0. Peeking is only safe while no row has
+     * been returned, since loading a batch replaces the vectors backing the current row.
+     */
+    @SneakyThrows
+    boolean isBeforeFirst() {
+        if (rowsSeen > 0 || endOfStream) {
+            return false;
+        }
+        if (!firstBatchLoaded) {
+            try {
+                val hasRows = loadNextNonEmptyBatch();
+                // loadNextNonEmptyBatch positions the cursor on row 0; step back so next() returns it.
+                currentIndex.set(INIT_ROW_NUMBER);
+                firstBatchLoaded = true;
+                endOfStream = !hasRows;
+            } catch (Exception e) {
+                if (e instanceof SQLException) {
+                    throw e;
+                } else {
+                    throw new SQLException("Failed to load next batch: " + e.getMessage(), e);
+                }
+            }
+        }
+        return !endOfStream;
+    }
+
+    /**
+     * True once {@link #next()} has moved past the last row. False for an empty result, which has
+     * no last row to be after.
+     */
+    boolean isAfterLast() {
+        return endOfStream && rowsSeen > 0;
+    }
+
+    /** True while positioned on the first row. */
+    boolean isFirst() {
+        return rowsSeen == 1 && !endOfStream;
     }
 
     @SneakyThrows
