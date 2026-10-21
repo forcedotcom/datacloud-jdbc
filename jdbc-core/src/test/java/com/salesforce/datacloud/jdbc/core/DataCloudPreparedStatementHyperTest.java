@@ -18,6 +18,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -29,10 +30,33 @@ import lombok.val;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @Slf4j
 @ExtendWith(LocalHyperTestBase.class)
 public class DataCloudPreparedStatementHyperTest {
+    @ParameterizedTest
+    @ValueSource(
+            ints = {
+                Types.BOOLEAN, Types.SMALLINT, Types.INTEGER, Types.BIGINT, Types.REAL, Types.DOUBLE,
+                Types.DECIMAL, Types.VARCHAR, Types.DATE, Types.TIME, Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE
+            })
+    void testSetObjectNullRetainsRequestedJdbcType(int sqlType) throws SQLException {
+        try (Connection connection = getHyperQueryConnection();
+                PreparedStatement statement = connection.prepareStatement("SELECT ? AS value")) {
+            statement.setObject(1, null, sqlType);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertThat(resultSet.getMetaData().getColumnType(1)).isEqualTo(sqlType);
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getObject(1)).isNull();
+                assertThat(resultSet.wasNull()).isTrue();
+                assertThat(resultSet.next()).isFalse();
+            }
+        }
+    }
+
     @Test
     @SneakyThrows
     public void testPreparedStatementDateRange() {

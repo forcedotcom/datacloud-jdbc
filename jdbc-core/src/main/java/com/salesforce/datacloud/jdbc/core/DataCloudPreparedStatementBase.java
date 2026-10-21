@@ -196,7 +196,7 @@ abstract class DataCloudPreparedStatementBase<P> extends DataCloudStatement {
 
     protected final void setObjectParameter(P parameter, Object value, int targetSqlType) throws SQLException {
         if (value == null) {
-            setNullParameter(parameter, Types.NULL);
+            setNullParameter(parameter, targetSqlType);
             return;
         }
         if (targetSqlType == Types.TIMESTAMP) {

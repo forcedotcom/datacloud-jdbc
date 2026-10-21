@@ -30,8 +30,9 @@ import salesforce.cdp.hyperdb.v1.QueryParam;
  * <p>Setting an existing name again replaces its type and value. Binding order is not significant.
  * {@link #clearParameters()} removes all bindings; executing with no bindings is allowed. SQL
  * {@code NULL} values follow {@link
- * DataCloudPreparedStatement}: {@link #setObject(String, Object, int)} with a null value binds an
- * untyped null, while type-specific setters bind a null of their corresponding type.
+ * DataCloudPreparedStatement}: {@link #setObject(String, Object, int)} with a null value preserves
+ * the requested JDBC type, while {@link #setObject(String, Object)} binds an untyped null.
+ * Type-specific setters bind a null of their corresponding type.
  *
  * <p>This class exposes only the named setters supported by the driver. It is not a {@link
  * java.sql.PreparedStatement}, and {@link java.sql.DatabaseMetaData#supportsNamedParameters()}

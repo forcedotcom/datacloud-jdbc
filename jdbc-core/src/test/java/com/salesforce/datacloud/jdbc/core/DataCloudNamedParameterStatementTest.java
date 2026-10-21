@@ -9,11 +9,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import com.salesforce.datacloud.jdbc.protocol.data.ParameterBinding;
+import java.math.BigDecimal;
+import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
+import java.sql.Time;
 import java.sql.Types;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class DataCloudNamedParameterStatementTest extends InterceptedHyperTestBase {
     private DataCloudNamedParameterStatement preparedStatement;
@@ -71,7 +79,28 @@ class DataCloudNamedParameterStatementTest extends InterceptedHyperTestBase {
 
         assertThat(preparedStatement.parameters)
                 .containsEntry("left_value", new ParameterBinding(HyperType.int32(false), 40))
-                .containsEntry("right_value", new ParameterBinding(HyperType.nullType(), null));
+                .containsEntry("right_value", new ParameterBinding(HyperType.int32(true), null));
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            ints = {
+                Types.BOOLEAN, Types.SMALLINT, Types.INTEGER, Types.BIGINT, Types.REAL, Types.DOUBLE,
+                Types.DECIMAL, Types.VARCHAR, Types.DATE, Types.TIME, Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE
+            })
+    void setObjectNullRetainsRequestedJdbcType(int sqlType) throws SQLException {
+        try (DataCloudNamedParameterStatement statement =
+                getInterceptedClientConnection().prepareNamedParameterStatement("SELECT :bound_value AS value")) {
+            statement.setObject("bound_value", null, sqlType);
+
+            try (java.sql.ResultSet resultSet = statement.executeQuery()) {
+                assertThat(resultSet.getMetaData().getColumnType(1)).isEqualTo(sqlType);
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getObject(1)).isNull();
+                assertThat(resultSet.wasNull()).isTrue();
+                assertThat(resultSet.next()).isFalse();
+            }
+        }
     }
 
     @Test
@@ -121,14 +150,60 @@ class DataCloudNamedParameterStatementTest extends InterceptedHyperTestBase {
     }
 
     @Test
-    void executesFloatParameterAgainstHyper() throws SQLException {
-        try (DataCloudNamedParameterStatement statement =
-                getInterceptedClientConnection().prepareNamedParameterStatement("SELECT :float_value AS float_value")) {
+    void executesScalarParametersAgainstHyper() throws SQLException {
+        try (DataCloudNamedParameterStatement statement = getInterceptedClientConnection()
+                .prepareNamedParameterStatement(
+                        "SELECT :bool_value AS bool_value, :byte_value AS byte_value, :short_value AS short_value, "
+                                + ":long_value AS long_value, :float_value AS float_value, :double_value AS double_value, "
+                                + ":date_value AS date_value, :time_value AS time_value")) {
+            statement.setBoolean("bool_value", true);
+            statement.setByte("byte_value", (byte) 7);
+            statement.setShort("short_value", (short) 32000);
+            statement.setLong("long_value", 5_000_000_000L);
             statement.setFloat("float_value", 1.5f);
+            statement.setDouble("double_value", 2.5);
+            statement.setDate("date_value", Date.valueOf("2024-01-02"));
+            statement.setTime("time_value", Time.valueOf("12:34:56"));
 
             try (java.sql.ResultSet resultSet = statement.executeQuery()) {
                 assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getBoolean("bool_value")).isTrue();
+                assertThat(resultSet.getByte("byte_value")).isEqualTo((byte) 7);
+                assertThat(resultSet.getShort("short_value")).isEqualTo((short) 32000);
+                assertThat(resultSet.getLong("long_value")).isEqualTo(5_000_000_000L);
                 assertThat(resultSet.getFloat("float_value")).isEqualTo(1.5f);
+                assertThat(resultSet.getDouble("double_value")).isEqualTo(2.5);
+                assertThat(resultSet.getDate("date_value")).isEqualTo(Date.valueOf("2024-01-02"));
+                assertThat(resultSet.getTime("time_value")).isEqualTo(Time.valueOf("12:34:56"));
+                assertThat(resultSet.next()).isFalse();
+            }
+        }
+    }
+
+    private static Stream<Arguments> scalarObjects() {
+        return Stream.of(
+                Arguments.of(new BigDecimal("12.34"), new BigDecimal("12.34")),
+                Arguments.of((short) 7, 7),
+                Arguments.of(5_000_000_000L, 5_000_000_000L),
+                Arguments.of(1.5f, 1.5f),
+                Arguments.of(2.5, 2.5),
+                Arguments.of(Date.valueOf("2024-01-02"), Date.valueOf("2024-01-02")),
+                Arguments.of(Time.valueOf("12:34:56"), Time.valueOf("12:34:56")),
+                Arguments.of(true, true));
+    }
+
+    @ParameterizedTest
+    @MethodSource("scalarObjects")
+    void executesInferredScalarObjectsAgainstHyper(Object value, Object expectedValue) throws SQLException {
+        try (DataCloudNamedParameterStatement statement =
+                getInterceptedClientConnection().prepareNamedParameterStatement("SELECT :bound_value AS value")) {
+            statement.setObject("bound_value", value);
+
+            assertThat(statement.execute()).isTrue();
+            try (java.sql.ResultSet resultSet = statement.getResultSet()) {
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getObject(1)).isEqualTo(expectedValue);
+                assertThat(resultSet.next()).isFalse();
             }
         }
     }
@@ -177,7 +252,19 @@ class DataCloudNamedParameterStatementTest extends InterceptedHyperTestBase {
                     .isInstanceOf(SQLFeatureNotSupportedException.class)
                     .hasFieldOrPropertyWithValue("SQLState", "HYC00")
                     .hasMessageContaining("JDBC type " + unsupportedType);
+            assertThatThrownBy(() -> preparedStatement.setObject("value", null, unsupportedType))
+                    .isInstanceOf(SQLFeatureNotSupportedException.class)
+                    .hasFieldOrPropertyWithValue("SQLState", "HYC00")
+                    .hasMessageContaining("JDBC type " + unsupportedType);
         }
+    }
+
+    @Test
+    void rejectsUnknownJdbcTypeCodes() {
+        assertThatThrownBy(() -> preparedStatement.setObject("value", null, Integer.MIN_VALUE))
+                .isInstanceOf(SQLException.class)
+                .hasFieldOrPropertyWithValue("SQLState", "HYC00")
+                .hasMessageContaining("Unsupported JDBC type code: " + Integer.MIN_VALUE);
     }
 
     @Test

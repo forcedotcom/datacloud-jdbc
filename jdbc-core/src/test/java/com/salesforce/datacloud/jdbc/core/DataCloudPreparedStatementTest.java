@@ -204,7 +204,7 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
 
         preparedStatement.setObject(17, null, Types.VARCHAR);
         assertThat(preparedStatement.parameters.getParameters().get(16))
-                .isEqualTo(new ParameterBinding(HyperType.nullType(), null));
+                .isEqualTo(new ParameterBinding(HyperType.varcharUnlimited(true), null));
 
         try (MockedStatic<DateTimeUtils> mockedDateTimeUtil = mockStatic(DateTimeUtils.class)) {
             mockedDateTimeUtil
