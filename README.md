@@ -50,7 +50,7 @@ com.salesforce.datacloud.jdbc.DataCloudJDBCDriver
 > This supported API includes:
 > 1. Any construct available through the JDBC specification we have implemented
 > 2. The DataCloudQueryStatus class
-> 3. The public methods in DataCloudConnection, DataCloudStatement, DataCloudResultSet, DataCloudPreparedStatement, and DataCloudNamedPreparedStatement -- note that these will be refactored to be interfaces that will make the API more obvious in the near future
+> 3. The public methods in DataCloudConnection, DataCloudStatement, DataCloudResultSet, DataCloudPreparedStatement, and DataCloudNamedParameterStatement -- note that these will be refactored to be interfaces that will make the API more obvious in the near future
 >
 > Usage of any other public classes or methods not listed above should be considered relatively unsafe, though we will strive to not make changes and will use semantic versioning from 1.0.0 and on.
 
@@ -162,11 +162,11 @@ This section describes details around potential pitfalls / ambiguities related t
 
 ### Named parameters
 
-`DataCloudConnection` supports Hyper's native `:name` parameters through `prepareNamedStatement`:
+`DataCloudConnection` supports Hyper's native `:name` parameters through `prepareNamedParameterStatement`:
 
 ```java
-try (DataCloudNamedPreparedStatement statement =
-        connection.prepareNamedStatement("SELECT :minimum + :increment")) {
+try (DataCloudNamedParameterStatement statement =
+        connection.prepareNamedParameterStatement("SELECT :minimum + :increment")) {
     statement.setInt("minimum", 40);
     statement.setInt("increment", 2);
 

@@ -190,8 +190,8 @@ public class DataCloudConnection implements Connection {
      * Creates a prepared statement for SQL containing named parameters such as
      * {@code SELECT :accountId}.
      */
-    public DataCloudNamedPreparedStatement prepareNamedStatement(String sql) {
-        return new DataCloudNamedPreparedStatement(this, sql);
+    public DataCloudNamedParameterStatement prepareNamedParameterStatement(String sql) {
+        return new DataCloudNamedParameterStatement(this, sql);
     }
 
     /**

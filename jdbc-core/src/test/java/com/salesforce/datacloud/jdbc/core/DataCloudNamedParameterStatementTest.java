@@ -15,13 +15,14 @@ import java.sql.Types;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class DataCloudNamedPreparedStatementTest extends InterceptedHyperTestBase {
-    private DataCloudNamedPreparedStatement preparedStatement;
+class DataCloudNamedParameterStatementTest extends InterceptedHyperTestBase {
+    private DataCloudNamedParameterStatement preparedStatement;
 
     @BeforeEach
     void setUp() {
         preparedStatement = getInterceptedClientConnection()
-                .prepareNamedStatement("SELECT :left_value + :right_value AS total, :left_value AS left_value");
+                .prepareNamedParameterStatement(
+                        "SELECT :left_value + :right_value AS total, :left_value AS left_value");
     }
 
     @Test
@@ -97,13 +98,13 @@ class DataCloudNamedPreparedStatementTest extends InterceptedHyperTestBase {
     void rejectsStatementSqlOverrides() {
         assertThatThrownBy(() -> preparedStatement.executeQuery("SELECT 1"))
                 .isInstanceOf(SQLException.class)
-                .hasMessageContaining("use DataCloudNamedPreparedStatement::executeQuery() instead");
+                .hasMessageContaining("use DataCloudNamedParameterStatement::executeQuery() instead");
         assertThatThrownBy(() -> preparedStatement.execute("SELECT 1"))
                 .isInstanceOf(SQLException.class)
-                .hasMessageContaining("use DataCloudNamedPreparedStatement::execute() instead");
+                .hasMessageContaining("use DataCloudNamedParameterStatement::execute() instead");
         assertThatThrownBy(() -> preparedStatement.executeAsyncQuery("SELECT 1"))
                 .isInstanceOf(SQLException.class)
-                .hasMessageContaining("use DataCloudNamedPreparedStatement::executeAsyncQuery() instead");
+                .hasMessageContaining("use DataCloudNamedParameterStatement::executeAsyncQuery() instead");
     }
 
     @Test
@@ -121,8 +122,8 @@ class DataCloudNamedPreparedStatementTest extends InterceptedHyperTestBase {
 
     @Test
     void executesFloatParameterAgainstHyper() throws SQLException {
-        try (DataCloudNamedPreparedStatement statement =
-                getInterceptedClientConnection().prepareNamedStatement("SELECT :float_value AS float_value")) {
+        try (DataCloudNamedParameterStatement statement =
+                getInterceptedClientConnection().prepareNamedParameterStatement("SELECT :float_value AS float_value")) {
             statement.setFloat("float_value", 1.5f);
 
             try (java.sql.ResultSet resultSet = statement.executeQuery()) {
@@ -134,8 +135,8 @@ class DataCloudNamedPreparedStatementTest extends InterceptedHyperTestBase {
 
     @Test
     void executesQuotedParameterNameContainingSpacesAgainstHyper() throws SQLException {
-        try (DataCloudNamedPreparedStatement statement =
-                getInterceptedClientConnection().prepareNamedStatement("SELECT :\"order total\" AS total")) {
+        try (DataCloudNamedParameterStatement statement =
+                getInterceptedClientConnection().prepareNamedParameterStatement("SELECT :\"order total\" AS total")) {
             statement.setInt("order total", 42);
 
             try (java.sql.ResultSet resultSet = statement.executeQuery()) {
@@ -148,9 +149,10 @@ class DataCloudNamedPreparedStatementTest extends InterceptedHyperTestBase {
 
     @Test
     void executesDecimalNullsAgainstHyper() throws SQLException {
-        try (DataCloudNamedPreparedStatement statement = getInterceptedClientConnection()
-                .prepareNamedStatement("SELECT :setter_null IS NULL AS setter_null, :typed_null IS NULL AS typed_null, "
-                        + ":untyped_null IS NULL AS untyped_null")) {
+        try (DataCloudNamedParameterStatement statement = getInterceptedClientConnection()
+                .prepareNamedParameterStatement(
+                        "SELECT :setter_null IS NULL AS setter_null, :typed_null IS NULL AS typed_null, "
+                                + ":untyped_null IS NULL AS untyped_null")) {
             statement.setBigDecimal("setter_null", null);
             statement.setNull("typed_null", Types.DECIMAL);
             statement.setObject("untyped_null", null);
@@ -180,8 +182,8 @@ class DataCloudNamedPreparedStatementTest extends InterceptedHyperTestBase {
 
     @Test
     void reportsParameterEncodingFailuresAsSqlExceptions() throws SQLException {
-        try (DataCloudNamedPreparedStatement statement =
-                getInterceptedClientConnection().prepareNamedStatement("SELECT :value")) {
+        try (DataCloudNamedParameterStatement statement =
+                getInterceptedClientConnection().prepareNamedParameterStatement("SELECT :value")) {
             statement.setObject("value", "not an integer", Types.INTEGER);
 
             assertThatThrownBy(statement::executeQuery)

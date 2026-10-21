@@ -18,7 +18,7 @@ import salesforce.cdp.hyperdb.v1.QueryParam;
 
 /**
  * A Hyper specific prepared statement for named parameters such as {@code :account_id}.
- * Create instances with {@link DataCloudConnection#prepareNamedStatement(String)} and execute the
+ * Create instances with {@link DataCloudConnection#prepareNamedParameterStatement(String)} and execute the
  * SQL supplied there using {@link #executeQuery()}, {@link #execute()}, or {@link
  * #executeAsyncQuery()}.
  *
@@ -39,14 +39,14 @@ import salesforce.cdp.hyperdb.v1.QueryParam;
  * java.sql.CallableStatement} parameters. Like JDBC statements generally, instances are not
  * thread-safe.
  */
-public final class DataCloudNamedPreparedStatement extends DataCloudPreparedStatementBase<String> {
+public final class DataCloudNamedParameterStatement extends DataCloudPreparedStatementBase<String> {
     private static final String PARAMETER_NAME_ERROR = "Parameter name must not be null or empty";
 
     final Map<String, ParameterBinding> parameters = new HashMap<>();
     private final ProvidedParameters providedParameters =
             new ProvidedParameters(QueryParam.ParameterStyle.NAMED, parameters.entrySet());
 
-    DataCloudNamedPreparedStatement(DataCloudConnection connection, String sql) {
+    DataCloudNamedParameterStatement(DataCloudConnection connection, String sql) {
         super(connection, sql);
     }
 
