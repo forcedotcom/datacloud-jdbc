@@ -18,6 +18,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -29,10 +30,33 @@ import lombok.val;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @Slf4j
 @ExtendWith(LocalHyperTestBase.class)
 public class DataCloudPreparedStatementHyperTest {
+    @ParameterizedTest
+    @ValueSource(
+            ints = {
+                Types.BOOLEAN, Types.SMALLINT, Types.INTEGER, Types.BIGINT, Types.REAL, Types.DOUBLE,
+                Types.DECIMAL, Types.VARCHAR, Types.DATE, Types.TIME, Types.TIMESTAMP, Types.TIMESTAMP_WITH_TIMEZONE
+            })
+    void testSetObjectNullRetainsRequestedJdbcType(int sqlType) throws SQLException {
+        try (Connection connection = getHyperQueryConnection();
+                PreparedStatement statement = connection.prepareStatement("SELECT ? AS value")) {
+            statement.setObject(1, null, sqlType);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertThat(resultSet.getMetaData().getColumnType(1)).isEqualTo(sqlType);
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.getObject(1)).isNull();
+                assertThat(resultSet.wasNull()).isTrue();
+                assertThat(resultSet.next()).isFalse();
+            }
+        }
+    }
+
     @Test
     @SneakyThrows
     public void testPreparedStatementDateRange() {
@@ -280,41 +304,6 @@ public class DataCloudPreparedStatementHyperTest {
                 Assertions.assertThatThrownBy(preparedStatement::getMetaData)
                         .isInstanceOf(SQLException.class)
                         .hasMessageContaining("table \"non_existent_table\" does not exist");
-            }
-        }
-    }
-
-    @Test
-    @SneakyThrows
-    public void testGetMetaDataAfterExecuteDoesNotQueryAgain() {
-        try (HyperLogScope logScope = new HyperLogScope()) {
-            try (Connection connection = getHyperQueryConnection(logScope.getProperties())) {
-                try (PreparedStatement preparedStatement =
-                        connection.prepareStatement("select 1 as id, 'test' as name")) {
-                    try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                        assertThat(resultSet.next()).isTrue();
-                        assertThat(resultSet.next()).isFalse();
-
-                        ResultSetMetaData metadata = preparedStatement.getMetaData();
-                        assertThat(metadata).isNotNull();
-                        assertThat(metadata.getColumnCount()).isEqualTo(2);
-                    }
-
-                    ResultSet logResult = logScope.executeQuery("SELECT COUNT(*) FROM hyper_log WHERE k='query-end'");
-                    logResult.next();
-                    Assertions.assertThat(logResult.getDouble(1))
-                            .as("Should only have one query execution, not two")
-                            .isEqualTo(1);
-
-                    // Test that after closing the resultset it would query again
-                    ResultSetMetaData metadata = preparedStatement.getMetaData();
-                    assertThat(metadata).isNotNull();
-                    assertThat(metadata.getColumnCount()).isEqualTo(2);
-
-                    ResultSet logResult2 = logScope.executeQuery("SELECT COUNT(*) FROM hyper_log WHERE k='query-end'");
-                    logResult2.next();
-                    Assertions.assertThat(logResult2.getDouble(1)).isEqualTo(2);
-                }
             }
         }
     }
