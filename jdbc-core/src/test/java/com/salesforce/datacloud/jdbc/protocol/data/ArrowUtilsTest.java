@@ -19,6 +19,7 @@ import java.sql.JDBCType;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
@@ -242,9 +243,12 @@ class ArrowUtilsTest {
         assertEquals(-1, negativeScaleValue.scale());
         assertEquals(7, negativeScaleValue.precision());
 
-        List<ParameterBinding> parameterBindings = Collections.singletonList(new ParameterBinding(
-                HyperType.decimal(negativeScaleValue.precision(), negativeScaleValue.scale(), true),
-                negativeScaleValue));
+        List<Map.Entry<String, ParameterBinding>> parameterBindings =
+                Collections.singletonList(new AbstractMap.SimpleImmutableEntry<>(
+                        "negative_scale",
+                        new ParameterBinding(
+                                HyperType.decimal(negativeScaleValue.precision(), negativeScaleValue.scale(), true),
+                                negativeScaleValue)));
 
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         byte[] encoded = ArrowUtils.toArrowByteArray(parameterBindings, calendar);
@@ -255,6 +259,7 @@ class ArrowUtilsTest {
 
             Field field = reader.getVectorSchemaRoot().getSchema().getFields().get(0);
             assertInstanceOf(ArrowType.Decimal.class, field.getType());
+            assertEquals(parameterBindings.get(0).getKey(), field.getName());
             ArrowType.Decimal decimalType = (ArrowType.Decimal) field.getType();
             assertTrue(
                     decimalType.getScale() >= 0,
@@ -280,9 +285,12 @@ class ArrowUtilsTest {
         assertEquals(1, smallMagnitudeValue.precision());
         assertEquals(3, smallMagnitudeValue.scale());
 
-        List<ParameterBinding> parameterBindings = Collections.singletonList(new ParameterBinding(
-                HyperType.decimal(smallMagnitudeValue.precision(), smallMagnitudeValue.scale(), true),
-                smallMagnitudeValue));
+        List<Map.Entry<String, ParameterBinding>> parameterBindings =
+                Collections.singletonList(new AbstractMap.SimpleImmutableEntry<>(
+                        "small_magnitude",
+                        new ParameterBinding(
+                                HyperType.decimal(smallMagnitudeValue.precision(), smallMagnitudeValue.scale(), true),
+                                smallMagnitudeValue)));
 
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         byte[] encoded = ArrowUtils.toArrowByteArray(parameterBindings, calendar);
@@ -293,6 +301,7 @@ class ArrowUtilsTest {
 
             Field field = reader.getVectorSchemaRoot().getSchema().getFields().get(0);
             assertInstanceOf(ArrowType.Decimal.class, field.getType());
+            assertEquals(parameterBindings.get(0).getKey(), field.getName());
             ArrowType.Decimal decimalType = (ArrowType.Decimal) field.getType();
             assertTrue(
                     decimalType.getScale() <= decimalType.getPrecision(),
@@ -312,10 +321,11 @@ class ArrowUtilsTest {
         BigDecimal normalScaleValue = new BigDecimal("123.45");
         assertEquals(2, normalScaleValue.scale());
 
-        List<ParameterBinding> parameterBindings = Arrays.asList(
-                null,
-                new ParameterBinding(HyperType.int32(true), 42),
-                new ParameterBinding(HyperType.decimal(5, 2, true), normalScaleValue));
+        List<Map.Entry<String, ParameterBinding>> parameterBindings = Arrays.asList(
+                new AbstractMap.SimpleImmutableEntry<>("1", null),
+                new AbstractMap.SimpleImmutableEntry<>("2", new ParameterBinding(HyperType.int32(true), 42)),
+                new AbstractMap.SimpleImmutableEntry<>(
+                        "3", new ParameterBinding(HyperType.decimal(5, 2, true), normalScaleValue)));
 
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         byte[] encoded = ArrowUtils.toArrowByteArray(parameterBindings, calendar);
@@ -337,6 +347,67 @@ class ArrowUtilsTest {
 
             DecimalVector vector = (DecimalVector) reader.getVectorSchemaRoot().getVector(2);
             assertEquals(0, vector.getObject(0).compareTo(normalScaleValue));
+        }
+    }
+
+    @Test
+    void testArrowByteArrayUsesParameterEntryNames() throws Exception {
+        List<Map.Entry<String, ParameterBinding>> parameterBindings = Arrays.asList(
+                new AbstractMap.SimpleImmutableEntry<>("second", new ParameterBinding(HyperType.int32(false), 2)),
+                new AbstractMap.SimpleImmutableEntry<>("first", new ParameterBinding(HyperType.int32(false), 1)));
+
+        byte[] arrow = ArrowUtils.toArrowByteArray(parameterBindings, Calendar.getInstance());
+
+        try (org.apache.arrow.memory.RootAllocator allocator = new org.apache.arrow.memory.RootAllocator();
+                org.apache.arrow.vector.ipc.ArrowStreamReader reader =
+                        new org.apache.arrow.vector.ipc.ArrowStreamReader(
+                                new java.io.ByteArrayInputStream(arrow), allocator)) {
+            assertThat(reader.getVectorSchemaRoot().getSchema().getFields())
+                    .extracting(Field::getName)
+                    .containsExactlyInAnyOrder("second", "first");
+            assertThat(reader.loadNextBatch()).isTrue();
+            assertThat(reader.getVectorSchemaRoot().getVector("second").getObject(0))
+                    .isEqualTo(2);
+            assertThat(reader.getVectorSchemaRoot().getVector("first").getObject(0))
+                    .isEqualTo(1);
+        }
+    }
+
+    @Test
+    void testArrowByteArraySupportsTypedDecimalNull() throws Exception {
+        byte[] arrow = ArrowUtils.toArrowByteArray(
+                Collections.singletonList(new AbstractMap.SimpleImmutableEntry<>(
+                        "1", new ParameterBinding(HyperType.decimal(0, 0, true), null))),
+                Calendar.getInstance());
+
+        try (org.apache.arrow.memory.RootAllocator allocator = new org.apache.arrow.memory.RootAllocator();
+                org.apache.arrow.vector.ipc.ArrowStreamReader reader =
+                        new org.apache.arrow.vector.ipc.ArrowStreamReader(
+                                new java.io.ByteArrayInputStream(arrow), allocator)) {
+            ArrowType.Decimal decimal = (ArrowType.Decimal)
+                    reader.getVectorSchemaRoot().getSchema().getFields().get(0).getType();
+            assertThat(decimal.getPrecision()).isEqualTo(38);
+            assertThat(decimal.getScale()).isZero();
+            assertThat(reader.loadNextBatch()).isTrue();
+            assertThat(reader.getVectorSchemaRoot().getVector(0).isNull(0)).isTrue();
+        }
+    }
+
+    @Test
+    void testArrowByteArraySupportsUntypedNull() throws Exception {
+        byte[] arrow = ArrowUtils.toArrowByteArray(
+                Collections.singletonList(
+                        new AbstractMap.SimpleImmutableEntry<>("1", new ParameterBinding(HyperType.nullType(), null))),
+                Calendar.getInstance());
+
+        try (org.apache.arrow.memory.RootAllocator allocator = new org.apache.arrow.memory.RootAllocator();
+                org.apache.arrow.vector.ipc.ArrowStreamReader reader =
+                        new org.apache.arrow.vector.ipc.ArrowStreamReader(
+                                new java.io.ByteArrayInputStream(arrow), allocator)) {
+            assertThat(reader.loadNextBatch()).isTrue();
+            assertThat(reader.getVectorSchemaRoot().getVector(0))
+                    .isInstanceOf(org.apache.arrow.vector.VarCharVector.class);
+            assertThat(reader.getVectorSchemaRoot().getVector(0).isNull(0)).isTrue();
         }
     }
 }

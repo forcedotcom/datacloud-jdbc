@@ -50,7 +50,7 @@ com.salesforce.datacloud.jdbc.DataCloudJDBCDriver
 > This supported API includes:
 > 1. Any construct available through the JDBC specification we have implemented
 > 2. The DataCloudQueryStatus class
-> 3. The public methods in DataCloudConnection, DataCloudStatement, DataCloudResultSet, and DataCloudPreparedStatement -- note that these will be refactored to be interfaces that will make the API more obvious in the near future
+> 3. The public methods in DataCloudConnection, DataCloudStatement, DataCloudResultSet, DataCloudPreparedStatement, and DataCloudNamedPreparedStatement -- note that these will be refactored to be interfaces that will make the API more obvious in the near future
 >
 > Usage of any other public classes or methods not listed above should be considered relatively unsafe, though we will strive to not make changes and will use semantic versioning from 1.0.0 and on.
 
@@ -159,6 +159,25 @@ This section describes details around potential pitfalls / ambiguities related t
 - The standard offers two types for fixed point decimals (`NUMERIC` and `DECIMAL`), this driver uses `DECIMAL` to represent such values
 - The JDBC standard describes that `getObject` for a `SHORT` should return an `Integer`. Due to a current limitation we for now return a `Short` object. This will likely be fixed in a future version of the JDBC driver.
 - The query timeout enforcement is done on the server side for both normal as well as async execution. To provide a safety net with regards to network problems the driver locally also does a delayed enforcement for normal query executions. The default delay is `5` seconds - which typically shouldn't be relevant as in normal circumstances the server will enforce the timeout. The local enforcement delay can be configured through the `queryTimeoutLocalEnforcementDelay` property
+
+### Named parameters
+
+`DataCloudConnection` supports Hyper's native `:name` parameters through `prepareNamedStatement`:
+
+```java
+try (DataCloudNamedPreparedStatement statement =
+        connection.prepareNamedStatement("SELECT :minimum + :increment")) {
+    statement.setInt("minimum", 40);
+    statement.setInt("increment", 2);
+
+    try (ResultSet result = statement.executeQuery()) {
+        result.next();
+        int value = result.getInt(1); // 42
+    }
+}
+```
+
+Use `Connection.prepareStatement` for standard JDBC positional `?` parameters.
 
 ### Timestamp handling
 

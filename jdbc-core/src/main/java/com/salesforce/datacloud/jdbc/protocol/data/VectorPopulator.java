@@ -64,6 +64,10 @@ public final class VectorPopulator {
                 continue;
             }
             HyperTypeKind kind = binding.getType().getKind();
+            if (kind == HyperTypeKind.NULL && binding.getValue() == null) {
+                // NullVector needs no setter; every row is null by definition.
+                continue;
+            }
             ValueVector vector =
                     root.getVector(root.getSchema().getFields().get(i).getName());
             setCell(vector, kind, 0, binding.getValue(), calendar);
