@@ -307,39 +307,4 @@ public class DataCloudPreparedStatementHyperTest {
             }
         }
     }
-
-    @Test
-    @SneakyThrows
-    public void testGetMetaDataAfterExecuteDoesNotQueryAgain() {
-        try (HyperLogScope logScope = new HyperLogScope()) {
-            try (Connection connection = getHyperQueryConnection(logScope.getProperties())) {
-                try (PreparedStatement preparedStatement =
-                        connection.prepareStatement("select 1 as id, 'test' as name")) {
-                    try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                        assertThat(resultSet.next()).isTrue();
-                        assertThat(resultSet.next()).isFalse();
-
-                        ResultSetMetaData metadata = preparedStatement.getMetaData();
-                        assertThat(metadata).isNotNull();
-                        assertThat(metadata.getColumnCount()).isEqualTo(2);
-                    }
-
-                    ResultSet logResult = logScope.executeQuery("SELECT COUNT(*) FROM hyper_log WHERE k='query-end'");
-                    logResult.next();
-                    Assertions.assertThat(logResult.getDouble(1))
-                            .as("Should only have one query execution, not two")
-                            .isEqualTo(1);
-
-                    // Test that after closing the resultset it would query again
-                    ResultSetMetaData metadata = preparedStatement.getMetaData();
-                    assertThat(metadata).isNotNull();
-                    assertThat(metadata.getColumnCount()).isEqualTo(2);
-
-                    ResultSet logResult2 = logScope.executeQuery("SELECT COUNT(*) FROM hyper_log WHERE k='query-end'");
-                    logResult2.next();
-                    Assertions.assertThat(logResult2.getDouble(1)).isEqualTo(2);
-                }
-            }
-        }
-    }
 }

@@ -83,6 +83,37 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
     }
 
     @Test
+    void testGetMetaDataAfterExecuteDoesNotQueryAgain() throws SQLException {
+        String sql = "select 1 as id, 'test' as name";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertThat(resultSet.next()).isTrue();
+                assertThat(resultSet.next()).isFalse();
+
+                ResultSetMetaData metadata = statement.getMetaData();
+                assertThat(metadata.getColumnCount()).isEqualTo(2);
+                assertThat(metadata.getColumnName(1)).isEqualTo("id");
+                assertThat(metadata.getColumnName(2)).isEqualTo("name");
+
+                GrpcMock.verifyThat(
+                        GrpcMock.calledMethod(HyperServiceGrpc.getExecuteQueryMethod())
+                                .withRequest(request -> sql.equals(request.getSql())),
+                        GrpcMock.times(1));
+            }
+
+            ResultSetMetaData metadata = statement.getMetaData();
+            assertThat(metadata.getColumnCount()).isEqualTo(2);
+            assertThat(metadata.getColumnName(1)).isEqualTo("id");
+            assertThat(metadata.getColumnName(2)).isEqualTo("name");
+
+            GrpcMock.verifyThat(
+                    GrpcMock.calledMethod(HyperServiceGrpc.getExecuteQueryMethod())
+                            .withRequest(request -> sql.equals(request.getSql())),
+                    GrpcMock.times(2));
+        }
+    }
+
+    @Test
     @SneakyThrows
     void testClearParameters() {
         preparedStatement.setString(1, "TEST");
