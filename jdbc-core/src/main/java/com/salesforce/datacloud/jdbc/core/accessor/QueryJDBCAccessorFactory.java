@@ -11,6 +11,7 @@ import com.salesforce.datacloud.jdbc.core.accessor.impl.DateVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DecimalVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DoubleVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.FloatVectorAccessor;
+import com.salesforce.datacloud.jdbc.core.accessor.impl.IntervalVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.LargeListVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.ListVectorAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.TimeStampTZVectorAccessor;
@@ -29,6 +30,7 @@ import org.apache.arrow.vector.FixedSizeBinaryVector;
 import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
+import org.apache.arrow.vector.IntervalMonthDayNanoVector;
 import org.apache.arrow.vector.LargeVarBinaryVector;
 import org.apache.arrow.vector.LargeVarCharVector;
 import org.apache.arrow.vector.SmallIntVector;
@@ -125,6 +127,8 @@ public class QueryJDBCAccessorFactory {
             return new TimeStampTZVectorAccessor((TimeStampNanoTZVector) vector, getCurrentRow);
         } else if (arrowType.equals(Types.MinorType.TIMESTAMPNANO)) {
             return new TimeStampVectorAccessor((TimeStampNanoVector) vector, getCurrentRow);
+        } else if (arrowType.equals(Types.MinorType.INTERVALMONTHDAYNANO)) {
+            return new IntervalVectorAccessor((IntervalMonthDayNanoVector) vector, getCurrentRow);
         } else if (arrowType.equals(Types.MinorType.LIST)) {
             return new ListVectorAccessor((ListVector) vector, getCurrentRow);
         } else if (arrowType.equals(Types.MinorType.LARGELIST)) {
