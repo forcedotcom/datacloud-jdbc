@@ -179,6 +179,41 @@ try (DataCloudNamedParameterStatement statement =
 
 Use `Connection.prepareStatement` for standard JDBC positional `?` parameters.
 
+### Data type mapping
+
+How [Data 360 SQL data types](https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/dc-sql-reference/datatypes.html) are presented over JDBC (`ResultSetMetaData.getColumnType` / `getColumnClassName`, `DatabaseMetaData.getColumns`).
+
+| Data 360 SQL type (aliases)                         | `java.sql.Types`            | `getObject` Java class | Notes |
+|-----------------------------------------------------|-----------------------------|------------------------|-------|
+| `BOOLEAN` (`BOOL`)                                  | `BOOLEAN`                   | `Boolean`              | |
+| `SMALLINT` (`INT2`)                                 | `SMALLINT`                  | `Integer`              | |
+| `INTEGER` (`INT`, `INT4`)                           | `INTEGER`                   | `Integer`              | |
+| `BIGINT` (`INT8`)                                   | `BIGINT`                    | `Long`                 | |
+| `REAL` (`FLOAT4`)                                   | `REAL`                      | `Float`                | |
+| `DOUBLE PRECISION` (`FLOAT`, `FLOAT8`)              | `DOUBLE`                    | `Double`               | |
+| `NUMERIC(p, s)` (`DECIMAL(p, s)`)                   | `DECIMAL`                   | `BigDecimal`           | `NUMERIC` is reported as `DECIMAL` |
+| `CHAR(n)` (`CHARACTER(n)`)                          | `CHAR`                      | `String`               | |
+| `VARCHAR(n)` (`CHARACTER VARYING(n)`)               | `VARCHAR`                   | `String`               | |
+| `TEXT`                                              | `VARCHAR`                   | `String`               | Unbounded `VARCHAR` |
+| `BYTES` (`bytea`)                                   | `VARBINARY`                 | `byte[]`               | |
+| `DATE`                                              | `DATE`                      | `java.sql.Date`        | |
+| `TIME [WITHOUT TIME ZONE]`                          | `TIME`                      | `java.sql.Time`        | Microsecond precision |
+| `TIMESTAMP [WITHOUT TIME ZONE]`                     | `TIMESTAMP`                 | `java.sql.Timestamp`   | See [Timestamp handling](#timestamp-handling) |
+| `TIMESTAMP WITH TIME ZONE` (`TIMESTAMPTZ`)          | `TIMESTAMP_WITH_TIMEZONE`   | `java.sql.Timestamp`   | See [Timestamp handling](#timestamp-handling) |
+| `ARRAY` of any of the above                         | `ARRAY`                     | `java.sql.Array`       | |
+| `INTERVAL`                                          | n/a                         | n/a                    | Not supported in result sets: reading an `INTERVAL` column fails with `Unsupported Arrow type: Interval(MONTH_DAY_NANO)` |
+| `JSON`                                              | `VARCHAR`                   | `String`               | Data 360 returns JSON values as text |
+
+The internal `OID` type is presented as `BIGINT`.
+
+#### Not supported yet
+
+- `INTERVAL`: columns of this type cannot be read. The query fails with `Unsupported Arrow type: Interval(MONTH_DAY_NANO)`. Cast to text in the query as a workaround, e.g. `SELECT my_interval::text`, which returns an ISO-8601 duration such as `P1Y2M3DT4H5M6.789000S`.
+- Binding `INTERVAL` or `JSON` values as `PreparedStatement` parameters.
+- Result columns that Arrow transports as structs, maps, unions, large lists or fixed-size lists, and unsigned integers other than 32-bit (`OID`).
+
+`JSON` has no dedicated JDBC representation: Data 360 returns it as text, so it is reported as `VARCHAR`.
+
 ### Timestamp handling
 
 The driver follows the JDBC 4.2 specification for timestamp types. Use the `java.time` API for unambiguous behavior:
