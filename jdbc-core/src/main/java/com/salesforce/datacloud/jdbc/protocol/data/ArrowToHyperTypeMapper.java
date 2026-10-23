@@ -6,6 +6,7 @@ package com.salesforce.datacloud.jdbc.protocol.data;
 
 import java.util.Objects;
 import lombok.val;
+import org.apache.arrow.vector.types.IntervalUnit;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 
@@ -204,7 +205,11 @@ public final class ArrowToHyperTypeMapper {
 
         @Override
         public HyperType visit(ArrowType.Interval interval) {
-            // TODO: Interval support will need to come in a separate PR
+            // Hyper's interval travels as (months, days, nanoseconds); the other Arrow interval
+            // units are lossy subsets that Hyper never emits.
+            if (interval.getUnit() == IntervalUnit.MONTH_DAY_NANO) {
+                return HyperType.interval(nullable);
+            }
             throw unsupportedTypeException();
         }
 
