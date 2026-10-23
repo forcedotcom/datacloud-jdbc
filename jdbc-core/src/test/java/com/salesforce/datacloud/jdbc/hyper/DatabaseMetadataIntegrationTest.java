@@ -16,13 +16,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -411,16 +408,6 @@ class DatabaseMetadataIntegrationTest {
     // they MUST agree. Today they don't, and these tests pin every disagreement.
     // ------------------------------------------------------------------
 
-    /**
-     * Columns excluded from the cross-check because {@code SELECT *} itself fails or the Arrow
-     * path is structurally unable to describe them. Each exclusion is a known bug in its own right.
-     */
-    private static final Set<String> CROSS_CHECK_EXCLUDED = new HashSet<>(Arrays.asList(
-            // BUG: interval triggers IllegalArgumentException("Unsupported Arrow type") in
-            // ArrowToColumnTypeMapper, so any SELECT that materialises an interval column crashes
-            // in the driver — see the explicit TODO in ArrowToColumnTypeMapper.visit(Interval).
-            "col_interval"));
-
     @Test
     @SneakyThrows
     void getColumns_consistentWith_resultSetMetaData_forDataType() {
@@ -520,6 +507,7 @@ class DatabaseMetadataIntegrationTest {
             "col_time",
             "col_timestamp",
             "col_timestamptz",
+            "col_interval",
             "col_json",
             "col_oid",
             "col_int_array",
@@ -546,9 +534,6 @@ class DatabaseMetadataIntegrationTest {
 
             Map<String, String> mismatches = new LinkedHashMap<>();
             for (String col : arrow.keySet()) {
-                if (CROSS_CHECK_EXCLUDED.contains(col)) {
-                    continue;
-                }
                 Map<String, Object> pgInfo = pg.get(col);
                 Map<String, Object> arrowInfo = arrow.get(col);
                 assertThat(pgInfo)
@@ -568,13 +553,10 @@ class DatabaseMetadataIntegrationTest {
     @Test
     @SneakyThrows
     void getColumns_consistentWith_resultSetMetaData_forColumnCount() {
-        // The Arrow path can't materialise col_interval, so selectEmptyRowset() omits it. That
-        // means this test only cross-checks column counts *minus* the excluded columns.
         try (val connection = getConnection();
                 val stmt = connection.createStatement();
                 val rs = stmt.executeQuery(selectEmptyRowset())) {
-            assertThat(rs.getMetaData().getColumnCount())
-                    .isEqualTo(EXPECTED_COLUMN_COUNT - CROSS_CHECK_EXCLUDED.size());
+            assertThat(rs.getMetaData().getColumnCount()).isEqualTo(EXPECTED_COLUMN_COUNT);
         }
     }
 
@@ -594,10 +576,7 @@ class DatabaseMetadataIntegrationTest {
             List<String> pgNames = new ArrayList<>();
             try (val rs = connection.getMetaData().getColumns(null, TEST_SCHEMA, TEST_TABLE, "%")) {
                 while (rs.next()) {
-                    String name = rs.getString("COLUMN_NAME");
-                    if (!CROSS_CHECK_EXCLUDED.contains(name)) {
-                        pgNames.add(name);
-                    }
+                    pgNames.add(rs.getString("COLUMN_NAME"));
                 }
             }
 
@@ -608,8 +587,6 @@ class DatabaseMetadataIntegrationTest {
     }
 
     private static String selectEmptyRowset() {
-        // Hyper accepts interval in the schema but blows up on materialisation, so we have to
-        // exclude col_interval from the SELECT itself. See CROSS_CHECK_EXCLUDED.
         StringBuilder sb = new StringBuilder("SELECT ");
         boolean first = true;
         for (String col : new String[] {
@@ -627,6 +604,7 @@ class DatabaseMetadataIntegrationTest {
             "col_time",
             "col_timestamp",
             "col_timestamptz",
+            "col_interval",
             "col_json",
             "col_oid",
             "col_int_array",
