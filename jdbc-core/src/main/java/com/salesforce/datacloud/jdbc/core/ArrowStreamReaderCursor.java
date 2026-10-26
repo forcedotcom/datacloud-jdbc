@@ -57,10 +57,16 @@ class ArrowStreamReaderCursor implements AutoCloseable {
      */
     private boolean endOfStream = false;
 
-    ArrowStreamReaderCursor(ArrowStreamReader reader, BufferAllocator allocator, ZoneId sessionZone) {
+    ArrowStreamReaderCursor(ArrowStreamReader reader, BufferAllocator allocator, ZoneId sessionZone)
+            throws SQLException {
         this.reader = reader;
         this.allocator = allocator;
         this.sessionZone = sessionZone;
+        // next() and isBeforeFirst() assume the first batch has not been read yet; a preloaded
+        // batch would be silently skipped.
+        if (getSchemaRoot().getRowCount() != 0) {
+            throw new SQLException("Arrow reader must not contain a loaded batch");
+        }
     }
 
     @SneakyThrows
@@ -80,14 +86,18 @@ class ArrowStreamReaderCursor implements AutoCloseable {
 
     /**
      * Load the next batch that has at least one row, skipping any zero-row batches in between.
+     * This is the only place that reads from the stream, so it also maintains
+     * {@link #firstBatchLoaded} and {@link #endOfStream}.
      */
     private boolean loadNextNonEmptyBatch() throws IOException {
+        firstBatchLoaded = true;
         while (reader.loadNextBatch()) {
             if (getSchemaRoot().getRowCount() > 0) {
                 currentIndex.set(0);
                 return true;
             }
         }
+        endOfStream = true;
         return false;
     }
 
@@ -100,12 +110,9 @@ class ArrowStreamReaderCursor implements AutoCloseable {
         val total = getSchemaRoot().getRowCount();
 
         try {
-            firstBatchLoaded = true;
             val next = current < total || loadNextNonEmptyBatch();
             if (next) {
                 rowsSeen++;
-            } else {
-                endOfStream = true;
             }
             return next;
         } catch (Exception e) {
@@ -131,20 +138,10 @@ class ArrowStreamReaderCursor implements AutoCloseable {
         if (rowsSeen > 0 || endOfStream) {
             return false;
         }
-        if (!firstBatchLoaded) {
-            try {
-                val hasRows = loadNextNonEmptyBatch();
-                // loadNextNonEmptyBatch positions the cursor on row 0; step back so next() returns it.
-                currentIndex.set(INIT_ROW_NUMBER);
-                firstBatchLoaded = true;
-                endOfStream = !hasRows;
-            } catch (Exception e) {
-                if (e instanceof SQLException) {
-                    throw e;
-                } else {
-                    throw new SQLException("Failed to load next batch: " + e.getMessage(), e);
-                }
-            }
+        if (!firstBatchLoaded && next()) {
+            // next() consumed row 0 to load the batch; step back so the caller's next() returns it.
+            currentIndex.set(INIT_ROW_NUMBER);
+            rowsSeen--;
         }
         return !endOfStream;
     }
