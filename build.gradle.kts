@@ -3,7 +3,7 @@ plugins {
     id("base-conventions")
     id("version-conventions")
     id("com.diffplug.spotless")
-    id("dev.iurysouza.modulegraph") version "0.12.1"
+    id("dev.iurysouza.modulegraph") version "0.13.0"
     id("jacoco-report-aggregation")
     id("version-updates")
 }
@@ -50,8 +50,7 @@ dependencies {
 
 reporting {
     reports {
-        val testCodeCoverageReport by
-        creating(JacocoCoverageReport::class) {
+        create<JacocoCoverageReport>("testCodeCoverageReport") {
             testSuiteName.set("test")
             reportTask
                 .get()
@@ -71,7 +70,6 @@ reporting {
                 csv.required.set(true)
             }
         }
-
     }
 }
 

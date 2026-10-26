@@ -1,5 +1,5 @@
 
-val revision: String by project
+val revision = project.property("revision").toString()
 
 private val ci = object {
     private val snapshotVersion = when (System.getenv("GITHUB_RUN_NUMBER")) {
