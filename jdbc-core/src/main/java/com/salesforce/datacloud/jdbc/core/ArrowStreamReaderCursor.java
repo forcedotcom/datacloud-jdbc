@@ -45,10 +45,28 @@ class ArrowStreamReaderCursor implements AutoCloseable {
 
     private final AtomicInteger currentIndex = new AtomicInteger(INIT_ROW_NUMBER);
 
-    ArrowStreamReaderCursor(ArrowStreamReader reader, BufferAllocator allocator, ZoneId sessionZone) {
+    /**
+     * Whether the first non-empty batch has been requested from the stream, either by
+     * {@link #isBeforeFirst()} peeking at it or by the first {@link #next()}.
+     */
+    private boolean firstBatchLoaded = false;
+
+    /**
+     * Whether the stream has no further rows: the first batch was found empty, or {@link #next()}
+     * ran past the last row.
+     */
+    private boolean endOfStream = false;
+
+    ArrowStreamReaderCursor(ArrowStreamReader reader, BufferAllocator allocator, ZoneId sessionZone)
+            throws SQLException {
         this.reader = reader;
         this.allocator = allocator;
         this.sessionZone = sessionZone;
+        // next() and isBeforeFirst() assume the first batch has not been read yet; a preloaded
+        // batch would be silently skipped.
+        if (getSchemaRoot().getRowCount() != 0) {
+            throw new SQLException("Arrow reader must not contain a loaded batch");
+        }
     }
 
     @SneakyThrows
@@ -68,19 +86,26 @@ class ArrowStreamReaderCursor implements AutoCloseable {
 
     /**
      * Load the next batch that has at least one row, skipping any zero-row batches in between.
+     * This is the only place that reads from the stream, so it also maintains
+     * {@link #firstBatchLoaded} and {@link #endOfStream}.
      */
     private boolean loadNextNonEmptyBatch() throws IOException {
+        firstBatchLoaded = true;
         while (reader.loadNextBatch()) {
             if (getSchemaRoot().getRowCount() > 0) {
                 currentIndex.set(0);
                 return true;
             }
         }
+        endOfStream = true;
         return false;
     }
 
     @SneakyThrows
     public boolean next() {
+        if (endOfStream) {
+            return false;
+        }
         val current = currentIndex.incrementAndGet();
         val total = getSchemaRoot().getRowCount();
 
@@ -98,6 +123,40 @@ class ArrowStreamReaderCursor implements AutoCloseable {
                 throw new SQLException("Failed to load next batch: " + e.getMessage(), e);
             }
         }
+    }
+
+    /**
+     * True if no row has been returned yet and the stream has at least one row to return.
+     *
+     * <p>Answering this for an empty result requires reading the first non-empty batch, so the
+     * first call peeks at it, blocking on the stream just as the first {@link #next()} would. The
+     * batch stays loaded and the cursor stays before row 0. Peeking is only safe while no row has
+     * been returned, since loading a batch replaces the vectors backing the current row.
+     */
+    @SneakyThrows
+    boolean isBeforeFirst() {
+        if (rowsSeen > 0 || endOfStream) {
+            return false;
+        }
+        if (!firstBatchLoaded && next()) {
+            // next() consumed row 0 to load the batch; step back so the caller's next() returns it.
+            currentIndex.set(INIT_ROW_NUMBER);
+            rowsSeen--;
+        }
+        return !endOfStream;
+    }
+
+    /**
+     * True once {@link #next()} has moved past the last row. False for an empty result, which has
+     * no last row to be after.
+     */
+    boolean isAfterLast() {
+        return endOfStream && rowsSeen > 0;
+    }
+
+    /** True while positioned on the first row. */
+    boolean isFirst() {
+        return rowsSeen == 1 && !endOfStream;
     }
 
     @SneakyThrows

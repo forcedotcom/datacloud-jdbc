@@ -45,9 +45,27 @@ class ArrowStreamReaderCursorTest {
     @Mock
     protected BufferAllocator allocator;
 
+    @SneakyThrows
+    private void stubEmptyRoot() {
+        when(reader.getVectorSchemaRoot()).thenReturn(root);
+        when(root.getRowCount()).thenReturn(0);
+    }
+
+    @Test
+    @SneakyThrows
+    void constructorRejectsReaderWithLoadedBatch() {
+        when(reader.getVectorSchemaRoot()).thenReturn(root);
+        when(root.getRowCount()).thenReturn(1);
+
+        assertThatThrownBy(() -> new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault()))
+                .isInstanceOf(java.sql.SQLException.class)
+                .hasMessageContaining("must not contain a loaded batch");
+    }
+
     @Test
     @SneakyThrows
     void closesReaderAndAllocator() {
+        stubEmptyRoot();
         val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
         sut.close();
         // Reader-before-allocator ordering is load-bearing: reader.close releases the buffers
@@ -73,6 +91,7 @@ class ArrowStreamReaderCursorTest {
         val allocatorError = new IllegalStateException("allocator leak detected");
         doThrow(readerError).when(reader).close();
         doThrow(allocatorError).when(allocator).close();
+        stubEmptyRoot();
 
         val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
 
@@ -86,28 +105,24 @@ class ArrowStreamReaderCursorTest {
     void incrementsInternalIndexUntilRowsExhaustedThenLoadsNextBatch() {
         val times = 5;
         when(reader.getVectorSchemaRoot()).thenReturn(root);
-        // First batch has rows; loadNextBatch is consulted only after the per-batch index is
-        // exhausted. Return false on that single call so the cursor terminates rather than
-        // looping forever inside loadNextNonEmptyBatch.
-        when(reader.loadNextBatch()).thenReturn(false);
-        when(root.getRowCount()).thenReturn(times);
+        // The root is empty at construction and until the first batch is loaded, then holds `times`
+        // rows. The second loadNextBatch call (after the batch is exhausted) ends the stream.
+        when(root.getRowCount()).thenReturn(0, 0, times);
+        when(reader.loadNextBatch()).thenReturn(true, false);
 
         val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
-        IntStream.range(0, times + 1).forEach(i -> sut.next());
+        IntStream.range(0, times).forEach(i -> assertThat(sut.next()).isTrue());
+        assertThat(sut.next()).isFalse();
 
-        // Each next() inspects rowCount once on the per-batch index check. loadNextNonEmptyBatch
-        // is reached on the (times+1)-th call but only inspects rowCount inside its loop body if
-        // loadNextBatch returns true; here it returns false, so getRowCount is observed times+1
-        // times in total.
-        verify(root, times(times + 1)).getRowCount();
-        verify(reader, times(1)).loadNextBatch();
+        verify(reader, times(2)).loadNextBatch();
     }
 
     @Test
     @SneakyThrows
     void firstNextReturnsTrueWhenInitialBatchHasRows() {
-        when(root.getRowCount()).thenReturn(1);
+        when(root.getRowCount()).thenReturn(0, 0, 1);
         when(reader.getVectorSchemaRoot()).thenReturn(root);
+        when(reader.loadNextBatch()).thenReturn(true);
 
         val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
 
@@ -117,8 +132,7 @@ class ArrowStreamReaderCursorTest {
     @Test
     @SneakyThrows
     void firstNextReturnsFalseWhenStreamHasNoBatches() {
-        when(root.getRowCount()).thenReturn(0);
-        when(reader.getVectorSchemaRoot()).thenReturn(root);
+        stubEmptyRoot();
         when(reader.loadNextBatch()).thenReturn(false);
 
         val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
@@ -200,5 +214,197 @@ class ArrowStreamReaderCursorTest {
             val sut = new ArrowStreamReaderCursor(streamReader, readAlloc, ZoneId.systemDefault());
             assertThat(sut.next()).isFalse();
         }
+    }
+    // --- Position methods: isBeforeFirst / isAfterLast / isFirst ---
+
+    /** Serialises one Arrow IPC batch per entry, each holding that many consecutive int rows. */
+    @SneakyThrows
+    private static byte[] ipcWithBatches(int... rowsPerBatch) {
+        val field = new Field("a", new FieldType(true, new ArrowType.Int(32, true), null), null);
+        val schema = new Schema(Collections.singletonList(field));
+        try (RootAllocator writeAlloc = new RootAllocator(Long.MAX_VALUE);
+                VectorSchemaRoot writeRoot = VectorSchemaRoot.create(schema, writeAlloc);
+                val out = new ByteArrayOutputStream();
+                ArrowStreamWriter writer = new ArrowStreamWriter(writeRoot, null, out)) {
+            writer.start();
+            int next = 0;
+            for (int rows : rowsPerBatch) {
+                writeRoot.allocateNew();
+                val vector = (org.apache.arrow.vector.IntVector) writeRoot.getVector("a");
+                for (int i = 0; i < rows; i++) {
+                    vector.setSafe(i, next++);
+                }
+                writeRoot.setRowCount(rows);
+                writer.writeBatch();
+            }
+            writer.end();
+            writer.close();
+            return out.toByteArray();
+        }
+    }
+
+    @SneakyThrows
+    private static void withCursor(byte[] ipc, java.util.function.Consumer<ArrowStreamReaderCursor> body) {
+        try (RootAllocator readAlloc = new RootAllocator(Long.MAX_VALUE);
+                ArrowStreamReader streamReader = new ArrowStreamReader(new ByteArrayInputStream(ipc), readAlloc)) {
+            streamReader.getVectorSchemaRoot();
+            body.accept(new ArrowStreamReaderCursor(streamReader, readAlloc, ZoneId.systemDefault()));
+        }
+    }
+
+    @Test
+    void positionMethodsOnEmptyStream() {
+        withCursor(ipcWithBatches(), sut -> {
+            assertThat(sut.isBeforeFirst()).as("no rows to be before").isFalse();
+            assertThat(sut.isAfterLast()).isFalse();
+            assertThat(sut.isFirst()).isFalse();
+            assertThat(sut.next()).isFalse();
+            assertThat(sut.isBeforeFirst()).isFalse();
+            assertThat(sut.isAfterLast())
+                    .as("empty result has no last row to be after")
+                    .isFalse();
+            assertThat(sut.getRowsSeen()).isZero();
+        });
+    }
+
+    @Test
+    void positionMethodsOnZeroRowBatchOnlyStream() {
+        withCursor(ipcWithBatches(0, 0), sut -> {
+            assertThat(sut.isBeforeFirst()).isFalse();
+            assertThat(sut.next()).isFalse();
+            assertThat(sut.isAfterLast()).isFalse();
+        });
+    }
+
+    @Test
+    void positionMethodsAcrossSingleRowLifecycle() {
+        withCursor(ipcWithBatches(1), sut -> {
+            assertThat(sut.isBeforeFirst()).isTrue();
+            assertThat(sut.isAfterLast()).isFalse();
+            assertThat(sut.isFirst()).isFalse();
+
+            assertThat(sut.next()).isTrue();
+            assertThat(sut.isBeforeFirst()).isFalse();
+            assertThat(sut.isFirst()).isTrue();
+            assertThat(sut.isAfterLast()).isFalse();
+
+            assertThat(sut.next()).isFalse();
+            assertThat(sut.isBeforeFirst()).isFalse();
+            assertThat(sut.isFirst()).isFalse();
+            assertThat(sut.isAfterLast()).isTrue();
+        });
+    }
+
+    @Test
+    void positionMethodsAcrossBatches() {
+        withCursor(ipcWithBatches(2, 1), sut -> {
+            assertThat(sut.isBeforeFirst()).isTrue();
+            assertThat(sut.next()).isTrue();
+            assertThat(sut.isFirst()).isTrue();
+            assertThat(sut.next()).isTrue();
+            assertThat(sut.isFirst()).isFalse();
+            assertThat(sut.isAfterLast()).isFalse();
+            assertThat(sut.next()).as("first row of the second batch").isTrue();
+            assertThat(sut.isAfterLast()).isFalse();
+            assertThat(sut.next()).isFalse();
+            assertThat(sut.isAfterLast()).isTrue();
+            assertThat(sut.getRowsSeen()).isEqualTo(3);
+        });
+    }
+
+    /** Initializing via next() instead of isBeforeFirst() must leave the same position state, and positions must not move the cursor. */
+    @Test
+    @SneakyThrows
+    void positionMethodsWhenNextIsCalledFirst() {
+        try (RootAllocator readAlloc = new RootAllocator(Long.MAX_VALUE);
+                ArrowStreamReader streamReader =
+                        new ArrowStreamReader(new ByteArrayInputStream(ipcWithBatches(2, 1)), readAlloc)) {
+            val sut = new ArrowStreamReaderCursor(streamReader, readAlloc, ZoneId.systemDefault());
+            val value = sut.createAccessors().get(0);
+
+            assertThat(sut.next()).isTrue();
+            assertThat(sut.isBeforeFirst()).isFalse();
+            assertThat(sut.isFirst()).isTrue();
+            assertThat(sut.isAfterLast()).isFalse();
+            assertThat(value.getInt())
+                    .as("position checks leave the current row alone")
+                    .isZero();
+
+            assertThat(sut.next()).isTrue();
+            assertThat(sut.isFirst()).isFalse();
+            assertThat(value.getInt()).isEqualTo(1);
+
+            // Crossing the batch boundary replaces the vectors; isFirst must stay false.
+            assertThat(sut.next()).isTrue();
+            assertThat(sut.isBeforeFirst()).isFalse();
+            assertThat(sut.isFirst()).isFalse();
+            assertThat(sut.isAfterLast()).isFalse();
+            assertThat(value.getInt()).isEqualTo(2);
+
+            assertThat(sut.next()).isFalse();
+            assertThat(sut.isBeforeFirst()).isFalse();
+            assertThat(sut.isFirst()).isFalse();
+            assertThat(sut.isAfterLast()).isTrue();
+            assertThat(sut.getRowsSeen()).isEqualTo(3);
+        }
+    }
+
+    @Test
+    void positionMethodsSkipLeadingZeroRowBatch() {
+        withCursor(ipcWithBatches(0, 2), sut -> {
+            assertThat(sut.isBeforeFirst()).isTrue();
+            assertThat(sut.next()).isTrue();
+            assertThat(sut.next()).isTrue();
+            assertThat(sut.next()).isFalse();
+        });
+    }
+
+    /** Peeking must not consume or skip a row: repeated isBeforeFirst() calls still leave row 0 for next(). */
+    @Test
+    @SneakyThrows
+    void isBeforeFirstPeekDoesNotConsumeFirstRow() {
+        val ipc = ipcWithBatches(3);
+        try (RootAllocator readAlloc = new RootAllocator(Long.MAX_VALUE);
+                ArrowStreamReader streamReader = new ArrowStreamReader(new ByteArrayInputStream(ipc), readAlloc)) {
+            val sut = new ArrowStreamReaderCursor(streamReader, readAlloc, ZoneId.systemDefault());
+            val accessors = sut.createAccessors();
+
+            assertThat(sut.isBeforeFirst()).isTrue();
+            assertThat(sut.isBeforeFirst()).isTrue();
+            assertThat(sut.getRowsSeen()).as("peeking does not count as a row").isZero();
+
+            for (int expected = 0; expected < 3; expected++) {
+                assertThat(sut.next()).isTrue();
+                assertThat(accessors.get(0).getInt()).isEqualTo(expected);
+            }
+            assertThat(sut.next()).isFalse();
+        }
+    }
+
+    @Test
+    @SneakyThrows
+    void isBeforeFirstDoesNotReadStreamAgainAfterEndOfStream() {
+        stubEmptyRoot();
+        when(reader.loadNextBatch()).thenReturn(false);
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
+
+        assertThat(sut.isBeforeFirst()).isFalse();
+        assertThat(sut.isBeforeFirst()).isFalse();
+        assertThat(sut.next()).isFalse();
+        assertThat(sut.next()).isFalse();
+
+        verify(reader, times(1)).loadNextBatch();
+    }
+
+    @Test
+    @SneakyThrows
+    void isBeforeFirstWrapsStreamFailureAsSqlException() {
+        stubEmptyRoot();
+        when(reader.loadNextBatch()).thenThrow(new IOException("stream broke"));
+        val sut = new ArrowStreamReaderCursor(reader, allocator, ZoneId.systemDefault());
+
+        assertThatThrownBy(sut::isBeforeFirst)
+                .isInstanceOf(java.sql.SQLException.class)
+                .hasMessageContaining("stream broke");
     }
 }
