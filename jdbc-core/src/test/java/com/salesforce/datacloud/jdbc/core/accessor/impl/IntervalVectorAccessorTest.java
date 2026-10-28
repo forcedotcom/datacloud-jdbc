@@ -7,10 +7,13 @@ package com.salesforce.datacloud.jdbc.core.accessor.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudInterval;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessorFactory;
 import com.salesforce.datacloud.jdbc.protocol.data.ArrowToHyperTypeMapper;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
+import java.time.Duration;
+import java.time.Period;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.IntervalMonthDayNanoVector;
@@ -48,17 +51,31 @@ class IntervalVectorAccessorTest {
         "1200, 0, 0, P100Y",
     })
     void formatMatchesHyperTextOutput(int months, int days, long nanos, String expected) {
-        assertThat(IntervalVectorAccessor.format(months, days, nanos)).isEqualTo(expected);
+        assertThat(new DataCloudInterval(months, days, nanos)).hasToString(expected);
     }
 
     @Test
     void formatHandlesNanosecondPrecisionAndExtremes() {
-        assertThat(IntervalVectorAccessor.format(0, 0, 1)).isEqualTo("PT0.000000001S");
-        assertThat(IntervalVectorAccessor.format(Integer.MAX_VALUE, Integer.MAX_VALUE, 0))
-                .isEqualTo("P178956970Y7M2147483647D");
-        assertThat(IntervalVectorAccessor.format(Integer.MIN_VALUE, Integer.MIN_VALUE, Long.MIN_VALUE))
+        assertThat(new DataCloudInterval(0, 0, 1)).hasToString("PT0.000000001S");
+        assertThat(new DataCloudInterval(Integer.MAX_VALUE, Integer.MAX_VALUE, 0))
+                .hasToString("P178956970Y7M2147483647D");
+        assertThat(new DataCloudInterval(Integer.MIN_VALUE, Integer.MIN_VALUE, Long.MIN_VALUE).toString())
                 .startsWith("P-178956970Y-8M-2147483648DT-")
                 .endsWith("S");
+    }
+
+    @Test
+    void intervalExposesComponentsAndJavaTimeViews() {
+        DataCloudInterval interval = new DataCloudInterval(-14, 3, -(4 * HOUR + 30 * MINUTE));
+
+        assertThat(interval.getTotalMonths()).isEqualTo(-14);
+        assertThat(interval.getDays()).isEqualTo(3);
+        assertThat(interval.getNanos()).isEqualTo(-(4 * HOUR + 30 * MINUTE));
+        assertThat(interval.toPeriod()).isEqualTo(Period.of(-1, -2, 3));
+        assertThat(interval.toDuration()).isEqualTo(Duration.ofMinutes(-(4 * 60 + 30)));
+        assertThat(interval).isEqualTo(new DataCloudInterval(-14, 3, -(4 * HOUR + 30 * MINUTE)));
+        assertThat(interval.hashCode()).isEqualTo(new DataCloudInterval(-14, 3, -(4 * HOUR + 30 * MINUTE)).hashCode());
+        assertThat(interval).isNotEqualTo(new DataCloudInterval(-14, 3, 0));
     }
 
     @Test
@@ -74,16 +91,22 @@ class IntervalVectorAccessorTest {
             AtomicInteger row = new AtomicInteger();
             QueryJDBCAccessor accessor = QueryJDBCAccessorFactory.createAccessor(vector, row::get);
 
-            assertThat(accessor.getObjectClass()).isEqualTo(String.class);
+            assertThat(accessor.getObjectClass()).isEqualTo(DataCloudInterval.class);
+            assertThat(accessor.getObject())
+                    .isEqualTo(new DataCloudInterval(14, 3, 4 * HOUR + 5 * MINUTE + 6 * SECOND + 789_000 * MICROS));
             assertThat(accessor.getString()).isEqualTo("P1Y2M3DT4H5M6.789000S");
+            assertThat(accessor.getObject(String.class)).isEqualTo("P1Y2M3DT4H5M6.789000S");
+            assertThat(accessor.getObject(DataCloudInterval.class)).isNotNull();
             assertThat(accessor.wasNull()).isFalse();
 
             row.set(1);
             assertThat(accessor.getObject()).isNull();
+            assertThat(accessor.getString()).isNull();
             assertThat(accessor.wasNull()).isTrue();
 
             row.set(2);
-            assertThat(accessor.getObject()).isEqualTo("PT0S");
+            assertThat(accessor.getObject()).isEqualTo(new DataCloudInterval(0, 0, 0));
+            assertThat(accessor.getString()).isEqualTo("PT0S");
             assertThat(accessor.wasNull()).isFalse();
         }
     }
