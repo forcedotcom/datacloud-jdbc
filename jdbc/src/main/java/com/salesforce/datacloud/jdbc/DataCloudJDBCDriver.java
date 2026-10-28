@@ -8,10 +8,12 @@ import static com.salesforce.datacloud.jdbc.config.DriverVersion.formatDriverInf
 
 import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import com.salesforce.datacloud.jdbc.core.DataCloudConnection;
+import com.salesforce.datacloud.jdbc.util.DriverProperty;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.logging.Logger;
 import lombok.NonNull;
@@ -58,7 +60,13 @@ public class DataCloudJDBCDriver implements Driver {
 
     @Override
     public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) {
-        return new DriverPropertyInfo[0];
+        return Arrays.stream(DriverProperty.values())
+                .map(p -> {
+                    DriverPropertyInfo propertyInfo = new DriverPropertyInfo(p.getName(), null);
+                    propertyInfo.description = p.getDescription();
+                    return propertyInfo;
+                })
+                .toArray(DriverPropertyInfo[]::new);
     }
 
     @Override
