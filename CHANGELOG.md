@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/forcedotcom/datacloud-jdbc/compare/v1.2.0...v1.3.0) (2026-10-29)
+
+
+### Features
+
+* advertise connection properties via Driver.getPropertyInfo ([#216](https://github.com/forcedotcom/datacloud-jdbc/issues/216)) ([5effa89](https://github.com/forcedotcom/datacloud-jdbc/commit/5effa89c98723ba479d545bf7441fcc5e6a54e21))
+
 ## [1.2.0](https://github.com/forcedotcom/datacloud-jdbc/compare/v1.1.1...v1.2.0) (2026-10-27)
 
 
