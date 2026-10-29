@@ -12,8 +12,10 @@ import com.salesforce.datacloud.jdbc.config.DriverVersion;
 import java.nio.charset.StandardCharsets;
 import java.sql.Driver;
 import java.sql.DriverManager;
+import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Properties;
 import java.util.regex.Pattern;
@@ -42,6 +44,15 @@ public class DataCloudJDBCDriverTest {
         final Driver driver = new DataCloudJDBCDriver();
 
         assertThat(driver.acceptsURL(VALID_URL)).isTrue();
+    }
+
+    @Test
+    public void testGetPropertyInfoAdvertisesProperties() {
+        final DriverPropertyInfo[] infos = new DataCloudJDBCDriver().getPropertyInfo(VALID_URL, new Properties());
+
+        assertThat(Arrays.stream(infos).map(i -> i.name).toArray())
+                .contains("clientId", "clientSecret", "userName", "password", "privateKey", "refreshToken");
+        assertThat(Arrays.stream(infos).allMatch(i -> !i.description.isEmpty())).isTrue();
     }
 
     @Test
