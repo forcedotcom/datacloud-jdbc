@@ -250,6 +250,26 @@ OffsetDateTime odt = rs.getObject("col", OffsetDateTime.class);
 
 - `dataspace`: The data space to query, defaults to "default"
 
+### Using the driver in DBeaver
+
+DBeaver ships this driver as **Salesforce Data 360** (called **Salesforce Data Cloud** in older versions) and downloads it from Maven Central for you.
+Follow the [Salesforce guide for DBeaver][dbeaver guide], with these notes:
+
+- The driver does not advertise its properties, so the **Driver properties** tab starts empty and has no `clientId` or `clientSecret` fields.
+  Right-click under **User Properties**, choose **Add new property**, then click the **Value** cell and enter the value. A property without a value is not sent, and the connection fails with `Property clientId is missing`.
+- Client credentials authentication works in DBeaver too: add only `clientId` and `clientSecret`, and set the host to your My Domain host (for example `mydomain.my.salesforce.com`, without `https://`), because Salesforce does not support this flow on `login.salesforce.com`.
+- `information_schema` is not available. The database navigator lists tables through `pg_catalog`, and you can query it directly:
+
+  ```sql
+  SELECT n.nspname AS table_schema, c.relname AS table_name
+  FROM pg_catalog.pg_class c
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE c.relkind IN ('r', 'v') AND n.nspname !~ '^pg_'
+  ORDER BY 1, 2
+  ```
+
+- DBeaver keeps user property values, including `clientSecret` and `privateKey`, in plain text in its `data-sources.json`. Do not commit or share that file.
+
 ### Usage sample code
 
 ```java
@@ -280,3 +300,4 @@ public static void executeQuery() throws ClassNotFoundException, SQLException {
 [client credentials flow]: https://help.salesforce.com/s/articleView?id=xcloud.remoteaccess_oauth_client_credentials_flow.htm&type=5
 [connection settings]: https://tableau.github.io/hyper-db/docs/hyper-api/connection#connection-settings
 [connected app overview]: https://help.salesforce.com/s/articleView?id=sf.connected_app_overview.htm&type=5
+[dbeaver guide]: https://developer.salesforce.com/docs/data/data-cloud-query-guide/guide/jdbc-dbeaver.html
