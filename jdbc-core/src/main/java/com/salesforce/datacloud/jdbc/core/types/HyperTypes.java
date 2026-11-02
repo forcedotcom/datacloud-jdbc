@@ -4,6 +4,7 @@
  */
 package com.salesforce.datacloud.jdbc.core.types;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudInterval;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperTypeKind;
 import java.math.BigDecimal;
@@ -227,6 +228,7 @@ public final class HyperTypes {
             case NULL:
                 return Object.class;
             case INTERVAL:
+                return DataCloudInterval.class;
             case JSON:
                 return String.class;
             case UNKNOWN:

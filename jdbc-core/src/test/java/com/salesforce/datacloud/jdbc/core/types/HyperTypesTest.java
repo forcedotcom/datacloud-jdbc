@@ -6,6 +6,7 @@ package com.salesforce.datacloud.jdbc.core.types;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.salesforce.datacloud.jdbc.core.DataCloudInterval;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import java.math.BigDecimal;
 import java.sql.Array;
@@ -87,7 +88,7 @@ class HyperTypesTest {
         assertThat(HyperTypes.toJavaClass(HyperType.array(HyperType.int32(true), true)))
                 .isEqualTo(Array.class);
         assertThat(HyperTypes.toJavaClass(HyperType.nullType())).isEqualTo(Object.class);
-        assertThat(HyperTypes.toJavaClass(HyperType.interval(true))).isEqualTo(String.class);
+        assertThat(HyperTypes.toJavaClass(HyperType.interval(true))).isEqualTo(DataCloudInterval.class);
         assertThat(HyperTypes.toJavaClass(HyperType.json(true))).isEqualTo(String.class);
     }
 
