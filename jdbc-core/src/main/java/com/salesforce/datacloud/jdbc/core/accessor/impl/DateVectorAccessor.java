@@ -5,7 +5,6 @@
 package com.salesforce.datacloud.jdbc.core.accessor.impl;
 
 import static com.salesforce.datacloud.jdbc.core.accessor.impl.DateVectorGetter.createGetter;
-import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCDateFromMilliseconds;
 
 import com.salesforce.datacloud.jdbc.core.accessor.QueryJDBCAccessor;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DateVectorGetter.Getter;
@@ -13,7 +12,9 @@ import com.salesforce.datacloud.jdbc.core.accessor.impl.DateVectorGetter.Holder;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
 import lombok.val;
@@ -28,6 +29,7 @@ public class DateVectorAccessor extends QueryJDBCAccessor {
     private final TimeUnit timeUnit;
     private final Holder holder;
 
+    private static final long MILLIS_PER_DAY = TimeUnit.DAYS.toMillis(1);
     private static final String INVALID_VECTOR_ERROR_RESPONSE = "Invalid Arrow vector provided";
 
     public DateVectorAccessor(DateDayVector vector, IntSupplier currentRowSupplier) throws SQLException {
@@ -70,30 +72,66 @@ public class DateVectorAccessor extends QueryJDBCAccessor {
     }
 
     /**
+     * Returns the SQL calendar date as a {@link Date} whose calendar fields (year, month, day) match
+     * the value stored in the vector, at local midnight in the default time zone.
+     *
+     * <p>Arrow and Hyper use the proleptic Gregorian calendar, while {@link Date} uses the hybrid
+     * Julian/Gregorian calendar, so the instant behind pre-1582 values necessarily differs. Building the
+     * {@link Date} from a {@link LocalDate} preserves the calendar date instead of the instant,
+     * including the era: a BC date is returned as a {@link Date} whose {@link Calendar#ERA} is
+     * {@link java.util.GregorianCalendar#BC} (ISO year 0 is year 1 BC). {@link #getString()} and
+     * {@code getObject(LocalDate.class)} remain the unambiguous ways to read the value.
+     *
+     * <p>{@link Date} has no 1582-10-05 through 1582-10-14 (skipped by the calendar cutover), so those
+     * dates come back as 1582-10-15 through 1582-10-24; use {@link #getString()} or
+     * {@code getObject(LocalDate.class)} to read them exactly.
+     *
      * @param calendar Calendar passed in. Ignores the calendar
-     * @return Date of current row in UTC
      */
     @Override
     public Date getDate(Calendar calendar) {
+        val localDate = getLocalDate();
+        return localDate == null ? null : Date.valueOf(localDate);
+    }
+
+    /** @return the proleptic Gregorian date of the current row, or null for SQL NULL */
+    private LocalDate getLocalDate() {
         fillHolder();
         if (this.wasNull) {
             return null;
         }
+        val epochDay = timeUnit == TimeUnit.DAYS ? holder.value : Math.floorDiv(holder.value, MILLIS_PER_DAY);
+        return LocalDate.ofEpochDay(epochDay);
+    }
 
-        long value = holder.value;
-        long milliseconds = this.timeUnit.toMillis(value);
-
-        return getUTCDateFromMilliseconds(milliseconds);
+    /**
+     * Formats like the server's {@code CAST(date AS text)}: ISO {@code yyyy-MM-dd} in the proleptic
+     * Gregorian calendar, with years before 1 AD written as {@code yyyy-MM-dd BC} (ISO year 0 is 1 BC).
+     */
+    @Override
+    public String getString() {
+        val localDate = getLocalDate();
+        if (localDate == null) {
+            return null;
+        }
+        val year = localDate.getYear();
+        val era = year > 0 ? "" : " BC";
+        // Locale.ROOT: the default locale may use non-ASCII digits (e.g. ar-SA, hi-IN).
+        return String.format(
+                Locale.ROOT,
+                "%04d-%02d-%02d%s",
+                year > 0 ? year : 1 - year,
+                localDate.getMonthValue(),
+                localDate.getDayOfMonth(),
+                era);
     }
 
     @Override
-    public String getString() {
-        val date = getDate(null);
-        if (date == null) {
-            return null;
+    public <T> T getObject(Class<T> type) throws SQLException {
+        if (type == LocalDate.class) {
+            return type.cast(getLocalDate());
         }
-
-        return date.toLocalDate().toString();
+        return super.getObject(type);
     }
 
     private void fillHolder() {
