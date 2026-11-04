@@ -228,9 +228,10 @@ OffsetDateTime odt = rs.getObject("col", OffsetDateTime.class);
 DBeaver ships this driver as **Salesforce Data 360** (called **Salesforce Data Cloud** in older versions) and downloads it from Maven Central for you.
 Follow the [Salesforce guide for DBeaver][dbeaver guide], with these notes:
 
-- The driver does not advertise its properties, so the **Driver properties** tab starts empty and has no `clientId` or `clientSecret` fields.
-  Right-click under **User Properties**, choose **Add new property**, then click the **Value** cell and enter the value. A property without a value is not sent, and the connection fails with `Property clientId is missing`.
-- Client credentials authentication works in DBeaver too: add only `clientId` and `clientSecret`, and set the host to your My Domain host (for example `mydomain.my.salesforce.com`, without `https://`), because Salesforce does not support this flow on `login.salesforce.com`.
+- Starting with driver 1.3.0, the **Driver properties** tab lists the driver's properties, such as `clientId` and `clientSecret`, with descriptions. Click the **Value** cell of each property your authentication flow needs and enter the value.
+  With 1.2.0 and older the tab starts empty: right-click under **User Properties**, choose **Add new property**, then enter the value in its **Value** cell.
+  A property without a value is not sent, and the connection fails with `Property clientId is missing`.
+- Client credentials authentication works in DBeaver too: set only `clientId` and `clientSecret`, and set the host to your My Domain host (for example `mydomain.my.salesforce.com`, without `https://`), because Salesforce does not support this flow on `login.salesforce.com`.
 - `information_schema` is not available. The database navigator lists tables through `pg_catalog`, and you can query it directly:
 
   ```sql
