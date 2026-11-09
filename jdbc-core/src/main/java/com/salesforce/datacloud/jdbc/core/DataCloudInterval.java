@@ -4,8 +4,10 @@
  */
 package com.salesforce.datacloud.jdbc.core;
 
+import java.io.Serializable;
 import java.time.Duration;
 import java.time.Period;
+import java.util.Locale;
 
 /**
  * A Hyper {@code INTERVAL} value, returned by {@code ResultSet.getObject} for {@code INTERVAL} columns.
@@ -19,7 +21,9 @@ import java.time.Period;
  * <p>{@link #toString()} (and therefore {@code ResultSet.getString}) prints the ISO-8601 form Hyper
  * itself prints for {@code interval::text}, e.g. {@code P1Y2M3DT4H5M6.789000S}.
  */
-public final class DataCloudInterval {
+public final class DataCloudInterval implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private static final long NANOS_PER_MICRO = 1_000L;
     private static final long NANOS_PER_SECOND = 1_000_000_000L;
@@ -134,9 +138,9 @@ public final class DataCloudInterval {
                 long absFraction = fraction < 0 ? -fraction : fraction;
                 // Hyper is microsecond-granular; fall back to nanoseconds only if a value has them.
                 if (absFraction % NANOS_PER_MICRO == 0) {
-                    sb.append('.').append(String.format("%06d", absFraction / NANOS_PER_MICRO));
+                    sb.append('.').append(String.format(Locale.ROOT, "%06d", absFraction / NANOS_PER_MICRO));
                 } else {
-                    sb.append('.').append(String.format("%09d", absFraction));
+                    sb.append('.').append(String.format(Locale.ROOT, "%09d", absFraction));
                 }
             }
             sb.append('S');
