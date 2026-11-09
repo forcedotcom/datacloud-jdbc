@@ -11,13 +11,20 @@ import com.google.common.collect.ImmutableMap;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -374,6 +381,7 @@ public class DateVectorAccessorTest {
                 collector.assertThat(sut.getTimestamp(calendar)).isNull();
                 collector.assertThat(sut.getObject()).isNull();
                 collector.assertThat(sut.getString()).isNull();
+                collector.assertThat(sut.getObject(LocalDate.class)).isNull();
             }
         }
     }
@@ -395,7 +403,148 @@ public class DateVectorAccessorTest {
                 collector.assertThat(sut.getTimestamp(calendar)).isNull();
                 collector.assertThat(sut.getObject()).isNull();
                 collector.assertThat(sut.getString()).isNull();
+                collector.assertThat(sut.getObject(LocalDate.class)).isNull();
             }
+        }
+    }
+
+    /** Proleptic Gregorian dates (as stored by Arrow/Hyper) paired with the server's text form. */
+    private static final Map<String, String> HISTORICAL_DATES = ImmutableMap.<String, String>builder()
+            .put("0001-01-01", "0001-01-01")
+            .put("1500-02-28", "1500-02-28")
+            .put("1582-10-04", "1582-10-04")
+            .put("1582-10-15", "1582-10-15")
+            .put("0000-12-31", "0001-12-31 BC")
+            .put("0000-01-01", "0001-01-01 BC")
+            .put("-0001-01-01", "0002-01-01 BC")
+            .put("1969-12-31", "1969-12-31")
+            .put("2000-02-29", "2000-02-29")
+            .put("9999-12-31", "9999-12-31")
+            .build();
+
+    private static final List<String> HISTORICAL_TIME_ZONES =
+            Stream.of("UTC", "America/Los_Angeles", "Asia/Kolkata").collect(Collectors.toList());
+
+    @SneakyThrows
+    @Test
+    void testHistoricalDatesAreLosslessAcrossVectorsAndTimeZones() {
+        val original = TimeZone.getDefault();
+        try {
+            for (val tz : HISTORICAL_TIME_ZONES) {
+                TimeZone.setDefault(TimeZone.getTimeZone(tz));
+                val millis = HISTORICAL_DATES.keySet().stream()
+                        .map(d -> LocalDate.parse(d).toEpochDay() * MILLIS_PER_DAY)
+                        .collect(Collectors.toList());
+                val expectedText = new ArrayList<>(HISTORICAL_DATES.values());
+
+                try (val dayVector = appendDates(millis, extension.createDateDayVector());
+                        val milliVector = appendDates(millis, extension.createDateMilliVector())) {
+                    val row = new AtomicInteger(0);
+                    val daySut = new DateVectorAccessor(dayVector, row::get);
+                    val milliSut = new DateVectorAccessor(milliVector, row::get);
+                    for (; row.get() < millis.size(); row.incrementAndGet()) {
+                        val i = row.get();
+                        val ctx = tz + " " + expectedText.get(i);
+                        val epochDay = millis.get(i) / MILLIS_PER_DAY;
+                        for (val sut : Arrays.asList(daySut, milliSut)) {
+                            collector.assertThat(sut.getString()).as(ctx).isEqualTo(expectedText.get(i));
+                            collector
+                                    .assertThat(sut.getObject(LocalDate.class))
+                                    .as(ctx)
+                                    .isEqualTo(LocalDate.ofEpochDay(epochDay));
+                            // java.sql.Date keeps the calendar fields (including the era) of the SQL date at
+                            // local midnight in the default time zone.
+                            val expectedDate = LocalDate.ofEpochDay(epochDay);
+                            val actual = Calendar.getInstance();
+                            actual.setTime(sut.getDate(null));
+                            val bc = expectedDate.getYear() <= 0;
+                            val ctxDate = ctx + " java.sql.Date";
+                            collector
+                                    .assertThat(actual.get(Calendar.ERA))
+                                    .as(ctxDate)
+                                    .isEqualTo(bc ? GregorianCalendar.BC : GregorianCalendar.AD);
+                            collector
+                                    .assertThat(actual.get(Calendar.YEAR))
+                                    .as(ctxDate)
+                                    .isEqualTo(bc ? 1 - expectedDate.getYear() : expectedDate.getYear());
+                            collector
+                                    .assertThat(actual.get(Calendar.MONTH) + 1)
+                                    .as(ctxDate)
+                                    .isEqualTo(expectedDate.getMonthValue());
+                            collector
+                                    .assertThat(actual.get(Calendar.DAY_OF_MONTH))
+                                    .as(ctxDate)
+                                    .isEqualTo(expectedDate.getDayOfMonth());
+                            collector
+                                    .assertThat(actual.get(Calendar.HOUR_OF_DAY))
+                                    .as(ctxDate)
+                                    .isZero();
+                        }
+                    }
+                }
+            }
+        } finally {
+            TimeZone.setDefault(original);
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void testGetStringIgnoresDefaultLocaleDigits() {
+        val original = Locale.getDefault();
+        val millis = Stream.of("2024-03-05", "0000-01-01")
+                .map(d -> LocalDate.parse(d).toEpochDay() * MILLIS_PER_DAY)
+                .collect(Collectors.toList());
+        try (val vector = appendDates(millis, extension.createDateDayVector())) {
+            val i = new AtomicInteger(0);
+            val sut = new DateVectorAccessor(vector, i::get);
+            for (val tag : Arrays.asList("ar-SA-u-nu-arab", "hi-IN-u-nu-deva", "th-TH-u-nu-thai")) {
+                Locale.setDefault(Locale.forLanguageTag(tag));
+                i.set(0);
+                collector.assertThat(sut.getString()).as(tag).isEqualTo("2024-03-05");
+                i.set(1);
+                collector.assertThat(sut.getString()).as(tag).isEqualTo("0001-01-01 BC");
+            }
+        } finally {
+            Locale.setDefault(original);
+        }
+    }
+
+    /** java.sql.Date has no 1582-10-05..14 (skipped by the Julian-to-Gregorian cutover); pin the rollover. */
+    @SneakyThrows
+    @Test
+    void testGetDateForCutoverGapRollsForward() {
+        val millis = Collections.singletonList(LocalDate.parse("1582-10-05").toEpochDay() * MILLIS_PER_DAY);
+        try (val vector = appendDates(millis, extension.createDateDayVector())) {
+            val sut = new DateVectorAccessor(vector, () -> 0);
+            collector.assertThat(sut.getString()).isEqualTo("1582-10-05");
+            collector.assertThat(sut.getObject(LocalDate.class)).isEqualTo(LocalDate.parse("1582-10-05"));
+            collector.assertThat(sut.getDate(null).toLocalDate()).isEqualTo(LocalDate.parse("1582-10-15"));
+        }
+    }
+
+    @SneakyThrows
+    @Test
+    void testGetObjectWithClassFallsBackToDefaultConversions() {
+        val millis = Stream.of("2000-02-29", "0000-01-01")
+                .map(d -> LocalDate.parse(d).toEpochDay() * MILLIS_PER_DAY)
+                .collect(Collectors.toList());
+
+        try (val vector = appendDates(millis, extension.createDateDayVector())) {
+            val i = new AtomicInteger(0);
+            val sut = new DateVectorAccessor(vector, i::get);
+
+            collector.assertThat(sut.getObject(String.class)).isEqualTo("2000-02-29");
+            collector.assertThat(sut.getObject(Date.class)).isEqualTo(Date.valueOf("2000-02-29"));
+            collector.assertThat(sut.getObject(java.util.Date.class)).isEqualTo(Date.valueOf("2000-02-29"));
+            collector
+                    .assertThatThrownBy(() -> sut.getObject(Integer.class))
+                    .isInstanceOf(SQLFeatureNotSupportedException.class);
+            collector.assertThatThrownBy(() -> sut.getObject((Class<?>) null)).isInstanceOf(SQLException.class);
+
+            i.incrementAndGet();
+            collector.assertThat(sut.getObject(String.class)).isEqualTo("0001-01-01 BC");
+            collector.assertThat(sut.getObject(LocalDate.class)).isEqualTo(LocalDate.of(0, 1, 1));
         }
     }
 
