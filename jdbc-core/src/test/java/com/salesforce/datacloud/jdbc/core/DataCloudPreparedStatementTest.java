@@ -55,6 +55,17 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
     }
 
     @Test
+    void testSetObjectBindsJavaArrays() throws SQLException {
+        preparedStatement.setObject(1, new long[] {1L, 2L});
+        preparedStatement.setObject(2, new String[] {"a", null}, Types.ARRAY);
+        preparedStatement.setArray(3, null);
+        assertThatThrownBy(() -> preparedStatement.setObject(4, new Object[] {1}))
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
+        assertThatThrownBy(() -> preparedStatement.setObject(5, new Object[] {1}, Types.ARRAY))
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
+    }
+
+    @Test
     @SneakyThrows
     public void testExecuteQuery() {
         assertThatThrownBy(() -> preparedStatement.executeQuery("SELECT * FROM table"))

@@ -164,9 +164,6 @@ public final class ArrowUtils {
      */
     private static ParameterBinding normalizeDecimalArray(ParameterBinding binding) {
         List<?> elements = (List<?>) binding.getValue();
-        if (elements == null) {
-            return binding;
-        }
         int scale = 0;
         int integerDigits = 1;
         for (Object element : elements) {
