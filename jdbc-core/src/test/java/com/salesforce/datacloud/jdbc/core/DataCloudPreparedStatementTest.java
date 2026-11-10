@@ -297,7 +297,6 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
                 impl("setRef", s -> s.setRef(1, null)),
                 impl("setBlob", s -> s.setBlob(1, (Blob) null)),
                 impl("setClob", s -> s.setClob(1, (Clob) null)),
-                impl("setArray", s -> s.setArray(1, null)),
                 impl("setURL", s -> s.setURL(1, null)),
                 impl("setRowId", s -> s.setRowId(1, null)),
                 impl("setNString", s -> s.setNString(1, null)),

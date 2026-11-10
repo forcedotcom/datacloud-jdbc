@@ -179,6 +179,21 @@ try (DataCloudNamedParameterStatement statement =
 
 Use `Connection.prepareStatement` for standard JDBC positional `?` parameters.
 
+### Array parameters
+
+An array binds as a single parameter, so many values can be passed without inlining them into the SQL text, for example to turn parallel arrays into rows:
+
+```java
+try (PreparedStatement statement =
+        connection.prepareStatement("SELECT * FROM unnest(?, ?) AS t(id, name)")) {
+    statement.setArray(1, connection.createArrayOf("BIGINT", new Object[] {1L, 2L}));
+    statement.setArray(2, connection.createArrayOf("VARCHAR", new Object[] {"a", null}));
+    ...
+}
+```
+
+`createArrayOf` takes a JDBC type name (`java.sql.JDBCType`), and each element is converted as `setObject(element, type)` would convert it. Arrays can also be passed to `setObject`, including on named-parameter statements, either as a `java.sql.Array` or as a Java array such as `String[]` or `long[]` (typed by its component class). For bulk writes, bind one array per column and use `unnest`; `executeBatch` is not supported. Only one-dimensional arrays are supported.
+
 ### Data type mapping
 
 How [Data 360 SQL data types](https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/dc-sql-reference/datatypes.html) are presented over JDBC (`ResultSetMetaData.getColumnType` / `getColumnClassName`, `DatabaseMetaData.getColumns`).

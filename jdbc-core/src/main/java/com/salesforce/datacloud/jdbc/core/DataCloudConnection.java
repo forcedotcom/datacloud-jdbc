@@ -10,6 +10,7 @@ import static com.salesforce.datacloud.jdbc.logging.ElapsedLogger.logTimedValue;
 import static com.salesforce.datacloud.jdbc.protocol.data.ArrowUtils.toColumnMetaData;
 
 import com.google.protobuf.Empty;
+import com.salesforce.datacloud.jdbc.core.accessor.impl.DataCloudArray;
 import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
@@ -36,12 +37,14 @@ import java.sql.CallableStatement;
 import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.JDBCType;
 import java.sql.NClob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLClientInfoException;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;
 import java.sql.Savepoint;
@@ -51,6 +54,7 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
@@ -584,9 +588,20 @@ public class DataCloudConnection implements Connection {
         return new Properties();
     }
 
+    /**
+     * Creates an array to bind as a query parameter. {@code typeName} is a JDBC type name such as
+     * {@code "VARCHAR"}, {@code "BIGINT"} or {@code "TIMESTAMP"}; each element is converted as
+     * {@code setObject(element, type)} would convert it.
+     */
     @Override
-    public Array createArrayOf(String typeName, Object[] elements) {
-        return null;
+    public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
+        JDBCType baseType;
+        try {
+            baseType = JDBCType.valueOf(typeName.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new SQLFeatureNotSupportedException("Unsupported array element type: " + typeName, "HYC00", ex);
+        }
+        return new DataCloudArray(baseType, elements);
     }
 
     @Override

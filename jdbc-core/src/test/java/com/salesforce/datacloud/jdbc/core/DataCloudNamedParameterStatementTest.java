@@ -243,9 +243,7 @@ class DataCloudNamedParameterStatementTest extends InterceptedHyperTestBase {
 
     @Test
     void rejectsNullTypesWithoutParameterEncodingSupport() {
-        int[] unsupportedTypes = {
-            Types.BINARY, Types.VARBINARY, Types.LONGVARBINARY, Types.TIME_WITH_TIMEZONE, Types.ARRAY
-        };
+        int[] unsupportedTypes = {Types.BINARY, Types.VARBINARY, Types.LONGVARBINARY, Types.TIME_WITH_TIMEZONE};
 
         for (int unsupportedType : unsupportedTypes) {
             assertThatThrownBy(() -> preparedStatement.setNull("value", unsupportedType))

@@ -132,6 +132,9 @@ public final class ArrowUtils {
         // ParameterAccumulator.setParameter() pads the list with null placeholders for any
         // skipped positions (e.g. setBigDecimal(3, ...) before 1/2 are set). createField() already
         // handles this same null for the type side; mirror it here on the value side.
+        if (binding != null && isUnsizedDecimalArray(binding.getType())) {
+            return normalizeDecimalArray(binding);
+        }
         if (binding == null || !(binding.getValue() instanceof BigDecimal)) {
             return binding;
         }
@@ -147,5 +150,38 @@ public final class ArrowUtils {
                 HyperType.decimal(
                         precision, normalized.scale(), binding.getType().isNullable()),
                 normalized);
+    }
+
+    private static boolean isUnsizedDecimalArray(HyperType type) {
+        return type.getKind() == HyperTypeKind.ARRAY
+                && type.getElement().getKind() == HyperTypeKind.DECIMAL
+                && type.getElement().getPrecision() <= 0;
+    }
+
+    /**
+     * All elements of an Arrow list share one decimal precision and scale, so pick the smallest pair
+     * that holds every element, and rescale each element to it. Raising the scale never rounds.
+     */
+    private static ParameterBinding normalizeDecimalArray(ParameterBinding binding) {
+        List<?> elements = (List<?>) binding.getValue();
+        if (elements == null) {
+            return binding;
+        }
+        int scale = 0;
+        int integerDigits = 1;
+        for (Object element : elements) {
+            if (element instanceof BigDecimal) {
+                BigDecimal value = (BigDecimal) element;
+                scale = Math.max(scale, value.scale());
+                integerDigits = Math.max(integerDigits, value.precision() - value.scale());
+            }
+        }
+        List<Object> rescaled = new ArrayList<>(elements.size());
+        for (Object element : elements) {
+            rescaled.add(element instanceof BigDecimal ? ((BigDecimal) element).setScale(scale) : element);
+        }
+        HyperType elementType = HyperType.decimal(integerDigits + scale, scale, true);
+        return new ParameterBinding(
+                HyperType.array(elementType, binding.getType().isNullable()), rescaled);
     }
 }

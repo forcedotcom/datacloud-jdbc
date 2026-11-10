@@ -35,6 +35,7 @@ import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.complex.ListVector;
 
 /**
  * Populates vectors in a {@link VectorSchemaRoot} with Java values, dispatching per column by
@@ -63,14 +64,14 @@ public final class VectorPopulator {
                 // invoke a setter without a HyperTypeKind to dispatch on.
                 continue;
             }
-            HyperTypeKind kind = binding.getType().getKind();
-            if (kind == HyperTypeKind.NULL && binding.getValue() == null) {
+            HyperType type = binding.getType();
+            if (type.getKind() == HyperTypeKind.NULL && binding.getValue() == null) {
                 // NullVector needs no setter; every row is null by definition.
                 continue;
             }
             ValueVector vector =
                     root.getVector(root.getSchema().getFields().get(i).getName());
-            setCell(vector, kind, 0, binding.getValue(), calendar);
+            setCell(vector, type, 0, binding.getValue(), calendar);
         }
         root.setRowCount(1);
     }
@@ -96,6 +97,33 @@ public final class VectorPopulator {
             vector.setValueCount(rowCount);
         }
         root.setRowCount(rowCount);
+    }
+
+    /**
+     * Like {@link #setCell(ValueVector, HyperTypeKind, int, Object, Calendar)}, but also handles
+     * {@code ARRAY} cells: the value is a {@link List} whose elements are written to the list's
+     * child vector by the same setters, recursively.
+     */
+    static void setCell(ValueVector vector, HyperType type, int index, Object value, Calendar calendar) {
+        if (type.getKind() != HyperTypeKind.ARRAY) {
+            setCell(vector, type.getKind(), index, value, calendar);
+            return;
+        }
+        ListVector list = (ListVector) vector;
+        if (value == null) {
+            list.setNull(index);
+            return;
+        }
+        List<?> elements = (List<?>) value;
+        int offset = list.startNewValue(index);
+        for (int i = 0; i < elements.size(); i++) {
+            try {
+                setCell(list.getDataVector(), type.getElement(), offset + i, elements.get(i), calendar);
+            } catch (RuntimeException e) {
+                throw new IllegalArgumentException("array element " + i + ": " + e.getMessage(), e);
+            }
+        }
+        list.endValue(index, elements.size());
     }
 
     /** Sets cell ({@code vector}, {@code index}) to {@code value}, or null if value is null. */

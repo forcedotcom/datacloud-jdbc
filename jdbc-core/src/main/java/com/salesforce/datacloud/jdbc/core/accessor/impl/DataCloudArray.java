@@ -9,6 +9,7 @@ import com.salesforce.datacloud.jdbc.protocol.data.ArrowToHyperTypeMapper;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.sql.Array;
+import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
@@ -30,6 +31,13 @@ public class DataCloudArray implements Array {
         HyperType elementType = ArrowToHyperTypeMapper.toHyperType(dataVector.getField());
         this.baseTypeName = HyperTypes.toJdbcTypeName(elementType);
         this.baseType = HyperTypes.toJdbcTypeCode(elementType);
+    }
+
+    /** An array built on the client, e.g. by {@code Connection.createArrayOf}, to bind as a parameter. */
+    public DataCloudArray(JDBCType baseType, Object[] data) {
+        this.data = data.clone();
+        this.baseTypeName = baseType.getName();
+        this.baseType = baseType.getVendorTypeNumber();
     }
 
     /**
