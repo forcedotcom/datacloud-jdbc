@@ -7,6 +7,7 @@ package com.salesforce.datacloud.jdbc.core;
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOptionalDuration;
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeRequired;
 
+import com.salesforce.datacloud.jdbc.util.DriverProperty;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.HashMap;
@@ -55,7 +56,7 @@ public class StatementProperties {
     public static StatementProperties ofDestructive(Properties props) throws SQLException {
         StatementPropertiesBuilder builder = StatementProperties.builder();
 
-        takeOptionalDuration(props, "queryTimeout").ifPresent(builder::queryTimeout);
+        takeOptionalDuration(props, DriverProperty.QUERY_TIMEOUT.getName()).ifPresent(builder::queryTimeout);
         takeOptionalDuration(props, "queryTimeoutLocalEnforcementDelay")
                 .ifPresent(builder::queryTimeoutLocalEnforcementDelay);
 
@@ -88,7 +89,7 @@ public class StatementProperties {
         Properties props = new Properties();
 
         if (!queryTimeout.isZero()) {
-            props.setProperty("queryTimeout", String.valueOf(queryTimeout.getSeconds()));
+            props.setProperty(DriverProperty.QUERY_TIMEOUT.getName(), String.valueOf(queryTimeout.getSeconds()));
         }
         if (!queryTimeoutLocalEnforcementDelay.isZero()) {
             props.setProperty(

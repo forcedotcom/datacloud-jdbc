@@ -90,6 +90,42 @@ class DataCloudResultSetMethodTest {
                 new QueryResultArrowStream.Result(reader, readerAllocator), QUERY_ID, ZoneId.systemDefault());
     }
 
+    // --- Cursor position ---
+
+    @Test
+    void positionMethodsFollowCursorThroughResultSet() throws Exception {
+        try (val rs = createResultSet()) {
+            assertThat(rs.isBeforeFirst()).isTrue();
+            assertThat(rs.isAfterLast()).isFalse();
+            assertThat(rs.isFirst()).isFalse();
+
+            assertThat(rs.next()).isTrue();
+            assertThat(rs.isBeforeFirst()).isFalse();
+            assertThat(rs.isFirst()).isTrue();
+            assertThat(rs.getString(1)).isEqualTo("hello");
+
+            assertThat(rs.next()).isFalse();
+            assertThat(rs.isAfterLast()).isTrue();
+            assertThat(rs.isFirst()).isFalse();
+        }
+    }
+
+    @Test
+    void positionMethodsThrowOnClosedResultSet() throws Exception {
+        val rs = createResultSet();
+        rs.close();
+        assertThatThrownBy(rs::isBeforeFirst).isInstanceOf(SQLException.class).hasMessageContaining("closed");
+        assertThatThrownBy(rs::isAfterLast).isInstanceOf(SQLException.class).hasMessageContaining("closed");
+        assertThatThrownBy(rs::isFirst).isInstanceOf(SQLException.class).hasMessageContaining("closed");
+    }
+
+    @Test
+    void isLastRemainsUnsupported() throws Exception {
+        try (val rs = createResultSet()) {
+            assertThatThrownBy(rs::isLast).isInstanceOf(SQLFeatureNotSupportedException.class);
+        }
+    }
+
     // --- Unsupported methods ---
 
     @FunctionalInterface

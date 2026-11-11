@@ -8,6 +8,7 @@ import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeOption
 import static com.salesforce.datacloud.jdbc.util.PropertyParsingUtils.takeRequired;
 
 import com.google.common.collect.ImmutableList;
+import com.salesforce.datacloud.jdbc.util.DriverProperty;
 import java.net.URI;
 import java.security.KeyFactory;
 import java.security.interfaces.RSAPrivateKey;
@@ -53,13 +54,13 @@ public class SalesforceAuthProperties {
         CLIENT_CREDENTIALS
     }
 
-    static final String AUTH_USER_NAME = "userName";
-    static final String AUTH_PASSWORD = "password";
-    static final String AUTH_PRIVATE_KEY = "privateKey";
-    static final String AUTH_CLIENT_ID = "clientId";
-    static final String AUTH_CLIENT_SECRET = "clientSecret";
-    static final String AUTH_REFRESH_TOKEN = "refreshToken";
-    static final String AUTH_DATASPACE = "dataspace";
+    static final String AUTH_USER_NAME = DriverProperty.USER_NAME.getName();
+    static final String AUTH_PASSWORD = DriverProperty.PASSWORD.getName();
+    static final String AUTH_PRIVATE_KEY = DriverProperty.PRIVATE_KEY.getName();
+    static final String AUTH_CLIENT_ID = DriverProperty.CLIENT_ID.getName();
+    static final String AUTH_CLIENT_SECRET = DriverProperty.CLIENT_SECRET.getName();
+    static final String AUTH_REFRESH_TOKEN = DriverProperty.REFRESH_TOKEN.getName();
+    static final String AUTH_DATASPACE = DriverProperty.DATASPACE.getName();
 
     // Required fields
     private final URI loginUrl;

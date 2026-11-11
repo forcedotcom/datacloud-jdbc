@@ -161,6 +161,33 @@ public class DataCloudResultSet implements ReadOnlyResultSet, ForwardOnlyResultS
         return cursor.getRowsSeen();
     }
 
+    /**
+     * Returns true if the cursor is before the first row and the result has at least one row; false
+     * otherwise, including for an empty result. The first call may block until the first batch of
+     * rows arrives, which is the same wait the first {@link #next()} would incur.
+     */
+    @Override
+    public boolean isBeforeFirst() throws SQLException {
+        checkClosed();
+        return cursor.isBeforeFirst();
+    }
+
+    /**
+     * Returns true if {@link #next()} has moved past the last row; false otherwise, including for an
+     * empty result.
+     */
+    @Override
+    public boolean isAfterLast() throws SQLException {
+        checkClosed();
+        return cursor.isAfterLast();
+    }
+
+    @Override
+    public boolean isFirst() throws SQLException {
+        checkClosed();
+        return cursor.isFirst();
+    }
+
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
         checkClosed();
