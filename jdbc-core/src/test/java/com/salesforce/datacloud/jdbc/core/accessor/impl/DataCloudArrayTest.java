@@ -10,6 +10,8 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import com.google.common.collect.ImmutableList;
 import com.salesforce.datacloud.jdbc.core.accessor.SoftAssertions;
+import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
+import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import com.salesforce.datacloud.jdbc.util.RootAllocatorTestExtension;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -48,6 +50,55 @@ public class DataCloudArrayTest {
         if (this.dataVector != null) {
             this.dataVector.close();
         }
+    }
+
+    @SneakyThrows
+    @Test
+    void testTemporalVectorValuesBecomeJavaTypes() {
+        dataVector = extension.createTimeStampMicroVector(ImmutableList.of(1_000L));
+        Object[] timestamps = (Object[]) new DataCloudArray(dataVector, 0, 1).getArray();
+        collector.assertThat(timestamps[0]).isEqualTo(java.sql.Timestamp.valueOf("1970-01-01 00:00:01"));
+        dataVector.close();
+
+        dataVector = extension.createTimeStampMicroTZVector(ImmutableList.of(1_500L), "UTC");
+        Object[] zoned = (Object[]) new DataCloudArray(dataVector, 0, 1).getArray();
+        collector.assertThat(zoned[0]).isEqualTo(java.sql.Timestamp.from(java.time.Instant.ofEpochMilli(1500)));
+        dataVector.close();
+
+        dataVector = extension.createTimeMicroVector(ImmutableList.of(3_600_000_000L));
+        Object[] times = (Object[]) new DataCloudArray(dataVector, 0, 1).getArray();
+        collector.assertThat(times[0]).isEqualTo(java.sql.Time.valueOf("01:00:00"));
+    }
+
+    @SneakyThrows
+    @Test
+    void testClientBuiltArrayKeepsPrimitivesAndSlices() {
+        val array = new DataCloudArray(HyperTypes.fromJdbcTypeCode(Types.BIGINT, true), new long[] {1L, 2L, 3L});
+        collector.assertThat(array.getBaseType()).isEqualTo(Types.BIGINT);
+        collector.assertThat((long[]) array.getArray()).containsExactly(1L, 2L, 3L);
+        collector.assertThat((long[]) array.getArray(2, 2)).containsExactly(2L, 3L);
+    }
+
+    @Test
+    void testClientBuiltArrayRejectsMismatchedElements() {
+        for (int type : new int[] {
+            Types.BOOLEAN,
+            Types.INTEGER,
+            Types.REAL,
+            Types.DOUBLE,
+            Types.DECIMAL,
+            Types.VARCHAR,
+            Types.DATE,
+            Types.TIME,
+            Types.TIMESTAMP_WITH_TIMEZONE
+        }) {
+            HyperType elementType = HyperTypes.fromJdbcTypeCode(type, true);
+            Object[] elements = new Object[] {null, new Object()};
+            val e = assertThrows(SQLException.class, () -> new DataCloudArray(elementType, elements));
+            collector.assertThat(e.getMessage()).contains("array element 1");
+        }
+        assertThrows(
+                SQLException.class, () -> new DataCloudArray(HyperTypes.fromJdbcTypeCode(Types.INTEGER, true), "x"));
     }
 
     @SneakyThrows

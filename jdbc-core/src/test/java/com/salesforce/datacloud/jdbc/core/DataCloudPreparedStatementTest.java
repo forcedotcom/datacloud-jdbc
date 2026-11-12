@@ -66,6 +66,39 @@ public class DataCloudPreparedStatementTest extends InterceptedHyperTestBase {
     }
 
     @Test
+    void testSetArrayBindsTimestampsAndRejectsBadArrays() throws SQLException {
+        Timestamp timestamp = Timestamp.valueOf("2026-11-10 07:05:52");
+        preparedStatement.setObject(1, new Timestamp[] {timestamp, null});
+        preparedStatement.setObject(2, new java.time.LocalDateTime[] {java.time.LocalDateTime.MIN});
+        preparedStatement.setObject(3, connection.createArrayOf("TIMESTAMP", new Object[] {"not a timestamp"}));
+
+        assertThatThrownBy(() -> preparedStatement.setArray(4, connection.createArrayOf("ARRAY", new Object[0])))
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
+        assertThatThrownBy(() -> preparedStatement.setArray(5, arrayReturning(Types.INTEGER, "not an array")))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("Java array");
+        preparedStatement.setArray(6, arrayReturning(Types.INTEGER, new int[] {1}));
+        assertThatThrownBy(() -> connection.createArrayOf("no such type", new Object[0]))
+                .isInstanceOf(SQLFeatureNotSupportedException.class);
+    }
+
+    private static java.sql.Array arrayReturning(int baseType, Object result) {
+        return (java.sql.Array) java.lang.reflect.Proxy.newProxyInstance(
+                DataCloudPreparedStatementTest.class.getClassLoader(),
+                new Class<?>[] {java.sql.Array.class},
+                (proxy, method, args) -> {
+                    switch (method.getName()) {
+                        case "getBaseType":
+                            return baseType;
+                        case "getBaseTypeName":
+                            return "INTEGER";
+                        default:
+                            return result;
+                    }
+                });
+    }
+
+    @Test
     @SneakyThrows
     public void testExecuteQuery() {
         assertThatThrownBy(() -> preparedStatement.executeQuery("SELECT * FROM table"))
