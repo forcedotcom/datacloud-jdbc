@@ -101,8 +101,9 @@ public final class VectorPopulator {
 
     /**
      * Like {@link #setCell(ValueVector, HyperTypeKind, int, Object, Calendar)}, but also handles
-     * {@code ARRAY} cells: the value is a {@link List} whose elements are written to the list's
-     * child vector by the same setters, recursively.
+     * {@code ARRAY} cells: the value is a {@link List} or a Java array (primitive or object) whose
+     * elements are written to the list's child vector, recursively. Decimal elements are rescaled to
+     * the element type's scale while writing.
      */
     static void setCell(ValueVector vector, HyperType type, int index, Object value, Calendar calendar) {
         if (type.getKind() != HyperTypeKind.ARRAY) {
@@ -114,27 +115,44 @@ public final class VectorPopulator {
             list.setNull(index);
             return;
         }
-        List<?> elements = (List<?>) value;
+        HyperType elementType = type.getElement();
+        boolean isList = value instanceof List;
+        int length = isList ? ((List<?>) value).size() : java.lang.reflect.Array.getLength(value);
+        boolean nested = elementType.getKind() == HyperTypeKind.ARRAY;
+        VectorValueSetter<ValueVector> setter = nested ? null : getSetter(elementType.getKind(), calendar);
+        ValueVector child = list.getDataVector();
         int offset = list.startNewValue(index);
-        for (int i = 0; i < elements.size(); i++) {
+        for (int i = 0; i < length; i++) {
             try {
-                setCell(list.getDataVector(), type.getElement(), offset + i, elements.get(i), calendar);
+                Object element = isList ? ((List<?>) value).get(i) : java.lang.reflect.Array.get(value, i);
+                if (nested) {
+                    setCell(child, elementType, offset + i, element, calendar);
+                    continue;
+                }
+                if (elementType.getKind() == HyperTypeKind.DECIMAL && element instanceof BigDecimal) {
+                    element = ((BigDecimal) element).setScale(elementType.getScale());
+                }
+                setter.setValue(child, offset + i, element);
             } catch (RuntimeException e) {
                 throw new IllegalArgumentException("array element " + i + ": " + e.getMessage(), e);
             }
         }
-        list.endValue(index, elements.size());
+        list.endValue(index, length);
     }
 
     /** Sets cell ({@code vector}, {@code index}) to {@code value}, or null if value is null. */
     static void setCell(ValueVector vector, HyperTypeKind kind, int index, Object value, Calendar calendar) {
-        @SuppressWarnings("unchecked")
+        getSetter(kind, calendar).setValue(vector, index, value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static VectorValueSetter<ValueVector> getSetter(HyperTypeKind kind, Calendar calendar) {
         VectorValueSetter<ValueVector> setter =
                 (VectorValueSetter<ValueVector>) VectorValueSetterFactory.getSetter(kind, calendar);
         if (setter == null) {
             throw new UnsupportedOperationException("Unsupported HyperTypeKind for vector population: " + kind);
         }
-        setter.setValue(vector, index, value);
+        return setter;
     }
 }
 

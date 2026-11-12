@@ -20,7 +20,6 @@ import lombok.SneakyThrows;
 import lombok.val;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VarCharVector;
-import org.apache.arrow.vector.util.Text;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.assertj.core.api.ThrowingConsumer;
 import org.assertj.core.api.junit.jupiter.InjectSoftAssertions;
@@ -211,12 +210,12 @@ public class DataCloudArrayTest {
         val array = (Object[]) dataCloudArray.getArray();
 
         collector.assertThat(array).hasSize(5);
-        // VarCharVector.getObject() returns Text objects, not String objects
-        collector.assertThat(array[0]).isEqualTo(new Text("abc"));
-        collector.assertThat(array[1]).isEqualTo(new Text("def"));
-        collector.assertThat(array[2]).isEqualTo(new Text("ghi"));
-        collector.assertThat(array[3]).isEqualTo(new Text("jkl"));
-        collector.assertThat(array[4]).isEqualTo(new Text("mno"));
+        // Arrow Text values are converted to String
+        collector.assertThat(array[0]).isEqualTo("abc");
+        collector.assertThat(array[1]).isEqualTo("def");
+        collector.assertThat(array[2]).isEqualTo("ghi");
+        collector.assertThat(array[3]).isEqualTo("jkl");
+        collector.assertThat(array[4]).isEqualTo("mno");
     }
 
     @SneakyThrows
@@ -242,13 +241,13 @@ public class DataCloudArrayTest {
 
         collector.assertThat(array).hasSize(6);
 
-        // VarCharVector.getObject() returns Text objects, not String objects
-        collector.assertThat(array[0]).isEqualTo(new Text("abc"));
+        // Arrow Text values are converted to String
+        collector.assertThat(array[0]).isEqualTo("abc");
         collector.assertThat(array[1]).isNull();
-        collector.assertThat(array[2]).isEqualTo(new Text("def"));
-        collector.assertThat(array[3]).isEqualTo(new Text("ghi"));
-        collector.assertThat(array[4]).isEqualTo(new Text("jkl"));
-        collector.assertThat(array[5]).isEqualTo(new Text("mno"));
+        collector.assertThat(array[2]).isEqualTo("def");
+        collector.assertThat(array[3]).isEqualTo("ghi");
+        collector.assertThat(array[4]).isEqualTo("jkl");
+        collector.assertThat(array[5]).isEqualTo("mno");
     }
 
     @SneakyThrows

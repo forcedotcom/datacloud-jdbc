@@ -192,7 +192,7 @@ try (PreparedStatement statement =
 }
 ```
 
-`createArrayOf` takes a JDBC type name (`java.sql.JDBCType`), and each element is converted as `setObject(element, type)` would convert it. Arrays can also be passed to `setObject`, including on named-parameter statements, either as a `java.sql.Array` or as a Java array such as `String[]` or `long[]` (typed by its component class). For bulk writes, bind one array per column and use `unnest`; `executeBatch` is not supported. Only one-dimensional arrays are supported.
+`createArrayOf` takes a JDBC type name (`java.sql.JDBCType`) or a SQL type name such as `text`, `double precision` or `numeric(10,2)`, and checks that each element has the matching Java type (e.g. `Long` for `BIGINT`). Arrays can also be passed to `setObject`, including on named-parameter statements, either as a `java.sql.Array` or as a Java array such as `String[]` or `long[]` (typed by its component class). Arrays read with `ResultSet.getArray` hold plain Java values (`String`, `java.sql.Date`, `java.sql.Timestamp`, ...) and can be bound again as is. For bulk writes, bind one array per column and use `unnest`; `executeBatch` is not supported. Only one-dimensional arrays are supported.
 
 ### Data type mapping
 

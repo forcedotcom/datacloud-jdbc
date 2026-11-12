@@ -120,10 +120,99 @@ class DataCloudPreparedStatementArrayHyperTest {
     }
 
     @Test
+    void roundTripsArraysReadFromAResultSet() throws SQLException {
+        try (DataCloudConnection connection = getHyperQueryConnection();
+                PreparedStatement query = connection.prepareStatement("SELECT * FROM unnest(?)");
+                PreparedStatement source = connection.prepareStatement(
+                        "SELECT ARRAY['a', 'b']::text[] AS s, ARRAY[DATE '2026-11-10']::date[] AS d,"
+                                + " ARRAY[TIMESTAMPTZ '2026-11-10 15:05:52+00']::timestamptz[] AS tz,"
+                                + " ARRAY[TIMESTAMP '2026-11-10 07:05:52']::timestamp[] AS ts")) {
+            try (ResultSet rs = source.executeQuery()) {
+                assertThat(rs.next()).isTrue();
+                for (int column = 1; column <= 4; column++) {
+                    Array fetched = rs.getArray(column);
+                    query.setArray(1, fetched);
+                    try (ResultSet echoed = query.executeQuery()) {
+                        for (Object expected : (Object[]) fetched.getArray()) {
+                            assertThat(echoed.next()).isTrue();
+                            assertThat(echoed.getObject(1)).isEqualTo(expected);
+                        }
+                        assertThat(echoed.next()).isFalse();
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    void bindsPrimitiveArraysReturnedByForeignArrays() throws SQLException {
+        try (DataCloudConnection connection = getHyperQueryConnection();
+                PreparedStatement statement = connection.prepareStatement("SELECT sum(x) FROM unnest(?) AS t(x)")) {
+            Array foreign = (Array) java.lang.reflect.Proxy.newProxyInstance(
+                    getClass().getClassLoader(), new Class<?>[] {Array.class}, (proxy, method, args) -> {
+                        switch (method.getName()) {
+                            case "getBaseType":
+                                return Types.INTEGER;
+                            case "getBaseTypeName":
+                                return "INTEGER";
+                            case "getArray":
+                                return new int[] {1, 2, 3};
+                            default:
+                                throw new UnsupportedOperationException(method.getName());
+                        }
+                    });
+            statement.setArray(1, foreign);
+            try (ResultSet rs = statement.executeQuery()) {
+                assertThat(rs.next()).isTrue();
+                assertThat(rs.getLong(1)).isEqualTo(6L);
+            }
+        }
+    }
+
+    @Test
+    void acceptsSqlTypeNames() throws SQLException {
+        try (DataCloudConnection connection = getHyperQueryConnection();
+                PreparedStatement statement =
+                        connection.prepareStatement("SELECT * FROM unnest(?, ?, ?) AS t(a, b, c)")) {
+            statement.setArray(1, connection.createArrayOf("text", new Object[] {"x"}));
+            statement.setArray(2, connection.createArrayOf("double precision", new Object[] {1.5d}));
+            statement.setArray(
+                    3, connection.createArrayOf("timestamp with time zone", new Object[] {new Timestamp(0)}));
+            try (ResultSet rs = statement.executeQuery()) {
+                assertThat(rs.next()).isTrue();
+                assertThat(rs.getString("a")).isEqualTo("x");
+                assertThat(rs.getDouble("b")).isEqualTo(1.5d);
+                assertThat(rs.getTimestamp("c")).isEqualTo(new Timestamp(0));
+            }
+        }
+    }
+
+    @Test
+    void sizesDecimalsWithoutAnExtraIntegerDigit() throws SQLException {
+        try (DataCloudConnection connection = getHyperQueryConnection();
+                PreparedStatement statement = connection.prepareStatement("SELECT * FROM unnest(?) AS t(x)")) {
+            statement.setArray(1, connection.createArrayOf("DECIMAL", new Object[] {new BigDecimal("1E-38"), null}));
+            try (ResultSet rs = statement.executeQuery()) {
+                assertThat(rs.next()).isTrue();
+                assertThat(rs.getBigDecimal(1)).isEqualByComparingTo("1E-38");
+            }
+        }
+    }
+
+    @Test
+    void rejectsElementsThatDoNotMatchTheArrayType() throws SQLException {
+        try (DataCloudConnection connection = getHyperQueryConnection()) {
+            assertThatThrownBy(() -> connection.createArrayOf("INTEGER", new String[] {"a"}))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("array element 0");
+        }
+    }
+
+    @Test
     void namesTheFailingElement() throws SQLException {
         try (DataCloudConnection connection = getHyperQueryConnection();
                 PreparedStatement statement = connection.prepareStatement("SELECT * FROM unnest(?)")) {
-            statement.setArray(1, connection.createArrayOf("VARCHAR", new Object[] {"ok", 42}));
+            statement.setArray(1, connection.createArrayOf("TIMESTAMP", new Object[] {new Timestamp(0), "x"}));
             assertThatThrownBy(statement::executeQuery)
                     .isInstanceOf(SQLException.class)
                     .hasMessageContaining("array element 1");

@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.SneakyThrows;
 import lombok.val;
-import org.apache.arrow.vector.util.Text;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -128,7 +127,7 @@ public class DataCloudConnectionFunctionalTest {
                     // during the runtime of the query
                     assertThat(((Object[]) reference.getArray()).length).isEqualTo(3);
                     Object entry = ((Object[]) reference.getArray())[2];
-                    assertThat(entry).isEqualTo(new Text("ghi"));
+                    assertThat(entry).isEqualTo("ghi");
                 }
             }
         }

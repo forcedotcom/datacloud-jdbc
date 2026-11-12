@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
@@ -160,25 +161,22 @@ public final class ArrowUtils {
 
     /**
      * All elements of an Arrow list share one decimal precision and scale, so pick the smallest pair
-     * that holds every element, and rescale each element to it. Raising the scale never rounds.
+     * that holds every element. {@link VectorPopulator} rescales each element while writing; raising
+     * the scale never rounds.
      */
     private static ParameterBinding normalizeDecimalArray(ParameterBinding binding) {
-        List<?> elements = (List<?>) binding.getValue();
         int scale = 0;
-        int integerDigits = 1;
-        for (Object element : elements) {
+        int integerDigits = 0;
+        Object values = binding.getValue();
+        for (Object element : values instanceof List ? (List<?>) values : Arrays.asList((Object[]) values)) {
             if (element instanceof BigDecimal) {
                 BigDecimal value = (BigDecimal) element;
                 scale = Math.max(scale, value.scale());
                 integerDigits = Math.max(integerDigits, value.precision() - value.scale());
             }
         }
-        List<Object> rescaled = new ArrayList<>(elements.size());
-        for (Object element : elements) {
-            rescaled.add(element instanceof BigDecimal ? ((BigDecimal) element).setScale(scale) : element);
-        }
-        HyperType elementType = HyperType.decimal(integerDigits + scale, scale, true);
+        HyperType elementType = HyperType.decimal(Math.max(1, integerDigits + scale), scale, true);
         return new ParameterBinding(
-                HyperType.array(elementType, binding.getType().isNullable()), rescaled);
+                HyperType.array(elementType, binding.getType().isNullable()), binding.getValue());
     }
 }

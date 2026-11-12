@@ -13,6 +13,7 @@ import com.google.protobuf.Empty;
 import com.salesforce.datacloud.jdbc.core.accessor.impl.DataCloudArray;
 import com.salesforce.datacloud.jdbc.core.metadata.DataCloudResultSetMetaData;
 import com.salesforce.datacloud.jdbc.core.partial.DataCloudQueryPolling;
+import com.salesforce.datacloud.jdbc.core.types.HyperTypes;
 import com.salesforce.datacloud.jdbc.exception.DataCloudJDBCException;
 import com.salesforce.datacloud.jdbc.exception.QueryExceptionHandler;
 import com.salesforce.datacloud.jdbc.interceptor.NetworkTimeoutInterceptor;
@@ -23,6 +24,8 @@ import com.salesforce.datacloud.jdbc.protocol.RowRangeIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.AsyncStreamObserverIterator;
 import com.salesforce.datacloud.jdbc.protocol.async.core.SyncIteratorAdapter;
 import com.salesforce.datacloud.jdbc.protocol.data.ColumnMetadata;
+import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
+import com.salesforce.datacloud.jdbc.protocol.data.PgCatalogTypeParser;
 import com.salesforce.datacloud.jdbc.protocol.grpc.QueryAccessGrpcClient;
 import com.salesforce.datacloud.jdbc.util.Deadline;
 import com.salesforce.datacloud.jdbc.util.JdbcURL;
@@ -595,13 +598,19 @@ public class DataCloudConnection implements Connection {
      */
     @Override
     public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
-        JDBCType baseType;
+        HyperType elementType;
         try {
-            baseType = JDBCType.valueOf(typeName.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ex) {
-            throw new SQLFeatureNotSupportedException("Unsupported array element type: " + typeName, "HYC00", ex);
+            // JDBC type names (BIGINT, TIMESTAMP_WITH_TIMEZONE) first, then SQL names (text, numeric(10,2))
+            elementType = HyperTypes.fromJdbcTypeCode(
+                    JDBCType.valueOf(typeName.toUpperCase(Locale.ROOT)).getVendorTypeNumber(), true);
+        } catch (IllegalArgumentException jdbcMiss) {
+            try {
+                elementType = PgCatalogTypeParser.parse(typeName, true);
+            } catch (IllegalArgumentException ex) {
+                throw new SQLFeatureNotSupportedException("Unsupported array element type: " + typeName, "HYC00", ex);
+            }
         }
-        return new DataCloudArray(baseType, elements);
+        return new DataCloudArray(elementType, elements);
     }
 
     @Override

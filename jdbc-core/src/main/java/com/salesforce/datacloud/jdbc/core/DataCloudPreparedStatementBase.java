@@ -32,10 +32,8 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import lombok.val;
@@ -227,18 +225,39 @@ abstract class DataCloudPreparedStatementBase<P> extends DataCloudStatement {
             setNullParameter(parameter, Types.ARRAY);
             return;
         }
-        int elementSqlType = array.getBaseType();
-        HyperType elementType = hyperTypeForJdbcCode(elementSqlType);
+        HyperType elementType = array instanceof DataCloudArray
+                ? ((DataCloudArray) array).getElementType()
+                : hyperTypeForJdbcCode(array.getBaseType());
         if (elementType.getKind() == HyperTypeKind.ARRAY || !isBindableParameterType(elementType.getKind())) {
             throw new SQLFeatureNotSupportedException(
-                    "Binding arrays of JDBC type " + elementSqlType + " is not supported", "HYC00");
+                    "Binding arrays of type " + array.getBaseTypeName() + " is not supported", "HYC00");
         }
-        List<Object> elements = new ArrayList<>();
-        for (Object element : (Object[]) array.getArray()) {
-            elements.add(
-                    element == null ? null : toBinding(element, elementSqlType).getValue());
+        Object elements = array.getArray();
+        if (elements == null || !elements.getClass().isArray()) {
+            throw new SQLException("Array.getArray() did not return a Java array", "HY000");
         }
+        if (elementType.getKind() == HyperTypeKind.TIMESTAMP && elements instanceof Object[]) {
+            elements = toWallClockElements((Object[]) elements);
+        }
+        // The Java array is handed to the Arrow writer as is: no per-element bindings or copies.
         setParameter(parameter, HyperType.array(elementType, true), elements);
+    }
+
+    /** Naive TIMESTAMP elements travel as UTC-instant wall clock, like {@link #setTimestampParameter}. */
+    private static Object[] toWallClockElements(Object[] elements) {
+        Timestamp[] result = new Timestamp[elements.length];
+        for (int i = 0; i < elements.length; i++) {
+            Object element = elements[i];
+            if (element instanceof Timestamp) {
+                result[i] = toWallClockAsUtc((Timestamp) element, null);
+            } else if (element instanceof LocalDateTime) {
+                result[i] = Timestamp.from(((LocalDateTime) element).toInstant(ZoneOffset.UTC));
+            } else if (element != null) {
+                // not convertible: leave it for the writer, which reports the failing index
+                return elements;
+            }
+        }
+        return result;
     }
 
     private static final Map<Class<?>, JDBCType> ARRAY_ELEMENT_TYPES = new HashMap<>();
@@ -277,11 +296,7 @@ abstract class DataCloudPreparedStatementBase<P> extends DataCloudStatement {
             throw new SQLFeatureNotSupportedException(
                     "Array element type not supported for: " + component.getSimpleName(), "HYC00");
         }
-        Object[] elements = new Object[java.lang.reflect.Array.getLength(javaArray)];
-        for (int i = 0; i < elements.length; i++) {
-            elements[i] = java.lang.reflect.Array.get(javaArray, i);
-        }
-        return new DataCloudArray(baseType, elements);
+        return new DataCloudArray(hyperTypeForJdbcCode(baseType.getVendorTypeNumber()), javaArray);
     }
 
     /** Converts a non-null value bound with an explicit JDBC type into its Hyper type and Arrow value. */
