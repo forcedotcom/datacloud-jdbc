@@ -410,4 +410,21 @@ class ArrowUtilsTest {
             assertThat(reader.getVectorSchemaRoot().getVector(0).isNull(0)).isTrue();
         }
     }
+
+    @Test
+    void decimalArraysShareScaleAndTolerateNulls() throws Exception {
+        HyperType unsized = HyperType.array(HyperType.decimal(0, 0, true), true);
+        List<Object> elements = Arrays.asList(new BigDecimal("1.5"), null, new BigDecimal("-22.25"));
+        byte[] arrow = ArrowUtils.toArrowByteArray(
+                Collections.singletonList(
+                        new AbstractMap.SimpleImmutableEntry<>("1", new ParameterBinding(unsized, elements))),
+                Calendar.getInstance());
+
+        try (RootAllocator allocator = new RootAllocator();
+                ArrowStreamReader reader = new ArrowStreamReader(new ByteArrayInputStream(arrow), allocator)) {
+            assertThat(reader.loadNextBatch()).isTrue();
+            assertThat(reader.getVectorSchemaRoot().getVector(0).getObject(0).toString())
+                    .isEqualTo("[1.50,null,-22.25]");
+        }
+    }
 }

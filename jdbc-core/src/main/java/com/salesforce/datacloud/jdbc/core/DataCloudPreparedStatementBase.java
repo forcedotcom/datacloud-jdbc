@@ -9,6 +9,7 @@ import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCDateFromDat
 import static com.salesforce.datacloud.jdbc.util.DateTimeUtils.getUTCTimeFromTimeAndCalendar;
 
 import com.google.protobuf.ByteString;
+import com.salesforce.datacloud.jdbc.core.accessor.impl.DataCloudArray;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperType;
 import com.salesforce.datacloud.jdbc.protocol.data.HyperTypeKind;
 import com.salesforce.datacloud.jdbc.protocol.data.ParameterBinding;
@@ -16,7 +17,9 @@ import com.salesforce.datacloud.jdbc.util.QueryTimeout;
 import com.salesforce.datacloud.jdbc.util.SqlErrorCodes;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.sql.Array;
 import java.sql.Date;
+import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -30,6 +33,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
 import lombok.val;
@@ -199,23 +203,129 @@ abstract class DataCloudPreparedStatementBase<P> extends DataCloudStatement {
             setNullParameter(parameter, targetSqlType);
             return;
         }
+        if (value instanceof Array) {
+            setArrayParameter(parameter, (Array) value);
+            return;
+        }
+        if (isJavaArray(value)) {
+            setArrayParameter(parameter, toJdbcArray(value));
+            return;
+        }
+        ParameterBinding binding = toBinding(value, targetSqlType);
+        setParameter(parameter, binding.getType(), binding.getValue());
+    }
+
+    /**
+     * Binds an array as one Arrow list parameter, e.g. for {@code SELECT * FROM unnest(?, ?)}. Each
+     * element is converted exactly as {@code setObject(element, array.getBaseType())} would convert
+     * it; a null array binds a SQL NULL {@code text[]}.
+     */
+    protected final void setArrayParameter(P parameter, Array array) throws SQLException {
+        if (array == null) {
+            setNullParameter(parameter, Types.ARRAY);
+            return;
+        }
+        HyperType elementType = array instanceof DataCloudArray
+                ? ((DataCloudArray) array).getElementType()
+                : hyperTypeForJdbcCode(array.getBaseType());
+        if (elementType.getKind() == HyperTypeKind.ARRAY || !isBindableParameterType(elementType.getKind())) {
+            throw new SQLFeatureNotSupportedException(
+                    "Binding arrays of type " + array.getBaseTypeName() + " is not supported", "HYC00");
+        }
+        Object elements = array.getArray();
+        if (elements == null || !elements.getClass().isArray()) {
+            throw new SQLException("Array.getArray() did not return a Java array", "HY000");
+        }
+        if (elementType.getKind() == HyperTypeKind.TIMESTAMP && elements instanceof Object[]) {
+            elements = toWallClockElements((Object[]) elements);
+        }
+        // The Java array is handed to the Arrow writer as is: no per-element bindings or copies.
+        setParameter(parameter, HyperType.array(elementType, true), elements);
+    }
+
+    /** Naive TIMESTAMP elements travel as UTC-instant wall clock, like {@link #setTimestampParameter}. */
+    private static Object[] toWallClockElements(Object[] elements) {
+        Timestamp[] result = new Timestamp[elements.length];
+        for (int i = 0; i < elements.length; i++) {
+            Object element = elements[i];
+            if (element instanceof Timestamp) {
+                result[i] = toWallClockAsUtc((Timestamp) element, null);
+            } else if (element instanceof LocalDateTime) {
+                result[i] = Timestamp.from(((LocalDateTime) element).toInstant(ZoneOffset.UTC));
+            } else if (element != null) {
+                // not convertible: leave it for the writer, which reports the failing index
+                return elements;
+            }
+        }
+        return result;
+    }
+
+    private static final Map<Class<?>, JDBCType> ARRAY_ELEMENT_TYPES = new HashMap<>();
+
+    static {
+        ARRAY_ELEMENT_TYPES.put(String.class, JDBCType.VARCHAR);
+        ARRAY_ELEMENT_TYPES.put(Boolean.class, JDBCType.BOOLEAN);
+        ARRAY_ELEMENT_TYPES.put(boolean.class, JDBCType.BOOLEAN);
+        ARRAY_ELEMENT_TYPES.put(Short.class, JDBCType.SMALLINT);
+        ARRAY_ELEMENT_TYPES.put(short.class, JDBCType.SMALLINT);
+        ARRAY_ELEMENT_TYPES.put(Integer.class, JDBCType.INTEGER);
+        ARRAY_ELEMENT_TYPES.put(int.class, JDBCType.INTEGER);
+        ARRAY_ELEMENT_TYPES.put(Long.class, JDBCType.BIGINT);
+        ARRAY_ELEMENT_TYPES.put(long.class, JDBCType.BIGINT);
+        ARRAY_ELEMENT_TYPES.put(Float.class, JDBCType.REAL);
+        ARRAY_ELEMENT_TYPES.put(float.class, JDBCType.REAL);
+        ARRAY_ELEMENT_TYPES.put(Double.class, JDBCType.DOUBLE);
+        ARRAY_ELEMENT_TYPES.put(double.class, JDBCType.DOUBLE);
+        ARRAY_ELEMENT_TYPES.put(BigDecimal.class, JDBCType.DECIMAL);
+        ARRAY_ELEMENT_TYPES.put(Date.class, JDBCType.DATE);
+        ARRAY_ELEMENT_TYPES.put(Time.class, JDBCType.TIME);
+        ARRAY_ELEMENT_TYPES.put(Timestamp.class, JDBCType.TIMESTAMP);
+        ARRAY_ELEMENT_TYPES.put(LocalDateTime.class, JDBCType.TIMESTAMP);
+    }
+
+    /** {@code byte[]} stays a binary value; every other Java array binds as a SQL array. */
+    private static boolean isJavaArray(Object value) {
+        return value.getClass().isArray() && !(value instanceof byte[]);
+    }
+
+    /** Wraps a Java array such as {@code String[]} or {@code long[]}, typing it by its component class. */
+    private static Array toJdbcArray(Object javaArray) throws SQLException {
+        Class<?> component = javaArray.getClass().getComponentType();
+        JDBCType baseType = ARRAY_ELEMENT_TYPES.get(component);
+        if (baseType == null) {
+            throw new SQLFeatureNotSupportedException(
+                    "Array element type not supported for: " + component.getSimpleName(), "HYC00");
+        }
+        return new DataCloudArray(hyperTypeForJdbcCode(baseType.getVendorTypeNumber()), javaArray);
+    }
+
+    /** Converts a non-null value bound with an explicit JDBC type into its Hyper type and Arrow value. */
+    private static ParameterBinding toBinding(Object value, int targetSqlType) throws SQLException {
         if (targetSqlType == Types.TIMESTAMP) {
             if (value instanceof Timestamp) {
-                setParameter(parameter, HyperType.timestamp(true), toWallClockAsUtc((Timestamp) value, null));
-                return;
+                return new ParameterBinding(HyperType.timestamp(true), toWallClockAsUtc((Timestamp) value, null));
             }
             if (value instanceof LocalDateTime) {
                 LocalDateTime dateTime = (LocalDateTime) value;
-                setParameter(parameter, HyperType.timestamp(true), Timestamp.from(dateTime.toInstant(ZoneOffset.UTC)));
-                return;
+                return new ParameterBinding(
+                        HyperType.timestamp(true), Timestamp.from(dateTime.toInstant(ZoneOffset.UTC)));
             }
         }
-        setParameter(parameter, hyperTypeForJdbcCode(targetSqlType), value);
+        return new ParameterBinding(hyperTypeForJdbcCode(targetSqlType), value);
     }
 
     protected final void setObjectParameter(P parameter, Object value) throws SQLException {
         if (value == null) {
             setNullParameter(parameter, Types.NULL);
+            return;
+        }
+
+        if (value instanceof Array) {
+            setArrayParameter(parameter, (Array) value);
+            return;
+        }
+        if (isJavaArray(value)) {
+            setArrayParameter(parameter, toJdbcArray(value));
             return;
         }
 
@@ -298,6 +408,7 @@ abstract class DataCloudPreparedStatementBase<P> extends DataCloudStatement {
             case TIME:
             case TIMESTAMP:
             case TIMESTAMP_TZ:
+            case ARRAY:
             case NULL:
                 return true;
             default:

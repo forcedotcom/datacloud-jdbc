@@ -35,6 +35,7 @@ import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.complex.ListVector;
 
 /**
  * Populates vectors in a {@link VectorSchemaRoot} with Java values, dispatching per column by
@@ -63,14 +64,14 @@ public final class VectorPopulator {
                 // invoke a setter without a HyperTypeKind to dispatch on.
                 continue;
             }
-            HyperTypeKind kind = binding.getType().getKind();
-            if (kind == HyperTypeKind.NULL && binding.getValue() == null) {
+            HyperType type = binding.getType();
+            if (type.getKind() == HyperTypeKind.NULL && binding.getValue() == null) {
                 // NullVector needs no setter; every row is null by definition.
                 continue;
             }
             ValueVector vector =
                     root.getVector(root.getSchema().getFields().get(i).getName());
-            setCell(vector, kind, 0, binding.getValue(), calendar);
+            setCell(vector, type, 0, binding.getValue(), calendar);
         }
         root.setRowCount(1);
     }
@@ -98,15 +99,60 @@ public final class VectorPopulator {
         root.setRowCount(rowCount);
     }
 
+    /**
+     * Like {@link #setCell(ValueVector, HyperTypeKind, int, Object, Calendar)}, but also handles
+     * {@code ARRAY} cells: the value is a {@link List} or a Java array (primitive or object) whose
+     * elements are written to the list's child vector, recursively. Decimal elements are rescaled to
+     * the element type's scale while writing.
+     */
+    static void setCell(ValueVector vector, HyperType type, int index, Object value, Calendar calendar) {
+        if (type.getKind() != HyperTypeKind.ARRAY) {
+            setCell(vector, type.getKind(), index, value, calendar);
+            return;
+        }
+        ListVector list = (ListVector) vector;
+        if (value == null) {
+            list.setNull(index);
+            return;
+        }
+        HyperType elementType = type.getElement();
+        boolean isList = value instanceof List;
+        int length = isList ? ((List<?>) value).size() : java.lang.reflect.Array.getLength(value);
+        boolean nested = elementType.getKind() == HyperTypeKind.ARRAY;
+        VectorValueSetter<ValueVector> setter = nested ? null : getSetter(elementType.getKind(), calendar);
+        ValueVector child = list.getDataVector();
+        int offset = list.startNewValue(index);
+        for (int i = 0; i < length; i++) {
+            try {
+                Object element = isList ? ((List<?>) value).get(i) : java.lang.reflect.Array.get(value, i);
+                if (nested) {
+                    setCell(child, elementType, offset + i, element, calendar);
+                    continue;
+                }
+                if (elementType.getKind() == HyperTypeKind.DECIMAL && element instanceof BigDecimal) {
+                    element = ((BigDecimal) element).setScale(elementType.getScale());
+                }
+                setter.setValue(child, offset + i, element);
+            } catch (RuntimeException e) {
+                throw new IllegalArgumentException("array element " + i + ": " + e.getMessage(), e);
+            }
+        }
+        list.endValue(index, length);
+    }
+
     /** Sets cell ({@code vector}, {@code index}) to {@code value}, or null if value is null. */
     static void setCell(ValueVector vector, HyperTypeKind kind, int index, Object value, Calendar calendar) {
-        @SuppressWarnings("unchecked")
+        getSetter(kind, calendar).setValue(vector, index, value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static VectorValueSetter<ValueVector> getSetter(HyperTypeKind kind, Calendar calendar) {
         VectorValueSetter<ValueVector> setter =
                 (VectorValueSetter<ValueVector>) VectorValueSetterFactory.getSetter(kind, calendar);
         if (setter == null) {
             throw new UnsupportedOperationException("Unsupported HyperTypeKind for vector population: " + kind);
         }
-        setter.setValue(vector, index, value);
+        return setter;
     }
 }
 

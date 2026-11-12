@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Map;
@@ -132,6 +133,9 @@ public final class ArrowUtils {
         // ParameterAccumulator.setParameter() pads the list with null placeholders for any
         // skipped positions (e.g. setBigDecimal(3, ...) before 1/2 are set). createField() already
         // handles this same null for the type side; mirror it here on the value side.
+        if (binding != null && isUnsizedDecimalArray(binding.getType())) {
+            return normalizeDecimalArray(binding);
+        }
         if (binding == null || !(binding.getValue() instanceof BigDecimal)) {
             return binding;
         }
@@ -147,5 +151,32 @@ public final class ArrowUtils {
                 HyperType.decimal(
                         precision, normalized.scale(), binding.getType().isNullable()),
                 normalized);
+    }
+
+    private static boolean isUnsizedDecimalArray(HyperType type) {
+        return type.getKind() == HyperTypeKind.ARRAY
+                && type.getElement().getKind() == HyperTypeKind.DECIMAL
+                && type.getElement().getPrecision() <= 0;
+    }
+
+    /**
+     * All elements of an Arrow list share one decimal precision and scale, so pick the smallest pair
+     * that holds every element. {@link VectorPopulator} rescales each element while writing; raising
+     * the scale never rounds.
+     */
+    private static ParameterBinding normalizeDecimalArray(ParameterBinding binding) {
+        int scale = 0;
+        int integerDigits = 0;
+        Object values = binding.getValue();
+        for (Object element : values instanceof List ? (List<?>) values : Arrays.asList((Object[]) values)) {
+            if (element instanceof BigDecimal) {
+                BigDecimal value = (BigDecimal) element;
+                scale = Math.max(scale, value.scale());
+                integerDigits = Math.max(integerDigits, value.precision() - value.scale());
+            }
+        }
+        HyperType elementType = HyperType.decimal(Math.max(1, integerDigits + scale), scale, true);
+        return new ParameterBinding(
+                HyperType.array(elementType, binding.getType().isNullable()), binding.getValue());
     }
 }

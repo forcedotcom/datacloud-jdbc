@@ -199,7 +199,7 @@ public class DataCloudPreparedStatement extends DataCloudPreparedStatementBase<I
 
     @Override
     public void setArray(int parameterIndex, Array value) throws SQLException {
-        throw unsupported();
+        setArrayParameter(parameterIndex, value);
     }
 
     @Override

@@ -167,8 +167,7 @@ public class JDBCLimitsTest {
             values[i] = "value" + i;
         }
 
-        // Create an ARRAY string literal with all values, a direct array parameter is not supported by the JDBC driver
-        // yet
+        // Create an ARRAY string literal with all values (see testLargeArrayParameter for the parameter variant)
         String arrayLiteral = "ARRAY['" + String.join("','", values) + "']";
 
         // Verify that WHERE IN with a large array works
@@ -183,6 +182,28 @@ public class JDBCLimitsTest {
                 result.next();
                 // We should find exactly one match
                 assertThat(result.getInt(1)).isEqualTo(100);
+            }
+        });
+    }
+
+    @Test
+    @SneakyThrows
+    public void testLargeArrayParameter() {
+        // ~32 MB as one array parameter (1M strings of 32 characters), well inside the 64 MB request limit
+        int itemCount = 1000000;
+        Object[] values = new Object[itemCount];
+        for (int i = 0; i < itemCount; i++) {
+            values[i] = String.format("value-%026d", i);
+        }
+
+        assertWithConnection(connection -> {
+            try (val stmt = connection.prepareStatement("SELECT count(*), sum(length(v)) FROM unnest(?) AS t(v)")) {
+                stmt.setArray(1, connection.createArrayOf("VARCHAR", values));
+                try (val result = stmt.executeQuery()) {
+                    result.next();
+                    assertThat(result.getLong(1)).isEqualTo(itemCount);
+                    assertThat(result.getLong(2)).isEqualTo(32L * itemCount);
+                }
             }
         });
     }
